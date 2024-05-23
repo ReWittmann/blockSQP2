@@ -56,7 +56,9 @@ set_property(TARGET blockSQP PROPERTY PUBLIC_HEADER
     
 target_compile_options(blockSQP PUBLIC)# -g -O0)
 
-#Add path to qpOASES here
+#############################
+#Path to qpOASES needs to be added here
+#############################
 target_include_directories(blockSQP PUBLIC include PATH/TO/qpOASES/include)
 target_link_libraries(blockSQP LAPACK::LAPACK PATH/TO/qpOASES/libs/libqpOASES.so)
 set_target_properties(blockSQP
