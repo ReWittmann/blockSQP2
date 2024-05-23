@@ -10,9 +10,9 @@ pybind11_add_module(BlockSQP
 
 
 target_include_directories(BlockSQP 
-	PUBLIC ~/blockSQP_modified/include)
+	PUBLIC PATH/TO/BLOCKSQP/include)
 
 
 target_link_libraries(BlockSQP
-	PUBLIC ~/blockSQP_modified/lib/libblockSQP.so)
+	PUBLIC PATH/TO/BLOCKSQP/lib/libblockSQP.so)
 
