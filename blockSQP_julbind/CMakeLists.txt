@@ -4,7 +4,8 @@ cmake_minimum_required(VERSION 3.5)
 set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-list(APPEND CMAKE_PREFIX_PATH "/home/reinhold/.julia/artifacts/5209ca23f516fb3391b885eef717e49b4ee0a268/lib/cmake/JlCxx")
+#Add path to JlCxx library
+list(APPEND CMAKE_PREFIX_PATH "PATH/TO/.julia/artifacts/5209ca23f516fb3391b885eef717e49b4ee0a268/lib/cmake/JlCxx")
 
 find_package(JlCxx)
 get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
@@ -15,9 +16,9 @@ message(STATUS "Found JlCxx at ${JlCxx_location}")
 
 add_library(BlockSQP SHARED BlockSQP.cpp)
 target_include_directories(BlockSQP 
-	PUBLIC ~/blockSQP_modified/include)
+	PUBLIC PATH/TO/BLOCKSQP/include)
 target_link_libraries(BlockSQP
-	PUBLIC ~/blockSQP_modified/lib/libblockSQP.so JlCxx::cxxwrap_julia)
+	PUBLIC PATH/TO/BLOCKSQP/lib/libblockSQP.so JlCxx::cxxwrap_julia)
 
 
 
