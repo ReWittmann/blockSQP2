@@ -120,12 +120,9 @@ class BlockSQP_Problem(BlockSQP.Problemform):
         xi_ = np.maximum(self.Data.xi, self.lb_input)
         xi_ = np.minimum(xi_, self.ub_input)
         
-        np.savez('last_input', xi_)
-        
         for j in range(len(xi_)):
             if np.isnan(self.Data.xi[j]):
                 raise ValueError("Received nan")
-        
         
         self.Data.objval = self.f(xi_)
         self.Data.constr[:] = self.g(xi_)
