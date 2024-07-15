@@ -38,7 +38,6 @@ class SQPiterate
      */
     public:
         double obj;                                   ///< objective value
-        //double qpObj;                                 ///< objective value of last QP subproblem
         double cNorm;                                 ///< constraint violation
         double cNormS;                                ///< scaled constraint violation
         double gradNorm;                              ///< norm of Lagrangian gradient
@@ -55,11 +54,36 @@ class SQPiterate
         int *jacIndCol;                               ///< indices to first entry of columns (nCols+1)
 
         Matrix deltaMat;                              ///< last m primal steps
-        Matrix deltaXi;                               ///< alias for current step
+        Matrix deltaXi;                               ///< alias for current step (first stores full step from QP, then gets modified by globalization)
         Matrix gradObj;                               ///< gradient of objective
         Matrix gradLagrange;                          ///< gradient of Lagrangian
         Matrix gammaMat;                              ///< Lagrangian gradient differences for last m steps
         Matrix gamma;                                 ///< alias for current Lagrangian gradient
+
+        //Scalar products for COL sizing. In full memory quasi newton, they are updated at the end of each SQP iteration. In limited memory, they are calculated when applying the up
+        Matrix deltaNormMat;                          /// last m >= 2 squared step norms
+        Matrix deltaGammaMat;                         /// last m >= 2 delta-gamma scalar products
+        int dg_pos;                                   /// position of the current iterate within deltaNormMat and gammaNormMat as well as deltaMat and gammaMat if in limited memory
+
+        //[blockwise] precalculated scalar products, needed for quasi-newton updates and sizing
+        Matrix deltaNorm;                             ///< sTs, subvector of deltaNormMat
+        Matrix deltaGamma;                            ///< sTy, subvector of deltaGammaMat
+
+        //[blockwise] norm and scalar product of the last delta-gamma pair for the secant update was successful and secand equation is fulfilled.
+        //Dampening may have been applied to gamma und thus to deltaGamma
+        //These are set during the update calculation (SR1, BFGS etc.) and required for COL sizing. They may be different for each of the two maintained hessians, so
+        //we need one pair for each hessian
+
+        //For hess1
+        Matrix deltaNormOld;
+        Matrix deltaGammaOld;
+
+        //For hess2
+        Matrix deltaNormOldFallback;
+        Matrix deltaGammaOldFallback;
+
+        int *nquasi;                                  ///< number of quasi-newton updates for each block since last hessian reset
+        int *noUpdateCounter;                         ///< count skipped updates for each block
 
         int nBlocks;                                  ///< number of diagonal blocks in Hessian
         int *blockIdx;                                ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
@@ -68,15 +92,11 @@ class SQPiterate
         SymMatrix *hess1;                             ///< [blockwise] first Hessian approximation
         SymMatrix *hess2;                             ///< [blockwise] second Hessian approximation (convexified)
         SymMatrix *hess_conv;                         ///< [blockwise] convex combination of first and second Hessian approximation if two or more additional qps are solved per iteration
-        //SymMatrix *hess_save;
 
         double *hessNz;                               ///< nonzero elements of Hessian (length)
         int *hessIndRow;                              ///< row indices (length)
         int *hessIndCol;                              ///< indices to first entry of columns (nCols+1)
         int *hessIndLo;                               ///< Indices to first entry of lower triangle (including diagonal) (nCols)
-
-        double conv_identity_scale;                        ///< Current scaling factor for added identity in hessian convexification
-
 
         bool conv_qp_solved;
         bool hess2_calculated;
@@ -85,39 +105,36 @@ class SQPiterate
          * Variables for QP solver
          */
         bool use_homotopy;
-        Matrix delta_lb_var;                          ///< lower bounds for current step
-        Matrix delta_ub_var;                          ///< upper bounds for current step
-        Matrix delta_lb_con;                          ///< lower bounds for linearized constraints
-        Matrix delta_ub_con;                          ///< upper bounds for linearized constraints
-        Matrix lambdaQP;                              ///< dual variables of QP
-        Matrix AdeltaXi;                              ///< product of constraint Jacobian with deltaXi
 
-        /*
-         * For modified BFGS updates
-         */
-        Matrix deltaNorm;                             ///< sTs
-        Matrix deltaNormOld;                          ///< (from previous iteration)
-        Matrix deltaGamma;                            ///< sTy
-        Matrix deltaGammaOld;                         ///< (from previous iteration)
-        int *noUpdateCounter;                         ///< count skipped updates for each block
+        //Bounds for QP step, calculated in solveQP directly before invoking QP solver / condenser
+        Matrix delta_lb_var;                          ///< lower bounds for current (SOC) step
+        Matrix delta_ub_var;                          ///< upper bounds for current (SOC) step
+        Matrix delta_lb_con;                          ///< lower bounds for linearized (SOC) constraints
+        Matrix delta_ub_con;                          ///< upper bounds for linearized (SOC) constraints
+        Matrix lambdaQP;                              ///< dual variables of QP
+
+        Matrix AdeltaXi;                              ///< product of constraint Jacobian with deltaXi (from SOC for SOC iterations after the first one), calculated in secondOrderCorrection method as needed
 
         /*
          * Variables for globalization strategy
          */
-        int steptype;                                 ///< -1: KKT-error reduction step, 0: Linesearch step, 1: Step with identity hessian
-                                                      ///<  2: Feasibility restoration heuristic step, 3: Feasibility restoration step
-
-        double solution_durations[10];                ///< Solution time of the last 10 successful qps
-        int dur_pos;
-        double avg_solution_duration;
-
+        int steptype;                                 ///< -1: KKT-error reduction step, 0: Linesearch step, 1: Step with identity hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
 
         double alpha;                                 ///< stepsize for line search
         int nSOCS;                                    ///< number of second-order correction steps
         int reducedStepCount;                         ///< count number of consecutive reduced steps,
-        //Matrix deltaH;                                ///< scalars for inertia correction (filter line search w indef Hessian)
+
         Matrix trialXi;                               ///< new trial iterate (for line search)
+        Matrix trialConstr;                           ///< constraints evaluated at trial point. Calculated in linesearch and used also in SOC
+
         std::set< std::pair<double,double> > *filter; ///< Filter contains pairs (constrVio, objective)
+
+
+        //Parameters derived from given options, may change during iterations
+        //int hessUpdate;
+        //int fallbackUpdate;
+        //int hessMemSize;
+
 
     /*
      * Methods
@@ -127,17 +144,11 @@ class SQPiterate
         SQPiterate( Problemspec* prob, SQPoptions* param, bool full );
         SQPiterate();
         SQPiterate( const SQPiterate &iter );
-        /// Allocate variables that any SQP code needs
-        //void allocMin( Problemspec* prob );
-        /// Allocate diagonal block Hessian
-        //void allocHess( SQPoptions* param );
         /// Convert *hess to column compressed sparse format
         void convertHessian( int num_vars, int num_hessblocks, double eps, SymMatrix *&hess_,
                              double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ );
         /// Convert *hess to double array (dense matrix)
         void convertHessian( Problemspec *prob, double eps, SymMatrix *&hess_ );
-        /// Allocate variables specifically needed by vmused SQP method
-        //void allocAlg( Problemspec* prob, SQPoptions* param );
         /// Set initial filter, objective function, tolerances etc.
         void initIterate( SQPoptions* param );
         virtual ~SQPiterate( void );

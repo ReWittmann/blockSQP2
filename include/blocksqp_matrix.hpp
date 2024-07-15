@@ -182,8 +182,6 @@ Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start);
 Sparse_Matrix lr_zero_pad(int N, const Matrix &M1, int start);
 Sparse_Matrix vertcat(std::vector<Sparse_Matrix>&);
 
-//Sparse_Matrix CSR_CSC_horzcat(std::vector<CSR_Matrix>&);
-//add(const Sparse_Matrix &M1, const Sparse_Matrix &M2, Sparse_Matrix &M_out)
 
 class CSR_Matrix{
 public:
@@ -206,14 +204,6 @@ public:
     Matrix dense() const;
 };
 
-//CSR_Matrix sparse_dense_multiply_2(const Sparse_Matrix M1, const Matrix M2);
-//CSR_Matrix add_fullrow(const CSR_Matrix &M1, const CSR_Matrix &M2);
-
-
-
-
-
-
 
 //Lower-Triangle block-matrix
 class LT_Block_Matrix{
@@ -225,13 +215,11 @@ class LT_Block_Matrix{
 		int m;
 		int n;
 		Matrix *array;
+
 		LT_Block_Matrix(int, int*, int*);
 		LT_Block_Matrix(int, int, int*, int*);
 		LT_Block_Matrix();
 		~LT_Block_Matrix(void);
-
-		//void initialize(int, int*, int*);
-		//void initialize(int,int, int*, int*);
 
 		void set(int i, int j, const Matrix &M);
 		const Matrix &operator() (int i, int j) const;

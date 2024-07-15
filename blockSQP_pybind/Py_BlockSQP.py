@@ -20,7 +20,7 @@ class BlockSQP_Problem(BlockSQP.Problemform):
     g : Callable[[np.array], np.array]
     grad_f : Callable[[np.array], np.array]
     jac_g : Callable[[np.array], np.array]
-    jac_gNz : Callable[[np.array], np.array]
+    jac_g_nz : Callable[[np.array], np.array]
     
     _continuity_restoration: Callable[[np.array], np.array]
     rest_cont : bool = False
@@ -33,7 +33,7 @@ class BlockSQP_Problem(BlockSQP.Problemform):
     #     return None
     # def jac_g(xi):
     #     return None
-    # def jac_gNz(xi):
+    # def jac_g_nz(xi):
     # 	return None
     # def close_continuity_gaps(xi):
     # 	return None
@@ -120,20 +120,23 @@ class BlockSQP_Problem(BlockSQP.Problemform):
         xi_ = np.maximum(self.Data.xi, self.lb_input)
         xi_ = np.minimum(xi_, self.ub_input)
         
-        for j in range(len(xi_)):
-            if np.isnan(self.Data.xi[j]):
-                raise ValueError("Received nan")
+        np.savez('last_input', xi_)
+        
+        #for j in range(len(xi_)):
+        #    if np.isnan(self.Data.xi[j]):
+        #        raise ValueError("Received nan")
+        
         
         self.Data.objval = self.f(xi_)
         self.Data.constr[:] = self.g(xi_)
         
         if self.Data.dmode > 0:
-            t0 = time.time()
-            print("Evaluating constraint-jacobian\n")
+            #t0 = time.time()
+            #print("Evaluating constraint-jacobian\n")
             self.Data.gradObj[:] = self.grad_f(xi_)
-            self.Data.jacNz[:] = self.jac_gNz(xi_)
-            t1 = time.time()
-            print("Evaluated constraint jacobian in ", t1 - t0, "seconds\n")
+            self.Data.jacNz[:] = self.jac_g_nz(xi_)
+            #t1 = time.time()
+            #print("Evaluated constraint jacobian in ", t1 - t0, "seconds\n")
         
     def evaluate_simple(self):
         xi_ = np.maximum(self.Data.xi, self.lb_input)
@@ -148,7 +151,6 @@ class BlockSQP_Problem(BlockSQP.Problemform):
             self.Cpp_Data.info = 0
         else:
             self.Cpp_Data.info = 1
-        print("Python side: Cpp_Data.info = ", self.Cpp_Data.info, "\n")
         return
     
     

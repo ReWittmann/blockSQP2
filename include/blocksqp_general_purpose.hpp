@@ -22,7 +22,11 @@
 #include "blocksqp_lapack.h"
 
 namespace blockSQP
-{
+{/*
+class NotImplementedError : public std::logic_error{
+public:
+    NotImplementedError(std::string info) : std::logic_error("Missing implementation of " + info){}
+};*/
 
 double l1VectorNorm( const Matrix &v );
 double l2VectorNorm( const Matrix &v );

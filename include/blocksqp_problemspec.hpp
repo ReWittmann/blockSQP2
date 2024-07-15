@@ -37,7 +37,6 @@ class Problemspec
     public:
         int         nVar;               ///< number of variables
         int         nCon;               ///< number of constraints
-        //int         nnCon;              ///< number of nonlinear constraints
         int         nnz = -1;           ///< number of structural nonzero entries of sparse constraint jacobian
 
         double      objLo;              ///< lower bound for objective

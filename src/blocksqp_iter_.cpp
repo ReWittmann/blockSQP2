@@ -81,7 +81,7 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
 
-    ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
+    ///Allocate constraint jacobian and hessian approximation, either as dense of sparse matrices
     if( !param->sparseQP ){
         constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
         hessNz = new double[prob->nVar*prob->nVar];
@@ -110,8 +110,14 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
     hess2 = nullptr;
     hess_conv = nullptr;
 
+    //conv_identity_scale = 1.0;
+
     noUpdateCounter = nullptr;
-    nquasi = nullptr;
+    dur_pos = 0;
+    avg_solution_duration = param->maxTimeQP/2.5;
+    for (int i = 0; i < 10; i++){
+        solution_durations[i] = param->maxTimeQP/2.5;
+    }
 
     if( full )
     {
@@ -127,25 +133,25 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         }
 
         // For SR1 or finite differences, maintain two Hessians
-        if( param->hessUpdate == 1 || param->hessUpdate == 4 )
-        {
+        if (param->hessUpdate == 1 || param->hessUpdate == 4){
             hess2 = new SymMatrix[nBlocks];
-            for( iBlock=0; iBlock<nBlocks; iBlock++ )
-            {
+            for (iBlock=0; iBlock<nBlocks; iBlock++){
                 varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
                 hess2[iBlock].Dimension( varDim ).Initialize( 0.0 );
             }
-            //Store convex combination of nonconvex and fallback hessian separately, so we don't have to recalculate the fallback hessian
             if (param->maxConvQP > 1){
                 hess_conv = new SymMatrix[nBlocks];
-                for( iBlock=0; iBlock<nBlocks; iBlock++ )
-                {
+                for( iBlock=0; iBlock<nBlocks; iBlock++ ){
                     varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
                     hess_conv[iBlock].Dimension( varDim ).Initialize( 0.0 );
                 }
+                /*
+                hess_save = new SymMatrix[nBlocks];
+                for (iBlock = 0; iBlock<nBlocks; iBlock++){
+                    varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
+                    hess_save[iBlock].Dimension( varDim ).Initialize( 0.0 );
+                }*/
             }
-
-
         }
 
         // Set Hessian pointer
@@ -157,24 +163,11 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         int nCon = prob->nCon;
 
         // current step
-        if (param->hessLimMem){
-            deltaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
-            deltaNormMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(1.0);
-            deltaGammaMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(0.0);
-        }
-        else{
-            deltaMat.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
-            deltaNormMat.Dimension(nBlocks, 1, nBlocks).Initialize(1.0);
-            deltaGammaMat.Dimension(nBlocks, 1, nBlocks).Initialize(0.0);
-        }
-
+        deltaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
         deltaXi.Submatrix( deltaMat, nVar, 1, 0, 0 );
 
         // trial step (temporary variable, for line search)
         trialXi.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
-
-        //
-        trialConstr.Dimension(nCon, 1).Initialize(0.0);
 
         // bounds for step (QP subproblem)
         delta_lb_var.Dimension(nVar).Initialize(0.0);
@@ -193,32 +186,22 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         //deltaH.Dimension( nBlocks ).Initialize( 0.0 );
 
         // filter as a set of pairs
-        filter = new std::set< std::pair<double,double> >;
+        filter = new std::set<std::pair<double,double>>;
 
         // difference of Lagrangian gradients
-        //gammaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
-        if (param->hessLimMem)
-            gammaMat.Dimension(nVar, param->hessMemsize, nVar).Initialize(0.0);
-        else
-            gammaMat.Dimension(nVar, 1, nVar).Initialize(0.0);
-
-        gamma.Submatrix(gammaMat, nVar, 1, 0, 0);
+        gammaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
+        gamma.Submatrix( gammaMat, nVar, 1, 0, 0 );
 
         // Scalars that are used in various Hessian update procedures
         noUpdateCounter = new int[nBlocks];
-        for (iBlock = 0; iBlock < nBlocks; iBlock++)
+        for (iBlock = 0; iBlock<nBlocks; iBlock++)
             noUpdateCounter[iBlock] = -1;
 
-        nquasi = new int[nBlocks]();
-        dg_pos = -1;
         // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
-        deltaNorm.Dimension(nBlocks).Initialize( 1.0 );
-        deltaNormOld.Dimension(nBlocks).Initialize( 1.0 );
-        deltaGamma.Dimension(nBlocks).Initialize( 0.0 );
-        deltaGammaOld.Dimension(nBlocks).Initialize( 0.0 );
-
-        deltaNormOldFallback.Dimension(nBlocks).Initialize(1.0);
-        deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
+        deltaNorm.Dimension( nBlocks ).Initialize( 1.0 );
+        deltaNormOld.Dimension( nBlocks ).Initialize( 1.0 );
+        deltaGamma.Dimension( nBlocks ).Initialize( 0.0 );
+        deltaGammaOld.Dimension( nBlocks ).Initialize( 0.0 );
 
         use_homotopy = true;
     }
@@ -395,8 +378,6 @@ SQPiterate::~SQPiterate( void )
 
     delete[] hessNz;
     delete[] hessIndRow;
-
-    delete[] nquasi;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

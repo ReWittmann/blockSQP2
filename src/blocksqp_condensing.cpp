@@ -588,7 +588,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
 
     std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
-    std::cout << "Sliced linear term, bounds and jacobian in " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
+    //std::cout << "Sliced linear term, bounds and jacobian in " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 
     //Assert that lower and upper bounds of condensing conditions are equal
@@ -607,7 +607,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
         T_start = std::chrono::steady_clock::now();
         single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
         T_end = std::chrono::steady_clock::now();
-        std::cout << "Condensing target " << i << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(T_end - T_start).count() << "ms\n";
+        //std::cout << "Condensing target " << i << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(T_end - T_start).count() << "ms\n";
 
         O_Slices[i].remove_rows(c_starts, c_ends, num_targets);
         //T_Slices[i].remove_rows(c_starts, c_ends, num_targets);
@@ -628,7 +628,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     blockSQP::Sparse_Matrix reduced_Jacobian = blockSQP::horzcat(reduced_Slices);
 
     T1 = std::chrono::steady_clock::now();
-    std::cout << "Assembling the reduced jacobian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
+    //std::cout << "Assembling the reduced jacobian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 //Assemble condensed block-hessian
     if (condensed_hess == nullptr){
@@ -653,7 +653,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     }
 
     T1 = std::chrono::steady_clock::now();
-    std::cout << "Assembling the condensed block hessian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
+    //std::cout << "Assembling the condensed block hessian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
     blockSQP::Matrix reduced_lb_con = lb_con.without_rows(c_starts, c_ends, num_targets);
@@ -741,7 +741,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     condensed_h = blockSQP::vertcat(condensed_h_k);
 
     std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
-    std::cout << "Rest of condensing took " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << "ms\n";
+    //std::cout << "Rest of condensing took " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << "ms\n";
     //std::cout << "Assembled complete condensed system from smaller condensed systems in " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << " ms.\n";
 
     return;
@@ -1597,7 +1597,7 @@ void Condenser::correction_condense(const blockSQP::Matrix &grad_obj, const bloc
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-14 || ub_con(i) - lb_con(i) >= 1e-14){
-                std::cout << "lb_con(i) = " << lb_con(i) << ", ub_con(i) = " << ub_con(i) << "\n";
+                //std::cout << "lb_con(i) = " << lb_con(i) << ", ub_con(i) = " << ub_con(i) << "\n";
                 throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }

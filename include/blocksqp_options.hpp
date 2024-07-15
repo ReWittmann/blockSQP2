@@ -18,6 +18,7 @@
 #define BLOCKSQP_OPTIONS_HPP
 
 #include "blocksqp_defs.hpp"
+#include <string>
 
 namespace blockSQP
 {
@@ -27,6 +28,14 @@ namespace blockSQP
  * \author Dennis Janka
  * \date 2012-2015
  */
+
+ enum class QPSOLVER{
+    ANY,
+    QPOASES,
+    GUROBI
+ };
+
+
 class SQPoptions
 {
     /*
@@ -40,6 +49,7 @@ class SQPoptions
         double inf;                         ///< values larger than this are regarded as numerically infinity
         double opttol;                      ///< optimality tolerance
         double nlinfeastol;                 ///< nonlinear feasibility tolerance
+        QPSOLVER which_QPsolver;            ///< which linked QP solver (qpOASES, gurobi, ...) should be used
 
         /* Algorithmic options */
         int sparseQP;                       ///< which qpOASES variant is used (dense/sparse/Schur)
@@ -54,7 +64,11 @@ class SQPoptions
         int fallbackScaling;                ///< If indefinite update is used, the type of fallback strategy
         double maxTimeQP;                   ///< Maximum number of time in seconds per QP solve per SQP iteration
         double iniHessDiag;                 ///< Initial Hessian guess: diagonal matrix diag(iniHessDiag)
+        double HessDiag2;
+        bool size_hessian_first_step;       ///< Size hessian to get a better initial stepsize, currently only for (almost) feasible starting points
+
         double colEps;                      ///< epsilon for COL scaling strategy
+        double olEps;                       ///< epsilon for first sizing in COL scaling strategy (OL scaling)
         double colTau1;                     ///< tau1 for COL scaling strategy
         double colTau2;                     ///< tau2 for COL scaling strategy
         int hessDamp;                       ///< activate Powell damping for BFGS
@@ -74,13 +88,6 @@ class SQPoptions
         int max_correction_steps;           ///< How many additional QPs with bound correction added to dependent variables should be solved
         double dep_bound_tolerance;          ///< Maximum dependent variable bound violation, before they are added to the QP
 
-        /* Options for correction of all state trajectory errors*/
-        double integration_correction_stepsize;
-
-        /* qpOASES options*/
-        int qpOASES_print_level;            ///< print level of qpOASES sub-qp solver, 0 = PL_NONE, 1 = PL_LOW, 2 = PL_MEDIUM, 3 = PL_HIGH
-        double qpOASES_terminationTolerance;///< Termination tolerance of qp-subproblem solver qpOASES
-
         /* Filter line search parameters */
         int maxSOCiter;                     ///< Maximum number of SOC line search iterations
         double gammaTheta;                  ///< see IPOPT paper
@@ -98,7 +105,27 @@ class SQPoptions
         double deltaH0;                     ///< see IPOPT paper
         double eta;                         ///< see IPOPT paper
 
-        ///Options for testing and debugging
+        //Options for linked QP solvers
+        #ifdef QPSOLVER_QPOASES
+            int qpOASES_printLevel;                 ///< print level of qpOASES sub-qp solver, 0 = PL_NONE, 1 = PL_LOW, 2 = PL_MEDIUM, 3 = PL_HIGH
+            double qpOASES_terminationTolerance;    ///< Termination tolerance of qp-subproblem solver qpOASES
+        #endif
+
+        #ifdef QPSOLVER_GUROBI
+            //Gurobi options
+            int gurobi_Method;
+            int gurobi_NumericFocus;
+            int gurobi_OutputFlag;
+            int gurobi_Presolve;
+            int gurobi_Aggregate;
+            int gurobi_BarHomogeneous;
+            double gurobi_OptimalityTol;
+            double gurobi_FeasibilityTol;
+            double gurobi_PSDTol;
+
+            //Scaling factor for identity added to hessian in gurobi model
+            double gurobi_solver_regularization_factor; ///< Scaling factor for identity added to hessian when invoking gurobi
+        #endif
 
     /*
      * Methods

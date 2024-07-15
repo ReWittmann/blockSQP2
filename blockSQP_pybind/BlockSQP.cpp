@@ -6,6 +6,8 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <string>
+#include "blocksqp_options.hpp"
 #include "blocksqp_method.hpp"
 #include "blocksqp_condensing.hpp"
 #include "qpOASES.hpp"
@@ -404,12 +406,10 @@ public:
         qp_cond->getDualSolution(delta_Lambda_cond.array);
 
         C->recover_var_mult(delta_Xi_cond, delta_Lambda_cond, delta_Xi_rest, delta_Lambda_rest);
-
     }
-
 };
 
-
+/*
 class TC_restoration_Test{
 public:
     blockSQP::TC_restoration_Problem *rest_Prob;
@@ -433,26 +433,8 @@ public:
         rest_Prob->initialize(xi_rest, lambda_rest, rest_nz.ptr, rest_row.ptr, rest_colind.ptr);
     }
 };
+*/
 
-
-
-/*
-struct Prob_Data{
-
-
-	blockSQP::Matrix xi;			///< optimization variables
-	blockSQP::Matrix lambda;		///< Lagrange multipliers
-	double objval;				///< objective function value
-	blockSQP::Matrix constr;		///< constraint function values
-	blockSQP::Matrix gradObj;		///< gradient of objective
-	blockSQP::Matrix constrJac;		///< constraint Jacobian (dense)
-	double_pointer_interface jacNz;		///< nonzero elements of constraint Jacobian
-	int_pointer_interface jacIndRow;		///< row indices of nonzero elements
-	int_pointer_interface jacIndCol;		///< starting indices of columns
-	blockSQP::SymMatrix *hess;		///< Hessian of the Lagrangian (blockwise)
-	int dmode;				///< derivative mode
-	int info;				///< error flag
-};*/
 
 struct Prob_Data{
     double_pointer_interface xi;			///< optimization variables
@@ -635,7 +617,7 @@ public:
 
         *info = Cpp_Data.info;
         std::cout << "info is " << *info << "\n";
-        //*info = 1;
+        //_ *info = 1;
     }
 
 
@@ -761,8 +743,6 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("printLevel",&blockSQP::SQPoptions::printLevel)
 	.def_readwrite("printColor",&blockSQP::SQPoptions::printColor)
 	.def_readwrite("debugLevel",&blockSQP::SQPoptions::debugLevel)
-	.def_readwrite("qpOASES_print_level", &blockSQP::SQPoptions::qpOASES_print_level)
-	.def_readwrite("qpOASES_terminationTolerance", &blockSQP::SQPoptions::qpOASES_terminationTolerance)
 	.def_readwrite("eps",&blockSQP::SQPoptions::eps)
 	.def_readwrite("inf",&blockSQP::SQPoptions::inf)
 	.def_readwrite("opttol",&blockSQP::SQPoptions::opttol)
@@ -779,7 +759,9 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("fallbackScaling",&blockSQP::SQPoptions::fallbackScaling)
 	.def_readwrite("maxTimeQP",&blockSQP::SQPoptions::maxTimeQP)
 	.def_readwrite("iniHessDiag",&blockSQP::SQPoptions::iniHessDiag)
+	.def_readwrite("HessDiag2",&blockSQP::SQPoptions::HessDiag2)
 	.def_readwrite("colEps",&blockSQP::SQPoptions::colEps)
+	.def_readwrite("olEps", &blockSQP::SQPoptions::olEps)
 	.def_readwrite("colTau1",&blockSQP::SQPoptions::colTau1)
 	.def_readwrite("colTau2",&blockSQP::SQPoptions::colTau2)
 	.def_readwrite("hessDamp",&blockSQP::SQPoptions::hessDamp)
@@ -796,8 +778,35 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("max_bound_refines", &blockSQP::SQPoptions::max_bound_refines)
 	.def_readwrite("max_correction_steps", &blockSQP::SQPoptions::max_correction_steps)
 	.def_readwrite("dep_bound_tolerance", &blockSQP::SQPoptions::dep_bound_tolerance)
-	.def_readwrite("integration_correction_stepsize", &blockSQP::SQPoptions::integration_correction_stepsize)
-	//Test options
+	.def_readwrite("size_hessian_first_step", &blockSQP::SQPoptions::size_hessian_first_step)
+	.def_property("which_QPsolver", [](blockSQP::SQPoptions &opts)->std::string{
+        if (opts.which_QPsolver == blockSQP::QPSOLVER::QPOASES) return "qpOASES";
+        else if (opts.which_QPsolver == blockSQP::QPSOLVER::GUROBI) return "gurobi";
+        return "any";
+        },
+    [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
+        if (QPsolver_name == "qpOASES") opts.which_QPsolver = blockSQP::QPSOLVER::QPOASES;
+        else if (QPsolver_name == "gurobi") opts.which_QPsolver = blockSQP::QPSOLVER::GUROBI;
+        else opts.which_QPsolver = blockSQP::QPSOLVER::ANY;
+        return;
+    }
+    )
+    #ifdef QPSOLVER_QPOASES
+        .def_readwrite("qpOASES_printLevel", &blockSQP::SQPoptions::qpOASES_printLevel)
+        .def_readwrite("qpOASES_terminationTolerance", &blockSQP::SQPoptions::qpOASES_terminationTolerance)
+	#endif
+	#ifdef QPSOLVER_GUROBI
+        .def_readwrite("gurobi_Method", &blockSQP::SQPoptions::gurobi_Method)
+        .def_readwrite("gurobi_NumericFocus", &blockSQP::SQPoptions::gurobi_NumericFocus)
+        .def_readwrite("gurobi_OutputFlag", &blockSQP::SQPoptions::gurobi_OutputFlag)
+        .def_readwrite("gurobi_Presolve", &blockSQP::SQPoptions::gurobi_Presolve)
+        .def_readwrite("gurobi_Aggregate", &blockSQP::SQPoptions::gurobi_Aggregate)
+        .def_readwrite("gurobi_BarHomogeneous", &blockSQP::SQPoptions::gurobi_BarHomogeneous)
+        .def_readwrite("gurobi_OptimalityTol", &blockSQP::SQPoptions::gurobi_OptimalityTol)
+        .def_readwrite("gurobi_FeasibilityTol", &blockSQP::SQPoptions::gurobi_FeasibilityTol)
+        .def_readwrite("gurobi_PSDTol", &blockSQP::SQPoptions::gurobi_PSDTol)
+        .def_readwrite("gurobi_solver_regularization_factor", &blockSQP::SQPoptions::gurobi_solver_regularization_factor)
+	#endif
 	;
 
 py::class_<int_array>(m,"int_array",py::buffer_protocol())
@@ -936,7 +945,7 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
 	.def("init", &blockSQP::SQPmethod::init)
 	.def("run", &blockSQP::SQPmethod::run, py::arg("maxIt"), py::arg("warmStart") = 0)
 	.def("finish", &blockSQP::SQPmethod::finish)
-    .def("resetHessian", static_cast<void (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::resetHessian))
+    .def("resetHessians", static_cast<void (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::resetHessians))
     .def_readwrite("param", &blockSQP::SQPmethod::param)
     ;
 
@@ -966,6 +975,7 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def_readonly("constrJac", &blockSQP::SQPiterate::constrJac)
 	.def_readonly("trialXi", &blockSQP::SQPiterate::trialXi)
 	.def_readwrite("use_homotopy", &blockSQP::SQPiterate::use_homotopy)
+	.def("get_hessblock", [](blockSQP::SQPiterate &vars, int i){return vars.hess[i];})
 	;
 
 py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
@@ -1080,13 +1090,14 @@ py::class_<blockSQP::TC_restoration_Problem, blockSQP::Problemspec>(m, "TC_resto
     .def_readwrite("xi_ref", &blockSQP::TC_restoration_Problem::xi_ref)
     ;
 
+/*
 py::class_<TC_restoration_Test>(m, "TC_restoration_Test")
     .def(py::init<blockSQP::TC_restoration_Problem *>())
     .def("init", &TC_restoration_Test::init)
     .def_readonly("rest_nz", &TC_restoration_Test::rest_nz)
     .def_readonly("rest_row", &TC_restoration_Test::rest_row)
     .def_readonly("rest_colind", &TC_restoration_Test::rest_colind);
-
+*/
 
 py::class_<blockSQP::TC_feasibility_Problem, blockSQP::Problemspec>(m, "TC_feasibility_Problem")
     .def(py::init<blockSQP::Problemspec*, blockSQP::Condenser*>())

@@ -21,12 +21,35 @@
 #include "stdio.h"
 #include "string.h"
 #include <set>
+#include <string>
+#include <stdexcept>
 
 namespace blockSQP
 {
 
 typedef char PATHSTR[4096];
 
+
+class NotImplementedError : public std::logic_error{
+public:
+    NotImplementedError(std::string info) : std::logic_error("Missing implementation of " + info){}
+};
+
+
+class ParameterError : public std::logic_error{
+public:
+    ParameterError(std::string info) : std::logic_error(info){}
+};
+
+
+
+
 } // namespace blockSQP
+
+
+
+
+
+
 
 #endif

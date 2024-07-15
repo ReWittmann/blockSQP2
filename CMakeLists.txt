@@ -1,6 +1,4 @@
-
 cmake_minimum_required(VERSION 3.18)
-
 
 # Project Information
 project(blockSQP
@@ -8,22 +6,24 @@ project(blockSQP
     HOMEPAGE_URL https://github.com/djanka2/blockSQP
     LANGUAGES CXX
     )
+    
+
+#Link possible QP solvers, 
+#QPOASES
+#	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../qpOASES/include)
+#	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../qpOASES/libs/libqpOASES.so)
+#	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
+#GUROBI
+#	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../gurobi/.../include)
+#	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../gurobi/.../lib/libgurobi_c++.a /path/to/.../gurobi/.../lib/libgurobi110.so)
+#	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_GUROBI)
+#################
+
+
 
 # Find dependencies: LAPACK
 find_package(LAPACK REQUIRED)
 find_package(BLAS REQUIRED)
-
-# Find dependencies: qpOASES
-find_path(QPOASES_PREFIX
-    include/qpOASES.hpp
-    DOC "qpOASES directory prefix."
-    REQUIRED
-    )
-#find_library(QPOASES_LIBRARY
-#    qpOASES
-#    REQUIRED
-#    )
-
 
 # Add target
 add_library(blockSQP SHARED
@@ -39,6 +39,7 @@ add_library(blockSQP SHARED
     src/blocksqp_qp.cpp
     src/blocksqp_restoration.cpp
     src/blocksqp_stats.cpp
+    src/blocksqp_qpsolver.cpp
     )
 set_property(TARGET blockSQP PROPERTY PUBLIC_HEADER
 	include/blocksqp_condensing.hpp
@@ -52,20 +53,20 @@ set_property(TARGET blockSQP PROPERTY PUBLIC_HEADER
     include/blocksqp_problemspec.hpp
     include/blocksqp_restoration.hpp
     include/blocksqp_stats.hpp
+    include/blocksqp_qpsolver.hpp
     )
     
-target_compile_options(blockSQP PUBLIC)# -g -O0)
 
-#############################
-#Path to qpOASES needs to be added here
-#############################
-target_include_directories(blockSQP PUBLIC include PATH/TO/qpOASES/include)
-target_link_libraries(blockSQP LAPACK::LAPACK PATH/TO/qpOASES/libs/libqpOASES.so)
+target_compile_options(blockSQP PUBLIC -g -O0 ${QPSOLVER_FLAGS})
+target_include_directories(blockSQP PUBLIC include ${QPSOLVER_INCLUDE})
+target_link_libraries(blockSQP LAPACK::LAPACK ${QPSOLVER_LIB})
+
 set_target_properties(blockSQP
 	PROPERTIES
 	LIBRARY_OUTPUT_DIRECTORY "~/blockSQP_modified/lib")
 
 add_executable(example1 examples/example1.cpp)
+target_compile_options(example1 PUBLIC -g -O0)
 target_link_libraries(example1 blockSQP)
 set_target_properties(example1
 	PROPERTIES
@@ -105,13 +106,30 @@ set_target_properties(TEST_condensing_SOC
 	RUNTIME_OUTPUT_DIRECTORY "~/blockSQP_modified/examples"
 )
 
-#add_executable(TEST_block examples/TEST_block.cpp)
-#target_compile_options(TEST_block PUBLIC -g -O0)
-#target_link_libraries(TEST_block blockSQP)
-#set_target_properties(TEST_block
-#	PROPERTIES
-#	RUNTIME_OUTPUT_DIRECTORY "~/blockSQP_modified/examples"
-#)
+add_executable(TEST_block examples/TEST_block.cpp)
+target_compile_options(TEST_block PUBLIC -g -O0)
+target_link_libraries(TEST_block blockSQP)
+set_target_properties(TEST_block
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "~/blockSQP_modified/examples"
+)
+
+add_executable(TEST_qp examples/TEST_qp.cpp)
+target_compile_options(TEST_qp PUBLIC -g -O0)
+target_link_libraries(TEST_qp blockSQP)
+set_target_properties(TEST_qp
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "~/blockSQP_modified/examples"
+)
+
+add_executable(TEST_condensing_QPS examples/TEST_condensing_QPS.cpp)
+target_compile_options(TEST_condensing_QPS PUBLIC -g -O0)
+target_link_libraries(TEST_condensing_QPS blockSQP)
+set_target_properties(TEST_condensing_QPS
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "~/blockSQP_modified/examples"
+)
+
 
 install(TARGETS blockSQP
     LIBRARY

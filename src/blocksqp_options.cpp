@@ -15,7 +15,9 @@
  */
 
 #include "blocksqp_options.hpp"
+#include "blocksqp_qpsolver.hpp"
 #include <iostream>
+#include <limits>
 
 namespace blockSQP
 {
@@ -44,9 +46,12 @@ SQPoptions::SQPoptions()
 
     //eps = 2.2204e-16;
     eps = 1.0e-16;
-    inf = 1.0e20;
+    //inf = 1.0e20;
+    inf = std::numeric_limits<double>::infinity();
     opttol = 1.0e-6;
     nlinfeastol = 1.0e-6;
+
+    which_QPsolver = QPSOLVER::ANY;
 
     // 0: no globalization, 1: filter line search
     globalization = 1;
@@ -73,7 +78,7 @@ SQPoptions::SQPoptions()
     hessScaling = 2;
     fallbackScaling = 4;
     iniHessDiag = 1.0;
-
+    HessDiag2 = 1.0;
 
     // Activate damping strategy for BFGS (if deactivated, BFGS might yield indefinite updates!)
     hessDamp = 1;
@@ -85,6 +90,8 @@ SQPoptions::SQPoptions()
     hessUpdate = 1;
     fallbackUpdate = 2;
 
+    size_hessian_first_step = false;
+
     //
     convStrategy = 0;
 
@@ -95,8 +102,6 @@ SQPoptions::SQPoptions()
     max_bound_refines = 3;
     max_correction_steps = 5;
 
-    //For correcting integration errors
-    integration_correction_stepsize = 1.0;
 
     // 0: full memory updates 1: limited memory
     hessLimMem = 1;
@@ -120,6 +125,8 @@ SQPoptions::SQPoptions()
 
     // Oren-Luenberger scaling parameters
     colEps = 0.1;
+    // Minimum sizing factor in first iteration (OL sizing)
+    olEps = 1.0e-4;
     colTau1 = 0.5;
     colTau2 = 1.0e4;
 
@@ -141,12 +148,28 @@ SQPoptions::SQPoptions()
     kappaPlusMax = 100.0;
     deltaH0 = 1.0e-4;
 
-    // qpOASES options
-    qpOASES_print_level = 1;
-    qpOASES_terminationTolerance = 5.0e6*2.221e-16;
-
-
+    //For SCQPmethod subclasses
     dep_bound_tolerance = 1e-7;
+
+    //Options for linked QP solvers
+    #ifdef QPSOLVER_QPOASES
+        qpOASES_printLevel = 1;
+        qpOASES_terminationTolerance = 5.0e6*2.221e-16;
+    #endif
+
+    #ifdef QPSOLVER_GUROBI
+        gurobi_Method = 2;
+        gurobi_NumericFocus = 3;
+        gurobi_OutputFlag = 0;
+        gurobi_Presolve = -1;
+        gurobi_Aggregate = 1;
+        gurobi_OptimalityTol = 1e-9;
+        gurobi_FeasibilityTol = 1e-9;
+        gurobi_BarHomogeneous = 0;
+        gurobi_PSDTol = 1e-6;
+
+        gurobi_solver_regularization_factor = 1e-8;
+    #endif
 
 }
 
@@ -165,14 +188,16 @@ void SQPoptions::optionsConsistency()
 
     // If we don't use limited memory BFGS we need to store only one vector.
     if( !hessLimMem )
-        hessMemsize = 1;
+        hessMemsize = std::numeric_limits<int>::max();
 
+    /*
     if( sparseQP != 2 && hessUpdate == 1 )
     {
         printf( "SR1 update only works with qpOASES Schur complement version. Using BFGS updates instead.\n" );
         hessUpdate = 2;
         hessScaling = fallbackScaling;
     }
+    */
 
     if (globalization == 1 && hessUpdate == 1 && (maxConvQP < 1)){
         std::cout << "Fallback update is needed for SR1, setting maxConvQP to 1\n";

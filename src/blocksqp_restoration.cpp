@@ -112,10 +112,6 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
     for( i=0; i<parent->nVar; i++ )
     {
         diff = xiOrig( i ) - xiRef( i );
-        //OLD:
-        //regTerm += diagScale( i ) * diff * diff;
-
-        //NEW:
         regTerm += diagScale(i) * diagScale(i) * diff * diff;
     }
     regTerm = 0.5 * zeta * regTerm;
@@ -178,10 +174,6 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
     for( i=0; i<parent->nVar; i++ )
     {
         diff = xiOrig( i ) - xiRef( i );
-        //OLD:
-        //regTerm += diagScale( i ) * diff * diff;
-
-        //NEW:
         regTerm += diagScale(i) * diagScale(i) * diff * diff;
     }
     regTerm = 0.5 * zeta * regTerm;
@@ -1559,14 +1551,12 @@ void TC_feasibility_Problem::evaluate(
     xi_orig.Submatrix( xi, parent->nVar, 1, 0, 0 );
     slack.Submatrix( xi, parent_cond->num_true_cons, 1, parent->nVar, 0 );
 
-
     for (int i = 0; i < parent->nVar; i++){
         if (std::isnan(xi_orig(i))){
             std::cout << "Submatrix value is nan!\n" << "Index = " << i << "\nMatrix value = " << xi(i) << "\n";
             throw std::invalid_argument("Submatrix value is nan!");
         }
     }
-
 
     // Evaluate constraints of the original problem
     parent->evaluate(xi_orig, lambda, objval, constr_orig,

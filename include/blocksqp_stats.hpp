@@ -63,6 +63,9 @@ class SQPstats
         FILE *jacFile;               ///< Jacobian of one iteration
         FILE *hessFile;              ///< Hessian of one iteration
 
+        //Progress
+        //double obj_progress;
+
     /*
      * Methods
      */
@@ -79,7 +82,7 @@ class SQPstats
         void printDualVars( const Matrix &lambda );
         /// Print all QP data to files to be read in MATLAB
         void dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparseQP );
-        void dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProblem *qp, int sparseQP );
+        //void dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProblem *qp, int sparseQP );
         void printVectorCpp( FILE *outfile, double *vec, int len, char* varname );
         void printVectorCpp( FILE *outfile, int *vec, int len, char* varname );
         void printCppNull( FILE *outfile, char* varname );

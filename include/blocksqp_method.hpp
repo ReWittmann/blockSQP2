@@ -17,37 +17,32 @@
 #ifndef BLOCKSQP_METHOD_HPP
 #define BLOCKSQP_METHOD_HPP
 
-#include "qpOASES.hpp"
+//#include "qpOASES.hpp"
 #include "blocksqp_defs.hpp"
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_options.hpp"
 #include "blocksqp_iterate.hpp"
 #include "blocksqp_stats.hpp"
+#include "blocksqp_qpsolver.hpp"
 #include <iostream>
 
-namespace blockSQP
-{
+namespace blockSQP{
 
 /**
  * \brief Describes an SQP method for a given problem and set of algorithmic options.
  * \author Dennis Janka
  * \date 2012-2015
  */
-class SQPmethod
-{
+class SQPmethod{
+
     public:
         Problemspec*             prob;        ///< Problem structure (has to provide evaluation routines)
-        SQPiterate*              vars;        ///< All SQP variables for this method
         SQPoptions*              param;       ///< Set of algorithmic options and parameters for this method
         SQPstats*                stats;       ///< Statistics object for current SQP run
 
-    //qpOASES Data
-        qpOASES::SQProblem*      qp;          ///< qpOASES qp object
-        qpOASES::SQProblem*      qpSave;      ///< qpOASES qp object
-
-        qpOASES::Matrix* A_qp;                ///< qpOASES constraint matrix
-        qpOASES::SymmetricMatrix* H_qp;       ///< qpOASES quadratic objective matrix
+        SQPiterate*              vars;        ///< All SQP variables for this method
+        QPsolver*                sub_QP;      ///< Class wrapping an external QP solver
 
     //Feasibility restoration problem
         Problemspec*             rest_prob;
@@ -88,14 +83,18 @@ class SQPmethod
          * Solve QP subproblem
          */
         /// Update the bounds on the current step, i.e. the QP variables
-        void updateStepBounds( bool soc );
+        void updateStepBounds();
+        /// Update the bounds on the current step for a second order correction, i.e. lb_s = lb - constr(trialXi) + constrJac(Xi)*deltaXi = prob->lb_con - vars->trialConstr + vars->AdeltaXi
+        void updateStepBoundsSOC();
         /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
         //If conv_qp is false, solution is tries with increasingly convexified hessian approximations, else only the convex fallback hessian is used
         virtual int solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false );
-        /// Solve a QP with updated constraint bounds
+        /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         virtual void computeNextHessian( int idx, int maxQP );
+        /// Compute a convexified hessian and store it in vars->hess2, set hess to hess2
+        virtual void computeConvexHessian();
 
         /*
          * Globalization Strategy
@@ -117,9 +116,7 @@ class SQPmethod
         /// Augment current filter by pair (cNorm, obj)
         void augmentFilter( double cNorm, double obj );
         /// Perform a second order correction step (solve QP)
-        virtual bool secondOrderCorrection( double cNorm, double cNormTrial, double dfTdeltaXi, bool swCond, int it );
-        /// Reduce stepsize if a second order correction step is rejected
-        //void reduceSOCStepsize( double *alphaSOC );
+        virtual bool secondOrderCorrection( double cNorm, double cNormTrial, double dfTdeltaXi, bool swCond);
         /// Start feasibility restoration heuristic
         int feasibilityRestorationHeuristic();
         /// Start feasibility restoration phase (solve NLP)
@@ -131,60 +128,69 @@ class SQPmethod
          * Hessian Approximation
          */
         /// Set initial Hessian: Identity matrix
-        void calcInitialHessian();
+        void calcInitialHessian(SymMatrix *hess);
         /// [blockwise] Set initial Hessian: Identity matrix
-        void calcInitialHessian( int iBlock );
-        /// Reset Hessian to identity and remove past information on Lagrange gradient and steps
-        void resetHessian();
-        /// [blockwise] Reset Hessian to identity and remove past information on Lagrange gradient and steps
-        void resetHessian( int iBlock );
+        void calcInitialHessian(int iBlock, SymMatrix *hess);
 
+        void calcInitialHessians();
+
+        void calcScaledInitialHessian(double scale, SymMatrix *hess);
+        void calcScaledInitialHessian(int iBlock, double scale, SymMatrix *hess);
+
+        /// Reset Hessian to identity and remove past information on Lagrange gradient and steps
+        void resetHessian(SymMatrix *hess);
+        /// [blockwise] Reset Hessian to identity and remove past information on Lagrange gradient and steps
+        void resetHessian(int iBlock, SymMatrix *hess);
+        /// Shortcut method to reset the hessian and the fallback hessian if it is in use
+        void resetHessians();
+
+        ///
+        /// Update methods for the block hessian. May store data in vars for the specific hessian given (hess1 or hess2)
+        ///
         /// Compute current Hessian approximation by finite differences
-        int calcFiniteDiffHessian();
+        int calcFiniteDiffHessian(SymMatrix *hess);
         /// Compute full memory Hessian approximations based on update formulas
-        void calcHessianUpdate( int updateType, int hessScaling );
+        void calcHessianUpdate(int updateType, int hessScaling, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
-        void calcHessianUpdateLimitedMemory( int updateType, int hessScaling );
+        void calcHessianUpdateLimitedMemory(int updateType, int hessScaling, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
-        void calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock );
+        void calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification
-        void calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock );
+        void calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess);
         /// Set pointer to correct step and Lagrange gradient difference in a limited memory context
         void updateDeltaGamma();
 
         /*
          * Scaling of Hessian Approximation
          */
-        /// [blockwise] Update scalars for COL sizing of Hessian approximation
-        void updateScalars( const Matrix &gamma, const Matrix &delta, int iBlock );
+        /// [blockwise] Update scalars for COL sizing of Hessian approximation (full memory, save last 2)
+        void updateScalarProducts();
+        /// [blockwise] Update scalars for COL sizing of Hessian approximation (limited memory, save param->hessMemsize)
+        void updateScalarProductsLimitedMemory();
+
         /// [blockwise] Size Hessian using SP, OL, or mean sizing factor
-        void sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option );
+        void sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option, SymMatrix *hess);
         /// [blockwise] Size Hessian using the COL scaling factor
-        void sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iBlock );
+        void sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iBlock, bool first_sizing, SymMatrix *hess);
 };
 
 ////////////////////////////////////////////////////////////
 
-
+//Sequential Condensed Quadratic Programming method
 class SCQPmethod : public SQPmethod{
 public:
     Condenser *cond;
-    qpOASES::SQProblemSchur*      qp_check;
 
-    //Restoration problem condenser
+    //Restoration problem with own condenser
     Condenser*              rest_cond;
     vblock*                 rest_vblocks;
     cblock*                 rest_cblocks;
     int*                    rest_h_sizes;
     condensing_target*      rest_targets;
 
-    SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND, SQPiterate *IT);
     SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
+    SCQPmethod();
     virtual ~SCQPmethod();
-
-
-    //SCQP_rest_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    virtual void compute_condensed_QP(int idx, int maxQP);
 
     virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
@@ -194,14 +200,11 @@ public:
 
 class SCQP_bound_method : public SCQPmethod{
 public:
-
     SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    //virtual ~SCQP_bound_method();
 
     virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 };
-
 
 
 class SCQP_correction_method : public SCQPmethod{
@@ -215,12 +218,8 @@ public:
     virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
-    /// Start feasibility restoration phase (solve NLP)
     virtual int feasibilityRestorationPhase();
-    //virtual bool secondOrderCorrection(double cNorm, double cNormTrial, double dfTdeltaXi, bool swCond, int it);
 };
-
-
 
 
 

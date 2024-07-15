@@ -18,7 +18,6 @@
 
 namespace blockSQP
 {
-
 /**
  * Compute the inverse of a matrix
  * using LU decomposition (DGETRF and DGETRI)
@@ -61,6 +60,7 @@ int calcEigenvalues( const SymMatrix &B, Matrix &ev )
     SymMatrix temp;
     double *work, *dummy = 0;
     int info, iDummy = 1;
+    char JOB = 'N', UPLO = 'L';
 
     n = B.M();
     ev.Dimension( n ).Initialize( 0.0 );
@@ -69,13 +69,10 @@ int calcEigenvalues( const SymMatrix &B, Matrix &ev )
     // copy Matrix, will be overwritten
     temp = SymMatrix( B );
 
-    // DSPEV computes all the eigenvalues and, optionally, eigenvectors of a
-    // real symmetric matrix A in packed storage.
-    dspev_( "N", "L", &n, temp.ARRAY(), ev.ARRAY(), dummy, &iDummy,
-            work, &info, strlen("N"), strlen("L") );
+    dspev_( &JOB, &UPLO, &n, temp.ARRAY(), ev.ARRAY(), dummy, &iDummy,
+            work, &info, 1, 1 );
 
     delete[] work;
-
     return info;
 }
 
@@ -91,17 +88,15 @@ double estimateSmallestEigenvalue( const Matrix &B )
     double lambdaMin = 0.0;
 
     // For each row, sum up off-diagonal elements
-    for( i=0; i<dim; i++ )
-    {
+    for (i = 0; i < dim; i++){
         radius = 0.0;
-        for( j=0; j<dim; j++ )
-            if( j != i )
+        for (j = 0; j < dim; j++)
+            if (j != i)
                 radius += fabs( B( i,j ) );
 
-        if( B( i,i ) - radius < lambdaMin )
-            lambdaMin = B( i,i ) - radius;
+        if (B(i,i) - radius < lambdaMin)
+            lambdaMin = B(i,i) - radius;
     }
-
     return lambdaMin;
 }
 

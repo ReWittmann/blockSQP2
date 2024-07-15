@@ -30,82 +30,92 @@ namespace blockSQP
 /**
  * Initial Hessian: Identity matrix
  */
-void SQPmethod::calcInitialHessian()
-{
-    int iBlock;
-
-    for( iBlock=0; iBlock<vars->nBlocks; iBlock++ )
+void SQPmethod::calcInitialHessian(SymMatrix *hess){
+    for (int iBlock=0; iBlock<vars->nBlocks; iBlock++ )
         //if objective derv is computed exactly, don't set the last block!
-        if( !(param->whichSecondDerv == 1 && param->blockHess && iBlock == vars->nBlocks-1) )
-            calcInitialHessian( iBlock );
+        if (!(param->whichSecondDerv == 1 && param->blockHess && iBlock == vars->nBlocks-1)){
+            hess[iBlock].Initialize(0.0);
+            for (int i=0; i<hess[iBlock].m; i++)
+                hess[iBlock]( i, i ) = param->iniHessDiag;
+        }
 }
 
 
 /**
  * Initial Hessian for one block: Identity matrix
  */
-void SQPmethod::calcInitialHessian( int iBlock )
-{
-    vars->hess[iBlock].Initialize( 0.0 );
-
+void SQPmethod::calcInitialHessian(int iBlock, SymMatrix *hess){
+    hess[iBlock].Initialize(0.0);
     // Each block is a diagonal matrix
-    for( int i=0; i<vars->hess[iBlock].M(); i++ )
-        vars->hess[iBlock]( i, i ) = param->iniHessDiag;
+    for (int i = 0; i < hess[iBlock].m; i++)
+        hess[iBlock](i, i) = param->iniHessDiag;
+}
 
-    // If we maintain 2 Hessians, also reset the second one
-    if( vars->hess2 != NULL )
-    {
-        vars->hess2[iBlock].Initialize( 0.0 );
-        for( int i=0; i<vars->hess2[iBlock].M(); i++ )
-            vars->hess2[iBlock]( i, i ) = param->iniHessDiag;
-    }
+void SQPmethod::calcInitialHessians(){
+    calcInitialHessian(vars->hess1);
+    if (vars->hess2 != nullptr) calcInitialHessian(vars->hess2);
 }
 
 
-void SQPmethod::resetHessian()
+void SQPmethod::calcScaledInitialHessian(double scale, SymMatrix *hess){
+    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++)
+        //if objective derv is computed exactly, don't set the last block!
+        if (!(param->whichSecondDerv == 1 && param->blockHess && iBlock == vars->nBlocks-1)){
+            hess[iBlock].Initialize(0.0);
+            for (int i = 0; i < hess[iBlock].m; i++)
+                hess[iBlock]( i, i ) = scale;
+        }
+}
+
+void SQPmethod::calcScaledInitialHessian(int iBlock, double scale, SymMatrix *hess){
+    hess[iBlock].Initialize( 0.0 );
+    // Each block is a diagonal matrix
+    for (int i = 0; i < hess[iBlock].m; i++)
+        hess[iBlock](i, i) = scale;
+}
+
+
+
+
+void SQPmethod::resetHessian(SymMatrix *hess)
 {
     for( int iBlock=0; iBlock<vars->nBlocks; iBlock++ )
         //if objective derv is computed exactly, don't set the last block!
-        if( !(param->whichSecondDerv == 1 && param->blockHess && iBlock == vars->nBlocks - 1) )
-            resetHessian( iBlock );
-
+        if( !(param->whichSecondDerv == 1 && param->blockHess && iBlock == vars->nBlocks - 1) ){
+            vars->noUpdateCounter[iBlock] = -1;
+            vars->nquasi[iBlock] = 0;
+            calcInitialHessian(iBlock, hess);
+        }
     //Don't use homotopy since changing the hessian to (scaled) identity can drastically change the QP
     vars->use_homotopy = false;
-
 }
 
 
-void SQPmethod::resetHessian( int iBlock )
-{
-    Matrix smallDelta, smallGamma;
-    int nVarLocal = vars->hess[iBlock].M();
-
-    // smallGamma and smallDelta are either subvectors of gamma and delta
-    // or submatrices of gammaMat, deltaMat, i.e. subvectors of gamma and delta from m prev. iterations (for L-BFGS)
-    smallGamma.Submatrix( vars->gammaMat, nVarLocal, vars->gammaMat.N(), vars->blockIdx[iBlock], 0 );
-    smallDelta.Submatrix( vars->deltaMat, nVarLocal, vars->deltaMat.N(), vars->blockIdx[iBlock], 0 );
-
-    // Remove past information on Lagrangian gradient difference
-    smallGamma.Initialize( 0.0 );
-
-    // Remove past information on steps
-    smallDelta.Initialize( 0.0 );
-
-    // Remove information on old scalars (used for COL sizing)
-    vars->deltaNorm( iBlock ) = 1.0;
-    vars->deltaGamma( iBlock ) = 0.0;
-    vars->deltaNormOld( iBlock ) = 1.0;
-    vars->deltaGammaOld( iBlock ) = 0.0;
-
+void SQPmethod::resetHessian(int iBlock, SymMatrix *hess){
     vars->noUpdateCounter[iBlock] = -1;
+    vars->nquasi[iBlock] = 0;
+    calcInitialHessian(iBlock, hess);
 
-    calcInitialHessian( iBlock );
+    if (hess == vars->hess1){
+        vars->deltaNormOld( iBlock ) = 1.0;
+        vars->deltaGammaOld( iBlock ) = 0.0;
+    }
+    else{
+        vars->deltaNormOldFallback( iBlock ) = 1.0;
+        vars->deltaGammaOldFallback( iBlock ) = 0.0;
+    }
+}
+
+void SQPmethod::resetHessians(){
+    resetHessian(vars->hess1);
+    if (vars->hess2 != nullptr) resetHessian(vars->hess2);
+    return;
 }
 
 /**
  * Approximate Hessian by finite differences
  */
-int SQPmethod::calcFiniteDiffHessian()
+int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess)
 {
     int iVar, jVar, k, iBlock, maxBlock, info, idx, idx1, idx2;
     double dummy, lowerVio, upperVio;
@@ -115,7 +125,7 @@ int SQPmethod::calcFiniteDiffHessian()
     const double myDelta = 1.0e-4;
     const double minDelta = 1.0e-6;
 
-    pert.Dimension( prob->nVar );
+    pert.Dimension(prob->nVar);
 
     info = 0;
 
@@ -172,13 +182,13 @@ int SQPmethod::calcFiniteDiffHessian()
         if( param->sparseQP )
         {
             prob->evaluate( vars->xi, vars->lambda, &dummy, varsP.constr, varsP.gradObj,
-                            varsP.jacNz, varsP.jacIndRow, varsP.jacIndCol, vars->hess, 1, &info );
+                            varsP.jacNz, varsP.jacIndRow, varsP.jacIndCol, hess, 1, &info );
             calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.jacNz, varsP.jacIndRow,
                                   varsP.jacIndCol, varsP.gradLagrange, 0 );
         }
         else
         {
-            prob->evaluate( vars->xi, vars->lambda, &dummy, varsP.constr, varsP.gradObj, varsP.constrJac, vars->hess, 1, &info );
+            prob->evaluate( vars->xi, vars->lambda, &dummy, varsP.constr, varsP.gradObj, varsP.constrJac, hess, 1, &info );
             calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.constrJac, varsP.gradLagrange, 0 );
         }
 
@@ -192,9 +202,9 @@ int SQPmethod::calcFiniteDiffHessian()
                 for( jVar=iVar; jVar<vars->blockIdx[iBlock+1]-vars->blockIdx[iBlock]; jVar++ )
                 {// Take symmetrized matrices
                     idx2 = vars->blockIdx[iBlock] + jVar;
-                    vars->hess[iBlock]( iVar, jVar ) =  ( varsP.gradLagrange( idx1 ) - vars->gradLagrange( idx2 ) );
-                    vars->hess[iBlock]( iVar, jVar ) += ( varsP.gradLagrange( idx2 ) - vars->gradLagrange( idx1 ) );
-                    vars->hess[iBlock]( iVar, jVar ) *= 0.5 / pert( idx1 );
+                    hess[iBlock]( iVar, jVar ) =  ( varsP.gradLagrange( idx1 ) - vars->gradLagrange( idx2 ) );
+                    hess[iBlock]( iVar, jVar ) += ( varsP.gradLagrange( idx2 ) - vars->gradLagrange( idx1 ) );
+                    hess[iBlock]( iVar, jVar ) *= 0.5 / pert( idx1 );
                 }
             }
         }
@@ -208,70 +218,54 @@ int SQPmethod::calcFiniteDiffHessian()
 }
 
 
-void SQPmethod::sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option )
+void SQPmethod::sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option, SymMatrix *hess)
 {
     int i, j;
     double scale;
     double myEps = 1.0e3 * param->eps;
 
-    if( option == 1 )
-    {// Shanno-Phua
-        scale = adotb( gamma, gamma ) / fmax( adotb( delta, gamma ), myEps );
-    }
-    else if( option == 2 )
-    {// Oren-Luenberger
-        scale = adotb( delta, gamma ) / fmax( adotb( delta, delta ), myEps );
-        //NEW//
+    //No scaling if delta is zero - we have no information
+    //if (l1VectorNorm(delta) < myEps)
+    //    scale = 1.0;
+    //else{//NEW
+        if( option == 1 )
+        {// Shanno-Phua
+            scale = adotb( gamma, gamma ) / fmax( adotb( delta, gamma ), myEps );
+        }
+        else if( option == 2 )
+        {// Oren-Luenberger
+            scale = adotb( delta, gamma ) / fmax( adotb( delta, delta ), myEps );
+            //NEW//
+            if (scale < 0) scale *= -1;
+            ///////
+            scale = fmin( scale, 1.0 );
+        }
+        else if( option == 3 )
+        {// Geometric mean of 1 and 2
+            scale = sqrt( adotb( gamma, gamma ) / fmax( adotb( delta, delta ), myEps ) );
+        }
+        else
+        {// Invalid option, ignore
+            return;
+        }
+
         if (scale < 0) scale *= -1;
-        ///////
-        scale = fmin( scale, 1.0 );
-    }
-    else if( option == 3 )
-    {// Geometric mean of 1 and 2
-        scale = sqrt( adotb( gamma, gamma ) / fmax( adotb( delta, delta ), myEps ) );
-    }
-    else
-    {// Invalid option, ignore
-        return;
-    }
 
-    //std::cout << "sizeInitialHessian: Scale = " << scale << "\n";
+        scale /= fmax(param->iniHessDiag, myEps);
+        scale = fmax(scale, myEps);
 
-    //OLD
-    /*
-    if( scale > 0.0 )
-    {
-        scale = fmax( scale, myEps );
-        for( i=0; i<vars->hess[iBlock].M(); i++ )
-            for( j=i; j<vars->hess[iBlock].M(); j++ )
-                vars->hess[iBlock]( i,j ) *= scale;
-    }
-    else
-        scale = 1.0;
-    */
-
-    //NEW
-
-    if (scale < 0) scale *= -1;
-
-    scale /= fmax(param->iniHessDiag, myEps);
-
-    scale = fmax(scale, myEps);
-    //std::cout << "OL scaling: scale = " << scale << "\n";
-    for (i = 0; i < vars->hess[iBlock].m; i++){
-        for (j = i; j < vars->hess[iBlock].m; j++){
-            vars->hess[iBlock](i,j) *= scale;
+    //}//END NEW
+    for (i = 0; i < hess[iBlock].m; i++){
+        for (j = i; j < hess[iBlock].m; j++){
+            hess[iBlock](i,j) *= scale;
         }
     }
-
-    //std::cout << "sizeInitialHessian: Modified Scale = " << scale << "\n";
-
     // statistics: average sizing factor
     stats->averageSizingFactor += scale;
 }
 
 
-void SQPmethod::sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iBlock )
+void SQPmethod::sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iBlock, bool first_sizing, SymMatrix *hess)
 {
     int i, j;
     double theta, scale, myEps = 1.0e3 * param->eps;
@@ -280,77 +274,39 @@ void SQPmethod::sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iB
     // Get sTs, sTs_, sTy, sTy_, sTBs
     deltaNorm = vars->deltaNorm(iBlock);
     deltaGamma = vars->deltaGamma(iBlock);
-    deltaNormOld = vars->deltaNormOld(iBlock);
-    deltaGammaOld = vars->deltaGammaOld(iBlock);
+    if (hess == vars->hess1){
+        deltaNormOld = vars->deltaNormOld(iBlock);
+        deltaGammaOld = vars->deltaGammaOld(iBlock);
+    }
+    else{
+        deltaNormOld = vars->deltaNormOldFallback(iBlock);
+        deltaGammaOld = vars->deltaGammaOldFallback(iBlock);
+    }
+
     deltaBdelta = 0.0;
     for( i=0; i<delta.M(); i++ )
         for( j=0; j<delta.M(); j++ )
-            deltaBdelta += delta( i ) * vars->hess[iBlock]( i, j ) * delta( j );
+            deltaBdelta += delta( i ) * hess[iBlock]( i, j ) * delta( j );
 
-    // Centered Oren-Luenberger factor
-    //OLD
-    /*
-    if( vars->noUpdateCounter[iBlock] == -1 ) // in the first iteration, this should equal the OL factor
-        theta = 1.0;
-    else
-        theta = fmin( param->colTau1, param->colTau2 * deltaNorm );
-    if( deltaNorm > myEps && deltaNormOld > myEps )
-    {
-        scale = (1.0 - theta)*deltaGammaOld / deltaNormOld + theta*deltaBdelta / deltaNorm;
-        if( scale > param->eps )
-            scale = ( (1.0 - theta)*deltaGammaOld / deltaNormOld + theta*deltaGamma / deltaNorm ) / scale;
-    }
-    else
-        scale = 1.0;
-
-
-    std::cout << "sizeHessianCOL: Scale = " << scale << "\n";
-    // Size only if factor is between zero and one
-    if( scale < 1.0 && scale > 0.0 )
-    {
-        scale = fmax( param->colEps, scale );
-        //printf("Sizing value (COL) block %i = %g\n", iBlock, scale );
-        for( i=0; i<vars->hess[iBlock].M(); i++ )
-            for( j=i; j<vars->hess[iBlock].M(); j++ )
-                vars->hess[iBlock]( i,j ) *= scale;
-
-        // statistics: average sizing factor
-        stats->averageSizingFactor += scale;
-    }
-    else
-        stats->averageSizingFactor += 1.0;
-    */
-
-    //NEW
-
-    if (vars->noUpdateCounter[iBlock] == -1){ //OL in the first iteration
-        //SUPER NEW
-        //if (deltaNorm > 1.0e3 * myEps){
-        //if (true){
+    //OL in the first iteration
+    if (first_sizing){
         if (deltaNorm > myEps){
-
             scale = deltaGamma/fmax(deltaBdelta, myEps);
             //Scale with absolute value of sizing factor the get good initial matrix magnitude
             if (scale < 0) scale *= -1;
             //Increase initial scaling factor to minimum
-
-            //std::cout << "Init unmodified scale = " << scale << "\n";
-            //scale = fmax(scale, myEps);
-            scale = fmax(scale, 1e-4);
-            //scale = 1.0;
-            //std::cout << "init scale = " << scale << ", hessblock(0,0) = " << vars->hess[iBlock](0,0) << "\n";
+            scale = fmax(scale, param->olEps);
         }
         else{
-            //std::cout << "deltaNorm too small, don't scale\n";
             scale = 1.0;
         }
     }
     else{
-        theta = fmin( param->colTau1, param->colTau2 * deltaNorm );
-        if( deltaNorm > myEps && deltaNormOld > myEps ){
+        theta = fmin(param->colTau1, param->colTau2 * deltaNorm);
+        if (deltaNorm > myEps && deltaNormOld > myEps){
             scale = (1.0 - theta)*deltaGammaOld / deltaNormOld + theta*deltaBdelta / deltaNorm;
-            if( scale > param->eps )
-                scale = ( (1.0 - theta)*deltaGammaOld / deltaNormOld + theta*deltaGamma / deltaNorm ) / scale;
+            if (scale > param->eps)
+                scale = ((1.0 - theta)*deltaGammaOld / deltaNormOld + theta*deltaGamma / deltaNorm) / scale;
 
             //Don't scale if scaling factor is negative, increase scaling factor to minimum
             if (scale < 0) scale = 1.0;
@@ -360,38 +316,29 @@ void SQPmethod::sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iB
             scale = 1.0;
     }
 
-    //std::cout << "sizeHessianCOL: Scale = " << scale << ", hessblock(0,0) = " << vars->hess[iBlock](0,0) << "\n";
-
-    //if (scale < 1.0 && scale > 0){
     if (scale < 1.0){
-        //scale = fmax(param->colEps, scale);
-
-        for( i=0; i<vars->hess[iBlock].M(); i++ )
-            for( j=i; j<vars->hess[iBlock].M(); j++ )
-                vars->hess[iBlock]( i,j ) *= scale;
+        for (i = 0; i < hess[iBlock].m; i++)
+            for (j = i; j < hess[iBlock].m; j++)
+                hess[iBlock](i,j) *= scale;
 
         // statistics: average sizing factor
         stats->averageSizingFactor += scale;
     }
     else
         stats->averageSizingFactor += 1.0;
-
-
-
 }
 
 /**
  * Apply BFGS or SR1 update blockwise and size blocks
  */
-void SQPmethod::calcHessianUpdate( int updateType, int hessScaling )
-{
+void SQPmethod::calcHessianUpdate(int updateType, int hessScaling, SymMatrix *hess){
     int iBlock, nBlocks;
     int nVarLocal;
     Matrix smallGamma, smallDelta;
     bool firstIter;
 
     //if objective derv is computed exactly, don't set the last block!
-    if( param->whichSecondDerv == 1 && param->blockHess )
+    if (param->whichSecondDerv == 1 && param->blockHess)
         nBlocks = vars->nBlocks - 1;
     else
         nBlocks = vars->nBlocks;
@@ -400,56 +347,32 @@ void SQPmethod::calcHessianUpdate( int updateType, int hessScaling )
     stats->hessDamped = 0;
     stats->averageSizingFactor = 0.0;
 
-    for( iBlock=0; iBlock<nBlocks; iBlock++ )
-    {
-        nVarLocal = vars->hess[iBlock].M();
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){
+        nVarLocal = hess[iBlock].m;
 
         // smallGamma and smallDelta are subvectors of gamma and delta, corresponding to partially separability
-        smallGamma.Submatrix( vars->gammaMat, nVarLocal, vars->gammaMat.N(), vars->blockIdx[iBlock], 0 );
-        smallDelta.Submatrix( vars->deltaMat, nVarLocal, vars->deltaMat.N(), vars->blockIdx[iBlock], 0 );
+        smallGamma.Submatrix(vars->gammaMat, nVarLocal, vars->gammaMat.N(), vars->blockIdx[iBlock], 0);
+        smallDelta.Submatrix(vars->deltaMat, nVarLocal, vars->deltaMat.N(), vars->blockIdx[iBlock], 0);
 
         // Is this the first iteration or the first after a Hessian reset?
-        firstIter = ( vars->noUpdateCounter[iBlock] == -1 );
-
-        // Update sTs, sTs_ and sTy, sTy_
-        vars->deltaNormOld(iBlock) = vars->deltaNorm(iBlock);
-        vars->deltaGammaOld(iBlock) = vars->deltaGamma(iBlock);
-        vars->deltaNorm(iBlock) = adotb( smallDelta, smallDelta );
-        vars->deltaGamma(iBlock) = adotb( smallDelta, smallGamma );
+        firstIter = (vars->nquasi[iBlock] == 1);
 
         // Sizing before the update
-        if( hessScaling < 4 && firstIter )
-            sizeInitialHessian( smallGamma, smallDelta, iBlock, hessScaling );
-        else if( hessScaling == 4 )
-            sizeHessianCOL( smallGamma, smallDelta, iBlock );
+        if (hessScaling < 4 && firstIter)
+            sizeInitialHessian( smallGamma, smallDelta, iBlock, hessScaling, hess);
+        else if (hessScaling == 4)
+            sizeHessianCOL( smallGamma, smallDelta, iBlock, firstIter, hess);
 
         // Compute the new update
-        if( updateType == 1 )
-        {
-            calcSR1( smallGamma, smallDelta, iBlock );
-
-            // Prepare to compute fallback update as well
-            vars->hess = vars->hess2;
-
-            // Sizing the fallback update
-            if( param->fallbackScaling < 4 && firstIter )
-                sizeInitialHessian( smallGamma, smallDelta, iBlock, param->fallbackScaling );
-            else if( param->fallbackScaling == 4 )
-                sizeHessianCOL( smallGamma, smallDelta, iBlock );
-
-            // Compute fallback update
-            if( param->fallbackUpdate == 2 )
-                calcBFGS( smallGamma, smallDelta, iBlock );
-
-            // Reset pointer
-            vars->hess = vars->hess1;
-        }
-        else if( updateType == 2 )
-            calcBFGS( smallGamma, smallDelta, iBlock );
+        // deltaNormOld and deltaGammaOld are set here (damping may be applied)
+        if (updateType == 1)
+            calcSR1(smallGamma, smallDelta, iBlock, hess);
+        else if (updateType == 2)
+            calcBFGS(smallGamma, smallDelta, iBlock, true, hess);
 
         // If an update is skipped to often, reset Hessian block
-        if( vars->noUpdateCounter[iBlock] > param->maxConsecSkippedUpdates )
-            resetHessian( iBlock );
+        if(vars->noUpdateCounter[iBlock] > param->maxConsecSkippedUpdates)
+            resetHessian(iBlock, hess);
     }
 
     // statistics: average sizing factor
@@ -457,17 +380,16 @@ void SQPmethod::calcHessianUpdate( int updateType, int hessScaling )
 }
 
 
-void SQPmethod::calcHessianUpdateLimitedMemory( int updateType, int hessScaling )
-{
+void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int hessScaling, SymMatrix *hess){
     int iBlock, nBlocks, nVarLocal;
     Matrix smallGamma, smallDelta;
     Matrix gammai, deltai;
-    int i, m, pos, posOldest, posNewest;
+    int m, pos, posOldest, posNewest;
     int hessDamped, hessSkipped;
     double averageSizingFactor;
 
     //if objective derv is computed exactly, don't set the last block!
-    if( param->whichSecondDerv == 1 && param->blockHess )
+    if (param->whichSecondDerv == 1 && param->blockHess)
         nBlocks = vars->nBlocks - 1;
     else
         nBlocks = vars->nBlocks;
@@ -477,55 +399,39 @@ void SQPmethod::calcHessianUpdateLimitedMemory( int updateType, int hessScaling 
     stats->hessSkipped = 0;
     stats->averageSizingFactor = 0.0;
 
-    for( iBlock=0; iBlock<nBlocks; iBlock++ )
-    {
-        nVarLocal = vars->hess[iBlock].M();
-
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){
+        nVarLocal = hess[iBlock].m;
         // smallGamma and smallDelta are submatrices of gammaMat, deltaMat,
         // i.e. subvectors of gamma and delta from m prev. iterations
-        smallGamma.Submatrix( vars->gammaMat, nVarLocal, vars->gammaMat.N(), vars->blockIdx[iBlock], 0 );
-        smallDelta.Submatrix( vars->deltaMat, nVarLocal, vars->deltaMat.N(), vars->blockIdx[iBlock], 0 );
+        smallGamma.Submatrix(vars->gammaMat, nVarLocal, vars->gammaMat.N(), vars->blockIdx[iBlock], 0);
+        smallDelta.Submatrix(vars->deltaMat, nVarLocal, vars->deltaMat.N(), vars->blockIdx[iBlock], 0);
 
         // Memory structure
-        if( stats->itCount > smallGamma.N() )
-        {
-            m = smallGamma.N();
-            posOldest = stats->itCount % m;
-            posNewest = (stats->itCount-1) % m;
-        }
-        else
-        {
-            m = stats->itCount;
-            posOldest = 0;
-            posNewest = m-1;
-        }
+        posNewest = vars->dg_pos % smallGamma.n;
+        posOldest = (vars->dg_pos - vars->nquasi[iBlock] + 1) % smallGamma.n;
+        posOldest += (posOldest < 0) * smallGamma.n;
+        m = vars->nquasi[iBlock];
 
         // Set B_0 (pretend it's the first step)
-        calcInitialHessian( iBlock );
-        vars->deltaNorm( iBlock ) = 1.0;
+        calcInitialHessian(iBlock, hess);
         vars->deltaNormOld( iBlock ) = 1.0;
-        vars->deltaGamma( iBlock ) = 0.0;
         vars->deltaGammaOld( iBlock ) = 0.0;
         vars->noUpdateCounter[iBlock] = -1;
 
         // Size the initial update, but with the most recent delta/gamma-pair
-        gammai.Submatrix( smallGamma, nVarLocal, 1, 0, posNewest );
-        deltai.Submatrix( smallDelta, nVarLocal, 1, 0, posNewest );
-        sizeInitialHessian( gammai, deltai, iBlock, hessScaling );
+        gammai.Submatrix(smallGamma, nVarLocal, 1, 0, posNewest);
+        deltai.Submatrix(smallDelta, nVarLocal, 1, 0, posNewest);
+        sizeInitialHessian( gammai, deltai, iBlock, hessScaling, hess);
 
-        for( i=0; i<m; i++ )
-        {
-            pos = (posOldest+i) % m;
+        for (int i = 0; i < m; i++){
+            pos = (posOldest + i) % smallGamma.n;
 
             // Get new vector from list
             gammai.Submatrix( smallGamma, nVarLocal, 1, 0, pos );
             deltai.Submatrix( smallDelta, nVarLocal, 1, 0, pos );
 
-            // Update sTs, sTs_ and sTy, sTy_
-            vars->deltaNormOld(iBlock) = vars->deltaNorm(iBlock);
-            vars->deltaGammaOld(iBlock) = vars->deltaGamma(iBlock);
-            vars->deltaNorm(iBlock) = adotb( deltai, deltai );
-            vars->deltaGamma(iBlock) = adotb( gammai, deltai );
+            vars->deltaNorm.Submatrix(vars->deltaNormMat, vars->nBlocks, 1, 0, pos);
+            vars->deltaGamma.Submatrix(vars->deltaGammaMat, vars->nBlocks, 1, 0, pos);
 
             // Save statistics, we want to record them only for the most recent update
             averageSizingFactor = stats->averageSizingFactor;
@@ -533,46 +439,35 @@ void SQPmethod::calcHessianUpdateLimitedMemory( int updateType, int hessScaling 
             hessSkipped = stats->hessSkipped;
 
             // Selective sizing before the update
-            if( hessScaling == 4 )
-                sizeHessianCOL( gammai, deltai, iBlock );
+            if (hessScaling == 4)
+                sizeHessianCOL(gammai, deltai, iBlock, (i == 0), hess);
 
             // Compute the new update
-
-            ///Debateful: Option to skip first hessian update and only size
-            //NEW//
-            //if (i > 0){
-            ///////
-            if( updateType == 1 )
-                calcSR1( gammai, deltai, iBlock );
-            else if( updateType == 2 ){
-                calcBFGS( gammai, deltai, iBlock );
-                //std::cout << "Calculated BFGS for block " << i << "\n";
-                //std::cout << "Hessian block value is\n";
-                //vars->hess[iBlock].Print();
-            }
+            if (updateType == 1)
+                calcSR1(gammai, deltai, iBlock, hess);
+            else if (updateType == 2)
+                calcBFGS(gammai, deltai, iBlock, true, hess);
 
             stats->nTotalUpdates++;
 
             // Count damping statistics only for the most recent update
-            if( pos != posNewest )
-            {
+            if (pos != posNewest){
                 stats->hessDamped = hessDamped;
                 stats->hessSkipped = hessSkipped;
-                if( hessScaling == 4 )
+                if (hessScaling == 4)
                     stats->averageSizingFactor = averageSizingFactor;
             }
         }
 
         // If an update is skipped too often, reset Hessian block
-        if( vars->noUpdateCounter[iBlock] > param->maxConsecSkippedUpdates )
-            resetHessian( iBlock );
+        if (vars->noUpdateCounter[iBlock] > param->maxConsecSkippedUpdates)
+            resetHessian(iBlock, hess);
     }//blocks
     stats->averageSizingFactor /= nBlocks;
 }
 
 
-void SQPmethod::calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock )
-{
+void SQPmethod::calcBFGS(const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess){
     int i, j, k, dim = gamma.M();
     Matrix Bdelta;
     SymMatrix *B;
@@ -580,6 +475,7 @@ void SQPmethod::calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock )
     double h2 = 0.0;
     double thetaPowell = 0.0;
     int damped;
+    double myEps = 1.0e2 * param->eps;
 
     /* Work with a local copy of gamma because damping may need to change gamma.
      * Note that vars->gamma needs to remain unchanged!
@@ -587,79 +483,72 @@ void SQPmethod::calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock )
      * When information is "forgotten", B_i-1 is different and the
      *  original gamma might lead to an undamped update with the new B_i-1! */
     Matrix gamma2 = gamma;
-
-    B = &vars->hess[iBlock];
+    B = &hess[iBlock];
 
     // Bdelta = B*delta (if sizing is enabled, B is the sized B!)
     // h1 = delta^T * B * delta
     // h2 = delta^T * gamma
-    Bdelta.Dimension( dim ).Initialize( 0.0 );
-    for( i=0; i<dim; i++ )
-    {
-        for( k=0; k<dim; k++ )
-            Bdelta( i ) += (*B)( i,k ) * delta( k );
+    Bdelta.Dimension(dim).Initialize(0.0);
+    for (i = 0; i < dim; i++){
+        for (k = 0; k < dim; k++)
+            Bdelta(i) += (*B)(i,k) * delta(k);
 
-        h1 += delta( i ) * Bdelta( i );
+        h1 += delta(i) * Bdelta(i);
         //h2 += delta( i ) * gamma( i );
     }
-    h2 = vars->deltaGamma( iBlock );
+    h2 = vars->deltaGamma(iBlock);
 
     /* Powell's damping strategy to maintain pos. def. (Nocedal/Wright p.537; SNOPT paper)
      * Interpolates between current approximation and unmodified BFGS */
     damped = 0;
-    if( param->hessDamp ){
-        //std::cout << "h1 = " << h1 << ", h2 = " << h2 << ", |h1 - h2| = " << fabs(h1 - h2) << "\n";
-        if( h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) > 1.0e-12 )
-        {// At the first iteration h1 and h2 are equal due to COL scaling
-
+    if (damping){
+        //if (h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) > 1.0e-12){
+        //if (h2 < param->hessDampFac * h1 && fabs( h1 - h2 ) > 1.0e-12){
+        if (fabs(h1) >= myEps && fabs(h2) >= myEps && h2 < param->hessDampFac * h1){
+            // At the first iteration h1 and h2 are equal due to COL scaling
             thetaPowell = (1.0 - param->hessDampFac)*h1 / ( h1 - h2 );
 
             // Redefine gamma and h2 = delta^T * gamma
             h2 = 0.0;
-            for( i=0; i<dim; i++ )
-            {
-                gamma2( i ) = thetaPowell*gamma2( i ) + (1.0 - thetaPowell)*Bdelta( i );
-                h2 += delta( i ) * gamma2( i );
+            for (i = 0; i < dim; i++){
+                gamma2(i) = thetaPowell * gamma2(i) + (1.0 - thetaPowell) * Bdelta(i);
+                h2 += delta(i) * gamma2(i);
             }
-
-            // Also redefine deltaGamma for computation of sizing factor in the next iteration
-            vars->deltaGamma( iBlock ) = h2;
-
             damped = 1;
         }
+    }
+
+    if (hess == vars->hess1){
+        vars->deltaNormOld(iBlock) = vars->deltaNorm(iBlock);
+        vars->deltaGammaOld(iBlock) = h2;
+    }
+    else{
+        vars->deltaNormOldFallback(iBlock) = vars->deltaNorm(iBlock);
+        vars->deltaGammaOldFallback(iBlock) = h2;
     }
 
     // For statistics: count number of damped blocks
     stats->hessDamped += damped;
 
-    // B_k+1 = B_k - Bdelta * (Bdelta)^T / h1 + gamma * gamma^T / h2
-    double myEps = 1.0e2 * param->eps;
-
-
-    //Added condition || h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) <= 1.0e-12
-    if( fabs( h1 ) < myEps || fabs( h2 ) < myEps || (h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) <= 1.0e-12))
-    {// don't perform update because of bad condition, might introduce negative eigenvalues
-    // Also don't perform update if damping failed because |h1 - h2| was too small
-        //printf("block = %i, h1 = %g, h2 = %g\n", iBlock, h1, h2);
+    //if( fabs( h1 ) < myEps || fabs( h2 ) < myEps || (damping && h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) <= 1.0e-12)){
+    if(fabs(h1) < myEps || fabs(h2) < myEps){
+        // don't perform update because of bad condition, might introduce negative eigenvalues
         vars->noUpdateCounter[iBlock]++;
         stats->hessDamped -= damped;
         stats->hessSkipped++;
         stats->nTotalSkippedUpdates++;
     }
-    else
-    {
-        for( i=0; i<dim; i++ )
-            for( j=i; j<dim; j++ )
-                (*B)( i,j ) = (*B)( i,j ) - Bdelta( i ) * Bdelta( j ) / h1
-                                          + gamma2( i ) * gamma2( j ) / h2;
+    else{
+        for (i = 0; i < dim; i++)
+            for (j = i; j < dim; j++)
+                (*B)(i,j) = (*B)(i,j) - Bdelta(i) * Bdelta(j) / h1 + gamma2(i) * gamma2(j) / h2;
 
         vars->noUpdateCounter[iBlock] = 0;
     }
 }
 
 
-void SQPmethod::calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock )
-{
+void SQPmethod::calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock, SymMatrix *hess){
     int i, j, k, dim = gamma.M();
     Matrix gmBdelta;
     SymMatrix *B;
@@ -667,34 +556,42 @@ void SQPmethod::calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock )
     double r = 1.0e-8;
     double h = 0.0;
 
-    B = &vars->hess[iBlock];
+    B = &hess[iBlock];
 
     // gmBdelta = gamma - B*delta
     // h = (gamma - B*delta)^T * delta
-    gmBdelta.Dimension( dim );
-    for( i=0; i<dim; i++ )
-    {
+    gmBdelta.Dimension(dim);
+    for (i = 0; i < dim; i++){
         gmBdelta( i ) = gamma( i );
-        for( k=0; k<dim; k++ )
-            gmBdelta( i ) -= ( (*B)( i,k ) * delta( k ) );
+        for (k = 0; k < dim; k++)
+            gmBdelta(i) -= ((*B)( i,k ) * delta(k));
 
-        h += ( gmBdelta( i ) * delta( i ) );
+        h += (gmBdelta(i) * delta(i));
+    }
+
+    //Update the scalar products (no damping here!)
+    if (hess == vars->hess1){
+        vars->deltaNormOld(iBlock) = vars->deltaNorm(iBlock);
+        vars->deltaGammaOld(iBlock) = vars->deltaGamma(iBlock);
+    }
+    else{
+        vars->deltaNormOldFallback(iBlock) = vars->deltaNorm(iBlock);
+        vars->deltaGammaOldFallback(iBlock) = vars->deltaGamma(iBlock);
     }
 
     // B_k+1 = B_k + gmBdelta * gmBdelta^T / h
-    if( fabs( h ) < r * l2VectorNorm( delta ) * l2VectorNorm( gmBdelta ) || fabs( h ) < myEps )
-    {// Skip update if denominator is too small
-        //printf("block %i, h = %23.16e\n", iBlock, h );
+    if (fabs(h) < r * l2VectorNorm(delta) * l2VectorNorm(gmBdelta) || fabs(h) < myEps){
+        //Skip update if denominator is too small
         vars->noUpdateCounter[iBlock]++;
         stats->hessSkipped++;
         stats->nTotalSkippedUpdates++;
     }
-    else
-    {
-        for( i=0; i<dim; i++ )
-            for( j=i; j<dim; j++ )
-                (*B)( i,j ) = (*B)( i,j ) + gmBdelta( i ) * gmBdelta( j ) / h;
+    else{
+        for (i = 0; i < dim; i++)
+            for (j = i; j < dim; j++)
+                (*B)(i,j) = (*B)(i,j) + gmBdelta(i) * gmBdelta(j) / h;
         vars->noUpdateCounter[iBlock] = 0;
+
     }
 }
 
@@ -703,16 +600,44 @@ void SQPmethod::calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock )
  * Set deltaXi and gamma as a column in the matrix containing
  * the m most recent delta and gamma
  */
-void SQPmethod::updateDeltaGamma()
-{
+void SQPmethod::updateDeltaGamma(){
     int nVar = vars->gammaMat.M();
     int m = vars->gammaMat.N();
-
     if( m == 1 )
         return;
 
-    vars->deltaXi.Submatrix( vars->deltaMat, nVar, 1, 0, stats->itCount % m );
-    vars->gamma.Submatrix( vars->gammaMat, nVar, 1, 0, stats->itCount % m );
+    //dg_pos is the position of the current calculated step, set deltaXi and gamma as storage for the next step
+    vars->deltaXi.Submatrix(vars->deltaMat, nVar, 1, 0, (vars->dg_pos + 1)%m);
+    vars->gamma.Submatrix(vars->gammaMat, nVar, 1, 0, (vars->dg_pos + 1)%m);
+}
+
+
+void SQPmethod::updateScalarProducts(){
+    Matrix smallDelta, smallGamma;
+    int nVarLocal;
+
+    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++){
+        nVarLocal = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
+        smallDelta.Submatrix(vars->deltaXi, nVarLocal, 1, vars->blockIdx[iBlock], 0);
+        smallGamma.Submatrix(vars->gamma, nVarLocal, 1, vars->blockIdx[iBlock], 0);
+        vars->deltaNorm(iBlock) = adotb(smallDelta, smallDelta);
+        vars->deltaGamma(iBlock) = adotb(smallDelta, smallGamma);
+    }
+    return;
+}
+
+void SQPmethod::updateScalarProductsLimitedMemory(){
+    Matrix smallDelta, smallGamma;
+    int nVarLocal;
+
+    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++){
+        nVarLocal = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
+        smallDelta.Submatrix(vars->deltaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
+        smallGamma.Submatrix(vars->gammaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
+        vars->deltaNormMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallDelta);
+        vars->deltaGammaMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallGamma);
+    }
+    return;
 }
 
 } // namespace blockSQP

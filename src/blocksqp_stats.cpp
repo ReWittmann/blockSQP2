@@ -87,7 +87,7 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
             printf("%5i  ", itCount );
             printf("%11i ", 0 );
             printf("% 10e  ", vars->obj );
-            printf("%-10.2e", vars->cNormS );
+            printf("%-10.2e", vars->cNorm );//cNorm instead of cNormS
             printf("%-10.2e", vars->tol );
             printf("\n");
         }
@@ -422,7 +422,7 @@ void SQPstats::printVectorCpp( FILE *outfile, int *vec, int len, char* varname )
     fprintf( outfile, " };\n\n" );
 }
 
-
+/*
 void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProblem *qp, int sparseQP )
 {
     int i, j;
@@ -588,7 +588,7 @@ void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProble
     fprintf( outfile, "\n" );
     fclose( outfile );
 }
-
+*/
 
 void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparseQP )
 {

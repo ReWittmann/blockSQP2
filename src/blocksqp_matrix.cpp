@@ -677,7 +677,7 @@ int SymMatrix::malloc( void )
 {
     int len;
 
-    len = m*(m+1)/2.0;
+    len = (m*(m+1))/2.0;
 
     if ( len == 0 )
        array = NULL;
@@ -1762,8 +1762,11 @@ CSR_Matrix::CSR_Matrix(int M, int N, double *NZ, int *COL, int *ROWIND, bool FD)
 CSR_Matrix::CSR_Matrix(const CSR_Matrix &M1){
     m = M1.m;
     n = M1.n;
-    if (free_data)
-        delete[] nz, col, rowind;
+    if (free_data){
+        delete[] nz;
+        delete[] col;
+        delete[] rowind;
+    }
 
     if (M1.free_data){
 
@@ -1816,13 +1819,18 @@ CSR_Matrix::CSR_Matrix(const Sparse_Matrix &M1){
 
 CSR_Matrix::~CSR_Matrix(){
     if (free_data){
-        delete[] nz, col, rowind;
+        delete[] nz;
+        delete[] col;
+        delete[] rowind;
     }
 }
 
 void CSR_Matrix::operator=(const CSR_Matrix &M1){
-    if (free_data)
-        delete[] nz, col, rowind;
+    if (free_data){
+        delete[] nz;
+        delete[] col;
+        delete[] rowind;
+    }
 
     m = M1.m;
     n = M1.n;
@@ -1853,8 +1861,11 @@ void CSR_Matrix::operator=(const CSR_Matrix &M1){
 void CSR_Matrix::operator=(CSR_Matrix &&M1){
     m = M1.m;
     n = M1.n;
-    if (free_data)
-        delete[] nz, col, rowind;
+    if (free_data){
+        delete[] nz;
+        delete[] col;
+        delete[] rowind;
+    }
     free_data = M1.free_data;
     nz = M1.nz;
     col = M1.col;

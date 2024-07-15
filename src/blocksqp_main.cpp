@@ -22,36 +22,22 @@
 #include "blocksqp_method.hpp"
 #include "blocksqp_general_purpose.hpp"
 #include "blocksqp_restoration.hpp"
+#include "blocksqp_qpsolver.hpp"
 #include <fstream>
 #include <cmath>
 
 namespace blockSQP
 {
 
-SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics )
-{
-    prob = problem;
-    param = parameters;
-    stats = statistics;
+SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics ): prob(problem), param(parameters), stats(statistics){
 
     // Check if there are options that are infeasible and set defaults accordingly
     param->optionsConsistency();
 
+    vars = new SQPiterate(prob, param, 1);
 
-    vars = new SQPiterate( prob, param, 1 );
-
-    if( param->sparseQP < 2 )
-    {
-        qp = new qpOASES::SQProblem( prob->nVar, prob->nCon );
-        qpSave = new qpOASES::SQProblem( prob->nVar, prob->nCon );
-    }
-    else
-    {
-        qp = new qpOASES::SQProblemSchur( prob->nVar, prob->nCon, qpOASES::HST_UNKNOWN, 50 );
-        qpSave = new qpOASES::SQProblemSchur( prob->nVar, prob->nCon, qpOASES::HST_UNKNOWN, 50 );
-    }
-    A_qp = nullptr;
-    H_qp = nullptr;
+    // Create a solver object for QP subproblems. This also checks for options that are infeasible with choice of QP solver.
+    sub_QP = create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, param);
 
     initCalled = false;
 
@@ -67,6 +53,7 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
         rest_opts->hessScaling = 2;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
+        rest_opts->which_QPsolver = param->which_QPsolver;
 
         rest_prob = nullptr;
         rest_stats = nullptr;
@@ -80,15 +67,12 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
     }
 }
 
-SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), initCalled(false), A_qp(nullptr), H_qp(nullptr){}
+SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), sub_QP(nullptr),
+    initCalled(false), rest_prob(nullptr), rest_opts(nullptr), rest_stats(nullptr), rest_method(nullptr){}
 
 SQPmethod::~SQPmethod(){
-    delete qp;
-    delete qpSave;
     delete vars;
-
-    delete A_qp;
-    delete H_qp;
+    delete sub_QP;
 
     delete rest_prob;
     delete rest_opts;
@@ -118,26 +102,20 @@ void SQPmethod::init()
 }
 
 
-int SQPmethod::run( int maxIt, int warmStart )
-{
-    int it, infoQP = 0, infoEval = 0;
+int SQPmethod::run(int maxIt, int warmStart){
+    int it = 0, infoQP = 0, infoEval = 0;
     bool skipLineSearch = false;
     bool hasConverged = false;
     int whichDerv = param->whichSecondDerv;
 
 
-    if( !initCalled )
-    {
+    if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         return -1;
     }
 
-    if( warmStart == 0 || stats->itCount == 0 )
-    {
+    if (warmStart == 0 || stats->itCount == 0){
         // SQP iteration 0
-
-        /// Set initial Hessian approximation
-        calcInitialHessian();
 
         /// Evaluate all functions and gradients for xi_0
         if( param->sparseQP ){
@@ -152,40 +130,33 @@ int SQPmethod::run( int maxIt, int warmStart )
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars, param, hasConverged );
-        if( hasConverged )
+        if (hasConverged)
             return 0;
 
-        ///TODO
-        //Find good scaling for initial hessian, so initial stepsize is not too small
-        //A small initial step can negatively influence the calculation of the scaling factors and hessian updates
-
         stats->itCount++;
+
+        /// Set initial Hessian approximation
+        //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
+
+        calcInitialHessians();
+        vars->hess2_calculated = true;
     }
 
     /*
      * SQP Loop: during first iteration, stats->itCount = 1
      */
+     param->iniHessDiag = param->HessDiag2;
 
-    for( it=0; it<maxIt; it++ )
-    {
+    for (; it<maxIt; it++){
         /// Solve QP subproblem with qpOASES or QPOPT
-        updateStepBounds( 0 );
-
         infoQP = solveQP( vars->deltaXi, vars->lambdaQP );
 
-        /*if( infoQP == 1 )
-        {// 1.) Maximum number of iterations reached
-            printf("***Warning! Maximum number of QP iterations exceeded.***\n");
-            ;// just continue ...
-        }
-        else*/
-        if (infoQP == 0){
-            printf("***QP solution successful***");
-        }
+        //if (infoQP == 0) printf("***QP solution successful***");
+        if (infoQP == 0) ;
         else if (infoQP == 1){
             bool qpError = true;
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
-            resetHessian();
+            resetHessians();
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
             if (infoQP){
                 std::cout << "QP solution failed again, try to reduce constraint violation\n";
@@ -212,15 +183,14 @@ int SQPmethod::run( int maxIt, int warmStart )
                     return -1;
                 }
             }
-            else{
+            else
                 vars->steptype = 1;
-            }
         }
         else if (infoQP == 2 || infoQP > 3){
             // 2.) QP error (e.g., unbounded), solve again with pos.def. diagonal matrix (identity)
             printf("***QP error. Solve again with identity matrix.***\n");
             printf("infoQP is: %d\n", infoQP);
-            resetHessian();
+            resetHessians();
             infoQP = solveQP( vars->deltaXi, vars->lambdaQP );
             if( infoQP )
             {// If there is still an error, terminate.
@@ -289,6 +259,8 @@ int SQPmethod::run( int maxIt, int warmStart )
                 if( !lsError )
                     vars->steptype = -1;
 
+                ///TODO: Check if there are problems when trying to achieve the desired accuracy
+
                 // Heuristic 2: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if( lsError && vars->cNorm > 0.01 * param->nlinfeastol && vars->steptype < 2 )
                 {// Don't do this twice in a row!
@@ -312,7 +284,8 @@ int SQPmethod::run( int maxIt, int warmStart )
                     printf("***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n");
                     vars->steptype = 1;
 
-                    resetHessian();
+                    it -= 1;
+                    resetHessians();
                     continue;
                 }
 
@@ -338,28 +311,17 @@ int SQPmethod::run( int maxIt, int warmStart )
             }
         }
 
-        //////////////////////
-        double Nsum = 0;
-        for (int i = 0; i < prob->nBlocks; i++){
-            Nsum += vars->deltaNorm(i);
-        }
-        Nsum = std::sqrt(Nsum);
-
-        std::cout << "gradNorm = " << l2VectorNorm(vars->gradObj) << ", deltaNorm = " << Nsum << "\n";
-        //////////////////////
-
-
         /// Calculate "old" Lagrange gradient: gamma = dL(xi_k, lambda_k+1)
         calcLagrangeGradient( vars->gamma, 0 );
 
         /// Evaluate functions and gradients at the new xi
-        if( param->sparseQP ){
-            prob->evaluate( vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess, 1+whichDerv, &infoEval );
+        if (param->sparseQP){
+            prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
+                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess, 1+whichDerv, &infoEval);
         }
         else
-            prob->evaluate( vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->constrJac, vars->hess, 1+whichDerv, &infoEval );
+            prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
+                            vars->constrJac, vars->hess, 1+whichDerv, &infoEval);
         stats->nDerCalls++;
 
         /// Check if converged
@@ -372,7 +334,7 @@ int SQPmethod::run( int maxIt, int warmStart )
             stats->itCount++;
             if( param->debugLevel > 2 )
             {
-                stats->dumpQPCpp( prob, vars, qp, param->sparseQP );
+                //stats->dumpQPCpp( prob, vars, qp, param->sparseQP );
             }
             return 0; //Convergence achieved!
         }
@@ -380,19 +342,41 @@ int SQPmethod::run( int maxIt, int warmStart )
         /// Calculate difference of old and new Lagrange gradient: gamma = -gamma + dL(xi_k+1, lambda_k+1)
         calcLagrangeGradient( vars->gamma, 1 );
 
-        /// Revise Hessian approximation
-        if( param->hessUpdate < 4 && !param->hessLimMem )
-            calcHessianUpdate( param->hessUpdate, param->hessScaling );
-        else if( param->hessUpdate < 4 && param->hessLimMem )
-            calcHessianUpdateLimitedMemory( param->hessUpdate, param->hessScaling );
-        else if( param->hessUpdate == 4 )
-            calcFiniteDiffHessian( );
+        //A new delta-gamma pair for quasi-newton has been calculated, increase the number of quasi newton updates for each block by 1, up to the maximum
+        for (int ind = 0; ind < vars->nBlocks; ind++)
+            vars->nquasi[ind] += (vars->nquasi[ind] < param->hessMemsize);
+
+        if (param->hessLimMem){
+            //Update position of current iterate and lagrange gradient in their respective matrices
+            vars->dg_pos = (vars->dg_pos + 1) % param->hessMemsize;
+            //Update the submatrices to new (empty) position, to store next step
+            updateDeltaGamma();
+            //Precalculate scalar products for COL sizing which might be needed several times
+            updateScalarProductsLimitedMemory();
+            //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
+
+            //Update only the first hessian for now if quasi-newton updates are used
+            if (param->hessUpdate == 1 || param->hessUpdate == 2)
+                calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1);
+        }
+        else{
+            //Vectors deltaXi and gamma not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
+
+            //We only store the previous precalculated scalar products, update them now
+            updateScalarProducts();
+
+            if (param->hessUpdate == 1 || param->hessUpdate == 2)
+                calcHessianUpdate(param->hessUpdate, param->hessScaling, vars->hess1);
+
+            //Also update the fallback hessian as we need to update it in every iteration regardless of if it is needed
+            if (vars->hess2 != nullptr)
+                calcHessianUpdate(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+        }
+
+        vars->hess = vars->hess1;
 
         //Fallback hessian is calculated only when needed for limited memory, so mark it as not yet calculated
         vars->hess2_calculated = false;
-
-        // If limited memory updates  are used, set pointers deltaXi and gamma to the next column in deltaMat and gammaMat
-        updateDeltaGamma();
 
         stats->itCount++;
         skipLineSearch = false;
@@ -608,40 +592,26 @@ void SQPmethod::printInfo( int printLevel )
     printf( "+---------------------------------------------------------------+\n\n");
 }
 
-
 //////////////////////////////////////////////////////////////////////
 
 
-SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND, SQPiterate *IT): cond(CND){
+SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND): cond(CND){
 
     prob = problem;
     param = parameters;
     stats = statistics;
-    vars = IT;
+    vars = new SCQPiterate(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
     param->optionsConsistency();
     if (param->sparseQP == 0){
         throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
     }
-
-
-    //vars = new SCQPiterate( prob, param, cond, 1 );
-
-    if( param->sparseQP < 2 )
-    {
-        qp = new qpOASES::SQProblem(cond->condensed_num_vars, cond->condensed_num_cons);
-        qpSave = new qpOASES::SQProblem(cond->condensed_num_vars, cond->condensed_num_cons);
+    if (param->blockHess != 1){
+        throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
-    else
-    {
-        qp = new qpOASES::SQProblemSchur(cond->condensed_num_vars, cond->condensed_num_cons, qpOASES::HST_UNKNOWN, 50 );
-        qpSave = new qpOASES::SQProblemSchur(cond->condensed_num_vars, cond->condensed_num_cons, qpOASES::HST_UNKNOWN, 50 );
-    }
-    A_qp = nullptr;
-    H_qp = nullptr;
 
-    qp_check = new qpOASES::SQProblemSchur(cond->condensed_num_vars, cond->condensed_num_cons, qpOASES::HST_UNKNOWN, 50);
+    sub_QP = create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, param);
 
     initCalled = false;
 
@@ -692,8 +662,9 @@ SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *
         rest_opts->maxConvQP = param->maxConvQP;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
+        rest_opts->which_QPsolver = param->which_QPsolver;
         rest_opts->qpOASES_terminationTolerance = param->qpOASES_terminationTolerance;
-        rest_opts->qpOASES_print_level = param->qpOASES_print_level;
+        rest_opts->qpOASES_printLevel = param->qpOASES_printLevel;
 
         rest_prob = nullptr;
         rest_stats = nullptr;
@@ -713,35 +684,136 @@ SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *
     }
 }
 
-SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND): SCQPmethod(problem, parameters, statistics, CND, new SCQPiterate(problem, parameters, CND, 1)){};
+SCQPmethod::SCQPmethod(): cond(nullptr), rest_cond(nullptr), rest_vblocks(nullptr), rest_cblocks(nullptr), rest_h_sizes(nullptr), rest_targets(nullptr)
+{};
 
 SCQPmethod::~SCQPmethod(){
-    delete qp_check;
-
     delete[] rest_vblocks;
     delete[] rest_cblocks;
     delete[] rest_h_sizes;
     delete[] rest_targets;
     delete rest_cond;
-    delete rest_opts;
-    delete rest_prob;
-    delete rest_stats;
-    delete rest_method;
 }
 
 
-SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND): SCQPmethod(problem, parameters, statistics, CND){
+SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
+    cond = CND;
     if (cond->add_dep_bounds != 1){
         std::cout << "SCQP_bound_method: Condenser needs to add inactive dependent variable bounds, changing condenser add_dep_bound option to 1\n";
         cond->set_dep_bound_handling(1);
     }
+
+    prob = problem;
+    param = parameters;
+    stats = statistics;
+    vars = new SCQPiterate(prob, param, cond, true);
+
+    // Check if there are options that are infeasible and set defaults accordingly
+    param->optionsConsistency();
+    if (param->sparseQP == 0){
+        throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
+    }
+    if (param->blockHess != 1){
+        throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
+    }
+
+    sub_QP = create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, param);
+
+    initCalled = false;
+
+    if (param->restoreFeas){
+        //Setup condenser for the restoration problem
+        int N_vblocks = cond->num_vblocks + cond->num_true_cons;
+        int N_cblocks = cond->num_cblocks;
+        int N_hessblocks = prob->nBlocks + cond->num_true_cons;
+        int N_targets = cond->num_targets;
+
+        rest_vblocks = new vblock[N_vblocks];
+        rest_cblocks = new cblock[N_cblocks];
+        rest_h_sizes = new int[N_hessblocks];
+        rest_targets = new condensing_target[N_targets];
+
+        for (int i = 0; i<cond->num_vblocks; i++){
+            rest_vblocks[i] = cond->vblocks[i];
+        }
+        for (int i = cond->num_vblocks; i < N_vblocks; i++){
+            rest_vblocks[i] = vblock(1, false);
+        }
+
+        for (int i = 0; i<cond->num_cblocks; i++){
+            rest_cblocks[i] = cond->cblocks[i];
+        }
+
+        for (int i = 0; i<prob->nBlocks; i++){
+            rest_h_sizes[i] = cond->hess_block_sizes[i];
+        }
+        for (int i = prob->nBlocks; i<N_hessblocks; i++){
+            rest_h_sizes[i] = 1;
+        }
+
+        for (int i = 0; i<cond->num_targets; i++){
+            rest_targets[i] = cond->targets[i];
+        }
+        rest_cond = new Condenser(rest_vblocks, N_vblocks, rest_cblocks, N_cblocks, rest_h_sizes, N_hessblocks, rest_targets, N_targets, 0);
+
+        //Setup options for the restoration problem
+        rest_opts = new SQPoptions();
+        rest_opts->globalization = 1;
+        rest_opts->whichSecondDerv = 0;
+        rest_opts->restoreFeas = 0;
+        //rest_opts->hessUpdate = param->hessUpdate;
+        rest_opts->hessUpdate = 2;
+        rest_opts->hessLimMem = 1;
+        rest_opts->hessScaling = 2;
+        rest_opts->maxConvQP = param->maxConvQP;
+        rest_opts->opttol = param->opttol;
+        rest_opts->nlinfeastol = param->nlinfeastol;
+        rest_opts->which_QPsolver = param->which_QPsolver;
+        rest_opts->qpOASES_terminationTolerance = param->qpOASES_terminationTolerance;
+        rest_opts->qpOASES_printLevel = param->qpOASES_printLevel;
+
+        rest_prob = nullptr;
+        rest_stats = nullptr;
+        rest_method = nullptr;
+    }
+    else{
+        rest_vblocks = nullptr;
+        rest_cblocks = nullptr;
+        rest_h_sizes = nullptr;
+        rest_targets = nullptr;
+        rest_cond = nullptr;
+        rest_opts = nullptr;
+
+        rest_prob = nullptr;
+        rest_stats = nullptr;
+        rest_method = nullptr;
+    }
 }
 
 
-SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND): SCQPmethod(problem, parameters, statistics, CND, new SCQP_correction_iterate(problem, parameters, CND, true)){
+SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
+    cond = CND;
     if (cond->add_dep_bounds > 0){
-        std::cout << "Warning, condenser adds dependent variable bounds to constraint matrix, performance may be impeded\n";
+        std::cout << "Warning: Condenser adds dependent variable bounds to constraint matrix, performance may be impeded\n";
     }
+
+    prob = problem;
+    param = parameters;
+    stats = statistics;
+    vars = new SCQP_correction_iterate(prob, param, cond, true);
+
+    // Check if there are options that are infeasible and set defaults accordingly
+    param->optionsConsistency();
+    if (param->sparseQP == 0){
+        throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
+    }
+    if (param->blockHess != 1){
+        throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
+    }
+
+    sub_QP = create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, param);
+
+    initCalled = false;
 
     corrections = new Matrix[cond->num_targets];
     SOC_corrections = new Matrix[cond->num_targets];
@@ -796,9 +868,10 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         rest_opts->maxConvQP = param->maxConvQP;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
+        rest_opts->which_QPsolver = param->which_QPsolver;
         rest_opts->max_correction_steps = param->max_correction_steps;
         rest_opts->qpOASES_terminationTolerance = param->qpOASES_terminationTolerance;
-        rest_opts->qpOASES_print_level = param->qpOASES_print_level;
+        rest_opts->qpOASES_printLevel = param->qpOASES_printLevel;
 
         rest_prob = nullptr;
         rest_stats = nullptr;
