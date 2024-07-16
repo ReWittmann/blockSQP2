@@ -16,7 +16,7 @@ message(STATUS "Found JlCxx at ${JlCxx_location}")
 add_library(BlockSQP SHARED BlockSQP.cpp)
 #IMPORTANT: Flags for qpsolvers (-DQPSOLVER_QPOASES -DQPSOLVER_GUROBI ...) have to be identical to those used
 #to compile blockSQP, else julia will crash when trying to create SQPoptions object
-SET(QPSOLVER_COMPILE_FLAGS -DQPSOLVER_QPOASES -DQPSOLVER_GUROBI)
+target_compile_options(BlockSQP PUBLIC -DQPSOLVER_QPOASES -DQPSOLVER_GUROBI)
 target_include_directories(BlockSQP 
 	PUBLIC ~/blockSQP_modified/include)
 target_link_libraries(BlockSQP
