@@ -18,7 +18,9 @@ pybind11_add_module(BlockSQP
 #SET(QPSOLVER_INCLUDE_DIRECTORIES /path/to/.../qpOASES/include /path/to/gurobi/.../include ...)
 
 #Add flags for inclusion of qp solvers
-#IMPORTANT: They need to be the same as the ones used to compile blockSQP to libblockSQP.so
+#Currently available: qpOASES (-DQPSOLVER_QPOASES), gurobi (-DQPSOLVER_GUROBI)
+#IMPORTANT: They need to be the same as the ones used to compile blockSQP
+
 SET(QPSOLVER_COMPILE_FLAGS -DQPSOLVER_QPOASES)# -DQPSOLVER_GUROBI)
 
 target_include_directories(BlockSQP 
