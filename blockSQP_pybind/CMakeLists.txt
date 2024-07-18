@@ -24,9 +24,9 @@ pybind11_add_module(BlockSQP
 SET(QPSOLVER_COMPILE_FLAGS -DQPSOLVER_QPOASES)# -DQPSOLVER_GUROBI)
 
 target_include_directories(BlockSQP 
-	PUBLIC ~/blockSQP_modified/include ${QPSOLVER_INCLUDE_DIRECTORIES})
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include ${QPSOLVER_INCLUDE_DIRECTORIES})
 target_compile_options(BlockSQP PUBLIC ${QPSOLVER_COMPILE_FLAGS})
 
 target_link_libraries(BlockSQP
-	PUBLIC ~/blockSQP_modified/lib/libblockSQP.so)
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libblockSQP.so)
 
