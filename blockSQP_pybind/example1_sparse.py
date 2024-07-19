@@ -34,7 +34,7 @@ prob.lam_start = [0.,0.,0.]
 prob.f = lambda x: x[0]**2 - 0.5*x[1]**2
 prob.g = lambda x: x[0] - x[1]
 prob.grad_f = lambda x: [2*x[0], -x[1]]
-prob.jac_gNz = lambda x: np.array([1,-1])
+prob.jac_g_nz = lambda x: np.array([1,-1])
 #######
 jac_g_nnz = 2
 jac_g_ind_row = np.array([0,0])
