@@ -22,6 +22,8 @@ namespace blockSQP
  * Compute the inverse of a matrix
  * using LU decomposition (DGETRF and DGETRI)
  */
+
+/*
 int inverse( const Matrix &A, Matrix &Ainv )
 {
     int i, j;
@@ -50,10 +52,13 @@ int inverse( const Matrix &A, Matrix &Ainv )
 
     return info;
 }
+*/
 
 /**
  * Compute eigenvalues of a symmetric matrix by DSPEV
  */
+
+ /*
 int calcEigenvalues( const SymMatrix &B, Matrix &ev )
 {
     int n;
@@ -75,6 +80,7 @@ int calcEigenvalues( const SymMatrix &B, Matrix &ev )
     delete[] work;
     return info;
 }
+*/
 
 /**
  * Estimate the smalles eigenvalue of a sqare matrix

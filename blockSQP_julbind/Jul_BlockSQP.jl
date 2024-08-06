@@ -29,6 +29,7 @@ module BlockSQP
 		
 		Jprob = unsafe_pointer_to_objref(Prob)::BlockSQP_Problem
 		xi_arr = unsafe_wrap(Array{Float64, 1}, xi.cpp_object, Jprob.nVar, own = false)
+		lam_arr = unsafe_wrap(Array{Float64, 1}, lam.cpp_object, Jprob.nVar + Jprob.nCon, own = false)
 		constr_arr = unsafe_wrap(Array{Float64, 1}, constr.cpp_object, Jprob.nCon, own = false)
 		
 		objval[] = Jprob.f(xi_arr)
@@ -45,7 +46,7 @@ module BlockSQP
 
 				s = Jprob.blockIdx[Jprob.n_hessblocks + 1] - Jprob.blockIdx[Jprob.n_hessblocks]
 				hess_last = unsafe_wrap(Array{Float64,1}, hess_arr[Jprob.n_hessblocks].cpp_object, Int32((s*(s+Int32(1)))//(Int32(2))), own = false)
-				hess_last[:] = Jprob.last_hessblock(xi_arr)
+				hess_last[:] = Jprob.last_hessBlock(xi_arr, lam_arr[Jprob.nVar + 1 : Jprob.nVar + Jprob.nCon])
 			elseif dmode == 3
 				hessPTR_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = true)
 				hess_arr = Array{Array{Float64, 1}, 1}(undef, Jprob.n_hessblocks)
@@ -54,7 +55,7 @@ module BlockSQP
 					hess_arr[i] = unsafe_wrap(Array{Float64,1}, hessPTR_arr[i].cpp_object, Int32((Bsize*(Bsize + Int32(1)))//Int32(2)), own = false)
 				end
 
-				hess_eval = Jprob.hess(xi_arr)
+				hess_eval = Jprob.hess(xi_arr, lam_arr[Jprob.nVar + 1 : Jprob.nVar + Jprob.nCon])
 				for i = 1:Jprob.n_hessblocks
 					hess_arr[i][:] = hess_eval[i]
 				end
@@ -95,6 +96,7 @@ module BlockSQP
 	function evaluate_sparse(Prob::Ptr{Nothing}, xi::ConstCxxPtr{Float64}, lam::ConstCxxPtr{Float64}, objval::CxxPtr{Float64}, constr::CxxPtr{Float64}, gradObj::CxxPtr{Float64}, jac_nz::CxxPtr{Float64}, jac_row::CxxPtr{Int32}, jac_colind::CxxPtr{Int32}, hess::CxxPtr{CxxPtr{Float64}}, dmode::Int32, info::CxxPtr{Int32})
 		Jprob = unsafe_pointer_to_objref(Prob)::BlockSQP_Problem
 		xi_arr = unsafe_wrap(Array{Float64, 1}, xi.cpp_object, Jprob.nVar, own = false)
+		lam_arr = unsafe_wrap(Array{Float64, 1}, lam.cpp_object, Jprob.nVar + Jprob.nCon, own = false)
 		constr_arr = unsafe_wrap(Array{Float64, 1}, constr.cpp_object, Jprob.nCon, own = false)
 		jac_nz_arr = unsafe_wrap(Array{Float64, 1}, jac_nz.cpp_object, Jprob.nnz, own = false)
 		
@@ -111,7 +113,7 @@ module BlockSQP
 
 				s_last = Jprob.blockIdx[Jprob.n_hessblocks + 1] - Jprob.blockIdx[Jprob.n_hesslbocks]
 				hess_last = unsafe_wrap(Array{Float64,1}, hess_arr[Jprob.n_hessblocks].cpp_object, Int32((s*(s+Int32(1)))//(Int32(2))), own = false)
-				hess_last[:] = Jprob.last_hessblock(xi_arr)
+				hess_last[:] = Jprob.last_hessBlock(xi_arr, lam_arr[Jprob.nVar + 1 : Jprob.nVar + Jprob.nCon])
 			end
 			
 			if dmode == 3
@@ -122,7 +124,7 @@ module BlockSQP
 					hess_arr[i] = unsafe_wrap(Array{Float64,1}, hessPTR_arr[i].cpp_object, Int32((Bsize*(Bsize + Int32(1)))//Int32(2)), own = false)
 				end
 
-				hess_eval = Jprob.hess(xi_arr)
+				hess_eval = Jprob.hess(xi_arr, lam_arr[Jprob.nVar + 1 : Jprob.nVar + Jprob.nCon])
 				for i = 1:Jprob.n_hessblocks
 					hess_arr[i][:] = hess_eval[i]
 				end
@@ -167,7 +169,7 @@ module BlockSQP
 		jac_g::Function
 		jac_g_nz::Function
 		continuity_restoration::Function
-		last_hessblock::Function
+		last_hessBlock::Function
 		hess::Function
 		
 		jac_g_row::Array{Int32, 1}
@@ -195,12 +197,6 @@ module BlockSQP
 		end
 		if "debugLevel" in opt_keys
 			set_debugLevel(cxx_opts, Int32(param["debugLevel"]))
-		end
-		if "qpOASES_print_level" in opt_keys
-			set_qpOASES_print_level(cxx_opts, Int32(param["qpOASES_print_level"]))
-		end
-		if "qpOASES_terminationTolerance" in opt_keys
-			set_qpOASES_terminationTolerance(cxx_opts, Float64(param["qpOASES_terminationTolerance"]))
 		end
 		if "eps" in opt_keys
 			set_eps(cxx_opts, Float64(param["eps"]))
@@ -253,6 +249,9 @@ module BlockSQP
 		if "colEps" in opt_keys
 			set_colEps(cxx_opts, Float64(param["colEps"]))
 		end
+		if "olEps" in opt_keys
+			set_olEps(cxx_opts, Float64(param["olEps"]))
+		end
 		if "colTau1" in opt_keys
 			set_colTau1(cxx_opts, Float64(param["colTau1"]))
 		end
@@ -270,6 +269,9 @@ module BlockSQP
 		end
 		if "fallbackUpdate" in opt_keys
 			set_fallbackUpdate(cxx_opts, Int32(param["fallbackUpdate"]))
+		end
+		if "indef_local_only" in opt_keys
+			set_indef_local_only(cxx_opts, Bool(param["indef_local_only"]))
 		end
 		if "hessLimMem" in opt_keys
 			set_hessLimMem(cxx_opts, Int32(param["hessLimMem"]))
@@ -300,6 +302,45 @@ module BlockSQP
 		end
 		if "dep_bound_tolerance" in opt_keys
 			set_dep_bound_tolerance(cxx_opts, Float64(param["dep_bound_tolerance"]))
+		end
+		if "which_QPsolver" in opt_keys
+			set_QPsolver(cxx_opts, StdString(param["which_QPsolver"]))
+		end
+		#QPsolver options
+		##qpOASES
+		if "qpOASES_printLevel" in opt_keys
+			set_qpOASES_print_level(cxx_opts, Int32(param["qpOASES_print_level"]))
+		end
+		if "qpOASES_terminationTolerance" in opt_keys
+			set_qpOASES_terminationTolerance(cxx_opts, Float64(param["qpOASES_terminationTolerance"]))
+		end
+		##gurobi
+		if "gurobi_Method" in opt_keys
+			set_gurobi_Method(cxx_opts, Int32(params["gurobi_Method"]))
+		end
+		if "gurobi_NumericFocus" in opt_keys
+			set_gurobi_NumericFocus(cxx_opts, Int32(params["gurobi_NumericFocus"]))
+		end
+		if "gurobi_OutputFlag" in opt_keys
+			set_gurobi_OutputFlag(cxx_opts, Int32(params["gurobi_OutputFlag"]))
+		end
+		if "gurobi_Presolve" in opt_keys
+			set_gurobi_Presolve(cxx_opts, Int32(params["gurobi_Presolve"]))
+		end
+		if "gurobi_Aggregate" in opt_keys
+			set_gurobi_Aggregate(cxx_opts, Int32(params["gurobi_Aggregate"]))
+		end
+		if "gurobi_BarHomogeneous" in opt_keys
+			set_gurobi_BarHomogeneous(cxx_opts, Int32(params["gurobi_BarHomogeneous"]))
+		end
+		if "gurobi_OptimalityTol" in opt_keys
+			set_gurobi_OptimalityTol(cxx_opts, Float64(params["gurobi_OptimalityTol"]))
+		end
+		if "gurobi_FeasibilityTol" in opt_keys
+			set_gurobi_FeasibilityTol(cxx_opts, Float64(params["gurobi_FeasibilityTol"]))
+		end
+		if "gurobi_PSDTol" in opt_keys
+			set_gurobi_PSDTol(cxx_opts, Float64(params["gurobi_PSDTol"]))
 		end
 
 		return cxx_opts

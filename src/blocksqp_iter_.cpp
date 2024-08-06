@@ -81,10 +81,10 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
 
-    ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
+    ///Allocate constraint jacobian and hessian approximation, either as dense of sparse matrices
     if( !param->sparseQP ){
         constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
-        //hessNz = new double[prob->nVar*prob->nVar];
+        hessNz = new double[prob->nVar*prob->nVar];
 
         jacNz = nullptr;
         jacIndRow = nullptr;
@@ -99,22 +99,25 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         jacIndRow = new int[prob->nnz];
         jacIndCol = new int[prob->nVar + 1];
 
-        //hessNz = nullptr;
+        hessNz = nullptr;
     }
 
-    //hessIndCol = nullptr;
-    //hessIndRow = nullptr;
-    //hessIndLo = nullptr;
+    hessIndCol = nullptr;
+    hessIndRow = nullptr;
+    hessIndLo = nullptr;
     hess = nullptr;
     hess1 = nullptr;
     hess2 = nullptr;
-    hess_alt = nullptr;
+    hess_conv = nullptr;
+
+    //conv_identity_scale = 1.0;
 
     noUpdateCounter = nullptr;
-    nquasi = nullptr;
-
-    modified_hess_regularizationFactor = param->hess_regularizationFactor;
-    conv_qp_only = param->indef_local_only;
+    dur_pos = 0;
+    avg_solution_duration = param->maxTimeQP/2.5;
+    for (int i = 0; i < 10; i++){
+        solution_durations[i] = param->maxTimeQP/2.5;
+    }
 
     if( full )
     {
@@ -130,46 +133,41 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         }
 
         // For SR1 or finite differences, maintain two Hessians
-        if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6){
+        if (param->hessUpdate == 1 || param->hessUpdate == 4){
             hess2 = new SymMatrix[nBlocks];
-            for (iBlock = 0; iBlock < nBlocks; iBlock++){
-                varDim = blockIdx[iBlock + 1] - blockIdx[iBlock];
-                hess2[iBlock].Dimension(varDim).Initialize(0.0);
+            for (iBlock=0; iBlock<nBlocks; iBlock++){
+                varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
+                hess2[iBlock].Dimension( varDim ).Initialize( 0.0 );
             }
-        }
-
-        hess_alt = new SymMatrix[nBlocks];
-        for (iBlock = 0; iBlock < nBlocks; iBlock++){
-            varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
-            hess_alt[iBlock].Dimension( varDim ).Initialize(0.0);
+            if (param->maxConvQP > 1){
+                hess_conv = new SymMatrix[nBlocks];
+                for( iBlock=0; iBlock<nBlocks; iBlock++ ){
+                    varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
+                    hess_conv[iBlock].Dimension( varDim ).Initialize( 0.0 );
+                }
+                /*
+                hess_save = new SymMatrix[nBlocks];
+                for (iBlock = 0; iBlock<nBlocks; iBlock++){
+                    varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
+                    hess_save[iBlock].Dimension( varDim ).Initialize( 0.0 );
+                }*/
+            }
         }
 
         // Set Hessian pointer
         hess = hess1;
+
 
         ///Allocate additional variables needed by the algorithm
         int nVar = prob->nVar;
         int nCon = prob->nCon;
 
         // current step
-        if (param->hessLimMem){
-            deltaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
-            deltaNormMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(1.0);
-            deltaGammaMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(0.0);
-        }
-        else{
-            deltaMat.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
-            deltaNormMat.Dimension(nBlocks, 1, nBlocks).Initialize(1.0);
-            deltaGammaMat.Dimension(nBlocks, 1, nBlocks).Initialize(0.0);
-        }
-
+        deltaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
         deltaXi.Submatrix( deltaMat, nVar, 1, 0, 0 );
 
         // trial step (temporary variable, for line search)
         trialXi.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
-
-        // Constraint function values at trial point
-        trialConstr.Dimension(nCon, 1).Initialize(0.0);
 
         // bounds for step (QP subproblem)
         delta_lb_var.Dimension(nVar).Initialize(0.0);
@@ -188,32 +186,22 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         //deltaH.Dimension( nBlocks ).Initialize( 0.0 );
 
         // filter as a set of pairs
-        filter = new std::set< std::pair<double,double> >;
+        filter = new std::set<std::pair<double,double>>;
 
         // difference of Lagrangian gradients
-        //gammaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
-        if (param->hessLimMem)
-            gammaMat.Dimension(nVar, param->hessMemsize, nVar).Initialize(0.0);
-        else
-            gammaMat.Dimension(nVar, 1, nVar).Initialize(0.0);
-
-        gamma.Submatrix(gammaMat, nVar, 1, 0, 0);
+        gammaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
+        gamma.Submatrix( gammaMat, nVar, 1, 0, 0 );
 
         // Scalars that are used in various Hessian update procedures
         noUpdateCounter = new int[nBlocks];
-        for (iBlock = 0; iBlock < nBlocks; iBlock++)
+        for (iBlock = 0; iBlock<nBlocks; iBlock++)
             noUpdateCounter[iBlock] = -1;
 
-        nquasi = new int[nBlocks]();
-        dg_pos = -1;
         // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
-        deltaNorm.Dimension(nBlocks).Initialize( 1.0 );
-        deltaNormOld.Dimension(nBlocks).Initialize( 1.0 );
-        deltaGamma.Dimension(nBlocks).Initialize( 0.0 );
-        deltaGammaOld.Dimension(nBlocks).Initialize( 0.0 );
-
-        deltaNormOldFallback.Dimension(nBlocks).Initialize(1.0);
-        deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
+        deltaNorm.Dimension( nBlocks ).Initialize( 1.0 );
+        deltaNormOld.Dimension( nBlocks ).Initialize( 1.0 );
+        deltaGamma.Dimension( nBlocks ).Initialize( 0.0 );
+        deltaGammaOld.Dimension( nBlocks ).Initialize( 0.0 );
 
         use_homotopy = true;
     }
@@ -259,14 +247,106 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
     }
 
     noUpdateCounter = NULL;
-    //hessNz = NULL;
-    //hessIndCol = NULL;
-    //hessIndRow = NULL;
-    //hessIndLo = NULL;
+    hessNz = NULL;
+    hessIndCol = NULL;
+    hessIndRow = NULL;
+    hessIndLo = NULL;
     hess = NULL;
     hess1 = NULL;
     hess2 = NULL;
 }
+
+
+/**
+ * Convert diagonal block Hessian to double array.
+ * Assumes that hessNz is already allocated.
+ */
+void SQPiterate::convertHessian( Problemspec *prob, double eps, SymMatrix *&hess_ )
+{
+    if( hessNz == NULL )
+        return;
+    int count = 0;
+    int blockCnt = 0;
+    for( int i=0; i<prob->nVar; i++ )
+        for( int j=0; j<prob->nVar; j++ )
+        {
+            if( i == blockIdx[blockCnt+1] )
+                blockCnt++;
+            if( j >= blockIdx[blockCnt] && j < blockIdx[blockCnt+1] )
+                hessNz[count++] = hess[blockCnt]( i - blockIdx[blockCnt], j - blockIdx[blockCnt] );
+            else
+                hessNz[count++] = 0.0;
+        }
+}
+
+/**
+ * Convert array *hess to a single symmetric sparse matrix in
+ * Harwell-Boeing format (as used by qpOASES)
+ */
+void SQPiterate::convertHessian( int num_vars, int num_hessblocks, double eps, SymMatrix *&hess_,
+                                 double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ )
+{
+    int iBlock, count, colCountTotal, rowOffset, i, j;
+    int nnz, nCols, nRows;
+
+    // 1) count nonzero elements
+    nnz = 0;
+    for( iBlock=0; iBlock<num_hessblocks; iBlock++ )
+        for( i=0; i<hess_[iBlock].N(); i++ )
+            for( j=i; j<hess_[iBlock].N(); j++ )
+                if( fabs(hess_[iBlock]( i,j )) > eps )
+                {
+                    nnz++;
+                    if( i != j )// off-diagonal elements count twice
+                        nnz++;
+                }
+
+    delete[] hessNz_;
+    delete[] hessIndRow_;
+
+    hessNz_ = new double[nnz];
+    hessIndRow_ = new int[nnz + (num_vars+1) + num_vars];
+    hessIndCol_ = hessIndRow_ + nnz;
+    hessIndLo_ = hessIndCol_ + (num_vars+1);
+
+    // 2) store matrix entries columnwise in hessNz
+    count = 0; // runs over all nonzero elements
+    colCountTotal = 0; // keep track of position in large matrix
+    rowOffset = 0;
+    for( iBlock=0; iBlock<num_hessblocks; iBlock++ )
+    {
+        nCols = hess_[iBlock].N();
+        nRows = hess_[iBlock].M();
+
+        for( i=0; i<nCols; i++ )
+        {
+            // column 'colCountTotal' starts at element 'count'
+            hessIndCol_[colCountTotal] = count;
+
+            for( j=0; j<nRows; j++ )
+                if( fabs(hess_[iBlock]( i,j )) > eps )
+                {
+                    hessNz_[count] = hess_[iBlock]( i, j );
+                    hessIndRow_[count] = j + rowOffset;
+                    count++;
+                }
+            colCountTotal++;
+        }
+
+        rowOffset += nRows;
+    }
+    hessIndCol_[colCountTotal] = count;
+
+    // 3) Set reference to lower triangular matrix
+    for( j=0; j<num_vars; j++ )
+    {
+        for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
+        hessIndLo_[j] = i;
+    }
+
+    if( count != nnz )
+         printf( "Error in convertHessian: %i elements processed, should be %i elements!\n", count, nnz );
+ }
 
 
 void SQPiterate::initIterate( SQPoptions* param )
@@ -275,7 +355,6 @@ void SQPiterate::initIterate( SQPoptions* param )
     nSOCS = 0;
     reducedStepCount = 0;
     steptype = 0;
-    n_id_hess = 0;
 
     obj = param->inf;
     tol = param->inf;
@@ -292,12 +371,13 @@ SQPiterate::~SQPiterate( void )
     delete[] jacIndRow;
     delete[] jacIndCol;
 
+    //NEW ////////////////////////////////////////////////////////////
     delete filter;
     delete[] hess1;
     delete[] hess2;
-    delete[] hess_alt;
 
-    delete[] nquasi;
+    delete[] hessNz;
+    delete[] hessIndRow;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

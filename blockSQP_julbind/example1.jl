@@ -44,19 +44,19 @@ opts["fallbackScaling"] = 0
 opts["hessLimMem"] = 1
 opts["hessMemsize"] = 20
 opts["maxConsecSkippedUpdates"] = 200
-opts["blockHess"] = 0
+opts["blockHess"] = 1
 opts["whichSecondDerv"] = 0
 opts["sparseQP"] = 0
 opts["printLevel"] = 2
 opts["debugLevel"] = 0
+opts["which_QPsolver"] = "qpOASES"
 
 stats = BlockSQP.SQPstats("./")
-
-
+cxx_opts = BlockSQP.BSQP_options(opts)
 
 meth = BlockSQP.Solver(prob, opts, stats)
-
 BlockSQP.init(meth)
+
 ret = BlockSQP.run(meth, Int32(100), Int32(1))
 
 BlockSQP.finish(meth)

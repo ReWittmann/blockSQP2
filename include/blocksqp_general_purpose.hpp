@@ -41,9 +41,9 @@ double adotb( const Matrix &a, const Matrix &b );
 void Atimesb( const Matrix &A, const Matrix &b, Matrix &result );
 void Atimesb( double *Anz, int *AIndRow, int *AIndCol, const Matrix &b, Matrix &result );
 
-int calcEigenvalues( const Matrix &B, Matrix &ev );
+//int calcEigenvalues( const Matrix &B, Matrix &ev );
 double estimateSmallestEigenvalue( const Matrix &B );
-int inverse( const Matrix &A, Matrix &Ainv );
+//int inverse( const Matrix &A, Matrix &Ainv );
 
 } // namespace blockSQP
 

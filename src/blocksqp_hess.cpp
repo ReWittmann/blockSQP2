@@ -224,37 +224,34 @@ void SQPmethod::sizeInitialHessian( const Matrix &gamma, const Matrix &delta, in
     double scale;
     double myEps = 1.0e3 * param->eps;
 
-    //No scaling if delta is zero - we have no information
-    //if (l1VectorNorm(delta) < myEps)
-    //    scale = 1.0;
-    //else{//NEW
-        if( option == 1 )
-        {// Shanno-Phua
-            scale = adotb( gamma, gamma ) / fmax( adotb( delta, gamma ), myEps );
-        }
-        else if( option == 2 )
-        {// Oren-Luenberger
-            scale = adotb( delta, gamma ) / fmax( adotb( delta, delta ), myEps );
-            //NEW//
-            if (scale < 0) scale *= -1;
-            ///////
-            scale = fmin( scale, 1.0 );
-        }
-        else if( option == 3 )
-        {// Geometric mean of 1 and 2
-            scale = sqrt( adotb( gamma, gamma ) / fmax( adotb( delta, delta ), myEps ) );
-        }
-        else
-        {// Invalid option, ignore
-            return;
-        }
+    //TODO: Consider adding condition l1VectorNorm(delta) > tol
 
+    if( option == 1 )
+    {// Shanno-Phua
+        scale = adotb( gamma, gamma ) / fmax( adotb( delta, gamma ), myEps );
+    }
+    else if( option == 2 )
+    {// Oren-Luenberger
+        scale = adotb( delta, gamma ) / fmax( adotb( delta, delta ), myEps );
+        //NEW//
         if (scale < 0) scale *= -1;
+        ///////
+        scale = fmin( scale, 1.0 );
+    }
+    else if( option == 3 )
+    {// Geometric mean of 1 and 2
+        scale = sqrt( adotb( gamma, gamma ) / fmax( adotb( delta, delta ), myEps ) );
+    }
+    else
+    {// Invalid option, ignore
+        return;
+    }
 
-        scale /= fmax(param->iniHessDiag, myEps);
-        scale = fmax(scale, myEps);
+    if (scale < 0) scale *= -1;
 
-    //}//END NEW
+    scale /= fmax(param->iniHessDiag, myEps);
+    scale = fmax(scale, myEps);
+
     for (i = 0; i < hess[iBlock].m; i++){
         for (j = i; j < hess[iBlock].m; j++){
             hess[iBlock](i,j) *= scale;
@@ -410,6 +407,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int hessScaling, 
         posNewest = vars->dg_pos % smallGamma.n;
         posOldest = (vars->dg_pos - vars->nquasi[iBlock] + 1) % smallGamma.n;
         posOldest += (posOldest < 0) * smallGamma.n;
+
         m = vars->nquasi[iBlock];
 
         // Set B_0 (pretend it's the first step)
@@ -422,6 +420,9 @@ void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int hessScaling, 
         gammai.Submatrix(smallGamma, nVarLocal, 1, 0, posNewest);
         deltai.Submatrix(smallDelta, nVarLocal, 1, 0, posNewest);
         sizeInitialHessian( gammai, deltai, iBlock, hessScaling, hess);
+
+        // OL sizing with different bounds on sizing factor and most recent delta/gamma-pair if COL sizing is used
+        if (hessScaling == 4) sizeHessianCOL(gammai, deltai, iBlock, true, hess);
 
         for (int i = 0; i < m; i++){
             pos = (posOldest + i) % smallGamma.n;
@@ -439,8 +440,8 @@ void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int hessScaling, 
             hessSkipped = stats->hessSkipped;
 
             // Selective sizing before the update
-            if (hessScaling == 4)
-                sizeHessianCOL(gammai, deltai, iBlock, (i == 0), hess);
+            if (hessScaling == 4 && i > 0)
+                sizeHessianCOL(gammai, deltai, iBlock, false, hess);
 
             // Compute the new update
             if (updateType == 1)
@@ -475,7 +476,7 @@ void SQPmethod::calcBFGS(const Matrix &gamma, const Matrix &delta, int iBlock, b
     double h2 = 0.0;
     double thetaPowell = 0.0;
     int damped;
-    double myEps = 1.0e2 * param->eps;
+    //double myEps = 1.0e4 * param->eps;
 
     /* Work with a local copy of gamma because damping may need to change gamma.
      * Note that vars->gamma needs to remain unchanged!
@@ -502,9 +503,9 @@ void SQPmethod::calcBFGS(const Matrix &gamma, const Matrix &delta, int iBlock, b
      * Interpolates between current approximation and unmodified BFGS */
     damped = 0;
     if (damping){
-        //if (h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) > 1.0e-12){
+        if (h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) > 1.0e-12){
         //if (h2 < param->hessDampFac * h1 && fabs( h1 - h2 ) > 1.0e-12){
-        if (fabs(h1) >= myEps && fabs(h2) >= myEps && h2 < param->hessDampFac * h1){
+        //if (fabs(h1) >= myEps && fabs(h2) >= myEps && h2 < param->hessDampFac * h1){
             // At the first iteration h1 and h2 are equal due to COL scaling
             thetaPowell = (1.0 - param->hessDampFac)*h1 / ( h1 - h2 );
 
@@ -530,8 +531,12 @@ void SQPmethod::calcBFGS(const Matrix &gamma, const Matrix &delta, int iBlock, b
     // For statistics: count number of damped blocks
     stats->hessDamped += damped;
 
-    //if( fabs( h1 ) < myEps || fabs( h2 ) < myEps || (damping && h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) <= 1.0e-12)){
-    if(fabs(h1) < myEps || fabs(h2) < myEps){
+    double myEps = 1.0e2 * param->eps;
+
+
+    if( fabs( h1 ) < myEps || fabs( h2 ) < myEps || (damping && h2 < param->hessDampFac * h1 / vars->alpha && fabs( h1 - h2 ) <= 1.0e-12)){
+    //if( fabs( h1 ) < myEps || fabs( h2 ) < myEps || (damping && h2 < param->hessDampFac * h1 && fabs( h1 - h2 ) <= 1.0e-12)){
+    //if(fabs(h1) < myEps || fabs(h2) < myEps){
         // don't perform update because of bad condition, might introduce negative eigenvalues
         vars->noUpdateCounter[iBlock]++;
         stats->hessDamped -= damped;

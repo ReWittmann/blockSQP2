@@ -47,10 +47,12 @@ public:
     double time_limit;
     int time_limit_type;
 
+    //Set by set_hess
+    bool convex_QP;
+
     //One time QP solving options (reset if a QP solve is successful)
     bool record_time;
     bool use_hotstart;
-    bool convex_QP;
 
 
 	//Arguments: Number of QP variables, number of linear constraints, options
@@ -61,9 +63,10 @@ public:
     //Setters for QP data. Only one of the setters for the constraint matrix (dense or sparse) is required
     virtual void set_lin(const Matrix &grad_obj) = 0;
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A) = 0;
-    virtual void set_constr(const Matrix &constr_jac);
-    virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-    virtual void set_hess(SymMatrix *const hess) = 0;
+    virtual void set_constr(const Matrix &constr_jac) = 0;
+    virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind) = 0;
+    //Set hessian and pass on whether hessian is supposedly positive definite
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
 
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
@@ -71,6 +74,7 @@ public:
 
     //Statistics
     virtual int get_QP_it();
+    virtual double get_solutionTime();
 };
 
 
@@ -109,11 +113,12 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
 
         void set_constr(const Matrix &constr_jac);
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-        void set_hess(SymMatrix *const hess);
+        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
         int solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
+        double get_solutionTime();
     };
 #endif
 
@@ -144,11 +149,12 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
 
         void set_constr(const Matrix &constr_jac);
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-        void set_hess(SymMatrix *const hess);
+        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
         int solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
+        double get_solutionTime();
     };
 #endif
 

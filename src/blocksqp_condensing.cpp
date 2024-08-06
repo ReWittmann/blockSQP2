@@ -783,11 +783,9 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
 	Data.Q_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], 0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1]);
 	Data.S_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages-1]);
 
-
 	std::vector<blockSQP::Matrix> w_k(n_stages);
 	std::vector<blockSQP::Matrix> W_ik(n_stages);
 
-    std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
 
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
@@ -825,8 +823,6 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
 	}
 	Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
 
-    std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
-    //std::cout << "Calculated g, G, h, H of target " << tnum << " in " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << " ms.\n";
 
     //Calculate slice of condensed constraint-jacobian corresponding to target variables
     std::vector<blockSQP::Matrix> D_lb_k(n_stages);
@@ -835,8 +831,7 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
     std::vector<blockSQP::Matrix> F_ub_k(n_stages + 1);
 
     Data.G.to_sparse(Data.G_sparse);
-    //Data.G.to_dense(Data.G_dense);
-    Data.H.to_dense(Data.H_dense);
+    Data.H.to_sym(Data.H_dense);
     Data.g = blockSQP::vertcat(Data.g_k);
     Data.h = blockSQP::vertcat(Data.h_k);
 
@@ -863,30 +858,13 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
     Data.F_lb = blockSQP::vertcat(F_lb_k);
     Data.F_ub = blockSQP::vertcat(F_ub_k);
 
-    //OLD
     blockSQP::Sparse_Matrix J_d = blockSQP::horzcat(Data.J_dep_k);
-    /*
-	blockSQP::Sparse_Matrix J_f = blockSQP::horzcat(Data.J_free_k);
 
-
-    Data.Jtimes_g = blockSQP::sparse_dense_multiply(J_d, Data.g).dense();
-
-	std::chrono::steady_clock::time_point T0_ = std::chrono::steady_clock::now();
-    Data.J_reduced = J_f + blockSQP::sparse_dense_multiply(J_d, Data.G_dense);
-    std::chrono::steady_clock::time_point T1_ = std::chrono::steady_clock::now();
-    std::cout << "Old sparse_dense_multiply took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1_ - T0_).count() << "ms\n";
-    */
-    //NEW
     blockSQP::CSR_Matrix J_fullrow;
-
-    //T0_ = std::chrono::steady_clock::now();
     Data.J_reduced_k[n_stages] = Data.J_free_k[n_stages];
 
     Data.J_d_CSR_k[n_stages - 1] = CSR_Matrix(Data.J_dep_k[n_stages - 1]);
     Data.J_reduced_k[n_stages - 1] = Sparse_Matrix(add_fullrow(CSR_Matrix(Data.J_free_k[n_stages - 1]), sparse_dense_multiply_2(Data.J_d_CSR_k[n_stages - 1], Data.B_k[n_stages - 1])));
-
-    //J_fullrow = sparse_dense_multiply_2(Data.J_d_CSR_k[n_stages-1], Data.A_k[n_stages - 1]);
-    //J_fullrow = make_fullrow(Data.J_d_CSR_k[n_stages - 1]);
 
     if (n_stages > 1){
         J_fullrow = sparse_dense_multiply_2(Data.J_d_CSR_k[n_stages - 1], Data.A_k[n_stages - 2]);
@@ -898,36 +876,12 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
         J_fullrow = add_fullrow(sparse_dense_multiply_2(CSR_Matrix(Data.J_dep_k[i+1]), Data.A_k[i]), fullrow_multiply(J_fullrow, Data.A_k[i]));
         Data.J_d_CSR_k[i] = add_fullrow(CSR_Matrix(Data.J_dep_k[i]), J_fullrow);
 
-        //Data.J_d_CSR_k[i] = add_fullrow(CSR_Matrix(Data.J_dep_k[i]), sparse_dense_multiply_2(Data.J_d_CSR_k[i+1], Data.A_k[i]));
         Data.J_reduced_k[i] = Sparse_Matrix(add_fullrow(CSR_Matrix(Data.J_free_k[i]), sparse_dense_multiply_2(Data.J_d_CSR_k[i], Data.B_k[i])));
     }
 
     Data.Jtimes_g = blockSQP::sparse_vector_multiply(J_d, Data.g);
     Data.J_reduced = blockSQP::horzcat(Data.J_reduced_k);
 
-    /*
-    Sparse_Matrix J_red_new = blockSQP::horzcat(Data.J_reduced_k);
-    T1_ = std::chrono::steady_clock::now();
-    std::cout << "New sparse_dense_multiply took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1_ - T0_).count() << "ms\n";
-
-    Matrix Jg_new = blockSQP::sparse_vector_multiply(J_d, Data.g);
-
-    //std::cout << "J_red_new =\n" << J_red_new.dense() << "\n";
-    //std::cout << "Jg_new =\n" << Jg_new << "\n";
-    std::cout << "J_reduced.nnz = " << Data.J_reduced.nnz << ", J_red_new.nnz = " << J_red_new.nnz << "\n";
-    Matrix J_dense = Data.J_reduced.dense();
-    Matrix J_dense_new = J_red_new.dense();
-    double v = 0.;
-    for (int j = 0; j < J_dense.n; j++){
-        for (int i = 0; i < J_dense.m; i++){
-            if (J_dense(i,j) - J_dense_new(i,j) > v)
-                v = J_dense(i,j) - J_dense_new(i,j);
-            else if (J_dense_new(i,j) - J_dense(i,j) > v)
-                v = J_dense_new(i,j) - J_dense(i,j);
-        }
-    }
-    std::cout << "Max difference = " << v << "\n";
-    */
     return;
 }
 
@@ -1182,7 +1136,7 @@ void Condenser::single_hess_condense(int tnum, const blockSQP::SymMatrix *const 
     Data.H_2.set(n_stages, n_stages, Data.R_k_2[n_stages]);
 
     Data.h_2 = blockSQP::vertcat(Data.h_k_2);
-    Data.H_2.to_dense(Data.H_dense_2);
+    Data.H_2.to_sym(Data.H_dense_2);
 
     return;
 }
@@ -1442,7 +1396,7 @@ void Condenser::single_new_hess_condense(int tnum, const blockSQP::SymMatrix *co
     Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
 
     Data.h = blockSQP::vertcat(Data.h_k);
-    Data.H.to_dense(Data.H_dense);
+    Data.H.to_sym(Data.H_dense);
 
     return;
 }

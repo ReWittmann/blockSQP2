@@ -37,26 +37,27 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
 
         // If last block contains exact Hessian, we need to copy it
         if (param->whichSecondDerv == 1)
-            for (int i=0; i<vars->hess[vars->nBlocks-1].M(); i++)
-                for (int j=i; j<vars->hess[vars->nBlocks-1].N(); j++)
+            for (int i=0; i<vars->hess[vars->nBlocks-1].m; i++)
+                for (int j=i; j<vars->hess[vars->nBlocks-1].m; j++)
                     vars->hess2[vars->nBlocks-1]( i,j ) = vars->hess1[vars->nBlocks-1]( i,j );
 
         // Limited memory: compute fallback update only when needed
-        if (param->hessLimMem){
-            calcHessianUpdateLimitedMemory( param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+        if (param->hessLimMem && !vars->hess2_updated){
+            if (param->fallbackUpdate <= 2)
+                calcHessianUpdateLimitedMemory( param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+            vars->hess2_updated = true;
         }
         /* Full memory: both updates must be computed in every iteration
          * so switching storage is enough */
-        vars->hess2_calculated = true;
     }
 
     // 'Nontrivial' convex combinations
     if (maxQP > 2 && idx < maxQP - 1){
-        //Store convex combination in vars->hess_conv, to avoid having to restore the second hessian if full memory updates are used
+        //Store convex combination in vars->hess_alt, to avoid having to restore the second hessian if full memory updates are used
         for (int i = 0; i < vars->nBlocks; i++){
-            vars->hess_conv[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
+            vars->hess_alt[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
         }
-        vars->hess = vars->hess_conv;
+        vars->hess = vars->hess_alt;
     }
     else{
         vars->hess = vars->hess2;
@@ -66,20 +67,27 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
 
 void SQPmethod::computeConvexHessian(){
     vars->hess = vars->hess2;
-    if (!vars->hess2_calculated){
-        // If last block contains exact Hessian, we need to copy it
-        if( param->whichSecondDerv == 1 )
-            for( int i=0; i<vars->hess[vars->nBlocks-1].M(); i++ )
-                for( int j=i; j<vars->hess[vars->nBlocks-1].N(); j++ )
-                    vars->hess2[vars->nBlocks-1]( i,j ) = vars->hess1[vars->nBlocks-1]( i,j );
 
+    // If last block contains exact Hessian, we need to copy it
+    if (param->whichSecondDerv == 1)
+        for (int i = 0; i < vars->hess[vars->nBlocks-1].m; i++)
+            for (int j = i; j < vars->hess[vars->nBlocks-1].m; j++)
+                vars->hess2[vars->nBlocks-1](i,j) = vars->hess1[vars->nBlocks - 1](i,j);
+
+    if (!vars->hess2_updated){
         // Limited memory: compute fallback update only when needed
         if (param->hessLimMem){
-            calcHessianUpdateLimitedMemory( param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+            calcHessianUpdateLimitedMemory(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
         }
-        vars->hess2_calculated = true;
+        vars->hess2_updated = true;
     }
     return;
+}
+
+
+void SQPmethod::setIdentityHessian(){
+    calcInitialHessian(vars->hess_alt);
+    vars->hess = vars->hess_alt;
 }
 
 
@@ -89,20 +97,20 @@ void SQPmethod::computeConvexHessian(){
  * Solve a sequence of QPs until pos. def. assumption (G3*) is satisfied.
  */
 
-int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp){
+int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
 
     int l, maxQP;
-    if (param->globalization == 1 && param->hessUpdate == 1 && stats->itCount > 1 && !conv_qp)
+    if (param->globalization == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6) && stats->itCount > 1 && hess_type == 0)
         maxQP = param->maxConvQP + 1;
     else
         maxQP = 1;
 
     //Solve convex QP using fallback hessian if indefinite approximations are normally tried first.
-
-    if (conv_qp && (param->hessUpdate == 1 || param->hessUpdate == 4)){
-    //if (conv_qp && (param->hessUpdate == 1 || param->hessUpdate == 4) && stats->itCount > 1)
+    if (hess_type == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6))
         computeConvexHessian();
-    }
+
+    if (hess_type >= 2)
+        setIdentityHessian();
 
     vars->conv_qp_solved = false;
 
@@ -114,7 +122,6 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp){
     updateStepBounds();
     sub_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
     sub_QP->set_lin(vars->gradObj);
-    sub_QP->set_hess(vars->hess);
 
     sub_QP->use_hotstart = vars->use_homotopy;
 
@@ -122,19 +129,20 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp){
     for (l = 0; l < maxQP; l++){
         //Compute a new Hessian
         if (l > 0){
-            // If the solution of the first QP was rejected, consider second Hessian
+            //If the solution of the first QP was rejected, consider the second Hessian
             stats->qpResolve++;
             computeNextHessian(l, maxQP);
-            sub_QP->set_hess(vars->hess);
         }
 
-        if( l == maxQP-1 ){
-            //Inform QP solver about convexity
-            sub_QP->convex_QP = true;
+        if (l == maxQP - 1){
+            //Pass hessian and inform QP solver of supposed convexity
+            sub_QP->set_hess(vars->hess, true, vars->modified_hess_regularizationFactor);
             sub_QP->time_limit_type = 1;
         }
-        else
+        else{
             sub_QP->time_limit_type = 0;
+            sub_QP->set_hess(vars->hess, false, 0);
+        }
 
         //Solve the QP
         QP_result = sub_QP->solve(deltaXi, lambdaQP);
@@ -161,7 +169,7 @@ int SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
     updateStepBoundsSOC();
 
     sub_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-    sub_QP->convex_QP = vars->conv_qp_solved;
+    //sub_QP->convex_QP = vars->conv_qp_solved;
 
     int QP_result;
     QP_result = sub_QP->solve(deltaXi, lambdaQP);
@@ -226,19 +234,23 @@ void SQPmethod::updateStepBoundsSOC(){
 ///////////////////////////////////////////////////Subclass methods
 
 
-int SCQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp){
+int SCQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
 
     SCQPiterate *c_vars = dynamic_cast<SCQPiterate*>(vars);
 
     int maxQP, l;
-    if (param->globalization == 1 && param->hessUpdate == 1 && stats->itCount > 1 && !conv_qp)
+    if (param->globalization == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6) && stats->itCount > 1 && hess_type == 0)
         maxQP = param->maxConvQP + 1;
     else
         maxQP = 1;
 
-    //conv_qp true: Solve convex QP using fallback hessian if indefinite approximations are normally tried first.
-    if (conv_qp && (param->hessUpdate == 1)){
+    //hess_type 1: Solve convex QP using fallback hessian if indefinite approximations are normally tried first.
+    if (hess_type == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6)){
         computeConvexHessian();
+    }
+
+    if (hess_type >= 2){
+        setIdentityHessian();
     }
 
     vars->conv_qp_solved = false;
@@ -255,27 +267,30 @@ int SCQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp){
 
     sub_QP->set_bounds(c_vars->condensed_lb_var, c_vars->condensed_ub_var, c_vars->condensed_lb_con, c_vars->condensed_ub_con);
     sub_QP->set_lin(c_vars->condensed_h);
-    sub_QP->set_hess(c_vars->condensed_hess);
+    //sub_QP->set_hess(c_vars->condensed_hess);
     sub_QP->use_hotstart = vars->use_homotopy;
 
     int QP_result;
-    for(l = 0; l<maxQP; l++){
+    for (l = 0; l < maxQP; l++){
         if (l > 0){
             // If the solution of the first QP was rejected, consider second Hessian
             stats->qpResolve++;
             computeNextHessian(l, maxQP);
             cond->new_hessian_condense(c_vars->hess, c_vars->condensed_h, c_vars->condensed_hess);
             sub_QP->set_lin(c_vars->condensed_h);
-            sub_QP->set_hess(c_vars->condensed_hess);
+            //sub_QP->set_hess(c_vars->condensed_hess);
         }
 
-        if( l == maxQP-1 ){
+        if (l == maxQP-1){
             //Inform QP solver about convexity
-            sub_QP->convex_QP = true;
+            //sub_QP->convex_QP = true;
+            sub_QP->set_hess(c_vars->condensed_hess, true, vars->modified_hess_regularizationFactor);
             sub_QP->time_limit_type = 1;
         }
-        else
+        else{
+            sub_QP->set_hess(c_vars->condensed_hess, false, 0);
             sub_QP->time_limit_type = 0;
+            }
 
         //Solve the QP
         QP_result = sub_QP->solve(c_vars->deltaXi_cond, c_vars->lambdaQP_cond);
@@ -285,8 +300,11 @@ int SCQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp){
             if (l == maxQP - 1)
                 vars->conv_qp_solved = true;
             cond->recover_var_mult(c_vars->deltaXi_cond, c_vars->lambdaQP_cond, deltaXi, lambdaQP);
+            stats->qpIterations += sub_QP->get_QP_it();
             break; // Success!
         }
+        stats->qpIterations2 += sub_QP->get_QP_it();
+        stats->rejectedSR1++;
     } // End of QP solving loop
 
     // Point Hessian again to the first Hessian
@@ -307,7 +325,7 @@ int SCQPmethod::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
 
     sub_QP->set_lin(c_vars->condensed_h);
     sub_QP->set_bounds(c_vars->condensed_lb_var, c_vars->condensed_ub_var, c_vars->condensed_lb_con, c_vars->condensed_ub_con);
-    sub_QP->convex_QP = c_vars->conv_qp_solved;
+    //sub_QP->convex_QP = c_vars->conv_qp_solved;
 
     int QP_result;
     QP_result = sub_QP->solve(c_vars->deltaXi_cond, c_vars->lambdaQP_cond);
@@ -322,20 +340,24 @@ int SCQPmethod::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 
-int SCQP_bound_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp ){
+int SCQP_bound_method::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
 
     SCQPiterate *c_vars = dynamic_cast<SCQPiterate*>(vars);
 
     int maxQP, l;
-    if (param->globalization == 1 && param->hessUpdate == 1 && stats->itCount > 1 && !conv_qp){
+    if (param->globalization == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6) && stats->itCount > 1 && hess_type == 0){
         maxQP = param->maxConvQP + 1;
     }
     else
         maxQP = 1;
 
     //Solve convex QP using fallback hessian if indefinite approximations are normally tried first.
-    if (conv_qp && (param->hessUpdate == 1)){
+    if (hess_type == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6)){
         computeConvexHessian();
+    }
+
+    if (hess_type >= 2){
+        setIdentityHessian();
     }
 
     vars->conv_qp_solved = false;
@@ -352,7 +374,7 @@ int SCQP_bound_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp 
 
     sub_QP->set_bounds(c_vars->condensed_lb_var, c_vars->condensed_ub_var, c_vars->condensed_lb_con, c_vars->condensed_ub_con);
     sub_QP->set_lin(c_vars->condensed_h);
-    sub_QP->set_hess(c_vars->condensed_hess);
+    //sub_QP->set_hess(c_vars->condensed_hess);
     sub_QP->use_hotstart = vars->use_homotopy;
 
     int QP_result;
@@ -362,16 +384,19 @@ int SCQP_bound_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp 
             computeNextHessian(l, maxQP);
             cond->new_hessian_condense(c_vars->hess, c_vars->condensed_h, c_vars->condensed_hess);
             sub_QP->set_lin(c_vars->condensed_h);
-            sub_QP->set_hess(c_vars->condensed_hess);
+            //sub_QP->set_hess(c_vars->condensed_hess);
         }
 
         if( l == maxQP-1 ){
             //Inform QP solver about convexity
-            sub_QP->convex_QP = true;
+            //sub_QP->convex_QP = true;
+            sub_QP->set_hess(c_vars->condensed_hess, true, vars->modified_hess_regularizationFactor);
             sub_QP->time_limit_type = 1;
         }
-        else
+        else{
+            sub_QP->set_hess(c_vars->condensed_hess, false, 0);
             sub_QP->time_limit_type = 0;
+        }
 
         QP_result = sub_QP->solve(c_vars->deltaXi_cond, c_vars->lambdaQP_cond);
 
@@ -381,6 +406,8 @@ int SCQP_bound_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp 
             solution_found = true;
 
             cond->recover_var_mult(c_vars->deltaXi_cond, c_vars->lambdaQP_cond, deltaXi, lambdaQP);
+
+            stats->qpIterations += sub_QP->get_QP_it();
 
             bool found_direction;
             int ind;
@@ -465,6 +492,9 @@ int SCQP_bound_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp 
 
         if (solution_found)
             break;
+
+        stats->qpIterations2 += sub_QP->get_QP_it();
+        stats->rejectedSR1++;
     } // End of QP solving loop
 
     if (QP_result == 0){
@@ -490,7 +520,7 @@ int SCQP_bound_method::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
 
     sub_QP->set_lin(c_vars->condensed_h);
     sub_QP->set_bounds(c_vars->condensed_lb_var, c_vars->condensed_ub_var, c_vars->condensed_lb_con, c_vars->condensed_ub_con);
-    sub_QP->convex_QP = c_vars->conv_qp_solved;
+    //sub_QP->convex_QP = c_vars->conv_qp_solved;
 
     int QP_result;
     QP_result = sub_QP->solve(c_vars->deltaXi_cond, c_vars->lambdaQP_cond);
@@ -583,20 +613,24 @@ int SCQP_bound_method::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
 
 
 
-int SCQP_correction_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp ){
+int SCQP_correction_method::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
 
     SCQP_correction_iterate *c_vars = dynamic_cast<SCQP_correction_iterate*>(vars);
 
     int maxQP, l;
-    if (param->globalization == 1 && param->hessUpdate == 1 && stats->itCount > 1 && !conv_qp){
+    if (param->globalization == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6) && stats->itCount > 1 && hess_type == 0){
         maxQP = param->maxConvQP + 1;
     }
     else
         maxQP = 1;
 
     //Solve convex QP using fallback hessian if indefinite approximations are normally tried first.
-    if (conv_qp && (param->hessUpdate == 1)){
+    if (hess_type == 1 && (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6)){
         computeConvexHessian();
+    }
+
+    if (hess_type >= 2){
+        setIdentityHessian();
     }
 
     vars->conv_qp_solved = false;
@@ -613,7 +647,7 @@ int SCQP_correction_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool con
 
     sub_QP->set_bounds(c_vars->condensed_lb_var, c_vars->condensed_ub_var, c_vars->condensed_lb_con, c_vars->condensed_ub_con);
     sub_QP->set_lin(c_vars->condensed_h);
-    sub_QP->set_hess(c_vars->condensed_hess);
+    //sub_QP->set_hess(c_vars->condensed_hess);
     sub_QP->use_hotstart = vars->use_homotopy;
 
     int QP_result;
@@ -623,18 +657,23 @@ int SCQP_correction_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool con
             computeNextHessian(l, maxQP);
             cond->new_hessian_condense(c_vars->hess, c_vars->condensed_h, c_vars->condensed_hess);
             sub_QP->set_lin(c_vars->condensed_h);
-            sub_QP->set_hess(c_vars->condensed_hess);
+            //sub_QP->set_hess(c_vars->condensed_hess);
         }
 
-        if( l == maxQP-1 ){
+        if (l == maxQP - 1){
             //Inform QP solver about convexity
-            sub_QP->convex_QP = true;
+            //sub_QP->convex_QP = true;
+            sub_QP->set_hess(c_vars->condensed_hess, true, vars->modified_hess_regularizationFactor);
             sub_QP->time_limit_type = 1;
         }
-        else
+        else{
+            sub_QP->set_hess(c_vars->condensed_hess, false, 0);
             sub_QP->time_limit_type = 0;
+        }
 
         QP_result = sub_QP->solve(c_vars->deltaXi_cond, c_vars->lambdaQP_cond);
+
+        std::cout << "Solved QP in " << sub_QP->get_solutionTime() << "s\n";
 
         //Check if some dependent variable bounds are violated and - if they are - correct them in the QP and solve again
         bool solution_found = false;
@@ -642,6 +681,8 @@ int SCQP_correction_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool con
             solution_found = true;
 
             cond->recover_var_mult(c_vars->deltaXi_cond, c_vars->lambdaQP_cond, deltaXi, lambdaQP);
+
+            stats->qpIterations += sub_QP->get_QP_it();
 
             int ind_1, ind_2, ind, vio_count, max_vio_index;
             double max_dep_bound_violation;
@@ -762,6 +803,9 @@ int SCQP_correction_method::solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool con
             }
         }
         if (solution_found) break;
+
+        stats->qpIterations2 += sub_QP->get_QP_it();
+        stats->rejectedSR1++;
     } // End of QP solving loop
 
     if (QP_result == 0){
@@ -792,7 +836,7 @@ int SCQP_correction_method::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
 
     sub_QP->set_lin(c_vars->condensed_h);
     sub_QP->set_bounds(c_vars->condensed_lb_var, c_vars->condensed_ub_var, c_vars->condensed_lb_con, c_vars->condensed_ub_con);
-    sub_QP->convex_QP = c_vars->conv_qp_solved;
+    //sub_QP->convex_QP = c_vars->conv_qp_solved;
 
     int QP_result;
     QP_result = sub_QP->solve(c_vars->deltaXi_cond, c_vars->lambdaQP_cond);

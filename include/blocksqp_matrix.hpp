@@ -33,6 +33,9 @@ extern int Ecount; ///< Count assign operator calls
  * \author Dennis Janka
  * \date 2012-2015
  */
+
+class SymMatrix;
+
 class Matrix
 {  private:
       int malloc( void );                                           ///< memory allocation
@@ -49,6 +52,7 @@ class Matrix
       Matrix( int, int = 1, int = -1 );                             ///< constructor with standard arguments
       Matrix( int, int, double*, int = -1 );
       Matrix( const Matrix& A );
+      Matrix(const SymMatrix &A);
       //Matrix( Matrix&& M);
       virtual ~Matrix( void );
 
@@ -58,11 +62,12 @@ class Matrix
       double *ARRAY( void ) const;                                  ///< returns pointer to data array
       int TFLAG( void ) const;                                      ///< returns this->tflag (1 if it is a submatrix and does not own the memory and 0 otherwise)
 
-      virtual double &operator()( int i, int j );                   ///< access element i,j of the matrix
-      virtual double &operator()( int i, int j ) const;
-      virtual double &operator()( int i );                          ///< access element i of the matrix (columnwise)
-      virtual double &operator()( int i ) const;
-      virtual Matrix &operator=( const Matrix &A );                 ///< assignment operator
+      virtual double &operator()(int i, int j);                     ///< access element i,j of the matrix
+      virtual double &operator()(int i, int j) const;
+      virtual double &operator()(int i);                            ///< access element i of the matrix (columnwise)
+      virtual double &operator()(int i) const;
+      virtual Matrix &operator=(const Matrix &A);                   ///< assignment operator
+      virtual Matrix &operator=(const SymMatrix &A);
       //virtual void operator=( Matrix &&A );
       Matrix operator+(const Matrix &M2) const;
       Matrix operator-(const Matrix &M2) const;
@@ -72,9 +77,9 @@ class Matrix
       void operator-=(const Matrix &M2);
       void operator*=(const double alpha);
 
-      virtual Matrix &Dimension( int, int = 1, int = -1 );                  ///< set dimension (rows, columns, leading dimension)
-      Matrix &Initialize( double (*)( int, int ) );                 ///< set matrix elements i,j to f(i,j)
-      Matrix &Initialize( double );                                 ///< set all matrix elements to a constant
+      virtual Matrix &Dimension( int, int = 1, int = -1 );          ///< set dimension (rows, columns, leading dimension)
+      Matrix &Initialize(double (*)(int, int));                     ///< set matrix elements i,j to f(i,j)
+      Matrix &Initialize(double);                                   ///< set all matrix elements to a constant
 
       /// Returns just a pointer to the full matrix
       Matrix& Submatrix( const Matrix&, int, int, int = 0, int = 0 );
@@ -106,8 +111,13 @@ Matrix vertcat(std::vector<Matrix> Ms);
  * \author Dennis Janka
  * \date 2012-2015
  */
-class SymMatrix : public Matrix
-{
+class SymMatrix{
+    public:
+        int m;
+        int ldim;                                                        ///< size of the quadratic symmetric matrix
+        double *array;                                                ///< array of how the matrix is stored in the memory
+        int tflag;
+
     protected:
         int malloc( void );
         int free( void );
@@ -115,9 +125,8 @@ class SymMatrix : public Matrix
     public:
         SymMatrix();
         SymMatrix( int );
-        SymMatrix( int, double* );
+        SymMatrix( int, double*, int = -1);
         SymMatrix( int, int, int );
-        SymMatrix( int, int, double*, int = -1 );
         SymMatrix( const Matrix& A );
         SymMatrix( const SymMatrix& A );
         virtual ~SymMatrix( void );
@@ -127,19 +136,29 @@ class SymMatrix : public Matrix
         virtual double &operator()( int i );
         virtual double &operator()( int i ) const;
 
-        SymMatrix &Dimension( int = 1 );
-        SymMatrix &Dimension( int, int, int );
-        SymMatrix &Initialize( double (*)( int, int ) );
-        SymMatrix &Initialize( double );
+        SymMatrix &Dimension(int = 1);
+        SymMatrix &Initialize(double (*)(int, int));
+        SymMatrix &Initialize(double);
 
-        SymMatrix& Submatrix( const Matrix&, int, int, int = 0, int = 0 );
+        SymMatrix& Submatrix(const Matrix&, int, int = 0);
         SymMatrix& Arraymatrix( int, double* );
-        SymMatrix& Arraymatrix( int, int, double*, int = -1 );
+        SymMatrix& Arraymatrix( int, double*, int = -1 );
 
         virtual SymMatrix &operator=(const SymMatrix &M2);
         SymMatrix operator+(const SymMatrix &M2) const;
         SymMatrix operator*(const double alpha) const;
+
+
+        Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
+
+        const SymMatrix &Print( FILE* = stdout,   ///< file for output
+                             int = 13,       ///< number of digits
+                             int = 1         ///< Flag for format
+                           ) const;
 };
+
+std::ostream& operator<<(std::ostream& os, const SymMatrix &M);
+
 
 Matrix Transpose( const Matrix& A); ///< Overwrites \f$ A \f$ with its transpose \f$ A^T \f$
 Matrix &Transpose( const Matrix &A, Matrix &T ); ///< Computes \f$ T = A^T \f$
@@ -226,6 +245,7 @@ class LT_Block_Matrix{
 		LT_Block_Matrix &operator=(const LT_Block_Matrix &M);
 		LT_Block_Matrix &Dimension(int, int, int*, int*);
 		void to_dense(Matrix &M) const;
+		void to_sym(SymMatrix &M) const;
 
 		//UNTESTED
 		void to_sparse(Sparse_Matrix &M) const;

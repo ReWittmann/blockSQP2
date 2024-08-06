@@ -152,6 +152,19 @@ int SQPmethod::filterLineSearch()
 
     // Backtracking line search
     for(k = 0; k<param->maxLineSearch; k++){
+        //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
+        if (k > 3 && !vars->conv_qp_solved){
+            if (solveQP(vars->deltaXi, vars->lambdaQP, 1) == 0){
+                k = 0;
+                alpha = 1.0;
+            }
+            else{
+                //Fallback QP failed to solve, end lineSearch
+                return 1;
+            }
+        }
+
+
         // Compute new trial point and set it in bounds
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
@@ -188,15 +201,17 @@ int SQPmethod::filterLineSearch()
         if (pairInFilter( cNormTrial, objTrial ))// || (stats->itCount == 4))
         {
             //Try solving again with convex hessian approximation before invoking SOC
+            /*
             if (k == 0 && !vars->conv_qp_solved){
                 std::cout << "Point is in the filter, recalculate step with convex hessian\n";
-                if (solveQP(vars->deltaXi, vars->lambdaQP, true) == 0){
+                if (solveQP(vars->deltaXi, vars->lambdaQP, 1) == 0){
                     //Restart filter line search with step from positive definite QP
                     k = -1;
                     continue;
                 }
                 //If solution failed, try to continue with step from nonconvex QP
             }
+            */
 
             // Trial point is in the prohibited region defined by the filter, try second order correction
             if (k == 0) std::cout << "Point is in the filter, try SOC\n";
@@ -601,7 +616,8 @@ int SQPmethod::feasibilityRestorationHeuristic()
     }
 
     //reset both hessians and possibly limited memory information
-    resetHessians();
+    //NEW
+    //resetHessians();
 
     return 0;
 }
@@ -688,10 +704,10 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
      */
 
     for( iter=filter->begin(); iter!=filter->end(); iter++ )
-        if( (cNorm >= (1.0 - param->gammaTheta) * iter->first ||
-            (cNorm < 0.01 * param->nlinfeastol && iter->first < 0.01 * param->nlinfeastol ) ) &&
-            obj >= iter->second - param->gammaF * iter->first )
-        {
+        if (
+            (cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->nlinfeastol && iter->first < 0.01 * param->nlinfeastol)) &&
+            obj >= iter->second - param->gammaF * iter->first
+        ){
             return 1;
         }
 
@@ -766,7 +782,6 @@ int SCQPmethod::feasibilityRestorationPhase()
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
 
     if (vars->steptype != 3){
-        warmStart = 0;
         delete rest_prob;
         delete rest_method;
         delete rest_stats;
@@ -776,6 +791,8 @@ int SCQPmethod::feasibilityRestorationPhase()
         rest_method = new SCQPmethod(rest_prob, rest_opts, rest_stats, rest_cond);
 
         rest_method->init();
+
+        warmStart = 0;
     }
     else{
         warmStart = 1;

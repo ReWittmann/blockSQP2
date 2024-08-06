@@ -93,7 +93,7 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
 
     // Subtract slacks
     for( iCon=0; iCon<nCon; iCon++ )
-        constr( iCon ) -= slack( iCon );
+        constr(iCon) -= slack(iCon);
 
 
     /* Evaluate objective: minimize slacks plus deviation from reference point */
@@ -301,6 +301,7 @@ void RestorationProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJ
 
     // Regularization factor zeta and rho \todo wie setzen?
     zeta = 1.0e-3;
+    //zeta = 0.0;
     rho = 1.0e3;
 
     lambda.Initialize( 0.0 );

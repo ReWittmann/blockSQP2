@@ -87,14 +87,16 @@ class SQPmethod{
         /// Update the bounds on the current step for a second order correction, i.e. lb_s = lb - constr(trialXi) + constrJac(Xi)*deltaXi = prob->lb_con - vars->trialConstr + vars->AdeltaXi
         void updateStepBoundsSOC();
         /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
-        //If conv_qp is false, solution is tries with increasingly convexified hessian approximations, else only the convex fallback hessian is used
-        virtual int solveQP( Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false );
+        //If hess_type is 0, solution is tried with increasingly convexified hessian approximations. If hess_type is 1, only convex hessian approximations are used. If hess_type is 2, only the (scaled) identity is used as hessian
+        virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         virtual void computeNextHessian( int idx, int maxQP );
         /// Compute a convexified hessian and store it in vars->hess2, set hess to hess2
         virtual void computeConvexHessian();
+        /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
+        virtual void setIdentityHessian();
 
         /*
          * Globalization Strategy
@@ -192,7 +194,7 @@ public:
     SCQPmethod();
     virtual ~SCQPmethod();
 
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false);
+    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
     virtual int feasibilityRestorationPhase();
 };
@@ -202,7 +204,7 @@ class SCQP_bound_method : public SCQPmethod{
 public:
     SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
 
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false);
+    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 };
 
@@ -215,7 +217,7 @@ public:
     SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
     virtual ~SCQP_correction_method();
 
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, bool conv_qp = false);
+    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
     virtual int feasibilityRestorationPhase();

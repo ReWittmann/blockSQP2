@@ -78,7 +78,7 @@ SQPoptions::SQPoptions()
     hessScaling = 2;
     fallbackScaling = 4;
     iniHessDiag = 1.0;
-    HessDiag2 = 1.0;
+    //HessDiag2 = 1.0;
 
     // Activate damping strategy for BFGS (if deactivated, BFGS might yield indefinite updates!)
     hessDamp = 1;
@@ -86,17 +86,22 @@ SQPoptions::SQPoptions()
     // Damping factor for Powell modification of BFGS updates ( between 0.0 and 1.0 )
     hessDampFac = 0.2;
 
-    // 0: constant, 1: SR1, 2: BFGS (damped), 3: [not used] , 4: finiteDiff, 5: Gauss-Newton
+    // 0: (sized) identity, 1: SR1, 2: BFGS (damped), 3: [not used] , 4: finiteDiff, 5: Gauss-Newton, 6: None, ...
     hessUpdate = 1;
     fallbackUpdate = 2;
 
-    size_hessian_first_step = false;
+    indef_local_only = false;
+
+    //size_hessian_first_step = false;
 
     //
     convStrategy = 0;
 
     // How many ADDITIONAL (convexified) QPs may be solved per iteration?
     maxConvQP = 1;
+
+    //Should convex quadratic forms in QPs be further regularized by adding the identity times this scaling factor?
+    hess_regularizationFactor = 0.0;
 
     //Options for solving additional QPs to enforce bounds on dependent variables
     max_bound_refines = 3;
@@ -153,12 +158,12 @@ SQPoptions::SQPoptions()
 
     //Options for linked QP solvers
     #ifdef QPSOLVER_QPOASES
-        qpOASES_printLevel = 1;
+        qpOASES_printLevel = 0;
         qpOASES_terminationTolerance = 5.0e6*2.221e-16;
     #endif
 
     #ifdef QPSOLVER_GUROBI
-        gurobi_Method = 2;
+        gurobi_Method = 1;
         gurobi_NumericFocus = 3;
         gurobi_OutputFlag = 0;
         gurobi_Presolve = -1;
@@ -168,9 +173,8 @@ SQPoptions::SQPoptions()
         gurobi_BarHomogeneous = 0;
         gurobi_PSDTol = 1e-6;
 
-        gurobi_solver_regularization_factor = 1e-8;
+        //gurobi_solver_regularization_factor = 1e-8;
     #endif
-
 }
 
 
@@ -179,25 +183,22 @@ SQPoptions::SQPoptions()
  */
 void SQPoptions::optionsConsistency()
 {
-    // If we compute second constraints derivatives switch to finite differences Hessian (convenience)
-    if( whichSecondDerv == 2 )
-    {
-        hessUpdate = 4;
+    // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
+    if (whichSecondDerv == 2){
+        std::cout << "Exact hessian is available, overwrite hessUpdate and hessScaling\n";
+        hessUpdate = 6;
+        hessScaling = 0;
         blockHess = 1;
     }
 
     // If we don't use limited memory BFGS we need to store only one vector.
-    if( !hessLimMem )
+    if (!hessLimMem)
         hessMemsize = std::numeric_limits<int>::max();
 
-    /*
-    if( sparseQP != 2 && hessUpdate == 1 )
-    {
-        printf( "SR1 update only works with qpOASES Schur complement version. Using BFGS updates instead.\n" );
-        hessUpdate = 2;
-        hessScaling = fallbackScaling;
-    }
-    */
+    //Ensure a positive definite fallback hessian is available if first hessian approximation is not guaranteed to be positive definite
+    if ((hessUpdate == 1 || hessUpdate == 4 || hessUpdate == 6) && maxConvQP < 1 && !(fallbackUpdate == 0 || fallbackUpdate == 2 || fallbackUpdate == 5))
+        throw ParameterError("Error, positive definite fallback hessian is needed when hessian is not positive definite");
+
 
     if (globalization == 1 && hessUpdate == 1 && (maxConvQP < 1)){
         std::cout << "Fallback update is needed for SR1, setting maxConvQP to 1\n";

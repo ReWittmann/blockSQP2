@@ -189,6 +189,21 @@ Matrix::Matrix( const Matrix &A )
             //(*this)(i,j) = A.a(i,j);
 }
 
+Matrix::Matrix(const SymMatrix &A){
+    Ccount++;
+    m = A.m;
+    n = A.m;
+    ldim = m;
+    tflag = 0;
+    malloc();
+    for (int i = 0; i < m; i++){
+        for (int j = 0; j < n; j++){
+            (*this)(i,j) = A(i,j);
+        }
+    }
+    return;
+}
+
 /*
 Matrix::Matrix(Matrix&& M){
     m = M.m;
@@ -240,6 +255,38 @@ Matrix &Matrix::operator=( const Matrix &A )
 
     return *this;
 }
+
+
+Matrix &Matrix::operator=(const SymMatrix &A){
+    Ecount++;
+
+    if (!tflag){
+        free();
+
+        m = A.m;
+        n = A.m;
+        ldim = m;
+
+        malloc();
+        for (int i = 0; i < m; i++){
+            for (int j = 0; j < n ; j++){
+                (*this)(i,j) = A(i,j);
+            }
+        }
+    }
+    else{
+        if (m != A.m || n != A.m)
+            Error("= operation not allowed");
+
+        for (int i = 0; i < m; i++){
+            for (int j = 0; j < n ; j++){
+                (*this)(i,j) = A(i,j);
+            }
+        }
+    }
+    return *this;
+}
+
 
 /*
 void Matrix::operator=(Matrix &&A){
@@ -524,7 +571,7 @@ std::ostream& operator<<(std::ostream &os, const Matrix &M){
 
 std::ostream& operator<<(std::ostream &os, const SymMatrix &M){
 	for (int i = 0; i < M.m; i++){
-		for (int j = 0; j < M.n; j++){
+		for (int j = 0; j < M.m; j++){
 			os << M(i,j) << " ";
 		}
 		os << "\n";
@@ -641,7 +688,6 @@ Matrix vertcat(std::vector<Matrix> M_k){
     int m = 0;
     double *array;
 
-
     for (int i = 0; i < M_k.size(); i++){
         #ifdef MATRIX_DEBUG
         if (M_k[i].n != n){
@@ -673,66 +719,49 @@ Matrix vertcat(std::vector<Matrix> M_k){
 
 
 
-int SymMatrix::malloc( void )
-{
+int SymMatrix::malloc(void){
     int len;
-
     len = (m*(m+1))/2.0;
-
     if ( len == 0 )
        array = NULL;
     else
-       if ( ( array = new double[len] ) == NULL )
+       if ((array = new double[len]) == NULL)
           Error("'new' failed");
 
     return 0;
 }
 
 
-int SymMatrix::free( void )
-{
-    if( array != NULL ){
+int SymMatrix::free( void ){
+    if (array != NULL){
         delete[] array;
         array = nullptr;
     }
-
     return 0;
 }
 
 
-double &SymMatrix::operator()( int i, int j )
-{
+double &SymMatrix::operator()(int i, int j){
     #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m || j < 0 || j >= n )
+    if (i < 0 || i >= m || j < 0 || j >= m)
     Error("Invalid matrix entry");
     #endif
 
-    int pos;
-
     if( i < j )//reference to upper triangular part
-        pos = (int) (j + i*(m - (i+1.0)/2.0));
-    else
-        pos = (int) (i + j*(m - (j+1.0)/2.0));
-
-    return array[pos];
+        return array[(j + i*ldim - (i*(i + 1))/2)];
+    return array[i + j*ldim - (j*(j + 1))/2];
 }
 
 
-double &SymMatrix::operator()( int i, int j ) const
-{
+double &SymMatrix::operator()(int i, int j) const{
     #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m || j < 0 || j >= n )
+    if (i < 0 || i >= m || j < 0 || j >= m)
     Error("Invalid matrix entry");
     #endif
 
-    int pos;
-
-    if( i < j )//reference to upper triangular part
-        pos = (int) (j + i*(m - (i+1.0)/2.0));
-    else
-        pos = (int) (i + j*(m - (j+1.0)/2.0));
-
-    return array[pos];
+    if (i < j)//reference to upper triangular part
+        return array[j + i*ldim - (i*(i + 1))/2];
+    return array[i + j*ldim - (j*(j + 1))/2];
 }
 
 
@@ -760,38 +789,30 @@ double &SymMatrix::operator()( int i ) const
 
 SymMatrix::SymMatrix(){
     m = 0;
-    n = 0;
     ldim = 0;
-    tflag = 0;
     array = nullptr;
+    tflag = 0;
 }
 
-SymMatrix::SymMatrix( int M )
-{
+SymMatrix::SymMatrix(int M){
     m = M;
-    n = M;
     ldim = M;
-    tflag = 0;
-
     malloc();
+    tflag = 0;
 }
 
 
-SymMatrix::SymMatrix( int M, double *ARRAY )
-{
+SymMatrix::SymMatrix(int M, double *ARRAY, int LDIM){
     m = M;
-    n = M;
-    ldim = M;
+    if (LDIM < m) ldim = M;
+    else ldim = LDIM;
     tflag = 0;
-
     array = ARRAY;
 }
 
 
-SymMatrix::SymMatrix( int M, int N, int LDIM )
-{
+SymMatrix::SymMatrix(int M, int N, int LDIM){
     m = M;
-    n = M;
     ldim = M;
     tflag = 0;
 
@@ -799,134 +820,89 @@ SymMatrix::SymMatrix( int M, int N, int LDIM )
 }
 
 
-SymMatrix::SymMatrix( int M, int N, double *ARRAY, int LDIM )
-{
-    m = M;
-    n = M;
-    ldim = M;
-    tflag = 0;
-
-    malloc();
-    array = ARRAY;
-}
-
-
-SymMatrix::SymMatrix( const Matrix &A )
-{
-    int i, j;
-
-    m = A.M();
-    n = A.M();
-    ldim = A.M();
-    tflag = 0;
-
-    malloc();
-
-    for ( j=0; j<m; j++ )
-         for ( i=j; i<m; i++ )
-             (*this)(i,j) = A(i,j);
-}
-
-
-SymMatrix::SymMatrix( const SymMatrix &A )
-{
-    int i, j;
-
+SymMatrix::SymMatrix(const Matrix &A){
     m = A.m;
-    n = A.n;
-    ldim = A.ldim;
+    ldim = A.m;
     tflag = 0;
-
     malloc();
-
-    for ( j=0; j<m; j++ )
-         for ( i=j; i<m; i++ )
+    for (int j = 0; j < m; j++){
+         for (int i = j; i < m; i++){
              (*this)(i,j) = A(i,j);
+        }
+    }
 }
 
 
-SymMatrix::~SymMatrix( void )
-{
+SymMatrix::SymMatrix(const SymMatrix &A){
+    m = A.m;
+    ldim = A.m;
+    tflag = 0;
+
+    malloc();
+    for (int j = 0; j < m; j++){
+        for (int i = j; i < m; i++){
+            (*this)(i,j) = A(i,j);
+        }
+    }
+}
+
+
+SymMatrix::~SymMatrix( void ){
     Dcount++;
 
-    if( !tflag )
+    if (!tflag)
         free();
 }
 
 
-
-SymMatrix &SymMatrix::Dimension( int M )
-{
+SymMatrix &SymMatrix::Dimension(int M){
     free();
     m = M;
-    n = M;
     ldim = M;
 
     malloc();
-
     return *this;
 }
 
 
-SymMatrix &SymMatrix::Dimension( int M, int N, int LDIM )
-{
-    #ifdef MATRIX_DEBUG
-    if (M != N){
-    	throw std::invalid_argument("SymMatrix.Dimension: SymMatrix not quadratic with given dimension (" + std::to_string(M) + ", " + std::to_string(N) + ")");
-    }
-    #endif
-
-    free();
-    m = M;
-    n = N;
-
-    ldim = M;
-
-    malloc();
-
-    return *this;
-}
-
-
-SymMatrix &SymMatrix::Initialize( double (*f)( int, int ) )
-{
-    int i, j;
-
-    for ( j=0; j<m; j++ )
-        for ( i=j; i<n ; i++ )
+SymMatrix &SymMatrix::Initialize(double (*f)(int, int)){
+    for (int j = 0; j < m; j++){
+        for (int i = j; i < m; i++){
             (*this)(i,j) = f(i,j);
-
+        }
+    }
     return *this;
 }
 
 
-SymMatrix &SymMatrix::Initialize( double val )
-{
-    int i, j;
-
-    for ( j=0; j<m; j++ )
-        for ( i=j; i<n ; i++ )
+SymMatrix &SymMatrix::Initialize(double val){
+    for (int j = 0; j < m; j++){
+        for (int i = j; i < m; i++){
             (*this)(i,j) = val;
+        }
+    }
+    return *this;
+}
+
+
+SymMatrix &SymMatrix::Submatrix(const Matrix &A, int M, int i0){
+    //Error("SymMatrix doesn't support Submatrix");
+    free();
+    m = M;
+    array = A.array + (i0 + i0*A.ldim - (i0 * (i0+1))/2);
+    ldim = A.ldim - i0;
+    tflag = 1;
 
     return *this;
 }
 
 
-SymMatrix &SymMatrix::Submatrix( const Matrix &A, int M, int N, int i0, int j0 )
-{
-    Error("SymMatrix doesn't support Submatrix");
-    return *this;
-}
-
-
-SymMatrix &SymMatrix::Arraymatrix( int M, double *ARRAY )
-{
-    if( !tflag )
+SymMatrix &SymMatrix::Arraymatrix(int M, double *ARRAY){
+    if (!tflag)
         free();
 
     tflag = 1;
     m = M;
-    n = M;
     ldim = M;
     array = ARRAY;
 
@@ -934,15 +910,13 @@ SymMatrix &SymMatrix::Arraymatrix( int M, double *ARRAY )
 }
 
 
-SymMatrix &SymMatrix::Arraymatrix( int M, int N, double *ARRAY, int LDIM )
-{
-    if( !tflag )
+SymMatrix &SymMatrix::Arraymatrix(int M, double *ARRAY, int LDIM){
+    if(!tflag)
         free();
 
     tflag = 1;
     m = M;
-    n = M;
-    ldim = M;
+    ldim = LDIM;
     array = ARRAY;
 
     return *this;
@@ -956,24 +930,23 @@ SymMatrix &SymMatrix::operator=(const SymMatrix &M2){
     }
 
     m = M2.m;
-    n = m;
     ldim = m;
-
 
     for (int j = 0; j < m; j++){
         for(int i = j; i < m; i++){
-            array[i + j*m - (j*(j+1))/2] = M2(i,j);
+            array[i + j*ldim - (j*(j+1))/2] = M2(i,j);
         }
     }
 
     return *this;
 }
 
+
 SymMatrix SymMatrix::operator+(const SymMatrix &M2) const{
     double *arr = new double[(m*(m+1))/2];
     for (int j = 0; j < m; j++){
         for (int i = j; i < m; i++){
-            arr[i + j*m - j*(j+1)/2] = array[i + j*m - j*(j+1)/2] + M2.array[i + j*m - j*(j+1)/2];
+            arr[i + j*m - j*(j+1)/2] = array[i + j*ldim - j*(j+1)/2] + M2.array[i + j*M2.ldim - j*(j+1)/2];
         }
     }
 
@@ -984,12 +957,79 @@ SymMatrix SymMatrix::operator*(const double alpha) const{
     double *arr = new double[(m*(m+1)/2)];
     for (int j = 0; j < m; j++){
         for (int i = j; i < m; i++){
-            arr[i + j*m - j*(j+1)/2] = array[i + j*m - j*(j+1)/2]*alpha;
+            arr[i + j*m - j*(j+1)/2] = array[i + j*ldim - j*(j+1)/2]*alpha;
         }
     }
 
     return SymMatrix(m, arr);
 }
+
+
+Matrix SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end) const{
+	if (m_end < m_start || n_end < n_start || m_end > m || n_end > m){
+		throw std::invalid_argument("Matrix.get_slice: Slices (" + std::to_string(m_start) + ", " + std::to_string(m_end) + "), (" + std::to_string(n_start) + ", " + std::to_string(n_end) + ") invalid for matrix of shape (" + std::to_string(m) + ", " + std::to_string(m));
+	}
+
+	int M_slc = m_end - m_start;
+	int N_slc = n_end - n_start;
+	double *array_slc = new double[M_slc * N_slc];
+	for (int j = 0; j < N_slc; j++){
+		for (int i = 0; i < M_slc; i++){
+			array_slc[i + j*M_slc] = (*this)(m_start + i, n_start + j);
+		}
+	}
+	return Matrix(M_slc, N_slc, array_slc);
+}
+
+
+const SymMatrix &SymMatrix::Print( FILE *f, int DIGITS, int flag ) const
+{    int i, j;
+     double x;
+
+     // Flag == 1: Matlab output
+     // else: plain output
+
+    if ( flag == 1 )
+        fprintf( f, "[" );
+
+    for ( i = 0; i < m; i++ )
+    {
+        for ( j = 0; j < m; j++ )
+        {
+            x = (*this)(i,j);
+            //x = a(i,j);
+
+            if ( flag == 1 )
+            {
+                fprintf( f, j == 0 ? " " : ", " );
+                fprintf( f, "%.*le", DIGITS, x );
+            }
+            else
+            {
+                fprintf( f, j == 0 ? "" : "  " );
+                fprintf( f, "% .*le", DIGITS, x );
+            }
+        }
+        if ( flag == 1 )
+        {
+            if ( i < m-1 )
+            fprintf( f, ";\n" );
+        }
+        else
+        {
+            if ( i < m-1 )
+            fprintf( f, "\n" );
+        }
+    }
+
+    if ( flag == 1 )
+        fprintf( f, " ];\n" );
+    else
+        fprintf( f, "\n" );
+
+    return *this;
+}
+
 
 
 /* ----------------------------------------------------------------------- */
@@ -2050,6 +2090,38 @@ void LT_Block_Matrix::to_dense(Matrix &M) const{
 	}
 }
 
+void LT_Block_Matrix::to_sym(SymMatrix &M) const{
+	int M_d = 0;
+	int N_d = 0;
+
+	for (int i = 0; i<m; i++){
+		M_d += m_block_sizes[i];
+	}
+
+	for (int i = 0; i<n; i++){
+		N_d += n_block_sizes[i];
+	}
+	if (M_d != N_d) throw std::logic_error("LT_Block_Matrix: Cannot create equivalent SymMatrix - no symmetry");
+
+	M.Dimension(M_d).Initialize(0.);
+
+	int I_start = 0;
+	int J_start;
+	for (int I = 0; I<m; I++){
+		J_start = 0;
+		for (int J = 0; J <= std::min(I, n-1); J++ ){
+			for (int i = 0; i<m_block_sizes[I]; i++){
+				for (int j = 0; j<n_block_sizes[J]; j++){
+					M(I_start + i, J_start + j) = (*this)(I,J)(i,j);
+				}
+			}
+			J_start += n_block_sizes[J];
+		}
+		I_start += m_block_sizes[I];
+	}
+}
+
+
 void LT_Block_Matrix::to_sparse(Sparse_Matrix &M) const{
 	int M_m = 0;
 	int M_n = 0;
@@ -2174,6 +2246,8 @@ CSR_Matrix sparse_dense_multiply_2(const Sparse_Matrix &M1, const Matrix &M2){
             }
         }
     }
+
+    delete[] nz_; delete[] col; delete[] rowind;
 
     return CSR_Matrix(M1.m, M2.n, nz_out, col_out, rowind_out, true);
 }

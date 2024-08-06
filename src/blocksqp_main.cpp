@@ -26,8 +26,7 @@
 #include <fstream>
 #include <cmath>
 
-namespace blockSQP
-{
+namespace blockSQP{
 
 SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics ): prob(problem), param(parameters), stats(statistics){
 
@@ -108,7 +107,6 @@ int SQPmethod::run(int maxIt, int warmStart){
     bool hasConverged = false;
     int whichDerv = param->whichSecondDerv;
 
-
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         return -1;
@@ -116,15 +114,14 @@ int SQPmethod::run(int maxIt, int warmStart){
 
     if (warmStart == 0 || stats->itCount == 0){
         // SQP iteration 0
-
         /// Evaluate all functions and gradients for xi_0
         if( param->sparseQP ){
             prob->evaluate( vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess, 1+whichDerv, &infoEval );
+                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+whichDerv, &infoEval );
         }
         else
             prob->evaluate( vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->constrJac, vars->hess, 1+whichDerv, &infoEval );
+                            vars->constrJac, vars->hess1, 1+whichDerv, &infoEval );
         stats->nDerCalls++;
 
         /// Check if converged
@@ -139,25 +136,25 @@ int SQPmethod::run(int maxIt, int warmStart){
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
 
         calcInitialHessians();
-        vars->hess2_calculated = true;
+        vars->hess2_updated = true;
     }
 
     /*
      * SQP Loop: during first iteration, stats->itCount = 1
      */
-     param->iniHessDiag = param->HessDiag2;
 
     for (; it<maxIt; it++){
         /// Solve QP subproblem with qpOASES or QPOPT
-        infoQP = solveQP( vars->deltaXi, vars->lambdaQP );
+        infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
 
         //if (infoQP == 0) printf("***QP solution successful***");
         if (infoQP == 0) ;
         else if (infoQP == 1){
             bool qpError = true;
+
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
-            resetHessians();
-            infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
+            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
+
             if (infoQP){
                 std::cout << "QP solution failed again, try to reduce constraint violation\n";
                 skipLineSearch = true;
@@ -187,13 +184,10 @@ int SQPmethod::run(int maxIt, int warmStart){
                 vars->steptype = 1;
         }
         else if (infoQP == 2 || infoQP > 3){
-            // 2.) QP error (e.g., unbounded), solve again with pos.def. diagonal matrix (identity)
-            printf("***QP error. Solve again with identity matrix.***\n");
-            printf("infoQP is: %d\n", infoQP);
-            resetHessians();
-            infoQP = solveQP( vars->deltaXi, vars->lambdaQP );
-            if( infoQP )
-            {// If there is still an error, terminate.
+            std::cout << "***QP error. Solve again with identity matrix.***\n";
+            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
+            if (infoQP){
+                // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
                 printf("InfoQP is %d\n", infoQP);
                 return -1;
@@ -201,13 +195,13 @@ int SQPmethod::run(int maxIt, int warmStart){
             else
                 vars->steptype = 1;
         }
-        else if( infoQP == 3 )
-        {// 3.) QP infeasible, try to restore feasibility
+        else if (infoQP == 3){
+            // 3.) QP infeasible, try to restore feasibility
             bool qpError = true;
             skipLineSearch = true; // don't do line search with restoration step
 
             // Try to reduce constraint violation by heuristic
-            if( vars->steptype < 2 )
+            if (vars->steptype < 2)
             {
                 printf("***QP infeasible. Trying to reduce constraint violation...");
                 qpError = feasibilityRestorationHeuristic();
@@ -252,14 +246,13 @@ int SQPmethod::run(int maxIt, int warmStart){
             {
                 // Filter line search did not produce a step. Now there are a few things we can try ...
                 bool lsError = true;
-
                 // Heuristic 1: Check if the full step reduces the KKT error by at least kappaF, if so, accept the step.
-                std::cout << "filterLineSearch failed, try to reduce kktError\n";
+                std::cout << "filterLineSearch failed, try to reduce kktError\n" << std::flush;
                 lsError = kktErrorReduction( );
                 if( !lsError )
                     vars->steptype = -1;
 
-                ///TODO: Check if there are problems when trying to achieve the desired accuracy
+                ///TODO: Check if there are problems with achieving the desired accuracy
 
                 // Heuristic 2: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if( lsError && vars->cNorm > 0.01 * param->nlinfeastol && vars->steptype < 2 )
@@ -278,15 +271,11 @@ int SQPmethod::run(int maxIt, int warmStart){
                         printf("Failed.***\n");
                 }
 
-                // Heuristic 3: Recompute step with a diagonal Hessian
-                if( lsError && vars->steptype != 1 && vars->steptype != 2 )
-                {// After closing continuity gaps, we already take a step with initial Hessian. If this step is not accepted then this will cause an infinite loop!
-                    printf("***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n");
-                    vars->steptype = 1;
-
-                    it -= 1;
-                    resetHessians();
-                    continue;
+                if (lsError && vars->steptype != 1){
+                    std::cout << "***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n";
+                    infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
+                    if (infoQP == 0)
+                        lsError = bool(filterLineSearch());
                 }
 
                 // If this does not yield a successful step, start restoration phase
@@ -317,34 +306,50 @@ int SQPmethod::run(int maxIt, int warmStart){
         /// Evaluate functions and gradients at the new xi
         if (param->sparseQP){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess, 1+whichDerv, &infoEval);
+                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+whichDerv, &infoEval);
         }
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->constrJac, vars->hess, 1+whichDerv, &infoEval);
+                            vars->constrJac, vars->hess1, 1+whichDerv, &infoEval);
         stats->nDerCalls++;
 
         /// Check if converged
         hasConverged = calcOptTol();
 
+
         /// Print one line of output for the current iteration
-        stats->printProgress( prob, vars, param, hasConverged );
-        if( hasConverged && vars->steptype < 2 )
-        {
+        stats->printProgress(prob, vars, param, hasConverged);
+        if (hasConverged && vars->steptype < 2){
             stats->itCount++;
-            if( param->debugLevel > 2 )
-            {
+            if (param->debugLevel > 2){
                 //stats->dumpQPCpp( prob, vars, qp, param->sparseQP );
             }
             return 0; //Convergence achieved!
         }
 
+        //If identity hessian was used three consecutive times, reset Hessian
+        if (vars->steptype == 1)
+            vars->n_id_hess += 1;
+        else
+            vars->n_id_hess = 0;
+        if (vars->n_id_hess > 2){
+            resetHessians();
+            vars->n_id_hess = 0;
+            continue;
+        }
+
         /// Calculate difference of old and new Lagrange gradient: gamma = -gamma + dL(xi_k+1, lambda_k+1)
-        calcLagrangeGradient( vars->gamma, 1 );
+        calcLagrangeGradient(vars->gamma, 1);
+
+        //If we appear to be reasonably close to a local optimum, enable SR1 updates for faster local convergence if only convex QPs were enabled before
+        if (vars->tol <= 1e-4 && vars->cNormS <= 1e-4 && it >= 9)
+            vars->conv_qp_only = false;
+
 
         //A new delta-gamma pair for quasi-newton has been calculated, increase the number of quasi newton updates for each block by 1, up to the maximum
         for (int ind = 0; ind < vars->nBlocks; ind++)
             vars->nquasi[ind] += (vars->nquasi[ind] < param->hessMemsize);
+
 
         if (param->hessLimMem){
             //Update position of current iterate and lagrange gradient in their respective matrices
@@ -354,29 +359,43 @@ int SQPmethod::run(int maxIt, int warmStart){
             //Precalculate scalar products for COL sizing which might be needed several times
             updateScalarProductsLimitedMemory();
             //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
+            //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite hessian first
 
-            //Update only the first hessian for now if quasi-newton updates are used
-            if (param->hessUpdate == 1 || param->hessUpdate == 2)
-                calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1);
+            if (vars->conv_qp_only && vars->hess2 != nullptr){
+                if (param->fallbackUpdate <= 2)
+                    calcHessianUpdateLimitedMemory(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+                vars->hess2_updated = true;
+            }
+            else{
+                //Calculate/Update first (pos. indefinite) hessian
+                if (param->hessUpdate <= 2)
+                    calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1);
+                else if (param->hessUpdate == 4)
+                    calcFiniteDiffHessian(vars->hess1);
+
+                vars->hess2_updated = false;
+            }
         }
         else{
-            //Vectors deltaXi and gamma not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
+            //Vectors deltaXi and gamma need not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
 
             //We only store the previous precalculated scalar products, update them now
             updateScalarProducts();
 
-            if (param->hessUpdate == 1 || param->hessUpdate == 2)
+            if (param->hessUpdate <= 2)
                 calcHessianUpdate(param->hessUpdate, param->hessScaling, vars->hess1);
+            else if (param->hessUpdate == 4)
+                calcFiniteDiffHessian(vars->hess1);
 
             //Also update the fallback hessian as we need to update it in every iteration regardless of if it is needed
-            if (vars->hess2 != nullptr)
-                calcHessianUpdate(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+            if (vars->hess2 != nullptr){
+                if (param->fallbackUpdate <= 2)
+                    calcHessianUpdate(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+                vars->hess2_updated = true;
+            }
         }
 
         vars->hess = vars->hess1;
-
-        //Fallback hessian is calculated only when needed for limited memory, so mark it as not yet calculated
-        vars->hess2_calculated = false;
 
         stats->itCount++;
         skipLineSearch = false;

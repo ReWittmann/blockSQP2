@@ -75,12 +75,12 @@ class SQPiterate
         //we need one pair for each hessian
 
         //For hess1
-        Matrix deltaNormOld;
-        Matrix deltaGammaOld;
+        //Matrix deltaNormOld;
+        //Matrix deltaGammaOld;
 
         //For hess2
-        Matrix deltaNormOldFallback;
-        Matrix deltaGammaOldFallback;
+        //Matrix deltaNormOldFallback;
+        //Matrix deltaGammaOldFallback;
 
         int *nquasi;                                  ///< number of quasi-newton updates for each block since last hessian reset
         int *noUpdateCounter;                         ///< count skipped updates for each block
@@ -88,18 +88,31 @@ class SQPiterate
         int nBlocks;                                  ///< number of diagonal blocks in Hessian
         int *blockIdx;                                ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
 
-        SymMatrix *hess;                              ///< [blockwise] pointer to current Hessian of the Lagrangian
-        SymMatrix *hess1;                             ///< [blockwise] first Hessian approximation
-        SymMatrix *hess2;                             ///< [blockwise] second Hessian approximation (convexified)
-        SymMatrix *hess_conv;                         ///< [blockwise] convex combination of first and second Hessian approximation if two or more additional qps are solved per iteration
+        SymMatrix *hess;                              ///< [blockwise] pointer to current hessian (-approximation) of the Lagrangian
 
+        SymMatrix *hess1;                             ///< [blockwise] first Hessian approximation
+        //For COL sizing of hess1
+        Matrix deltaNormOld;
+        Matrix deltaGammaOld;
+
+        SymMatrix *hess2;                             ///< [blockwise] second Hessian approximation (convex)
+        //For COL sizing of hess2
+        Matrix deltaNormOldFallback;
+        Matrix deltaGammaOldFallback;
+
+        SymMatrix *hess_alt;                          ///< [blockwise] space to store alternative hessians, such as convex combinations or temporarily used (scaled) identity hessians
+
+
+        /*
         double *hessNz;                               ///< nonzero elements of Hessian (length)
         int *hessIndRow;                              ///< row indices (length)
         int *hessIndCol;                              ///< indices to first entry of columns (nCols+1)
         int *hessIndLo;                               ///< Indices to first entry of lower triangle (including diagonal) (nCols)
+        */
 
+        bool conv_qp_only;                              ///< If true, only convex sub-QPs are used to generate steps
         bool conv_qp_solved;
-        bool hess2_calculated;
+        bool hess2_updated;
 
         /*
          * Variables for QP solver
@@ -119,6 +132,7 @@ class SQPiterate
          * Variables for globalization strategy
          */
         int steptype;                                 ///< -1: KKT-error reduction step, 0: Linesearch step, 1: Step with identity hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
+        int n_id_hess;                                ///< Number of condecutive uses of identity hessian as fallback
 
         double alpha;                                 ///< stepsize for line search
         int nSOCS;                                    ///< number of second-order correction steps
@@ -134,6 +148,7 @@ class SQPiterate
         //int hessUpdate;
         //int fallbackUpdate;
         //int hessMemSize;
+        double modified_hess_regularizationFactor;
 
 
     /*
@@ -145,10 +160,9 @@ class SQPiterate
         SQPiterate();
         SQPiterate( const SQPiterate &iter );
         /// Convert *hess to column compressed sparse format
-        void convertHessian( int num_vars, int num_hessblocks, double eps, SymMatrix *&hess_,
-                             double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ );
+        //void convertHessian( int num_vars, int num_hessblocks, double eps, SymMatrix *&hess_, double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ );
         /// Convert *hess to double array (dense matrix)
-        void convertHessian( Problemspec *prob, double eps, SymMatrix *&hess_ );
+        //void convertHessian( Problemspec *prob, double eps, SymMatrix *&hess_ );
         /// Set initial filter, objective function, tolerances etc.
         void initIterate( SQPoptions* param );
         virtual ~SQPiterate( void );

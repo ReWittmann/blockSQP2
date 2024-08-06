@@ -3,6 +3,7 @@
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_defs.hpp"
 #include <cmath>
+#include <chrono>
 
 
 #ifdef QPSOLVER_QPOASES
@@ -17,6 +18,7 @@
 namespace blockSQP{
 
 ////Helper methods/////
+/*
 void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar,
                                             double *&hessNz){
     if (hessNz == NULL)
@@ -48,8 +50,48 @@ void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar,
         bstart += bsize;
     }
     return;
+}*/
+
+
+void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+                                            double *&hessNz){
+    if (hessNz == NULL)
+        hessNz = new double[nVar * nVar];
+
+    int bsize, bstart = 0, ind = 0;
+    //Iterate over hessian blocks
+    for (int h = 0; h <nBlocks; h++){
+        bsize = hess[h].m;
+        //Iterate over second dimension
+        for (int j = 0; j < bsize; j++){
+            //Iterate over first dimension
+             //Segment above hessian block
+            for (int i = 0; i < bstart; i++){
+                hessNz[ind] = 0;
+                ++ind;
+            }
+             //Hessian block
+            for (int i = 0; i < hess[h].m; i++){
+                hessNz[ind] = hess[h](i, j);
+                //NEW
+                if (i == j) hessNz[ind] += regularizationFactor;
+
+                ++ind;
+            }
+             //Segment below hessian block
+            for (int i = bstart + bsize; i < nVar; i++){
+                hessNz[ind] = 0;
+                ++ind;
+            }
+        }
+        bstart += bsize;
+    }
+    return;
 }
 
+
+
+/*
 void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar,
                              double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
     int iBlock, count, colCountTotal, rowOffset, i, j;
@@ -115,6 +157,83 @@ void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, i
          std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
     }
 }
+*/
+
+
+void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+                             double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
+    int iBlock, count, colCountTotal, rowOffset, i, j;
+    int nnz, nCols, nRows;
+
+    // 1) count nonzero elements
+    nnz = 0;
+    for (iBlock=0; iBlock<nBlocks; iBlock++){
+        for (i=0; i<hess_[iBlock].m; i++){
+            //Always count diagonal elements (regularization)
+            if (fabs(hess_[iBlock](i,i)) > eps || fabs(hess_[iBlock](i,i)) + regularizationFactor > eps)
+                nnz++;
+
+            for (j = i + 1; j < hess_[iBlock].m; j++){
+                if (fabs(hess_[iBlock]( i,j )) > eps)
+                    nnz += 2;
+            }
+        }
+    }
+
+    delete[] hessNz_;
+    delete[] hessIndRow_;
+    delete[] hessIndCol_;
+    delete[] hessIndLo_;
+
+    hessNz_ = new double[nnz];
+    hessIndRow_ = new int[nnz];
+    hessIndCol_ = new int[nVar + 1];
+    hessIndLo_ = new int[nVar];
+
+    // 2) store matrix entries columnwise in hessNz
+    count = 0; // runs over all nonzero elements
+    colCountTotal = 0; // keep track of position in large matrix
+    rowOffset = 0;
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){
+        nCols = hess_[iBlock].m;
+        nRows = hess_[iBlock].m;
+
+        for (i = 0; i < nCols; i++){
+            // column 'colCountTotal' starts at element 'count'
+            hessIndCol_[colCountTotal] = count;
+
+            for (j = 0; j < nRows; j++){
+                //if (hess_[iBlock]( i,j ) > eps || -hess_[iBlock]( i,j ) > eps ){
+                if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                    hessNz_[count] = hess_[iBlock](i, j);
+                    if (i == j) hessNz_[count] += regularizationFactor;
+
+                    hessIndRow_[count] = j + rowOffset;
+                    count++;
+                }
+            }
+            colCountTotal++;
+        }
+        rowOffset += nRows;
+    }
+    hessIndCol_[colCountTotal] = count;
+
+    // 3) Set reference to lower triangular matrix
+    for( j=0; j<nVar; j++ )
+    {
+        for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
+        hessIndLo_[j] = i;
+    }
+
+    if( count != nnz ){
+         std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
+    }
+}
+
+
+
+
+
 ///////////////////////
 
 //QPsolver base class implemented methods
@@ -129,10 +248,11 @@ QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *
     for (int i = 0; i < 10; i++){
         solution_durations[i] = param->maxTimeQP/2.5;
     }
+    //Problem information
+    convex_QP = false;
 
     //Flags
     use_hotstart = false;
-    convex_QP = false;
 };
 
 QPsolver::~QPsolver(){}
@@ -146,6 +266,7 @@ void QPsolver::set_constr(double *const jac_nz, int *const jac_row, int *const j
 }
 
 int QPsolver::get_QP_it(){return 0;}
+double QPsolver::get_solutionTime(){return -1.0;}
 
 //QPsolver factory
 QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts){
@@ -279,16 +400,25 @@ void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *c
     return;
 }
 
-void qpOASES_solver::set_hess(SymMatrix *const hess){
+void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regularizationFactor){
+
+    convex_QP = pos_def;
+    double regFactor;
+    if (convex_QP)
+        //regFactor = param->hess_regularizationFactor;
+        regFactor = regularizationFactor;
+    else
+        regFactor = 0.0;
+
     delete H_qp;
 
     if (param->sparseQP){
-        convertHessian(param->eps, hess, nHess, nVar, hess_nz, hess_row, hess_colind, hess_loind);
+        convertHessian(param->eps, hess, nHess, nVar, regFactor, hess_nz, hess_row, hess_colind, hess_loind);
         H_qp = new qpOASES::SymSparseMat(nVar, nVar, hess_row, hess_colind, hess_nz);
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp)->createDiagInfo();
     }
     else{
-        convertHessian(hess, nHess, nVar, hess_nz);
+        convertHessian(hess, nHess, nVar, regFactor, hess_nz);
         H_qp = new qpOASES::SymDenseMat(nVar, nVar, nVar, hess_nz);
     }
     matrices_changed = true;
@@ -343,6 +473,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     qpOASES::SolutionAnalysis solAna;
     qpOASES::returnValue ret;
 
+
     if ((qp->getStatus() == qpOASES::QPS_HOMOTOPYQPSOLVED ||
          qp->getStatus() == qpOASES::QPS_SOLVED) && use_hotstart){
         if (matrices_changed)
@@ -352,6 +483,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     }
     else
         ret = qp->init(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QP_time);
+
 
     if (!convex_QP && ret == qpOASES::SUCCESSFUL_RETURN){
         if (param->sparseQP == 2){
@@ -367,15 +499,14 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     if (deltaXi.m != nVar) throw std::invalid_argument("QPsolver.solve: Error in argument deltaXi, wrong matrix size");
     if (lambdaQP.m != nVar + nCon) throw std::invalid_argument("QPsolver.solve: Error in argument lambdaQP, wrong matrix size");
 
-    convex_QP = false;
 
     // Return codes: 0 - success, 1 - took too long/too many steps, 2 definiteness condition violated or QP unbounded, 3 - QP was infeasible, 4 - other error
     if (ret == qpOASES::SUCCESSFUL_RETURN){
         use_hotstart = true;
         matrices_changed = false;
 
-        qp->getPrimalSolution(deltaXi.ARRAY());
-        qp->getDualSolution(lambdaQP.ARRAY());
+        qp->getPrimalSolution(deltaXi.array);
+        qp->getDualSolution(lambdaQP.array);
 
         if (record_time){
             avg_solution_duration -= solution_durations[dur_pos]/10.0;
@@ -393,6 +524,9 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     }
 
     *qp = *qpSave;
+
+    std::cout << "QP could not be solved, qpOASES ret is " << ret << "\n";
+
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
 
@@ -413,6 +547,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
 
 int qpOASES_solver::get_QP_it(){return QP_it;}
+double qpOASES_solver::get_solutionTime(){return solution_durations[(dur_pos + 9) % 10];}
 
 #endif
 
@@ -507,7 +642,14 @@ void gurobi_solver::set_constr(double *const jac_nz, int *const jac_row, int *co
     return;
 }
 
-void gurobi_solver::set_hess(SymMatrix *const hess){
+void gurobi_solver::set_hess(SymMatrix *const hess, bool pos_def, double regularizationFactor){
+    convex_QP = pos_def;
+    double regFactor;
+    if (convex_QP)
+        regFactor = regularizationFactor;
+    else
+        regFactor = 0;
+
     obj_quad = 0;
 
     int offset = 0;
@@ -517,7 +659,8 @@ void gurobi_solver::set_hess(SymMatrix *const hess){
                 obj_quad += QP_vars[offset + i] * QP_vars[offset + j] * hess[k](i,j);
             }
             //Diagonal part, add a regularization, else QP solution seems to fail in some instances
-            obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + param->gurobi_solver_regularization_factor);
+            //obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + param->gurobi_solver_regularization_factor);
+            obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + regFactor);
         }
         offset += hess[k].m;
     }
@@ -540,7 +683,6 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
     try{
         model->optimize();
-
     }
     catch (GRBException &e){
         return 4;
@@ -576,6 +718,9 @@ int gurobi_solver::get_QP_it(){
     return model->get(GRB_IntAttr_BarIterCount) + int(model->get(GRB_DoubleAttr_IterCount));
 }
 
+double gurobi_solver::get_solutionTime(){
+    return model->get(GRB_DoubleAttr_Runtime);
+}
 
 
 #endif

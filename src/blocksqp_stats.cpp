@@ -267,7 +267,7 @@ void SQPstats::printHessian( int nBlocks, SymMatrix *&hess )
 
     nVar = 0;
     for( iBlock=0; iBlock<nBlocks; iBlock++ )
-        nVar += hess[iBlock].M();
+        nVar += hess[iBlock].m;
 
     SymMatrix fullHessian;
     fullHessian.Dimension( nVar ).Initialize( 0.0 );
@@ -279,11 +279,11 @@ void SQPstats::printHessian( int nBlocks, SymMatrix *&hess )
     offset = 0;
     for( iBlock=0; iBlock<nBlocks; iBlock++ )
     {
-        for( i=0; i<hess[iBlock].N(); i++ )
-            for( j=i; j<hess[iBlock].N(); j++ )
+        for( i=0; i<hess[iBlock].m; i++ )
+            for( j=i; j<hess[iBlock].m; j++ )
                 fullHessian( offset + i, offset + j ) = hess[iBlock]( i,j );
 
-        offset += hess[iBlock].N();
+        offset += hess[iBlock].m;
     }
 
     fprintf( hessFile, "H=" );
@@ -632,7 +632,7 @@ void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparseQP )
     if( sparseQP )
     {
         printJacobian( prob->nCon, prob->nVar, vars->jacNz, vars->jacIndRow, vars->jacIndCol );
-        printHessian( prob->nVar, vars->hessNz, vars->hessIndRow, vars->hessIndCol );
+        //printHessian( prob->nVar, vars->hessNz, vars->hessIndRow, vars->hessIndCol );
     }
 
     // Print a script that correctly reads everything

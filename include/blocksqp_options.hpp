@@ -64,8 +64,8 @@ class SQPoptions
         int fallbackScaling;                ///< If indefinite update is used, the type of fallback strategy
         double maxTimeQP;                   ///< Maximum number of time in seconds per QP solve per SQP iteration
         double iniHessDiag;                 ///< Initial Hessian guess: diagonal matrix diag(iniHessDiag)
-        double HessDiag2;
-        bool size_hessian_first_step;       ///< Size hessian to get a better initial stepsize, currently only for (almost) feasible starting points
+        //double HessDiag2;
+        //bool size_hessian_first_step;       ///< Size hessian to get a better initial stepsize, currently only for (almost) feasible starting points
 
         double colEps;                      ///< epsilon for COL scaling strategy
         double olEps;                       ///< epsilon for first sizing in COL scaling strategy (OL scaling)
@@ -75,12 +75,15 @@ class SQPoptions
         double hessDampFac;                 ///< damping factor for BFGS Powell modification
         int hessUpdate;                     ///< Type of Hessian approximation
         int fallbackUpdate;                 ///< If indefinite update is used, the type of fallback strategy
+        bool indef_local_only;              ///< If set to true, only use positive definite fallback update until we are "close" to a local optimum (vars->tol <= 1e-4, vars->cNormS <= 1e-4, it >= 10)
+
         int hessLimMem;                     ///< Full or limited memory
         int hessMemsize;                    ///< Memory size for L-BFGS updates
         int whichSecondDerv;                ///< For which block should second derivatives be provided by the user
         bool skipFirstGlobalization;        ///< If set to true, no globalization strategy in first iteration is applied
         int convStrategy;                   ///< Convexification strategy
         int maxConvQP;                      ///< How many additional QPs may be solved for convexification per iteration?
+        double hess_regularizationFactor;   ///< The identity matrix times this regulrization factor is added to supposedly convex hessian approximations
 
 
         /* Options for qpOASES with condensing*/
@@ -124,7 +127,7 @@ class SQPoptions
             double gurobi_PSDTol;
 
             //Scaling factor for identity added to hessian in gurobi model
-            double gurobi_solver_regularization_factor; ///< Scaling factor for identity added to hessian when invoking gurobi
+            //double gurobi_solver_regularization_factor; ///< Scaling factor for identity added to hessian when invoking gurobi
         #endif
 
     /*

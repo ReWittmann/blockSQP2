@@ -8,17 +8,16 @@ project(blockSQP
     )
     
 
-#Link possible QP solvers, 
+#EDIT HERE: Set correct paths and flags to available QP solvers
 #QPOASES
-#	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../qpOASES/include)
-#	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../qpOASES/libs/libqpOASES.so)
-#	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
+	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../qpOASES/include)
+	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../qpOASES/libs/libqpOASES.so)
+	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
 #GUROBI
 #	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../gurobi/.../include)
 #	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../gurobi/.../lib/libgurobi_c++.a /path/to/.../gurobi/.../lib/libgurobi110.so)
 #	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_GUROBI)
 #################
-
 
 
 # Find dependencies: LAPACK
