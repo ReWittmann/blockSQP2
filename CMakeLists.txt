@@ -10,9 +10,9 @@ project(blockSQP
 
 #EDIT HERE: Set correct paths and flags to available QP solvers
 #QPOASES
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../qpOASES/include)
-	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../qpOASES/libs/libqpOASES.so)
-	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
+set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} ${qpOASES_DIR}/include)
+set(QPSOLVER_LIB ${QPSOLVER_LIB}  ${qpOASES_DIR}/bin/libqpOASES.so)
+set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
 #GUROBI
 #	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../gurobi/.../include)
 #	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../gurobi/.../lib/libgurobi_c++.a /path/to/.../gurobi/.../lib/libgurobi110.so)
@@ -73,37 +73,37 @@ set_target_properties(example1
 	)
 
 
-add_executable(TEST_condensing examples/TEST_condensing.cpp)
-target_compile_options(TEST_condensing PUBLIC -g -O0)
-target_link_libraries(TEST_condensing blockSQP)
-set_target_properties(TEST_condensing
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+#add_executable(TEST_condensing examples/TEST_condensing.cpp)
+#target_compile_options(TEST_condensing PUBLIC -g -O0)
+#target_link_libraries(TEST_condensing blockSQP)
+#set_target_properties(TEST_condensing
+#	PROPERTIES
+#	RUNTIME_OUTPUT_DIRECTORY "./examples"
+#)
 
-add_executable(TEST_condensing_multiple examples/TEST_condensing_multiple.cpp)
-target_compile_options(TEST_condensing_multiple PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_multiple blockSQP)
-set_target_properties(TEST_condensing_multiple
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+#add_executable(TEST_condensing_multiple examples/TEST_condensing_multiple.cpp)
+#target_compile_options(TEST_condensing_multiple PUBLIC -g -O0)
+#target_link_libraries(TEST_condensing_multiple blockSQP)
+#set_target_properties(TEST_condensing_multiple
+#	PROPERTIES
+#	RUNTIME_OUTPUT_DIRECTORY "./examples"
+#)
 
-add_executable(TEST_condensing_second_hessian examples/TEST_condensing_second_hessian.cpp)
-target_compile_options(TEST_condensing_second_hessian PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_second_hessian blockSQP)
-set_target_properties(TEST_condensing_second_hessian
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+#add_executable(TEST_condensing_second_hessian examples/TEST_condensing_second_hessian.cpp)
+#target_compile_options(TEST_condensing_second_hessian PUBLIC -g -O0)
+#target_link_libraries(TEST_condensing_second_hessian blockSQP)
+#set_target_properties(TEST_condensing_second_hessian
+#	PROPERTIES
+#	RUNTIME_OUTPUT_DIRECTORY "./examples"
+#)
 
-add_executable(TEST_condensing_SOC examples/TEST_condensing_SOC.cpp)
-target_compile_options(TEST_condensing_SOC PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_SOC blockSQP)
-set_target_properties(TEST_condensing_SOC
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+#add_executable(TEST_condensing_SOC examples/TEST_condensing_SOC.cpp)
+#target_compile_options(TEST_condensing_SOC PUBLIC -g -O0)
+#target_link_libraries(TEST_condensing_SOC blockSQP)
+#set_target_properties(TEST_condensing_SOC
+#	PROPERTIES
+#	RUNTIME_OUTPUT_DIRECTORY "./examples"
+#)
 
 add_executable(TEST_block examples/TEST_block.cpp)
 target_compile_options(TEST_block PUBLIC -g -O0)
@@ -113,21 +113,21 @@ set_target_properties(TEST_block
 	RUNTIME_OUTPUT_DIRECTORY "./examples"
 )
 
-add_executable(TEST_qp examples/TEST_qp.cpp)
-target_compile_options(TEST_qp PUBLIC -g -O0)
-target_link_libraries(TEST_qp blockSQP)
-set_target_properties(TEST_qp
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+#add_executable(TEST_qp examples/TEST_qp.cpp)
+#target_compile_options(TEST_qp PUBLIC -g -O0)
+#target_link_libraries(TEST_qp blockSQP)
+#set_target_properties(TEST_qp
+#	PROPERTIES
+#	RUNTIME_OUTPUT_DIRECTORY "./examples"
+#)
 
-add_executable(TEST_condensing_QPS examples/TEST_condensing_QPS.cpp)
-target_compile_options(TEST_condensing_QPS PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_QPS blockSQP)
-set_target_properties(TEST_condensing_QPS
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+#add_executable(TEST_condensing_QPS examples/TEST_condensing_QPS.cpp)
+#target_compile_options(TEST_condensing_QPS PUBLIC -g -O0)
+#target_link_libraries(TEST_condensing_QPS blockSQP)
+#set_target_properties(TEST_condensing_QPS
+#	PROPERTIES
+#	RUNTIME_OUTPUT_DIRECTORY "./examples"
+#)
 
 
 install(TARGETS blockSQP

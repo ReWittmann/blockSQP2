@@ -1,12 +1,12 @@
+cmake_minimum_required(VERSION 3.5)
 project(Julia_BlockSQP)
 
-cmake_minimum_required(VERSION 3.5)
 set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
 
 #EDIT HERE, change path to JlCxx CMake file
-list(APPEND CMAKE_PREFIX_PATH "/path/to/.../.julia/.../cmake/JlCxx")
+#list(APPEND CMAKE_PREFIX_PATH ${qpOASES_DIR})
 
 find_package(JlCxx)
 get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
@@ -21,11 +21,14 @@ add_library(BlockSQP SHARED BlockSQP.cpp)
 target_compile_options(BlockSQP PUBLIC -DQPSOLVER_QPOASES)# -DQPSOLVER_GUROBI)
 
 
-
 target_include_directories(BlockSQP 
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../blockSQP_modified/include)
+	PUBLIC ${blockSQP_DIR}/include)
+target_include_directories(BlockSQP 
+	PUBLIC ${qpOASES_DIR}/include)
+
 target_link_libraries(BlockSQP
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libblockSQP.so JlCxx::cxxwrap_julia)
+	PUBLIC ${blockSQP_DIR}/lib/libblockSQP.so  
+	${qpOASES_DIR}/bin/libqpOASES.so JlCxx::cxxwrap_julia)
 
 
 
