@@ -7,23 +7,21 @@ project(blockSQP
     LANGUAGES CXX
     )
     
-
-#Link possible QP solvers
+##################################################################################################
+#EDIT HERE: Set correct paths and flags to available QP solvers
 #QPOASES
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/qpOASES/include)
-	set(QPSOLVER_LIB ${QPSOLVER_LIB} /home/reinhold/qpOASES/libs/libqpOASES.so)
+	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../qpOASES/include)
+	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../qpOASES/libs/libqpOASES.so)
 	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
 #GUROBI
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/gurobi/gurobi1102/linux64/include)
-	set(QPSOLVER_LIB ${QPSOLVER_LIB} /home/reinhold/gurobi/gurobi1102/linux64/lib/libgurobi_c++.a /home/reinhold/gurobi/gurobi1102/linux64/lib/libgurobi110.so)
-	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_GUROBI)
-#################
-
+#	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../gurobi/.../include)
+#	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../gurobi/.../lib/libgurobi_c++.a /path/to/.../gurobi/.../lib/libgurobi110.so)
+#	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_GUROBI)
+##################################################################################################
 
 
 # Find dependencies: LAPACK
-#find_package(LAPACK REQUIRED)
-#set(BLA_STATIC ON)
+find_package(LAPACK REQUIRED)
 find_package(BLAS REQUIRED)
 
 # Add target
@@ -60,7 +58,7 @@ set_property(TARGET blockSQP PROPERTY PUBLIC_HEADER
 
 target_compile_options(blockSQP PUBLIC -g -O0 ${QPSOLVER_FLAGS})
 target_include_directories(blockSQP PUBLIC include ${QPSOLVER_INCLUDE})
-target_link_libraries(blockSQP BLAS::BLAS ${QPSOLVER_LIB})
+target_link_libraries(blockSQP LAPACK::LAPACK ${QPSOLVER_LIB})
 
 set_target_properties(blockSQP
 	PROPERTIES
