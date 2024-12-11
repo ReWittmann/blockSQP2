@@ -53,6 +53,7 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
         rest_opts->which_QPsolver = param->which_QPsolver;
+        rest_opts->hessDampFac = 0.2;
 
         rest_prob = nullptr;
         rest_stats = nullptr;
@@ -106,6 +107,7 @@ int SQPmethod::run(int maxIt, int warmStart){
     bool skipLineSearch = false;
     bool hasConverged = false;
     int whichDerv = param->whichSecondDerv;
+    int n_convShift;
 
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
@@ -115,13 +117,12 @@ int SQPmethod::run(int maxIt, int warmStart){
     if (warmStart == 0 || stats->itCount == 0){
         // SQP iteration 0
         /// Evaluate all functions and gradients for xi_0
-        if( param->sparseQP ){
-            prob->evaluate( vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+whichDerv, &infoEval );
-        }
+        if (param->sparseQP)
+            prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
+                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+whichDerv, &infoEval);
         else
-            prob->evaluate( vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->constrJac, vars->hess1, 1+whichDerv, &infoEval );
+            prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
+                            vars->constrJac, vars->hess1, 1+whichDerv, &infoEval);
         stats->nDerCalls++;
 
         /// Check if converged
@@ -252,9 +253,19 @@ int SQPmethod::run(int maxIt, int warmStart){
                 if( !lsError )
                     vars->steptype = -1;
 
+                //Heuristic 2: Ignore acceptance criteria up to a limited number of times if we are close to a solution
+                if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= 1e2*param->nlinfeastol && vars->local_lenience > 0){
+                    force_accept(1.0);
+                    vars->local_lenience--;
+                    lsError = false;
+                    std::cout << "Filter line search failed close to a local solution, ignore filter. We can only do this " << vars->local_lenience << " more times\n";
+                }
+
                 ///TODO: Check if there are problems with achieving the desired accuracy
 
-                // Heuristic 2: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
+
+
+                // Heuristic 3: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if( lsError && vars->cNorm > 0.01 * param->nlinfeastol && vars->steptype < 2 )
                 {// Don't do this twice in a row!
 
@@ -368,7 +379,7 @@ int SQPmethod::run(int maxIt, int warmStart){
             }
             else{
                 //Calculate/Update first (pos. indefinite) hessian
-                if (param->hessUpdate <= 2)
+                if (param->hessUpdate <= 2 || param->hessUpdate > 6)
                     calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1);
                 else if (param->hessUpdate == 4)
                     calcFiniteDiffHessian(vars->hess1);
@@ -395,7 +406,28 @@ int SQPmethod::run(int maxIt, int warmStart){
             }
         }
 
+        //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
+        if (param->convStrategy == 1 && vars->steptype == 0 && stats->itCount > 1){
+            if (param->maxConvQP > 2){
+                //If more than one convexified indefinite QP is tried, shift convexification factor of the successful QP to the last attempted convexified QP.
+                //If more than two convexified indefinite QPs are tried and none were accepted, shift last factor to first factor.
+                n_convShift = vars->hess_num_accepted - param->maxConvQP + 1 + (param->maxConvQP - 3) * (vars->hess_num_accepted == param->maxConvQP);
+                vars->convKappa *= std::pow(2, n_convShift);
+            }
+            else{
+                //If only one convexified indefinite QP is tried, increase convexification factor if it was rejected, decrease it if it was accepted.
+                if (vars->hess_num_accepted == param->maxConvQP) vars->convKappa *= 2;
+                else vars->convKappa *= 0.5;
+            }
+            if (vars->convKappa > 1.0e2) vars->convKappa = 1.0e2;
+        }
+        //The scaling factor adjustment in one line of code
+        //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->maxConvQP + 1 + (param->maxConvQP - 3) * (vars->hess_num_accepted == param->maxConvQP))*(param->maxConvQP > 2) + (1 - 2*(vars->hess_num_accepted < param->maxConvQP))*(param->maxConvQP <= 2))) * (param->convStrategy == 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->convStrategy != 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
+
+
         vars->hess = vars->hess1;
+
+        std::cout << "vars->convKappa = " << vars->convKappa << "\n";
 
         stats->itCount++;
         skipLineSearch = false;

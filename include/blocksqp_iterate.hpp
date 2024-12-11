@@ -61,12 +61,12 @@ class SQPiterate
         Matrix gamma;                                 ///< alias for current Lagrangian gradient
 
         //Scalar products for COL sizing. In full memory quasi newton, they are updated at the end of each SQP iteration. In limited memory, they are calculated when applying the up
-        Matrix deltaNormMat;                          /// last m >= 2 squared step norms
+        Matrix deltaNormSqMat;                          /// last m >= 2 squared step norms
         Matrix deltaGammaMat;                         /// last m >= 2 delta-gamma scalar products
-        int dg_pos;                                   /// position of the current iterate within deltaNormMat and gammaNormMat as well as deltaMat and gammaMat if in limited memory
+        int dg_pos;                                   /// position of the current iterate within deltaNormSqMat and gammaNormMat as well as deltaMat and gammaMat if in limited memory
 
         //[blockwise] precalculated scalar products, needed for quasi-newton updates and sizing
-        Matrix deltaNorm;                             ///< sTs, subvector of deltaNormMat
+        Matrix deltaNormSq;                             ///< sTs, subvector of deltaNormSqMat
         Matrix deltaGamma;                            ///< sTy, subvector of deltaGammaMat
 
         //[blockwise] norm and scalar product of the last delta-gamma pair for the secant update was successful and secand equation is fulfilled.
@@ -75,11 +75,11 @@ class SQPiterate
         //we need one pair for each hessian
 
         //For hess1
-        //Matrix deltaNormOld;
+        //Matrix deltaNormSqOld;
         //Matrix deltaGammaOld;
 
         //For hess2
-        //Matrix deltaNormOldFallback;
+        //Matrix deltaNormSqOldFallback;
         //Matrix deltaGammaOldFallback;
 
         int *nquasi;                                  ///< number of quasi-newton updates for each block since last hessian reset
@@ -88,16 +88,18 @@ class SQPiterate
         int nBlocks;                                  ///< number of diagonal blocks in Hessian
         int *blockIdx;                                ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
 
+        int nRestIt;
+
         SymMatrix *hess;                              ///< [blockwise] pointer to current hessian (-approximation) of the Lagrangian
 
         SymMatrix *hess1;                             ///< [blockwise] first Hessian approximation
         //For COL sizing of hess1
-        Matrix deltaNormOld;
+        Matrix deltaNormSqOld;
         Matrix deltaGammaOld;
 
         SymMatrix *hess2;                             ///< [blockwise] second Hessian approximation (convex)
         //For COL sizing of hess2
-        Matrix deltaNormOldFallback;
+        Matrix deltaNormSqOldFallback;
         Matrix deltaGammaOldFallback;
 
         SymMatrix *hess_alt;                          ///< [blockwise] space to store alternative hessians, such as convex combinations or temporarily used (scaled) identity hessians
@@ -110,9 +112,11 @@ class SQPiterate
         int *hessIndLo;                               ///< Indices to first entry of lower triangle (including diagonal) (nCols)
         */
 
-        bool conv_qp_only;                              ///< If true, only convex sub-QPs are used to generate steps
+        bool conv_qp_only;                            ///< If true, only convex sub-QPs are used to generate steps
         bool conv_qp_solved;
         bool hess2_updated;
+
+        int hess_num_accepted;                        ///< order of hessian convexification for last QP, ranging from 0 (no regularization) to options.maxConvQP (fallback)
 
         /*
          * Variables for QP solver
@@ -149,7 +153,10 @@ class SQPiterate
         //int fallbackUpdate;
         //int hessMemSize;
         double modified_hess_regularizationFactor;
+        double convKappa;
 
+        //Ignore filter up to a limited amount of times close to a solution as rounding errors can caues errors in line search.
+        int local_lenience;
 
     /*
      * Methods
@@ -213,6 +220,9 @@ public:
     Matrix corrected_h;
     Matrix corrected_lb_con;
     Matrix corrected_ub_con;
+
+    Matrix deltaXi_save;
+    Matrix lambdaQP_save;
     SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond, bool full);
 };
 

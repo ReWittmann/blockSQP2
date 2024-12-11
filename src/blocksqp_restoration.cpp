@@ -20,11 +20,10 @@
 #include <cmath>
 #include <limits>
 
-namespace blockSQP
-{
+namespace blockSQP{
 
-RestorationProblem::RestorationProblem( Problemspec *parentProblem, const Matrix &xiReference )
-{
+RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_zeta, double param_rho): zeta(param_zeta), rho(param_rho){
+
     int iVar, iCon;
 
     parent = parentProblem;
@@ -253,8 +252,13 @@ void RestorationProblem::initialize( Matrix &xi, Matrix &lambda, double *&jacNz,
             diagScale( i ) = 1.0 / fabs( xiRef( i ) );
 
     // Regularization factor zeta and rho \todo wie setzen?
-    zeta = 1.0e-3;
-    rho = 1.0e3;
+    //OLD
+    //zeta = 1.0e-3;
+    //rho = 1.0e3;
+
+    //NEW
+    //zeta = 1.0e-3;
+    //rho = 1.0e3;
 
     lambda.Initialize( 0.0 );
 }
@@ -1148,7 +1152,7 @@ void feasibility_Problem::recover_multipliers(const Matrix &lambda_rest, Matrix 
 
 
 
-TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference): parent(parent_Problem), parent_cond(parent_CND), xi_ref(xi_Reference){
+TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference, double param_zeta, double param_rho): parent(parent_Problem), parent_cond(parent_CND), xi_ref(xi_Reference), zeta(param_zeta), rho(param_rho){
 
     // one slack variable for each true (not used for condensing) constraint
     nVar = parent->nVar + parent_cond->num_true_cons;
@@ -1284,8 +1288,8 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
     }
 
     // Regularization factor zeta and rho \todo wie setzen?
-    zeta = 1.0e-3;
-    rho = 1.0e3;
+    //zeta = 1.0e-3;
+    //rho = 1.0e3;
 
     lambda.Initialize(0.0);
 }

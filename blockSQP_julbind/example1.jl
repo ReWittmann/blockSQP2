@@ -52,7 +52,7 @@ opts["debugLevel"] = 0
 opts["which_QPsolver"] = "qpOASES"
 
 stats = BlockSQP.SQPstats("./")
-cxx_opts = BlockSQP.BSQP_options(opts)
+#cxx_opts = BlockSQP.BSQP_options(opts)
 
 meth = BlockSQP.Solver(prob, opts, stats)
 BlockSQP.init(meth)

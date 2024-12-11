@@ -405,7 +405,6 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
     convex_QP = pos_def;
     double regFactor;
     if (convex_QP)
-        //regFactor = param->hess_regularizationFactor;
         regFactor = regularizationFactor;
     else
         regFactor = 0.0;

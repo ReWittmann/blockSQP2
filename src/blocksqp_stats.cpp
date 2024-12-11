@@ -260,8 +260,7 @@ void SQPstats::printDualVars( const Matrix &lambda )
 }
 
 
-void SQPstats::printHessian( int nBlocks, SymMatrix *&hess )
-{
+void SQPstats::printHessian( int nBlocks, SymMatrix *&hess ){
     PATHSTR filename;
     int offset, i, j, iBlock, nVar;
 
@@ -277,8 +276,7 @@ void SQPstats::printHessian( int nBlocks, SymMatrix *&hess )
     hessFile = fopen( filename, "w");
 
     offset = 0;
-    for( iBlock=0; iBlock<nBlocks; iBlock++ )
-    {
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){
         for( i=0; i<hess[iBlock].m; i++ )
             for( j=i; j<hess[iBlock].m; j++ )
                 fullHessian( offset + i, offset + j ) = hess[iBlock]( i,j );

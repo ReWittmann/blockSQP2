@@ -53,7 +53,7 @@ class RestorationProblem : public Problemspec
      * METHODS
      */
     public:
-        RestorationProblem( Problemspec *parentProblem, const Matrix &xiReference);
+        RestorationProblem( Problemspec *parentProblem, const Matrix &xiReference, double param_zeta, double param_rho);
         virtual ~RestorationProblem();
 
         /// Set initial values for xi and lambda, may also set matrix for linear constraints (dense version)
@@ -179,7 +179,7 @@ public:
 
 
 public:
-    TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference);
+    TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference, double param_zeta, double param_rho);
     virtual ~TC_restoration_Problem();
 
     /// Set initial values for xi and lambda, may also set matrix for linear constraints (sparse version)

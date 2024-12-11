@@ -81,6 +81,69 @@ void SQPmethod::reduceStepsize(double *alpha){
     *alpha = (*alpha) * 0.5;
 }
 
+void SQPmethod::force_accept(double alpha){
+    force_accept(vars->deltaXi, vars->lambdaQP, alpha, 0);
+}
+
+//Force a step to be accepted, ignoring the filter and remove dominating entries
+void SQPmethod::force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS){
+    int infoEval;
+
+    acceptStep(deltaXi, lambdaQP, alpha, nSOCS);
+
+    prob->evaluate(vars->xi, &vars->obj, vars->constr, &infoEval);
+    vars->cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
+
+    //Remove filter entries that dominate the set point
+    std::set<std::pair<double,double>>::iterator iter;
+    std::set<std::pair<double,double>>::iterator iterToRemove;
+    iter = vars->filter->begin();
+
+    while (iter != vars->filter->end()){
+        if (iter->first < vars->cNorm && iter->second < vars->obj){
+            iterToRemove = iter;
+            iter++;
+            vars->filter->erase(iterToRemove);
+        }
+        else iter++;
+    }
+    augmentFilter(vars->cNorm, vars->obj);
+    return;
+}
+
+//Set a new iterate, ignoring the filter and remove dominating entries
+void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHessian){
+    vars->xi = xi;
+    vars->lambda = lambda;
+    int infoEval;
+    if (resetHessian) resetHessians();
+
+    if (param->sparseQP)
+        prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
+                        vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+param->whichSecondDerv, &infoEval);
+    else
+        prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
+                        vars->constrJac, vars->hess1, 1+param->whichSecondDerv, &infoEval);
+
+    //Remove filter entries that dominate the set point
+    std::set<std::pair<double,double>>::iterator iter;
+    std::set<std::pair<double,double>>::iterator iterToRemove;
+    iter = vars->filter->begin();
+
+    while (iter != vars->filter->end()){
+        if (iter->first < vars->cNorm && iter->second < vars->obj){
+            iterToRemove = iter;
+            iter++;
+            vars->filter->erase(iterToRemove);
+        }
+        else iter++;
+    }
+    augmentFilter(vars->cNorm, vars->obj);
+    return;
+}
+
+
+
 
 /**
  * Take a full Quasi-Newton step, except when integrator fails:
@@ -154,16 +217,9 @@ int SQPmethod::filterLineSearch()
     for(k = 0; k<param->maxLineSearch; k++){
         //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
         if (k > 3 && !vars->conv_qp_solved){
-            if (solveQP(vars->deltaXi, vars->lambdaQP, 1) == 0){
-                k = 0;
-                alpha = 1.0;
-            }
-            else{
-                //Fallback QP failed to solve, end lineSearch
-                return 1;
-            }
+            if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
+            else{k = 0; alpha = 1.0;}
         }
-
 
         // Compute new trial point and set it in bounds
         for (int i = 0; i < nVar; i++){
@@ -190,29 +246,14 @@ int SQPmethod::filterLineSearch()
         cNormTrial = lInfConstraintNorm( vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
 
         // Reduce step if evaluation fails, if lower bound is violated or if objective is NaN
-        if( info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial) )
-        {
+        if(info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
             // evaluation error, reduce stepsize
-            reduceStepsize( &alpha );
+            reduceStepsize(&alpha);
             continue;
         }
 
         // Check acceptability to the filter
-        if (pairInFilter( cNormTrial, objTrial ))// || (stats->itCount == 4))
-        {
-            //Try solving again with convex hessian approximation before invoking SOC
-            /*
-            if (k == 0 && !vars->conv_qp_solved){
-                std::cout << "Point is in the filter, recalculate step with convex hessian\n";
-                if (solveQP(vars->deltaXi, vars->lambdaQP, 1) == 0){
-                    //Restart filter line search with step from positive definite QP
-                    k = -1;
-                    continue;
-                }
-                //If solution failed, try to continue with step from nonconvex QP
-            }
-            */
-
+        if (pairInFilter(cNormTrial, objTrial)){
             // Trial point is in the prohibited region defined by the filter, try second order correction
             if (k == 0) std::cout << "Point is in the filter, try SOC\n";
 
@@ -234,15 +275,8 @@ int SQPmethod::filterLineSearch()
                 if( alpha * pow( (-dfTdeltaXi), param->sF ) > param->delta * pow( cNorm, param->sTheta ) ){
                     // Switching conditions hold: Require satisfaction of Armijo condition for objective
                     if( objTrial > vars->obj + param->eta*alpha*dfTdeltaXi ){
-                        //Armijo condition violated, try calculating a step with convex QP
-                        if (k == 0 && !vars->conv_qp_solved){
-                            if (solveQP(vars->deltaXi, vars->lambdaQP, true) == 0){
-                                k = -1;
-                                continue;
-                            }
-                        }
-                        std::cout << "Armijo condition violated, try SOC\n";
-                        //Armijo condition violated for convex QP, try second order correction
+                        //Armijo condition violated, try second order correction
+                        if (k == 0) std::cout << "Armijo condition violated, try SOC\n";
                         if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                             break;
                         else{
@@ -439,8 +473,8 @@ int SQPmethod::feasibilityRestorationPhase()
 
     stats->nRestPhaseCalls++;
 
-    int ret, info;
-    int maxRestIt = 100;
+    int ret = 1, info;
+    int maxRestIt = 20;
     int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
 
@@ -450,9 +484,10 @@ int SQPmethod::feasibilityRestorationPhase()
         delete rest_prob;
         delete rest_method;
         delete rest_stats;
-        rest_prob = new RestorationProblem(prob, vars->xi);
+        rest_prob = new RestorationProblem(prob, vars->xi, param->restZeta, param->restRho);
         rest_stats = new SQPstats(stats->outpath);
         rest_method = new SQPmethod( rest_prob, rest_opts, rest_stats );
+        vars->nRestIt = 0;
 
         rest_method->init();
     }
@@ -460,7 +495,7 @@ int SQPmethod::feasibilityRestorationPhase()
         warmStart = 1;
     }
 
-    for(int it=0; it<maxRestIt; it++){
+    for(; vars->nRestIt<maxRestIt; vars->nRestIt++){
         // One iteration for minimum norm NLP
         ret = rest_method->run( 1, warmStart );
         warmStart = 1;
@@ -777,7 +812,7 @@ int SCQPmethod::feasibilityRestorationPhase()
     stats->nRestPhaseCalls++;
 
     int ret, info;
-    int maxRestIt = 100;
+    int maxRestIt = 20;
     int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
 
@@ -786,9 +821,10 @@ int SCQPmethod::feasibilityRestorationPhase()
         delete rest_method;
         delete rest_stats;
 
-        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi);
+        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restZeta, param->restRho);
         rest_stats = new SQPstats(stats->outpath);
         rest_method = new SCQPmethod(rest_prob, rest_opts, rest_stats, rest_cond);
+        vars->nRestIt = 0;
 
         rest_method->init();
 
@@ -798,7 +834,7 @@ int SCQPmethod::feasibilityRestorationPhase()
         warmStart = 1;
     }
 
-    for(int it=0; it<maxRestIt; it++){
+    for(; vars->nRestIt<maxRestIt; vars->nRestIt++){
 
         // One iteration for minimum norm NLP
         ret = rest_method->run( 1, warmStart );
@@ -876,6 +912,160 @@ int SCQPmethod::feasibilityRestorationPhase()
 
 
 
+int SCQP_correction_method::filterLineSearch(){
+
+    double alpha = 1.0;
+    double cNorm, cNormTrial, objTrial, dfTdeltaXi;
+
+    int k, info;
+    int nVar = prob->nVar;
+
+    int ind_1, ind_2, ind;
+    double max_dep_bound_violation, xi_s;
+
+    // Compute ||constr(xi)|| at old point
+    //cNorm = l1ConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+    cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+
+    // Backtracking line search
+    for(k = 0; k<param->maxLineSearch; k++){
+
+        //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
+        if (k > 3 && !vars->conv_qp_solved){
+            if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
+            else{k = 0; alpha = 1.0;}
+        }
+
+        // Compute grad(f)^T * deltaXi (deltaXi being the original step without (second order) corrections)
+        dfTdeltaXi = 0.0;
+        for(int i = 0; i < nVar; i++)
+            dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
+
+        //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
+        //work with a different variable (CSQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
+        if (k == 0){
+            static_cast<SCQP_correction_iterate*>(vars)->deltaXi_save = vars->deltaXi;
+            static_cast<SCQP_correction_iterate*>(vars)->lambdaQP_save = vars->lambdaQP;
+
+            info = bound_correction(vars->deltaXi, vars->lambdaQP);
+
+            //If model bound correction failed for indefinite hessian, resolve with convex hessian and try again
+            if (info && !vars->conv_qp_solved){
+                if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
+                else{k = 0; alpha = 1.0;}
+            }
+        }
+        else if (k == 1){
+            //Both bound and second order corrections are only tried in the first iteration, restore original step for backtracking line search
+            vars->deltaXi = static_cast<SCQP_correction_iterate*>(vars)->deltaXi_save;
+            vars->lambdaQP = static_cast<SCQP_correction_iterate*>(vars)->lambdaQP_save;
+        }
+
+        // Compute new trial point and truncate any bound violation
+        for (int i = 0; i < nVar; i++){
+            vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
+
+            if (vars->trialXi(i) < prob->lb_var(i)){
+                vars->trialXi(i) = prob->lb_var(i);
+            }
+            else if (vars->trialXi(i) > prob->ub_var(i)){
+                vars->trialXi(i) = prob->ub_var(i);
+            }
+        }
+
+        // Compute objective and at ||constr(trialXi)||_1 at trial point
+        prob->evaluate( vars->trialXi, &objTrial, vars->trialConstr, &info );
+        stats->nFunCalls++;
+
+        //cNormTrial = l1ConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+
+        // Reduce step if evaluation fails, if lower bound is violated or if objective is NaN
+        if(info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
+            // evaluation error, reduce stepsize
+            reduceStepsize(&alpha);
+            continue;
+        }
+
+        // Check acceptability to the filter
+        if (pairInFilter(cNormTrial, objTrial)){
+            // Trial point is in the prohibited region defined by the filter, try second order correction
+            if (k == 0) std::cout << "Point is in the filter, try SOC\n";
+
+            if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
+                break;
+            else{
+                reduceStepsize(&alpha);
+                continue;
+            }
+        }
+
+        // Check sufficient decrease, case I:
+        // If we are (almost) feasible and a "switching condition" is satisfied
+        // require sufficient progress in the objective instead of bi-objective condition
+        if( cNorm <= param->thetaMin ){
+            // Switching condition, part 1: grad(f)^T * deltaXi < 0 ?
+            if( dfTdeltaXi < 0 ){
+                // Switching condition, part 2: alpha * ( - grad(f)^T * deltaXi )**sF > delta * cNorm**sTheta ?
+                if( alpha * pow( (-dfTdeltaXi), param->sF ) > param->delta * pow( cNorm, param->sTheta ) ){
+                    // Switching conditions hold: Require satisfaction of Armijo condition for objective
+                    if( objTrial > vars->obj + param->eta*alpha*dfTdeltaXi ){
+                        //Armijo condition violated, try calculating a step with convex QP
+                        std::cout << "Armijo condition violated, try SOC\n";
+                        //Armijo condition violated for convex QP, try second order correction
+                        if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
+                            break;
+                        else{
+                            reduceStepsize(&alpha);
+                            continue;
+                        }
+                    }
+                    else{
+                        // found suitable alpha, stop
+                        acceptStep( alpha );
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Check sufficient decrease, case II:
+        // Bi-objective (filter) condition
+        if( cNormTrial < (1.0 - param->gammaTheta) * cNorm || objTrial < vars->obj - param->gammaF * cNorm ){
+            // found suitable alpha, stop
+            acceptStep( alpha );
+            break;
+        }
+        else{
+            std::cout << "Filter condition violated, try SOC\n";
+            // Trial point is dominated by current point, try second order correction
+            if( k == 0 && secondOrderCorrection( cNorm, cNormTrial, dfTdeltaXi, false) )
+                break; // SOC yielded suitable alpha, stop
+            else{
+                reduceStepsize( &alpha );
+                continue;
+            }
+        }
+    }// backtracking steps
+
+    // No step could be found by the line search
+    if( k == param->maxLineSearch )
+        return 1;
+
+    // Augment the filter if switching condition or Armijo condition does not hold
+    if( dfTdeltaXi >= 0 )
+        augmentFilter( cNormTrial, objTrial );
+    else if( alpha * pow( (-dfTdeltaXi), param->sF ) > param->delta * pow( cNorm, param->sTheta ) )// careful with neg. exponents!
+        augmentFilter( cNormTrial, objTrial );
+    else if( objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi )
+        augmentFilter( cNormTrial, objTrial );
+
+    return 0;
+}
+
+
+
+
 
 int SCQP_correction_method::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
@@ -886,7 +1076,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
     stats->nRestPhaseCalls++;
 
     int ret, info;
-    int maxRestIt = 100;
+    int maxRestIt = 20;
     int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum;
 
@@ -897,9 +1087,10 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
         delete rest_method;
         delete rest_stats;
 
-        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi);
+        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restZeta, param->restRho);
         rest_stats = new SQPstats(stats->outpath);
         rest_method = new SCQP_correction_method(rest_prob, rest_opts, rest_stats, rest_cond);
+        vars->nRestIt = 0;
 
         rest_method->init();
     }
@@ -907,7 +1098,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
         warmStart = 1;
     }
 
-    for(int it=0; it<maxRestIt; it++){
+    for(; vars->nRestIt<maxRestIt; vars->nRestIt++){
 
         // One iteration for minimum norm NLP
         ret = rest_method->run( 1, warmStart );

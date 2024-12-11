@@ -19,7 +19,7 @@
 
 #include "blocksqp_defs.hpp"
 #include "blocksqp_matrix.hpp"
-#include "blocksqp_lapack.h"
+//#include "blocksqp_lapack.h"
 
 namespace blockSQP
 {/*

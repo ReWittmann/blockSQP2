@@ -45,6 +45,7 @@ public:
 
     //Solution time options
     double time_limit;
+    //0: 2.5*average of past 10, 1: maxTimeQP from options, 2: time_limit
     int time_limit_type;
 
     //Set by set_hess

@@ -59,6 +59,9 @@ SQPoptions::SQPoptions()
     // 0: no feasibility restoration phase 1: if line search fails, start feasibility restoration phase
     restoreFeas = 1;
 
+    restZeta = 1e-6;
+    restRho = 1.0;
+
     // 0: globalization is always active, 1: take a full step at first SQP iteration, no matter what
     skipFirstGlobalization = false;
 
@@ -84,23 +87,36 @@ SQPoptions::SQPoptions()
     hessDamp = 1;
 
     // Damping factor for Powell modification of BFGS updates ( between 0.0 and 1.0 )
-    hessDampFac = 0.2;
+    //Originally: hessDampFac = 0.2;
+    hessDampFac = 1./3.;
 
-    // 0: (sized) identity, 1: SR1, 2: BFGS (damped), 3: [not used] , 4: finiteDiff, 5: Gauss-Newton, 6: None, ...
+    //
+    minDampQuot = 1e-12;
+
+    //Originally: 1e2*eps, 1e-8
+    SR1_abstol = 1e-18;
+    SR1_reltol = 1e-5;
+
+    // 0: (sized) identity, 1: SR1, 2: BFGS (damped), 3: [not used] , 4: finiteDiff, 5: Gauss-Newton, 6: BFGS (undamped), ...
     hessUpdate = 1;
     fallbackUpdate = 2;
 
     indef_local_only = false;
 
+    max_local_lenience = 2;
     //size_hessian_first_step = false;
+    tau_H = 2./3.;
+    convKappa0 = 1./16.;
 
-    //
-    convStrategy = 0;
+    //0: Convex combinations between indefinite hessian and convex fallback hessian
+    //1: First try adding decreasing scaled identities, then use convex fallback hessian
+    convStrategy = 1;
 
     // How many ADDITIONAL (convexified) QPs may be solved per iteration?
-    maxConvQP = 1;
+    maxConvQP = 4;
 
-    //Should convex quadratic forms in QPs be further regularized by adding the identity times this scaling factor?
+    //The identity scaled with this factor is added to convex hessian approximations.
+    //Useful if the selected qp solver requires/performs better with convex hessians with eigenvalues uniformly > m_H for some m_H > 0
     hess_regularizationFactor = 0.0;
 
     //Options for solving additional QPs to enforce bounds on dependent variables
@@ -147,6 +163,7 @@ SQPoptions::SQPoptions()
     sF = 2.3;
     eta = 1.0e-4;
 
+    //cNormFilterTol = 1e-8;
     // Inertia correction for filter line search and indefinite Hessians
     kappaMinus = 0.333;
     kappaPlus = 8.0;
@@ -175,6 +192,7 @@ SQPoptions::SQPoptions()
 
         //gurobi_solver_regularization_factor = 1e-8;
     #endif
+
 }
 
 
@@ -199,6 +217,17 @@ void SQPoptions::optionsConsistency()
     if ((hessUpdate == 1 || hessUpdate == 4 || hessUpdate == 6) && maxConvQP < 1 && !(fallbackUpdate == 0 || fallbackUpdate == 2 || fallbackUpdate == 5))
         throw ParameterError("Error, positive definite fallback hessian is needed when hessian is not positive definite");
 
+    /*
+    if (convStrategy == 1 && maxConvQP > 2){
+        std::cout << "Only one indefinite hessian with added scaled identity can be tried, setting maxConvQP to 2";
+        maxConvQP = 2;
+    }*/
+
+    //If no convexified hessians are tried, set convStrategy to 0 to avoid some unnecessary computation
+    if (maxConvQP == 1){
+        std::cout << "maxConvQP = 1, no Hessian regularization used, set convStrategy to default 0\n";
+        convStrategy = 0;
+    }
 
     if (globalization == 1 && hessUpdate == 1 && (maxConvQP < 1)){
         std::cout << "Fallback update is needed for SR1, setting maxConvQP to 1\n";

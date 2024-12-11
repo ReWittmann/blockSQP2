@@ -20,8 +20,8 @@
 #include "blocksqp_iterate.hpp"
 #include <stdexcept>
 
-namespace blockSQP
-{
+namespace blockSQP{
+
 
 SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
 
@@ -112,8 +112,11 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
 
     noUpdateCounter = nullptr;
     nquasi = nullptr;
+    nRestIt = 0;
 
     modified_hess_regularizationFactor = param->hess_regularizationFactor;
+    //hess_identity_scale = 1.0;
+    convKappa = param->convKappa0;
     conv_qp_only = param->indef_local_only;
 
     if( full )
@@ -130,7 +133,7 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         }
 
         // For SR1 or finite differences, maintain two Hessians
-        if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6){
+        if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6 || param->hessUpdate > 6){
             hess2 = new SymMatrix[nBlocks];
             for (iBlock = 0; iBlock < nBlocks; iBlock++){
                 varDim = blockIdx[iBlock + 1] - blockIdx[iBlock];
@@ -154,12 +157,12 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         // current step
         if (param->hessLimMem){
             deltaMat.Dimension( nVar, param->hessMemsize, nVar ).Initialize( 0.0 );
-            deltaNormMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(1.0);
+            deltaNormSqMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(1.0);
             deltaGammaMat.Dimension(nBlocks, param->hessMemsize, nBlocks).Initialize(0.0);
         }
         else{
             deltaMat.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
-            deltaNormMat.Dimension(nBlocks, 1, nBlocks).Initialize(1.0);
+            deltaNormSqMat.Dimension(nBlocks, 1, nBlocks).Initialize(1.0);
             deltaGammaMat.Dimension(nBlocks, 1, nBlocks).Initialize(0.0);
         }
 
@@ -207,15 +210,16 @@ SQPiterate::SQPiterate(Problemspec* prob, SQPoptions* param, bool full){
         nquasi = new int[nBlocks]();
         dg_pos = -1;
         // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
-        deltaNorm.Dimension(nBlocks).Initialize( 1.0 );
-        deltaNormOld.Dimension(nBlocks).Initialize( 1.0 );
+        deltaNormSq.Dimension(nBlocks).Initialize( 1.0 );
+        deltaNormSqOld.Dimension(nBlocks).Initialize( 1.0 );
         deltaGamma.Dimension(nBlocks).Initialize( 0.0 );
         deltaGammaOld.Dimension(nBlocks).Initialize( 0.0 );
 
-        deltaNormOldFallback.Dimension(nBlocks).Initialize(1.0);
+        deltaNormSqOldFallback.Dimension(nBlocks).Initialize(1.0);
         deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
 
         use_homotopy = true;
+        local_lenience = param->max_local_lenience;
     }
 }
 
@@ -340,6 +344,9 @@ SCQP_correction_iterate::SCQP_correction_iterate(Problemspec* prob, SQPoptions* 
     corrected_h.Dimension(cond->condensed_num_vars);
     corrected_lb_con.Dimension(cond->condensed_num_vars);
     corrected_ub_con.Dimension(cond->condensed_num_vars);
+
+    deltaXi_save.Dimension(prob->nVar);
+    lambdaQP_save.Dimension(prob->nVar + prob->nCon);
 }
 
 

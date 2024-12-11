@@ -68,12 +68,10 @@ class BlockSQP_Problem(BlockSQP.Problemform):
         self.jacIndCol = jacIndCol
     
     #Set indices of hessian block starts and ends. idx[0] == 0 and idx[-1] == nVar and len(idx) = nBlocks + 1 must hold.  
-    def set_blockIndex(self, idx : np.ndarray[np.int32]):
-        assert isinstance(idx, np.ndarray)
-        if idx.dtype != np.int32:
-            raise Exception("block index array has wrong dtype! np.int32 required!")
-        else:
-            self.blockIdx = idx
+    def set_blockIndex(self, idx : typing.Iterable):
+        #assert isinstance(idx, np.ndarray)
+        idx = np.array(idx, dtype = np.int32)
+        self.blockIdx = idx
     
     #Setter for _continuity restoration, see above
     @property

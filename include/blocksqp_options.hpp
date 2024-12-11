@@ -55,6 +55,8 @@ class SQPoptions
         int sparseQP;                       ///< which qpOASES variant is used (dense/sparse/Schur)
         int globalization;                  ///< Globalization strategy
         int restoreFeas;                    ///< Use feasibility restoration phase
+        double restZeta;
+        double restRho;
         int maxLineSearch;                  ///< Maximum number of steps in line search
         int maxConsecReducedSteps;          ///< Maximum number of consecutive reduced steps
         int maxConsecSkippedUpdates;        ///< Maximum number of consecutive skipped updates
@@ -72,10 +74,18 @@ class SQPoptions
         double colTau1;                     ///< tau1 for COL scaling strategy
         double colTau2;                     ///< tau2 for COL scaling strategy
         int hessDamp;                       ///< activate Powell damping for BFGS
+        double minDampQuot;               ///< Minimum allowed value of quotient in damping strategy
         double hessDampFac;                 ///< damping factor for BFGS Powell modification
         int hessUpdate;                     ///< Type of Hessian approximation
         int fallbackUpdate;                 ///< If indefinite update is used, the type of fallback strategy
         bool indef_local_only;              ///< If set to true, only use positive definite fallback update until we are "close" to a local optimum (vars->tol <= 1e-4, vars->cNormS <= 1e-4, it >= 10)
+        int max_local_lenience;             ///< If filter line search fails close to a solution (e.g. through rounding errors), allow ignoring the acceptance criteria a limited number of times
+        double tau_H;                       ///< If ||d_{SR1 + kappa*I}|| <= tau_H*||d_{BFGS}||, then d_{BFGS} is used instead
+        double convKappa0;
+
+        //Conditioning tolerances for SR1 update. Update is skipped if denominator goes below a bound determined by this
+        double SR1_abstol;
+        double SR1_reltol;
 
         int hessLimMem;                     ///< Full or limited memory
         int hessMemsize;                    ///< Memory size for L-BFGS updates
@@ -107,6 +117,8 @@ class SQPoptions
         double kappaPlusMax;                ///< see IPOPT paper
         double deltaH0;                     ///< see IPOPT paper
         double eta;                         ///< see IPOPT paper
+
+        //double cNormFilterTol;
 
         //Options for linked QP solvers
         #ifdef QPSOLVER_QPOASES

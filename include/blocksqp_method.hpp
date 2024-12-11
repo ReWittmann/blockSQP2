@@ -107,10 +107,15 @@ class SQPmethod{
         void acceptStep( const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS );
         /// Overloaded function for convenience, uses current variables of SQPiterate vars
         void acceptStep( double alpha );
+        /// Set a new iterate, ignoring the filter and remove all entries from the filter that dominate the new point
+        void force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS);
+        void force_accept(double alpha);
+        /// Set a new iterate and update derivatives
+        void set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHessian = false);
         /// Reduce stepsize if a step is rejected
         void reduceStepsize( double *alpha );
         /// Determine steplength alpha by a filter based line search similar to IPOPT
-        int filterLineSearch();
+        virtual int filterLineSearch();
         /// Remove all entries from filter
         void initializeFilter();
         /// Is a pair (cNorm, obj) in the current filter?
@@ -217,9 +222,11 @@ public:
     SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
     virtual ~SCQP_correction_method();
 
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+    //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+    virtual int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
 
+    virtual int filterLineSearch();
     virtual int feasibilityRestorationPhase();
 };
 

@@ -20,8 +20,8 @@ void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nV
     // 1) count nonzero elements
     nnz = 0;
     for( iBlock=0; iBlock<nBlocks; iBlock++ )
-        for( i=0; i<hess_[iBlock].N(); i++ )
-            for( j=i; j<hess_[iBlock].N(); j++ )
+        for( i=0; i<hess_[iBlock].m; i++ )
+            for( j=i; j<hess_[iBlock].m; j++ )
                 if( fabs(hess_[iBlock]( i,j )) > eps )
                 {
                     nnz++;
@@ -44,8 +44,8 @@ void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nV
     rowOffset = 0;
     for( iBlock=0; iBlock<nBlocks; iBlock++ )
     {
-        nCols = hess_[iBlock].N();
-        nRows = hess_[iBlock].M();
+        nCols = hess_[iBlock].m;
+        nRows = hess_[iBlock].m;
 
         for( i=0; i<nCols; i++ )
         {

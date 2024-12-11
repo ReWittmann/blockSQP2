@@ -21,12 +21,9 @@ class int_pointer_interface{
     int *ptr;
 
     public:
-
-    int_pointer_interface(){
-        ptr = nullptr;
-        size = 0;
-    }
+    int_pointer_interface(): ptr(nullptr), size(0){}
     int_pointer_interface(int *ptr_, int size_): size(size_), ptr(ptr_){}
+    ~int_pointer_interface(){}
 };
 
 class double_pointer_interface{
@@ -35,11 +32,9 @@ class double_pointer_interface{
     double *ptr;
 
     public:
-    double_pointer_interface(){
-        ptr = nullptr;
-        size = 0;
-    }
+    double_pointer_interface(): ptr(nullptr), size(0){}
     double_pointer_interface(double *ptr_, int size_): size(size_), ptr(ptr_){}
+    ~double_pointer_interface(){}
 };
 
 
@@ -141,10 +136,9 @@ public:
                 // column 'colCountTotal' starts at element 'count'
                 hessIndCol_[colCountTotal] = count;
 
-                for( j=0; j<nRows; j++ ){
-                    if( (hess_[iBlock]( i,j ) > eps) || (-hess_[iBlock]( i,j ) > eps) )
-                    {
-                        hessNz_[count] = hess_[iBlock]( i, j );
+                for (j = 0; j < nRows; j++){
+                    if ((hess_[iBlock](i, j) > eps) || (-hess_[iBlock](i, j) > eps)){
+                        hessNz_[count] = hess_[iBlock](i, j);
                         hessIndRow_[count] = j + rowOffset;
                         count++;
                     }
@@ -156,9 +150,8 @@ public:
         hessIndCol_[colCountTotal] = count;
 
         // 3) Set reference to lower triangular matrix
-        for( j=0; j<nVar; j++ )
-        {
-            for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
+        for (j = 0; j < nVar; j++){
+            for (i = hessIndCol_[j]; i < hessIndCol_[j+1] && hessIndRow_[i] < j; i++);
             hessIndLo_[j] = i;
         }
 
@@ -178,6 +171,8 @@ public:
         blockSQP::Sparse_Matrix red_con_jac = condensed_Jacobian;
         blockSQP::Matrix red_lb_con = condensed_lb_con;
         blockSQP::Matrix red_ub_con = condensed_ub_con;
+
+        std::cout << "con_jac.nnz = " << con_jac.colind[con_jac.n] << ", con_jac.m = " << con_jac.m << ", con_jac.n = " << con_jac.n << "\n";
 
         qpOASES::SQProblem* qp;
         qpOASES::SQProblem* qp_cond;
@@ -207,21 +202,17 @@ public:
         A_qp_cond = new qpOASES::SparseMatrix(red_con_jac.m, red_con_jac.n,
                     red_con_jac.row, red_con_jac.colind, red_con_jac.nz);
 
+
         convertHessian(1.0e-15, hess.ptr, hess.size, con_jac.n, hess_nz, hess_row, hess_colind, hess_loind);
         convertHessian(1.0e-15, condensed_hess.ptr, C->condensed_num_hessblocks, red_con_jac.n, hess_cond_nz, hess_cond_row, hess_cond_colind, hess_cond_loind);
         std::cout << "converted Hessians\n";
-
-        double S_h_nz = 0;
-        for (int i = 0; i < hess_cond_colind[C->condensed_num_vars]; i++){
-            S_h_nz += hess_cond_nz[i];
-        }
-        std::cout << "Sum hess_cond_nz = " << S_h_nz << "\n";
 
 
         H = new qpOASES::SymSparseMat(con_jac.n, con_jac.n, hess_row, hess_colind, hess_nz);
         dynamic_cast<qpOASES::SymSparseMat*>(H)->createDiagInfo();
         H_cond = new qpOASES::SymSparseMat(red_con_jac.n, red_con_jac.n, hess_cond_row, hess_cond_colind, hess_cond_nz);
         dynamic_cast<qpOASES::SymSparseMat*>(H_cond)->createDiagInfo();
+
 
         double *g = grad_obj.array;
         double *lb = lb_var.array;
@@ -243,11 +234,12 @@ public:
         opts.enableInertiaCorrection = qpOASES::BT_FALSE;
         opts.enableEqualities = qpOASES::BT_TRUE;
         opts.initialStatusBounds = qpOASES::ST_INACTIVE;
-        opts.printLevel = qpOASES::PL_LOW; //PL_LOW, PL_HIGH, PL_MEDIUM, PL_None
+        opts.printLevel = qpOASES::PL_NONE; //PL_LOW, PL_HIGH, PL_MEDIUM, PL_None
         opts.numRefinementSteps = 2;
         opts.epsLITests =  2.2204e-08;
-        qp->setOptions( opts );
-        qp_cond->setOptions( opts);
+        qp->setOptions(opts);
+        qp_cond->setOptions(opts);
+
 
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
@@ -284,6 +276,17 @@ public:
         qp_cond->getDualSolution(delta_Lambda_cond.array);
 
         C->recover_var_mult(delta_Xi_cond, delta_Lambda_cond, delta_Xi_rest, delta_Lambda_rest);
+
+        delete qp;
+        delete qp_cond;
+        delete A_qp;
+        delete A_qp_cond;
+        delete H;
+        delete H_cond;
+        delete[] hess_nz;
+        delete[] hess_row;
+        delete[] hess_cond_nz;
+        delete[] hess_cond_row;
     }
 };
 
@@ -616,6 +619,9 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("colTau1",&blockSQP::SQPoptions::colTau1)
 	.def_readwrite("colTau2",&blockSQP::SQPoptions::colTau2)
 	.def_readwrite("hessDamp",&blockSQP::SQPoptions::hessDamp)
+	.def_readwrite("minDampQuot",&blockSQP::SQPoptions::minDampQuot)
+	.def_readwrite("SR1_abstol",&blockSQP::SQPoptions::SR1_abstol)
+	.def_readwrite("SR1_reltol",&blockSQP::SQPoptions::SR1_reltol)
 	.def_readwrite("hessDampFac",&blockSQP::SQPoptions::hessDampFac)
 	.def_readwrite("hessUpdate",&blockSQP::SQPoptions::hessUpdate)
 	.def_readwrite("fallbackUpdate",&blockSQP::SQPoptions::fallbackUpdate)
@@ -631,6 +637,11 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("max_bound_refines", &blockSQP::SQPoptions::max_bound_refines)
 	.def_readwrite("max_correction_steps", &blockSQP::SQPoptions::max_correction_steps)
 	.def_readwrite("dep_bound_tolerance", &blockSQP::SQPoptions::dep_bound_tolerance)
+	.def_readwrite("max_local_lenience", &blockSQP::SQPoptions::max_local_lenience)
+	.def_readwrite("tau_H", &blockSQP::SQPoptions::tau_H)
+	.def_readwrite("convKappa0", &blockSQP::SQPoptions::convKappa0)
+	.def_readwrite("restZeta", &blockSQP::SQPoptions::restZeta)
+	.def_readwrite("restRho", &blockSQP::SQPoptions::restRho)
 	.def_property("which_QPsolver", [](blockSQP::SQPoptions &opts)->std::string{
         if (opts.which_QPsolver == blockSQP::QPSOLVER::QPOASES) return "qpOASES";
         else if (opts.which_QPsolver == blockSQP::QPSOLVER::GUROBI) return "gurobi";
@@ -727,7 +738,7 @@ py::class_<double_pointer_interface>(m,"double_pointer_interface",py::buffer_pro
 
 py::class_<double_pointer_interface_array>(m,"double_pointer_interface_array")
 	.def(py::init<>())
-	.def("__getitem__", [](double_pointer_interface_array &arr, int i)->double_pointer_interface&{return arr.ptr[i];})
+	.def("__getitem__", [](double_pointer_interface_array &arr, int i)->double_pointer_interface*{return arr.ptr + i;}, py::return_value_policy::reference)
 	;
 
 py::class_<Prob_Data>(m,"Prob_Data")
@@ -802,6 +813,7 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
 	.def("finish", &blockSQP::SQPmethod::finish)
     .def("resetHessians", static_cast<void (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::resetHessians))
     .def_readwrite("param", &blockSQP::SQPmethod::param)
+    .def("set_iterate", &blockSQP::SQPmethod::set_iterate)
     ;
 
 py::class_<blockSQP::SCQPmethod, blockSQP::SQPmethod>(m, "SCQPmethod")
@@ -829,7 +841,9 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def_readonly("constrJac", &blockSQP::SQPiterate::constrJac)
 	.def_readonly("trialXi", &blockSQP::SQPiterate::trialXi)
 	.def_readwrite("use_homotopy", &blockSQP::SQPiterate::use_homotopy)
-	.def("get_hessblock", [](blockSQP::SQPiterate &vars, int i){return vars.hess[i];})
+	.def("get_hess1_block", [](blockSQP::SQPiterate &vars, int i){return vars.hess1[i];})
+	.def("get_hess2_block", [](blockSQP::SQPiterate &vars, int i){return vars.hess2[i];})
+	.def_readonly("filter", &blockSQP::SQPiterate::filter)
 	;
 
 py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
@@ -851,7 +865,7 @@ py::class_<vblock_array>(m, "vblock_array")
 	.def(py::init<int>())
 	.def_readonly("size", &vblock_array::size)
 	.def("resize", &vblock_array::resize)
-	.def("__getitem__", [](vblock_array &arr, int i) -> blockSQP::vblock{return arr.ptr[i];})
+	.def("__getitem__", [](vblock_array &arr, int i) -> blockSQP::vblock *{return arr.ptr + i;}, py::return_value_policy::reference)
 	.def("__setitem__", [](vblock_array &arr, int i, blockSQP::vblock B) -> void{arr.ptr[i] = B;});
 
 py::class_<blockSQP::cblock>(m, "cblock")
@@ -863,7 +877,7 @@ py::class_<cblock_array>(m, "cblock_array")
     .def(py::init<int>())
     .def_readonly("size", &cblock_array::size)
     .def("resize", &cblock_array::resize)
-	.def("__getitem__", [](cblock_array &arr, int i) -> blockSQP::cblock{return arr.ptr[i];})
+	.def("__getitem__", [](cblock_array &arr, int i) -> blockSQP::cblock *{return arr.ptr + i;}, py::return_value_policy::reference)
 	.def("__setitem__", [](cblock_array &arr, int i, blockSQP::cblock B) -> void{arr.ptr[i] = B;});
 
 py::class_<blockSQP::condensing_target>(m, "condensing_target")
@@ -879,7 +893,7 @@ py::class_<condensing_targets>(m, "condensing_targets")
     .def(py::init<int>())
     .def_readonly("size", &condensing_targets::size)
     .def("resize", &condensing_targets::resize)
-	.def("__getitem__", [](condensing_targets &arr, int i) -> blockSQP::condensing_target{return arr.ptr[i];})
+	.def("__getitem__", [](condensing_targets &arr, int i) -> blockSQP::condensing_target *{return arr.ptr + i;}, py::return_value_policy::reference)
 	.def("__setitem__", [](condensing_targets &arr, int i, blockSQP::condensing_target B) -> void{arr.ptr[i] = B;});
 
 py::class_<blockSQP::Condenser>(m, "Condenser")
@@ -907,7 +921,8 @@ py::class_<SymMat_array>(m, "SymMat_array")
     .def(py::init<int>())
     .def_readonly("size", &SymMat_array::size)
     .def("resize", &SymMat_array::resize)
-	.def("__getitem__", [](SymMat_array &arr, int i) -> blockSQP::SymMatrix &{return arr.ptr[i];})
+	//.def("__getitem__", [](SymMat_array &arr, int i) -> blockSQP::SymMatrix *{return arr.ptr + i;}, py::return_value_policy::reference)
+	.def("__getitem__", [](SymMat_array &arr, int i) -> blockSQP::SymMatrix *{return arr.ptr + i;}, py::return_value_policy::reference)
 	.def("__setitem__", [](SymMat_array &arr, int i, blockSQP::SymMatrix &B) -> void{arr.ptr[i] = B;});
 
 py::class_<condensing_args>(m, "condensing_args")
@@ -936,7 +951,7 @@ py::class_<condensing_args>(m, "condensing_args")
     ;
 
 py::class_<blockSQP::TC_restoration_Problem, blockSQP::Problemspec>(m, "TC_restoration_Problem")
-    .def(py::init<blockSQP::Problemspec*, blockSQP::Condenser*, const blockSQP::Matrix&>())
+    .def(py::init<blockSQP::Problemspec*, blockSQP::Condenser*, const blockSQP::Matrix&, double, double>())
     .def_readonly("nVar", &blockSQP::TC_restoration_Problem::nVar)
     .def_readonly("nCon", &blockSQP::TC_restoration_Problem::nCon)
     .def_readwrite("xi_ref", &blockSQP::TC_restoration_Problem::xi_ref)

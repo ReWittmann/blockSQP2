@@ -297,14 +297,19 @@ int main( int argc, const char* argv[] )
     /* Options for SQP solver */
     /*------------------------*/
     opts = new SQPoptions();
+    //opts->opttol = 1.0e-12;
+    //opts->nlinfeastol = 1.0e-12;
     opts->opttol = 1.0e-12;
     opts->nlinfeastol = 1.0e-12;
 
     // 0: no globalization, 1: filter line search
     opts->globalization = 0;
     // 0: (scaled) identity, 1: SR1, 2: BFGS
-    opts->hessUpdate = 1;
+    opts->hessUpdate = 2;
     opts->fallbackUpdate = 2;
+    opts->indef_local_only = false;
+
+    opts->iniHessDiag = 1.0;
     // 0: initial Hessian is diagonal matrix, 1: scale initial Hessian according to Nocedal p.143,
     // 2: scale initial Hessian with Oren-Luenberger factor 3: scale initial Hessian with geometric mean of 1 and 2
     // 4: scale Hessian in every step with centered Oren-Luenberger sizing according to Tapia paper
@@ -312,7 +317,7 @@ int main( int argc, const char* argv[] )
     // scaling strategy for fallback BFGS update if SR1 and globalization is used
     opts->fallbackScaling = 0;
     // Size of limited memory
-    opts->hessLimMem = 1;
+    opts->hessLimMem = 0;
     opts->hessMemsize = 20;
     // If too many updates are skipped, reset Hessian
     opts->maxConsecSkippedUpdates = 200;
@@ -322,6 +327,8 @@ int main( int argc, const char* argv[] )
     opts->sparseQP = 2;
     opts->printLevel = 2;
     opts->debugLevel = 1;
+    opts->which_QPsolver = QPSOLVER::QPOASES;
+    opts->qpOASES_printLevel = 1;
 
     //opts->maxConvQP = 5;
 

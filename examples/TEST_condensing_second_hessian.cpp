@@ -11,7 +11,6 @@ blockSQP::SymMatrix identity(int n){
     return S;
 }
 
-
 void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nVar,
                              double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
     int iBlock, count, colCountTotal, rowOffset, i, j;
@@ -20,8 +19,8 @@ void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nV
     // 1) count nonzero elements
     nnz = 0;
     for( iBlock=0; iBlock<nBlocks; iBlock++ )
-        for( i=0; i<hess_[iBlock].N(); i++ )
-            for( j=i; j<hess_[iBlock].N(); j++ )
+        for( i=0; i<hess_[iBlock].m; i++ )
+            for( j=i; j<hess_[iBlock].m; j++ )
                 if( fabs(hess_[iBlock]( i,j )) > eps )
                 {
                     nnz++;
@@ -44,8 +43,8 @@ void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nV
     rowOffset = 0;
     for( iBlock=0; iBlock<nBlocks; iBlock++ )
     {
-        nCols = hess_[iBlock].N();
-        nRows = hess_[iBlock].M();
+        nCols = hess_[iBlock].m;
+        nRows = hess_[iBlock].m;
 
         for( i=0; i<nCols; i++ )
         {
@@ -253,7 +252,7 @@ int main(){
     );
 
 
-    std::cout << "Condensed hess =\n" << blockSQP::Matrix(condensed_hess_CC[0]) << "\n";
+    std::cout << "Condensed hess =\n" << condensed_hess_CC[0] << "\n";
     std::cout << "Condensed jacobian =\n" << condensed_Jacobian_CC.dense() << "\n";
     std::cout << "Condensed linear form h =\n" << condensed_h_CC << "\n";
     std::cout << "Condensed lb_var =\n" << condensed_lb_var_CC << "\n\ncondensed_ub_var =\n" << condensed_ub_var_CC << "\n";
