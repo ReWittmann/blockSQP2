@@ -45,18 +45,19 @@ if(APPLE)
 elseif(UNIX AND NOT APPLE)
     # On Linux (or other UNIX-like systems), use OpenBLAS via pkg-config
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(OPENBLAS REQUIRED openblas)
+    find_package(BLAS REQUIRED)
+    find_package(LAPACK REQUIRED)
     
-    message(STATUS "Found OpenBLAS libraries: ${OPENBLAS_LIBRARIES}")
-    message(STATUS "OpenBLAS include dirs: ${OPENBLAS_INCLUDE_DIRS}")
+    message(STATUS "Found BLAS libraries: ${BLAS_INCLUDE_DIRS}")
+    message(STATUS "Found LAPACK include dirs: ${LAPACK_INCLUDE_DIRS}")
 
     # Set the libraries and include directories
-    set(BLAS_LIBRARIES ${OPENBLAS_LIBRARIES})
-    set(LAPACK_LIBRARIES ${OPENBLAS_LIBRARIES})
+    set(BLAS_LIBRARIES ${BLAS_LIBRARIES})
+    set(LAPACK_LIBRARIES ${LAPACK_LIBRARIES})
 
     # Include the OpenBLAS headers
-    include_directories(${OPENBLAS_INCLUDE_DIRS})
-
+    include_directories(${LAPACK_INCLUDE_DIRS})
+    include_directories(${BLAS_INCLUDE_DIRS})
 else()
     message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
 endif()
