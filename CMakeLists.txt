@@ -29,7 +29,9 @@ set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
 set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} ${qpOASES_SOURCE_DIR}/include)
 set(QPSOLVER_LIB ${qpOASES_BINARY_DIR}/libs/libqpOASES.a)
 set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
-
+if(UNIX)
+    target_compile_options(qpOASES PUBLIC -fPIC)
+endif()
 
 # Platform-specific configuration
 if(APPLE)
@@ -110,7 +112,7 @@ target_include_directories(blockSQP
 
 # Compilation flags for debugging and optimization
 target_compile_options(blockSQP
-    PUBLIC -g -O0 ${QPSOLVER_FLAGS}
+    PUBLIC -g -O0 -fPIC ${QPSOLVER_FLAGS}
 )
 
 # TODO Add the examples
