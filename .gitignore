@@ -10,3 +10,5 @@ example1
 TEST_*
 sqpits.csv
 updatesequence.txt
+
+/build/*
