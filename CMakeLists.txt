@@ -1,31 +1,71 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.14)
 
-# Project Information
 project(blockSQP
     DESCRIPTION "Sequential quadratic programming for problems with block-diagonal Hessian matrix."
     HOMEPAGE_URL https://github.com/djanka2/blockSQP
     LANGUAGES CXX
     )
+
+# Enable C++11 standard or higher
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Include directories for the project (e.g., src and include directories)
+include_directories(${CMAKE_SOURCE_DIR}/include)
+
+
+# QPOASES
+include(FetchContent)
+
+FetchContent_Declare(
+  qpOASES
+  GIT_REPOSITORY https://github.com/coin-or/qpOASES.git
+  GIT_TAG        51d3fbea30142d3acbf40cf7a1c519efc27ea67b # release-3.21
+)
+
+FetchContent_MakeAvailable(qpOASES)
+set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
+
+set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} ${qpOASES_SOURCE_DIR}/include)
+set(QPSOLVER_LIB ${qpOASES_BINARY_DIR}/libs/libqpOASES.a)
+set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
+if(UNIX)
+    target_compile_options(qpOASES PUBLIC -fPIC)
+endif()
+
+# Platform-specific configuration
+if(APPLE)
+    # On macOS, use the Accelerate framework for BLAS and LAPACK
+    find_library(Accelerate_FRAMEWORK Accelerate REQUIRED)
     
-##################################################################################################
-#EDIT HERE: Set correct paths and flags to available QP solvers
-#QPOASES
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../qpOASES/include)
-	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../qpOASES/libs/libqpOASES.so)
-	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
-#GUROBI
-#	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /path/to/.../gurobi/.../include)
-#	set(QPSOLVER_LIB ${QPSOLVER_LIB} /path/to/.../gurobi/.../lib/libgurobi_c++.a /path/to/.../gurobi/.../lib/libgurobi110.so)
-#	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_GUROBI)
-##################################################################################################
+    message(STATUS "Found Accelerate framework: ${Accelerate_FRAMEWORK}")
+    
+    # Set the BLAS and LAPACK libraries to Accelerate framework
+    set(BLAS_LIBRARIES ${Accelerate_FRAMEWORK})
+    set(LAPACK_LIBRARIES ${Accelerate_FRAMEWORK})
 
+elseif(UNIX AND NOT APPLE)
+    # On Linux (or other UNIX-like systems), use OpenBLAS via pkg-config
+    find_package(PkgConfig REQUIRED)
+    find_package(BLAS REQUIRED)
+    find_package(LAPACK REQUIRED)
+    
+    message(STATUS "Found BLAS libraries: ${BLAS_INCLUDE_DIRS}")
+    message(STATUS "Found LAPACK include dirs: ${LAPACK_INCLUDE_DIRS}")
 
-# Find dependencies: LAPACK
-find_package(LAPACK REQUIRED)
-find_package(BLAS REQUIRED)
+    # Set the libraries and include directories
+    set(BLAS_LIBRARIES ${BLAS_LIBRARIES})
+    set(LAPACK_LIBRARIES ${LAPACK_LIBRARIES})
 
-# Add target
-add_library(blockSQP SHARED
+    # Include the OpenBLAS headers
+    include_directories(${LAPACK_INCLUDE_DIRS})
+    include_directories(${BLAS_INCLUDE_DIRS})
+else()
+    message(FATAL_ERROR "Unsupported platform: ${CMAKE_SYSTEM_NAME}")
+endif()
+
+# Specify the source files for your shared library
+set(SOURCE_FILES
 	src/blocksqp_condensing.cpp
     src/blocksqp_matrix.cpp
     src/blocksqp_problemspec.cpp
@@ -39,99 +79,53 @@ add_library(blockSQP SHARED
     src/blocksqp_restoration.cpp
     src/blocksqp_stats.cpp
     src/blocksqp_qpsolver.cpp
-    )
-set_property(TARGET blockSQP PROPERTY PUBLIC_HEADER
-	include/blocksqp_condensing.hpp
-    include/blocksqp_defs.hpp
-    include/blocksqp_general_purpose.hpp
-    include/blocksqp_iterate.hpp
-    include/blocksqp_lapack.h
-    include/blocksqp_matrix.hpp
-    include/blocksqp_method.hpp
-    include/blocksqp_options.hpp
-    include/blocksqp_problemspec.hpp
-    include/blocksqp_restoration.hpp
-    include/blocksqp_stats.hpp
-    include/blocksqp_qpsolver.hpp
-    )
-    
-
-target_compile_options(blockSQP PUBLIC -g -O0 ${QPSOLVER_FLAGS})
-target_include_directories(blockSQP PUBLIC include ${QPSOLVER_INCLUDE})
-target_link_libraries(blockSQP LAPACK::LAPACK ${QPSOLVER_LIB})
-
-set_target_properties(blockSQP
-	PROPERTIES
-	LIBRARY_OUTPUT_DIRECTORY "./lib")
-
-add_executable(example1 examples/example1.cpp)
-target_compile_options(example1 PUBLIC -g -O0)
-target_link_libraries(example1 blockSQP)
-set_target_properties(example1
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-	)
-
-
-add_executable(TEST_condensing examples/TEST_condensing.cpp)
-target_compile_options(TEST_condensing PUBLIC -g -O0)
-target_link_libraries(TEST_condensing blockSQP)
-set_target_properties(TEST_condensing
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
 )
 
-add_executable(TEST_condensing_multiple examples/TEST_condensing_multiple.cpp)
-target_compile_options(TEST_condensing_multiple PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_multiple blockSQP)
-set_target_properties(TEST_condensing_multiple
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
+# Define the shared library target
+add_library(blockSQP SHARED ${SOURCE_FILES})
+
+add_dependencies(blockSQP qpOASES)
+
+# Link the BLAS and LAPACK libraries to the shared library
+if(APPLE)
+    target_link_libraries(blockSQP PRIVATE ${Accelerate_FRAMEWORK})
+endif()
+target_link_libraries(blockSQP
+    PRIVATE
+    ${BLAS_LIBRARIES}
+    ${LAPACK_LIBRARIES}
 )
 
-add_executable(TEST_condensing_second_hessian examples/TEST_condensing_second_hessian.cpp)
-target_compile_options(TEST_condensing_second_hessian PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_second_hessian blockSQP)
-set_target_properties(TEST_condensing_second_hessian
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
+# Link external libraries and set include directories
+target_link_libraries(blockSQP
+    PRIVATE ${LAPACK_LIBRARIES}
+    PRIVATE ${BLAS_LIBRARIES}
+    PRIVATE ${QPSOLVER_LIB}
 )
 
-add_executable(TEST_condensing_SOC examples/TEST_condensing_SOC.cpp)
-target_compile_options(TEST_condensing_SOC PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_SOC blockSQP)
-set_target_properties(TEST_condensing_SOC
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
+target_include_directories(blockSQP
+    PRIVATE ${LAPACK_INCLUDE_DIRS}
+    PRIVATE ${BLAS_INCLUDE_DIRS}
+    PUBLIC include
+    PUBLIC ${QPSOLVER_INCLUDE}
 )
 
-add_executable(TEST_block examples/TEST_block.cpp)
-target_compile_options(TEST_block PUBLIC -g -O0)
-target_link_libraries(TEST_block blockSQP)
-set_target_properties(TEST_block
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
+# Compilation flags for debugging and optimization
+target_compile_options(blockSQP
+    PUBLIC -g -O0 -fPIC ${QPSOLVER_FLAGS}
 )
 
-add_executable(TEST_qp examples/TEST_qp.cpp)
-target_compile_options(TEST_qp PUBLIC -g -O0)
-target_link_libraries(TEST_qp blockSQP)
-set_target_properties(TEST_qp
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
+# TODO Add the examples
+add_subdirectory(examples)
 
-add_executable(TEST_condensing_QPS examples/TEST_condensing_QPS.cpp)
-target_compile_options(TEST_condensing_QPS PUBLIC -g -O0)
-target_link_libraries(TEST_condensing_QPS blockSQP)
-set_target_properties(TEST_condensing_QPS
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "./examples"
-)
-
-
+# Install the library and public headers
 install(TARGETS blockSQP
-    LIBRARY
-    PUBLIC_HEADER
-        DESTINATION include/blockSQP
-    )
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/blockSQP
+)
+
+# Optional: Install the library (uncomment if needed)
+# install(TARGETS blockSQP DESTINATION lib)
+
+# Optional: Install header files (uncomment if needed)
+# install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")

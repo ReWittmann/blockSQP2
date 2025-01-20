@@ -324,7 +324,7 @@ int main( int argc, const char* argv[] )
     // 0: full space Hessian approximation (ignore block structure), 1: blockwise updates
     opts->blockHess = 1;
     opts->whichSecondDerv = 0;
-    opts->sparseQP = 2;
+    opts->sparseQP = 0;
     opts->printLevel = 2;
     opts->debugLevel = 1;
     opts->which_QPsolver = QPSOLVER::QPOASES;
