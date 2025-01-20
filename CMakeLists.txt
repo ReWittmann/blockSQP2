@@ -113,9 +113,16 @@ target_compile_options(blockSQP
 )
 
 # TODO Add the examples
+add_subdirectory(examples)
+
+# Install the library and public headers
+install(TARGETS blockSQP
+    LIBRARY DESTINATION lib
+    PUBLIC_HEADER DESTINATION include/blockSQP
+)
 
 # Optional: Install the library (uncomment if needed)
-#install(TARGETS blockSQP DESTINATION lib)
+# install(TARGETS blockSQP DESTINATION lib)
 
 # Optional: Install header files (uncomment if needed)
 # install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/ DESTINATION include FILES_MATCHING PATTERN "*.h")
