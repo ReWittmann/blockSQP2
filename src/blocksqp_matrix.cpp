@@ -21,7 +21,18 @@
 #include <iostream>
 #include <string>
 #include <chrono>
-#include "cblas.h"
+
+#ifdef _WIN32
+    // For Windows systems, include Windows-specific headers
+    #include <windows.h>
+#elif defined(__APPLE__)
+    // For macOS, include the Accelerate framework
+    #include <Accelerate/Accelerate.h>
+#elif defined(__linux__)
+    // For Linux, include OpenBLAS or other libraries
+    #include <cblas.h>
+#endif
+
 #define MATRIX_DEBUG
 
 namespace blockSQP
@@ -1357,7 +1368,9 @@ Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2){
     }
     #endif
 
-	int index_offsets[M2.m] = {0};
+	// int index_offsets[M2.m] = {0};
+    std::vector<int> index_offsets(M2.m, 0);  // This will initialize the vector with 'M2.m' elements, all set to 0.
+
 	int first_rows[M2.m];
 	int min_inds[M2.m];
 	int min_end;
@@ -1428,6 +1441,7 @@ Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2){
 	for (int k = 0; k<=M2.n; k++){
 		COLIND[k] = colind_m[k];
 	}
+    
 	return Sparse_Matrix(M1.m, M2.n, c_ind, NZ, ROW, COLIND);
 }
 
