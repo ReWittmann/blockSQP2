@@ -24,8 +24,7 @@
 #include "blocksqp_options.hpp"
 #include "blocksqp_iterate.hpp"
 
-namespace blockSQP
-{
+namespace blockSQP{
 
 /**
  * \brief Contains information about the current run and corresponding
@@ -33,8 +32,7 @@ namespace blockSQP
  * \author Dennis Janka
  * \date 2012-2015
  */
-class SQPstats
-{
+class SQPstats{
     /*
      * Variables
      */

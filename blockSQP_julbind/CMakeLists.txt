@@ -4,10 +4,9 @@ cmake_minimum_required(VERSION 3.5)
 set(CMAKE_MACOSX_RPATH 1)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 
-##################################################################################################
-#EDIT HERE, change path to JlCxx CMake file
-list(APPEND CMAKE_PREFIX_PATH "/path/to/.../.julia/.../cmake/JlCxx")
-##################################################################################################
+#Path to cxxwrap cmake file
+list(APPEND CMAKE_PREFIX_PATH "/home/reinhold/.julia/artifacts/65c14d6c8b06e52ca794200129a8f3dd8b7ce34e/lib/cmake/JlCxx")
+#list(APPEND CMAKE_PREFIX_PATH "/home/reinhold/.julia")
 
 find_package(JlCxx)
 get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
@@ -18,16 +17,12 @@ message(STATUS "Found JlCxx at ${JlCxx_location}")
 
 add_library(BlockSQP SHARED BlockSQP.cpp)
 
-##################################################################################################
-#EDIT HERE: Set flags for QP solvers equal to those used to compile blockSQP (else there will be runtime crashes)
-target_compile_options(BlockSQP PUBLIC -DQPSOLVER_QPOASES)# -DQPSOLVER_GUROBI)
-##################################################################################################
-
-
 target_include_directories(BlockSQP 
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../blockSQP_modified/include)
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../include)
 target_link_libraries(BlockSQP
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../lib/libblockSQP.so JlCxx::cxxwrap_julia)
+
+
 
 
 

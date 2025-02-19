@@ -152,7 +152,6 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
                 else
                     printf("\033[0;36m%5i\033[0m", vars->nSOCS );
                 printf("%3i, %3i, %-9.1e", hessSkipped, hessDamped, averageSizingFactor );
-                //printf("%i, %-9.1e", qpResolve, l1VectorNorm( vars->deltaH )/vars->nBlocks );
                 printf("%i", qpResolve);
             }
             printf("\n");

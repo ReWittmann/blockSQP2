@@ -315,12 +315,11 @@ struct Prob_Data{
 class Problemform : public blockSQP::Problemspec
 {
 public:
-    Problemform(){
-        blockIdx = nullptr;
-    }
+    Problemform(){}
 
     virtual ~Problemform(){
         delete[] blockIdx;
+        delete[] vblocks;
     };
 
     Prob_Data Cpp_Data; //values that get evaluated and returned by the evaluate methods
@@ -464,15 +463,19 @@ public:
         std::copy((int*)buff.ptr, (int*)buff.ptr + buff.size, blockIdx);
     }
 
+    void set_vblocks(vblock_array &VB){
+        n_vblocks = VB.size;
+        vblocks = new blockSQP::vblock[n_vblocks];
+        for (int i = 0; i < n_vblocks; i++){
+            vblocks[i] = VB.ptr[i];
+        }
+    }
 
     void reduceConstrVio(blockSQP::Matrix &xi, int *info){
         Cpp_Data.xi.ptr = xi.array;
         update_xi();
-        std::cout << "reduceConstrVio called\n";
         restore_continuity();
-
         *info = Cpp_Data.info;
-        std::cout << "info is " << *info << "\n";
     }
 };
 
@@ -594,7 +597,9 @@ py::class_<blockSQP::Sparse_Matrix>(m, "Sparse_Matrix")
 
 py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def(py::init<>())
-	.def("optionsConsistency",&blockSQP::SQPoptions::optionsConsistency)
+	.def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)()>(&blockSQP::SQPoptions::optionsConsistency))
+    .def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)(blockSQP::Problemspec*)>(&blockSQP::SQPoptions::optionsConsistency))
+    .def("reset", &blockSQP::SQPoptions::reset)
 	.def_readwrite("printLevel",&blockSQP::SQPoptions::printLevel)
 	.def_readwrite("printColor",&blockSQP::SQPoptions::printColor)
 	.def_readwrite("debugLevel",&blockSQP::SQPoptions::debugLevel)
@@ -618,7 +623,6 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("olEps", &blockSQP::SQPoptions::olEps)
 	.def_readwrite("colTau1",&blockSQP::SQPoptions::colTau1)
 	.def_readwrite("colTau2",&blockSQP::SQPoptions::colTau2)
-	.def_readwrite("hessDamp",&blockSQP::SQPoptions::hessDamp)
 	.def_readwrite("minDampQuot",&blockSQP::SQPoptions::minDampQuot)
 	.def_readwrite("SR1_abstol",&blockSQP::SQPoptions::SR1_abstol)
 	.def_readwrite("SR1_reltol",&blockSQP::SQPoptions::SR1_reltol)
@@ -640,36 +644,48 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("max_local_lenience", &blockSQP::SQPoptions::max_local_lenience)
 	.def_readwrite("tau_H", &blockSQP::SQPoptions::tau_H)
 	.def_readwrite("convKappa0", &blockSQP::SQPoptions::convKappa0)
+    .def_readwrite("convKappaMax", &blockSQP::SQPoptions::convKappaMax)
 	.def_readwrite("restZeta", &blockSQP::SQPoptions::restZeta)
 	.def_readwrite("restRho", &blockSQP::SQPoptions::restRho)
-	.def_property("which_QPsolver", [](blockSQP::SQPoptions &opts)->std::string{
-        if (opts.which_QPsolver == blockSQP::QPSOLVER::QPOASES) return "qpOASES";
-        else if (opts.which_QPsolver == blockSQP::QPSOLVER::GUROBI) return "gurobi";
+    .def_readwrite("autoScaling", &blockSQP::SQPoptions::autoScaling)
+
+    .def_readwrite("kappaF", &blockSQP::SQPoptions::kappaF)
+    .def_readwrite("max_extra_steps", &blockSQP::SQPoptions::max_extra_steps)
+	.def_property("QPsol", [](blockSQP::SQPoptions &opts)->std::string{
+        if (opts.QPsol == blockSQP::QPSOLVER::qpOASES) return "qpOASES";
+        else if (opts.QPsol == blockSQP::QPSOLVER::gurobi) return "gurobi";
         return "any";
         },
     [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
-        if (QPsolver_name == "qpOASES") opts.which_QPsolver = blockSQP::QPSOLVER::QPOASES;
-        else if (QPsolver_name == "gurobi") opts.which_QPsolver = blockSQP::QPSOLVER::GUROBI;
-        else opts.which_QPsolver = blockSQP::QPSOLVER::ANY;
+        if (QPsolver_name == "qpOASES") opts.QPsol = blockSQP::QPSOLVER::qpOASES;
+        else if (QPsolver_name == "gurobi") opts.QPsol = blockSQP::QPSOLVER::gurobi;
+        else throw blockSQP::ParameterError("Unknown QP solver, known (no neccessarily linked) are qpOASES, gurobi");
         return;
     }
     )
-    #ifdef QPSOLVER_QPOASES
-        .def_readwrite("qpOASES_printLevel", &blockSQP::SQPoptions::qpOASES_printLevel)
-        .def_readwrite("qpOASES_terminationTolerance", &blockSQP::SQPoptions::qpOASES_terminationTolerance)
-	#endif
-	#ifdef QPSOLVER_GUROBI
-        .def_readwrite("gurobi_Method", &blockSQP::SQPoptions::gurobi_Method)
-        .def_readwrite("gurobi_NumericFocus", &blockSQP::SQPoptions::gurobi_NumericFocus)
-        .def_readwrite("gurobi_OutputFlag", &blockSQP::SQPoptions::gurobi_OutputFlag)
-        .def_readwrite("gurobi_Presolve", &blockSQP::SQPoptions::gurobi_Presolve)
-        .def_readwrite("gurobi_Aggregate", &blockSQP::SQPoptions::gurobi_Aggregate)
-        .def_readwrite("gurobi_BarHomogeneous", &blockSQP::SQPoptions::gurobi_BarHomogeneous)
-        .def_readwrite("gurobi_OptimalityTol", &blockSQP::SQPoptions::gurobi_OptimalityTol)
-        .def_readwrite("gurobi_FeasibilityTol", &blockSQP::SQPoptions::gurobi_FeasibilityTol)
-        .def_readwrite("gurobi_PSDTol", &blockSQP::SQPoptions::gurobi_PSDTol)
-	#endif
+    .def_readwrite("QPsol_opts", &blockSQP::SQPoptions::QPsol_opts)
 	;
+
+py::class_<blockSQP::QPSOLVER_options>(m, "QPSOLVER_options");
+
+py::class_<blockSQP::qpOASES_options, blockSQP::QPSOLVER_options>(m, "qpOASES_options")
+    .def(py::init<>())
+    .def_readwrite("printLevel", &blockSQP::qpOASES_options::printLevel)
+    .def_readwrite("terminationTolerance", &blockSQP::qpOASES_options::terminationTolerance)
+    ;
+
+py::class_<blockSQP::gurobi_options, blockSQP::QPSOLVER_options>(m, "gurobi_options")
+    .def(py::init<>())
+    .def_readwrite("Method", &blockSQP::gurobi_options::Method)
+    .def_readwrite("NumericFocus", &blockSQP::gurobi_options::NumericFocus)
+    .def_readwrite("OutputFlag", &blockSQP::gurobi_options::OutputFlag)
+    .def_readwrite("Presolve", &blockSQP::gurobi_options::Presolve)
+    .def_readwrite("Aggregate", &blockSQP::gurobi_options::Aggregate)
+    .def_readwrite("BarHomogeneous", &blockSQP::gurobi_options::BarHomogeneous)
+    .def_readwrite("OptimalityTol", &blockSQP::gurobi_options::OptimalityTol)
+    .def_readwrite("FeasibilityTol", &blockSQP::gurobi_options::FeasibilityTol)
+    .def_readwrite("PSDTol", &blockSQP::gurobi_options::PSDTol)
+    ;
 
 py::class_<int_array>(m,"int_array",py::buffer_protocol())
 	.def(py::init<>())
@@ -756,6 +772,19 @@ py::class_<Prob_Data>(m,"Prob_Data")
 	.def_readwrite("hess_arr", &Prob_Data::hess_arr)
 	;
 
+py::enum_<blockSQP::RES>(m, "RES")
+    .value("IT_FINISHED", blockSQP::RES::IT_FINISHED)
+    .value("FEAS_SUCCESS", blockSQP::RES::FEAS_SUCCESS)
+    .value("SUCCESS", blockSQP::RES::SUCCESS)
+    .value("SUPER_SUCCESS", blockSQP::RES::SUPER_SUCCESS)
+    .value("LOCAL_INFEASIBILITY", blockSQP::RES::LOCAL_INFEASIBILITY)
+    .value("RESTORATION_FAILURE", blockSQP::RES::RESTORATION_FAILURE)
+    .value("LINESEARCH_FAILURE", blockSQP::RES::LINESEARCH_FAILURE)
+    .value("QP_FAILURE", blockSQP::RES::QP_FAILURE)
+    .value("EVAL_FAILURE", blockSQP::RES::EVAL_FAILURE)
+    .value("MISC_ERROR", blockSQP::RES::MISC_ERROR)
+    ;
+
 py::class_<blockSQP::Problemspec>(m, "Problemspec");
 
 py::class_<Problemform, blockSQP::Problemspec, Py_Problemform>(m,"Problemform")
@@ -784,6 +813,8 @@ py::class_<Problemform, blockSQP::Problemspec, Py_Problemform>(m,"Problemform")
 	.def_readwrite("ub_con", &Problemform::ub_con)
 	.def_readonly("nBlocks", &Problemform::nBlocks)
 	.def_property("blockIdx", nullptr, &Problemform::set_blockIdx)
+    .def_property("vblocks", nullptr, &Problemform::set_vblocks)
+    //.def_property("vblocks", nullptr, [](Problemform &P, vblock_array &v_arr){P.vblocks = v_arr.ptr; P.n_vblocks = v_arr.size;})
 	;
 
 py::class_<blockSQP::SQPstats>(m,"SQPstats")
@@ -813,7 +844,13 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
 	.def("finish", &blockSQP::SQPmethod::finish)
     .def("resetHessians", static_cast<void (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::resetHessians))
     .def_readwrite("param", &blockSQP::SQPmethod::param)
-    .def("set_iterate", &blockSQP::SQPmethod::set_iterate)
+    .def("set_iterate_", &blockSQP::SQPmethod::set_iterate)
+    .def("get_xi", &blockSQP::SQPmethod::get_xi, py::return_value_policy::take_ownership)
+    .def("get_lambda", &blockSQP::SQPmethod::get_lambda, py::return_value_policy::take_ownership)
+    .def("get_scaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.scaled_prob->scaling_factors, M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
+    .def("get_rescaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.vars->rescaleFactors, M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
+    .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->autoScaling){M.apply_rescaling(arr->ptr);} return;})
+    .def("dec_nquasi", [](blockSQP::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
 
 py::class_<blockSQP::SCQPmethod, blockSQP::SQPmethod>(m, "SCQPmethod")
@@ -844,6 +881,13 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def("get_hess1_block", [](blockSQP::SQPiterate &vars, int i){return vars.hess1[i];})
 	.def("get_hess2_block", [](blockSQP::SQPiterate &vars, int i){return vars.hess2[i];})
 	.def_readonly("filter", &blockSQP::SQPiterate::filter)
+	.def_readonly("gradLagrange", &blockSQP::SQPiterate::gradLagrange)
+	.def_readonly("gammaMat", &blockSQP::SQPiterate::gammaMat)
+	.def_readonly("deltaXi", &blockSQP::SQPiterate::deltaXi)
+	.def_readonly("deltaMat", &blockSQP::SQPiterate::deltaMat)
+    .def_readonly("deltaNormSqMat", &blockSQP::SQPiterate::deltaNormSqMat)
+    .def_readonly("deltaGammaMat", &blockSQP::SQPiterate::deltaGammaMat)
+    .def_readonly("dg_pos", &blockSQP::SQPiterate::dg_pos)
 	;
 
 py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
@@ -975,6 +1019,10 @@ py::class_<blockSQP::TC_feasibility_Problem, blockSQP::Problemspec>(m, "TC_feasi
 	.def_property("jac_orig_row", [](blockSQP::TC_feasibility_Problem &P)->int_pointer_interface{int_pointer_interface row; row.size = P.nnz; row.ptr = P.jac_orig_row; return row;}, nullptr)
 	.def_property("jac_orig_colind", [](blockSQP::TC_feasibility_Problem &P)->int_pointer_interface{int_pointer_interface colind; colind.size = P.nVar + 1; colind.ptr = P.jac_orig_colind; return colind;}, nullptr)
 	;
+
+py::class_<blockSQP::scaled_Problemspec, blockSQP::Problemspec>(m, "scaled_Problemspec")
+    .def(py::init<blockSQP::Problemspec*>())
+    .def("arr_set_scale", [](blockSQP::scaled_Problemspec &P, double_array &arr){P.set_scale(arr.ptr);});
 }
 
 

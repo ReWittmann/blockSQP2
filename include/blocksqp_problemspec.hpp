@@ -20,41 +20,43 @@
 #include "blocksqp_defs.hpp"
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_condensing.hpp"
+#include <limits>
 
-namespace blockSQP
-{
+namespace blockSQP{
 
 /**
  * \brief Base class for problem specification as required by SQPmethod.
  * \author Dennis Janka
  * \date 2012-2015
  */
-class Problemspec
-{
+class Problemspec{
     /*
      * VARIABLES
      */
     public:
-        int         nVar;               ///< number of variables
-        int         nCon;               ///< number of constraints
-        int         nnz = -1;           ///< number of structural nonzero entries of sparse constraint jacobian
+        int         nVar = -1;                                          ///< number of variables
+        int         nCon = -1;                                          ///< number of constraints
+        int         nnz = -1;                                           ///< number of structural nonzero entries of sparse constraint jacobian
 
-        double      objLo;              ///< lower bound for objective
-        double      objUp;              ///< upper bound for objective
-        Matrix      lb_var;             ///< lower bounds of variables and constraints
-        Matrix      ub_var;             ///< upper bounds of variables and constraints
-        Matrix      lb_con;
-        Matrix      ub_con;
+        double      objLo = std::numeric_limits<double>::infinity();    ///< lower bound for objective
+        double      objUp = std::numeric_limits<double>::infinity();    ///< upper bound for objective
+        Matrix      lb_var;                                             ///< lower bounds of variables and constraints
+        Matrix      ub_var;                                             ///< upper bounds of variables and constraints
+        Matrix      lb_con;             
+        Matrix      ub_con;             
 
-        int         nBlocks;            ///< number of separable blocks of Lagrangian
-        int*        blockIdx;           ///< [blockwise] index in the variable vector where a block starts
+        int         nBlocks = -1;                                       ///< number of separable blocks of Lagrangian
+        int*        blockIdx = nullptr;                                 ///< [blockwise] index in the variable vector where a block starts
 
+        int         n_vblocks = -1;                                     ///< number of distinct variable blocks of variables
+        vblock      *vblocks = nullptr;                                 ///< variable blocks, containing structure information (free/dependent, ...)
+        
     /*
      * METHODS
      */
     public:
-        Problemspec( ){};
-        virtual ~Problemspec( ){};
+        Problemspec();
+        virtual ~Problemspec();
 
         /// Set initial values for xi (and possibly lambda) and parts of the Jacobian that correspond to linear constraints (dense version).
         virtual void initialize( Matrix &xi,            ///< optimization variables
@@ -113,9 +115,38 @@ class Problemspec
 
         /// Print information about the current problem
         virtual void printInfo(){};
+};
+
+class scaled_Problemspec: public Problemspec{
+public:
+
+    Problemspec *unscaled_prob;
+
+    double *scaling_factors;
+    Matrix xi_unscaled;
+
+    scaled_Problemspec(Problemspec *UNSCprob);
+    ~scaled_Problemspec();
+
+    //Set scaling factors
+    void set_scale(const double *const scaleFacs);
+    //Apply scaling factors, multiplies to current scaling factors
+    void rescale(const double *const scaleFacs);
+
+
+    void initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac);
+    void initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol);
+
+    void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *&hess, int dmode, int *info);
+    void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol, SymMatrix *&hess, int dmode, int *info);
+    void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info);
+
+    void reduceConstrVio(Matrix &xi, int* info);
 
 
 };
+
+
 
 } // namespace blockSQP
 

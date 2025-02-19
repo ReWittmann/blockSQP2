@@ -21,6 +21,32 @@ struct vblock{
 	bool removed;
 };
 
+//Future: Have more general dependency graphs for variables for advanced condensing in more than one pass
+/*
+struct vblock{
+    vblock();
+    vblock(int SIZE, bool DEP, bool COND1, bool COND2);
+    int size;
+    bool dependent;
+    //?maybe
+        bool dependent1;
+        bool dependent2;
+    //
+
+    bool cond1;
+    bool cond2;
+    
+    int ndep_in;
+    vblock* deps_in;
+    cblock* couplings_in;
+
+    int ndep_out;
+    vblock* deps_out;
+    cblock* couplings_out;
+}
+*/
+
+
 struct cblock{
 	cblock(int SIZE);
 	cblock();
@@ -173,6 +199,8 @@ class Condenser{
     int* condensed_v_ends;
 
 	int* hess_block_ranges;
+
+    int* condensed_hess_block_sizes;
 
 	//Additional option: How should dependent variable bounds be added to the condensed QP:
     //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep

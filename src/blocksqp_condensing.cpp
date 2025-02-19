@@ -66,7 +66,6 @@ Condenser::Condenser(
                 }
             }
 
-
             //Initialize data concerning the full QP
 			cranges = new int[num_cblocks+1];
 			vranges = new int[num_vblocks+1];
@@ -156,7 +155,6 @@ Condenser::Condenser(
                 condensed_num_hessblocks -= h_ends[i] - h_starts[i] - 1;
             }
 
-
             if (add_dep_bounds){
                 condensed_num_cons = num_cons;
             }
@@ -223,7 +221,7 @@ Condenser::Condenser(
 				}
 
 				if (vblocks[targets[tnum].vblock_end - 1].dependent){
-                    std::cout << "Last block not dependent, appending free block of size 0 during layout generation\n";
+                    //std::cout << "Last block dependent, appending free block of size 0 during layout generation\n";
                     targets_data[tnum].free_sizes[n_stages] = 0;
                     targets_data[tnum].alt_vranges[2*n_stages + 1] = targets_data[tnum].alt_vranges[2*n_stages];
 				}
@@ -294,9 +292,23 @@ Condenser::Condenser(
                 targets_data[tnum].S_k_2.resize(n_stages);
                 targets_data[tnum].h_k_2.resize(n_stages + 1);
                 targets_data[tnum].H_2.Dimension(n_stages + 1, n_stages + 1, h_sizes_2, h_sizes_2);
-
 			}
 
+            condensed_hess_block_sizes = new int[condensed_num_hessblocks];
+            int ind_1 = 0;
+            int ind_2 = 0;
+            for (int tnum = 0; tnum < num_targets; tnum++){
+                for (int i = 0; i < h_starts[tnum] - ind_2; i++){
+                    condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
+                }
+                ind_1 += h_starts[tnum] - ind_2;
+                condensed_hess_block_sizes[ind_1] = targets_data[tnum].n_free;
+                ind_1++;
+                ind_2 = h_ends[tnum];
+            }
+            for (int i = 0; i < num_hessblocks - ind_2; i++){
+                condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
+            }
 		}
 /*
 Condenser(const Condenser &C){
@@ -331,6 +343,7 @@ Condenser::Condenser(Condenser &&C){
     condensed_num_vars = C.condensed_num_vars;
     num_true_cons = C.num_true_cons;
     condensed_num_hessblocks = C.condensed_num_hessblocks;
+    condensed_hess_block_sizes = C.condensed_hess_block_sizes;
 
     cranges = C.cranges;
     vranges = C.vranges;
@@ -383,6 +396,7 @@ Condenser::~Condenser(){
 	delete[] v_ends;
 	delete[] h_starts;
 	delete[] h_ends;
+    delete[] condensed_hess_block_sizes;
 	delete[] condensed_v_starts;
 	delete[] condensed_v_ends;
     delete[] hess_block_ranges;
@@ -485,6 +499,12 @@ void Condenser::print_debug(){
     }
     std::cout<<"\n";
 
+    std::cout << "condensed_hess_block_sizes = ";
+    for (int i = 0; i < condensed_num_hessblocks; i++){
+        std::cout << condensed_hess_block_sizes[i] << " ";
+    }
+    std::cout << "\n";
+
     std::cout<< "cblock presence status = \n";
     for (int i = 0; i< num_cblocks; i++){
         std::cout << cblocks[i].removed << ", ";
@@ -492,6 +512,8 @@ void Condenser::print_debug(){
     std::cout<< "\n";
 
     for (int tnum = 0; tnum < num_targets; tnum++){
+        std::cout << "target " << tnum << " n_stages: " << targets[tnum].n_stages << "\n"; 
+
         std::cout<< "target " << tnum << " alt_vranges: ";
         for (int i = 0; i < 2*targets[tnum].n_stages + 2; i++){
             std::cout<<targets_data[tnum].alt_vranges[i] << " ";
@@ -544,7 +566,6 @@ int Condenser::get_hessblock_index(int v_ind){
 void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::Sparse_Matrix &con_jac, const blockSQP::SymMatrix *const hess, const blockSQP::Matrix &lb_var, const blockSQP::Matrix &ub_var, const blockSQP::Matrix &lb_con, const blockSQP::Matrix &ub_con,
     blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *&condensed_hess, blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con
 ){
-
     std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
 
 	T_Slices.resize(0);
@@ -1040,7 +1061,12 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
         J_T_sigma = blockSQP::transpose_multiply(Data.J_dep_k[n_stages - 1], sigma);
     }
 
-    nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+    //If there are no free variables in the final stage N, S_N and xi_free_N have second and first dimension zero respectively and cannot be multiplied. We have to manually omit the term
+    if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0)
+        nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+    else
+        nu_k[n_stages - 1] = Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+ 
     for (int i = n_stages - 2; i>= 0; i--){
         if (num_true_cons == 0){
             J_T_sigma.Dimension(Data.cond_sizes[i]);

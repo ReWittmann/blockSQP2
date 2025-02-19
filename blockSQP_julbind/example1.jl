@@ -28,6 +28,8 @@ prob.ub_con = Float64[0.0]
 #Set start-end indices of hessian blocks (blockIdx[0] = 0, blockIdx[-1] = nVar)
 prob.blockIdx = Int32[0, 1, 2]
 
+prob.vblocks = BlockSQP.vblock[BlockSQP.vblock(1, true), BlockSQP.vblock(1, true)]
+
 #Set initial values
 prob.x_start = Float64[10.0, 10.0]
 prob.lam_start = Float64[0., 0., 0.]
@@ -49,17 +51,19 @@ opts["whichSecondDerv"] = 0
 opts["sparseQP"] = 0
 opts["printLevel"] = 2
 opts["debugLevel"] = 0
-opts["which_QPsolver"] = "qpOASES"
+opts["QPsol"] = "qpOASES"
+opts["QPsol_opts"] = Dict([("printLevel", 1), ("terminationTolerance", 1e-10)])
+
+#opts["QPsol"] = "gurobi"
+#opts["QPsol_opts"] = Dict([("OutputFlag", 1), ("NumericFocus", 3)])
 
 stats = BlockSQP.SQPstats("./")
 #cxx_opts = BlockSQP.BSQP_options(opts)
 
 meth = BlockSQP.Solver(prob, opts, stats)
-BlockSQP.init(meth)
-
-ret = BlockSQP.run(meth, Int32(100), Int32(1))
-
-BlockSQP.finish(meth)
+BlockSQP.init!(meth)
+ret = BlockSQP.run!(meth, Int32(100), Int32(1))
+BlockSQP.finish!(meth)
 
 x_opt = BlockSQP.get_primal_solution(meth)
 lam_opt = BlockSQP.get_dual_solution(meth)

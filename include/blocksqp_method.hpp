@@ -34,6 +34,7 @@ namespace blockSQP{
  * \author Dennis Janka
  * \date 2012-2015
  */
+
 class SQPmethod{
 
     public:
@@ -50,6 +51,15 @@ class SQPmethod{
         SQPstats*                rest_stats;
         SQPmethod*               rest_method;
 
+        scaled_Problemspec*      scaled_prob;
+
+    //NEW
+    /*
+        vblock *                 vblocks;
+        int                      n_vblocks;
+    */
+    //
+
     protected:
         bool                     initCalled;  ///< indicates if init() has been called (necessary for run())
 
@@ -65,7 +75,7 @@ class SQPmethod{
         /// Initialization, has to be called before run
         void init();
         /// Main Loop of SQP method
-        int run( int maxIt, int warmStart = 0 );
+        RES run( int maxIt, int warmStart = 0 );
         /// Call after the last call of run, to close output files etc.
         void finish();
         /// Print information about the SQP method
@@ -112,6 +122,8 @@ class SQPmethod{
         void force_accept(double alpha);
         /// Set a new iterate and update derivatives
         void set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHessian = false);
+        Matrix get_xi();
+        Matrix get_lambda();
         /// Reduce stepsize if a step is rejected
         void reduceStepsize( double *alpha );
         /// Determine steplength alpha by a filter based line search similar to IPOPT
@@ -161,9 +173,11 @@ class SQPmethod{
         /// Compute limited memory Hessian approximations based on update formulas
         void calcHessianUpdateLimitedMemory(int updateType, int hessScaling, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
-        void calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock, SymMatrix *hess);
+        //void calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock, SymMatrix *hess);
+        void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification
-        void calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess);
+        //void calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess);
+        void calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping);
         /// Set pointer to correct step and Lagrange gradient difference in a limited memory context
         void updateDeltaGamma();
 
@@ -176,9 +190,26 @@ class SQPmethod{
         void updateScalarProductsLimitedMemory();
 
         /// [blockwise] Size Hessian using SP, OL, or mean sizing factor
-        void sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option, SymMatrix *hess);
+        //void sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option, SymMatrix *hess);
+        void sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int option);
         /// [blockwise] Size Hessian using the COL scaling factor
-        void sizeHessianCOL( const Matrix &gamma, const Matrix &delta, int iBlock, bool first_sizing, SymMatrix *hess);
+        //void sizeHessianCOL( const Matrix &gamma, const Matrix &delta, const double deltaNormSq, const double deltaNormSqOld, const double deltaGamma, const double deltaGammaOld, int iBlock, SymMatrix *hess);
+        void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
+
+        /*
+        * Automatic scaling of variables
+        */
+        /// Calculate relative scale factors for variable block number nBlock, result is multiplied to SF = double[nVar].
+        //void calc_block_variables_scaling(int nBlock, double *SF);
+        /// Scale the variable blocks relative to each other, recommended when using convexification strategy of adding scaled identities. Result is multiplied to SF
+        //void calc_blocks_scaling(double *SF);
+        void calc_free_variables_scaling(double *SF);
+
+        /// Rescale the problem specification and the iteration data with the given rescaling factors
+        void apply_rescaling(double *resfactors);
+
+        void scaling_heuristic();
+        
 };
 
 ////////////////////////////////////////////////////////////
@@ -202,6 +233,9 @@ public:
     virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
     virtual int feasibilityRestorationPhase();
+
+    //Try to convexify condensed Hessian by adding scaled identities
+    void convexify_condensed(SymMatrix *condensed_hess, int idx, int maxQP);
 };
 
 

@@ -1,5 +1,6 @@
 # Gather all .cpp files in the examples folder
 file(GLOB EXAMPLE_FILES "${CMAKE_SOURCE_DIR}/examples/*.cpp")
+list(REMOVE_ITEM EXAMPLE_FILES ${CMAKE_SOURCE_DIR}/examples/TEST_qp.cpp)
 
 # Loop through the example files and add each as an executable
 foreach(EXAMPLE ${EXAMPLE_FILES})

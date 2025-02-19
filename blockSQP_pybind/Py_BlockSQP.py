@@ -157,8 +157,8 @@ class BlockSQP_Problem(BlockSQP.Problemform):
         self.Data.constr.shape = (-1)
     
     def update_xi(self):
-     	self.Data.xi = np.array(self.Cpp_Data.xi, copy = False)
-     	self.Data.xi.shape = (-1)
+        self.Data.xi = np.array(self.Cpp_Data.xi, copy = False)
+        self.Data.xi.shape = (-1)
     
     def initialize_dense(self):
         self.Data.xi[:] = self.x_start
@@ -220,7 +220,5 @@ class BlockSQP_Problem(BlockSQP.Problemform):
             self.Cpp_Data.info = 1
         return
     
-        
-        
 
 

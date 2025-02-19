@@ -26,8 +26,10 @@ namespace blockSQP
  * Standard Constructor:
  * Default settings
  */
-SQPoptions::SQPoptions()
-{
+
+SQPoptions::SQPoptions(){}
+
+void SQPoptions::reset(){
     /* qpOASES: dense (0), sparse (1), or Schur (2)
      * Choice of qpOASES method:
      * 0: dense Hessian and Jacobian, dense factorization of reduced Hessian
@@ -51,7 +53,14 @@ SQPoptions::SQPoptions()
     opttol = 1.0e-6;
     nlinfeastol = 1.0e-6;
 
-    which_QPsolver = QPSOLVER::ANY;
+    #if defined(QPSOLVER_QPOASES)
+        QPsol = QPSOLVER::qpOASES;
+    #elif defined(QPSOLVER_GUROBI)
+        QPsol = QPSOLVER::gurobi;
+    #else
+        QPsol = QPSOLVER::unset;
+    #endif
+
 
     // 0: no globalization, 1: filter line search
     globalization = 1;
@@ -84,7 +93,7 @@ SQPoptions::SQPoptions()
     //HessDiag2 = 1.0;
 
     // Activate damping strategy for BFGS (if deactivated, BFGS might yield indefinite updates!)
-    hessDamp = 1;
+    //hessDamp = 1;
 
     // Damping factor for Powell modification of BFGS updates ( between 0.0 and 1.0 )
     //Originally: hessDampFac = 0.2;
@@ -107,6 +116,7 @@ SQPoptions::SQPoptions()
     //size_hessian_first_step = false;
     tau_H = 2./3.;
     convKappa0 = 1./16.;
+    convKappaMax = 8.;
 
     //0: Convex combinations between indefinite hessian and convex fallback hessian
     //1: First try adding decreasing scaled identities, then use convex fallback hessian
@@ -131,9 +141,9 @@ SQPoptions::SQPoptions()
     hessMemsize = 20;
 
     // maximum number of line search iterations
-    maxLineSearch = 20;
+    maxLineSearch = 10;
 
-    // if step has to be reduced in too many consecutive iterations, feasibility restoration phase is invoked
+    // if step has to be reduced in too many consecutive iterations, step/restoration heuristics are invoked
     maxConsecReducedSteps = 12;
 
     // maximum number of second-order correction steps
@@ -155,7 +165,8 @@ SQPoptions::SQPoptions()
     gammaTheta = 1.0e-5;
     gammaF = 1.0e-5;
     kappaSOC = 0.99;
-    kappaF = 0.999;
+    //kappaF = 0.999;
+    kappaF = 0.8;
     thetaMax = 1.0e7;       // reject steps if constr viol. is larger than thetaMax
     thetaMin = 1.0e-5;      // if constr viol. is smaller than thetaMin require Armijo cond. for obj.
     delta = 1.0;
@@ -163,77 +174,131 @@ SQPoptions::SQPoptions()
     sF = 2.3;
     eta = 1.0e-4;
 
-    //cNormFilterTol = 1e-8;
-    // Inertia correction for filter line search and indefinite Hessians
-    kappaMinus = 0.333;
-    kappaPlus = 8.0;
-    kappaPlusMax = 100.0;
-    deltaH0 = 1.0e-4;
+
+    autoScaling = false;
 
     //For SCQPmethod subclasses
     dep_bound_tolerance = 1e-7;
 
-    //Options for linked QP solvers
-    #ifdef QPSOLVER_QPOASES
-        qpOASES_printLevel = 0;
-        qpOASES_terminationTolerance = 5.0e6*2.221e-16;
-    #endif
+    QPsol = QPSOLVER::unset;
+    QPsol_opts = nullptr;
 
-    #ifdef QPSOLVER_GUROBI
-        gurobi_Method = 1;
-        gurobi_NumericFocus = 3;
-        gurobi_OutputFlag = 0;
-        gurobi_Presolve = -1;
-        gurobi_Aggregate = 1;
-        gurobi_OptimalityTol = 1e-9;
-        gurobi_FeasibilityTol = 1e-9;
-        gurobi_BarHomogeneous = 0;
-        gurobi_PSDTol = 1e-6;
+    default_QPsol_opts = nullptr;
 
-        //gurobi_solver_regularization_factor = 1e-8;
-    #endif
+    allow_premature_termination = true;
+    max_extra_steps = 0;
+}
 
+SQPoptions::~SQPoptions(){
+    delete default_QPsol_opts;
 }
 
 
 /**
- * Some options cannot be set together, resolve here
+ * Some options cannot be set together, check for invalid combinations here
  */
-void SQPoptions::optionsConsistency()
-{
+
+void SQPoptions::optionsConsistency(){ 
+
+    #ifndef QPSOLVER_QPOASES
+        if (QPsol == QPSOLVER::qpOASES)
+            throw ParameterError("qpOASES specified as QP solver, but not (properly) linked");
+    #endif
+    #ifndef QPSOLVER_GUROBI
+        if (QPsol == QPSOLVER::gurobi)
+            throw ParameterError("gurobi specified as QP solver, but not (properly) linked");
+    #endif
+
+    if (QPsol == QPSOLVER::qpOASES){
+        if (QPsol_opts != nullptr && QPsol_opts->sol != QPSOLVER::qpOASES)
+            throw ParameterError("qpOASES specified as QP solver, but options given for different QP solver");
+        if (hessUpdate == 1 && sparseQP < 2)
+            throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (sparseQP == 2)");
+    }
+    if (QPsol == QPSOLVER::gurobi){
+        if (QPsol_opts != nullptr && QPsol_opts->sol != QPSOLVER::gurobi)
+            throw ParameterError("gurobi specified as QP solver, but options given for different QP solver");
+        if (hessUpdate == 1 || hessUpdate == 4)
+            throw ParameterError("gurobi provides needed lagrange multipliers only for convex QPs, given Hessian options not possible");
+    }
+
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
     if (whichSecondDerv == 2){
-        std::cout << "Exact hessian is available, overwrite hessUpdate and hessScaling\n";
-        hessUpdate = 6;
-        hessScaling = 0;
-        blockHess = 1;
+        std::cout << "Exact hessian is available, hessUpdate and hessScaling are ignored\n";
     }
-
-    // If we don't use limited memory BFGS we need to store only one vector.
-    if (!hessLimMem)
-        hessMemsize = std::numeric_limits<int>::max();
-
+    
     //Ensure a positive definite fallback hessian is available if first hessian approximation is not guaranteed to be positive definite
-    if ((hessUpdate == 1 || hessUpdate == 4 || hessUpdate == 6) && maxConvQP < 1 && !(fallbackUpdate == 0 || fallbackUpdate == 2 || fallbackUpdate == 5))
-        throw ParameterError("Error, positive definite fallback hessian is needed when hessian is not positive definite");
+    if ((hessUpdate == 1 || hessUpdate == 4 || hessUpdate == 6) && maxConvQP < 1 && !(fallbackUpdate == 0 || fallbackUpdate == 2 || fallbackUpdate == 5)) 
+        throw ParameterError("Positive definite fallback hessian is needed when hessian is not positive definite");
 
-    /*
-    if (convStrategy == 1 && maxConvQP > 2){
-        std::cout << "Only one indefinite hessian with added scaled identity can be tried, setting maxConvQP to 2";
-        maxConvQP = 2;
-    }*/
 
-    //If no convexified hessians are tried, set convStrategy to 0 to avoid some unnecessary computation
-    if (maxConvQP == 1){
-        std::cout << "maxConvQP = 1, no Hessian regularization used, set convStrategy to default 0\n";
-        convStrategy = 0;
+    if (globalization == 1 && hessUpdate == 1 && maxConvQP < 1){
+        throw ParameterError("Fallback Hessian QP attempts (maxConvQP > 1) are required when using SR1.");
     }
 
-    if (globalization == 1 && hessUpdate == 1 && (maxConvQP < 1)){
-        std::cout << "Fallback update is needed for SR1, setting maxConvQP to 1\n";
-        maxConvQP = 1;
+    if (hessLimMem && hessMemsize == 0) 
+        throw ParameterError("hessMemsize must be greater zero for limited memory quasi newton");
+
+    if (hessLimMem && hessMemsize > 200){
+        std::cout << "WARNING: Large value of hessMemsize (> 200). Performance may be impeded\n";
     }
 
+    complete_QPsol_opts();
 }
+
+void SQPoptions::optionsConsistency(Problemspec *problem){
+    if ((autoScaling || convStrategy == 2) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
+        throw ParameterError("autoScaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
+    if (sparseQP && problem->nnz < 0)
+        throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
+    
+    optionsConsistency();
+}
+
+
+QPSOLVER_options::QPSOLVER_options(QPSOLVER SOL): sol(SOL){
+    eps = 1e-16;
+    inf = std::numeric_limits<double>::infinity();
+    maxTimeQP = 10.;
+    maxItQP = std::numeric_limits<int>::max();
+}
+
+void SQPoptions::complete_QPsol_opts(){
+    if (QPsol_opts == nullptr){
+        delete default_QPsol_opts;
+
+        if (QPsol == QPSOLVER::qpOASES) default_QPsol_opts = new qpOASES_options;
+        else if (QPsol == QPSOLVER::gurobi) default_QPsol_opts = new gurobi_options;
+        else throw ParameterError("No valid option for QP solver");
+
+        QPsol_opts = default_QPsol_opts;
+    }
+    //Check for default values from constructor, don't overwrite if values were altered.
+    if (QPsol_opts->eps == 1e-16) QPsol_opts->eps = eps;
+    if (QPsol_opts->inf == std::numeric_limits<double>::infinity()) QPsol_opts->inf = inf;  
+    if (QPsol_opts->maxTimeQP == 10.) QPsol_opts->maxTimeQP = maxTimeQP;
+    if (QPsol_opts->maxItQP == std::numeric_limits<int>::max()) QPsol_opts->maxItQP = maxItQP;
+    return;
+}
+
+qpOASES_options::qpOASES_options(): QPSOLVER_options(QPSOLVER::qpOASES){
+    printLevel = 0;
+    terminationTolerance = 5.0e6*2.221e-16;
+}
+
+gurobi_options::gurobi_options(): QPSOLVER_options(QPSOLVER::gurobi){
+        Method = 1;
+        NumericFocus = 3;
+        OutputFlag = 0;
+        Presolve = -1;
+        Aggregate = 1;
+        OptimalityTol = 1e-9;
+        FeasibilityTol = 1e-9;
+        BarHomogeneous = 0;
+        PSDTol = 1e-6;
+
+        //regularization_factor = 1e-8;
+}
+
 
 } // namespace blockSQP

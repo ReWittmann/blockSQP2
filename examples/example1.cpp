@@ -19,8 +19,8 @@ static double const myInf = std::numeric_limits<double>::infinity();    ///< Use
  * \author Dennis Janka
  * \date 2012-2015
  */
-class MyProblem : public Problemspec
-{
+
+class MyProblem : public Problemspec{
     public:
         Matrix xi0;                         ///< starting values for the optimization (dim nVar)
 
@@ -89,8 +89,8 @@ class MyProblem : public Problemspec
 };
 
 
-MyProblem::MyProblem( int nVar_, int nCon_, int nBlocks_, int *blockIdx_, const Matrix &lbv, const Matrix &ubv, const Matrix &lbc, const Matrix &ubc, const Matrix &xi0_ )
-{
+MyProblem::MyProblem( int nVar_, int nCon_, int nBlocks_, int *blockIdx_, const Matrix &lbv, const Matrix &ubv, const Matrix &lbc, const Matrix &ubc, const Matrix &xi0_ ){
+    
     nVar = nVar_;
     nCon = nCon_;
 
@@ -252,7 +252,7 @@ void MyProblem::evaluate( const Matrix &xi, const Matrix &lambda, double *objval
 int main( int argc, const char* argv[] )
 {
     using namespace blockSQP;
-    int ret = 1;
+    RES ret;
     MyProblem *prob;
     SQPmethod *meth;
     SQPoptions *opts;
@@ -265,6 +265,9 @@ int main( int argc, const char* argv[] )
     /*--------------------*/
     int nVar = 2;
     int nCon = 1;
+
+    int nBlocks = nVar;
+    int blockIdx[2+1]; //[nBlocks+1]
 
     // Initial values
     Matrix x0;
@@ -284,8 +287,6 @@ int main( int argc, const char* argv[] )
     ub_con(0) = 0.0;
 
     // Variable partition for block Hessian
-    int nBlocks = nVar;
-    int blockIdx[nBlocks+1];
     for( int i=0; i<nBlocks+1; i++ )
         blockIdx[i] = i;
 
@@ -302,10 +303,11 @@ int main( int argc, const char* argv[] )
     opts->opttol = 1.0e-12;
     opts->nlinfeastol = 1.0e-12;
 
+    opts->autoScaling = false;
     // 0: no globalization, 1: filter line search
     opts->globalization = 0;
     // 0: (scaled) identity, 1: SR1, 2: BFGS
-    opts->hessUpdate = 2;
+    opts->hessUpdate = 1;
     opts->fallbackUpdate = 2;
     opts->indef_local_only = false;
 
@@ -317,20 +319,24 @@ int main( int argc, const char* argv[] )
     // scaling strategy for fallback BFGS update if SR1 and globalization is used
     opts->fallbackScaling = 0;
     // Size of limited memory
-    opts->hessLimMem = 0;
+    opts->hessLimMem = 1;
     opts->hessMemsize = 20;
     // If too many updates are skipped, reset Hessian
     opts->maxConsecSkippedUpdates = 200;
     // 0: full space Hessian approximation (ignore block structure), 1: blockwise updates
     opts->blockHess = 1;
     opts->whichSecondDerv = 0;
-    opts->sparseQP = 0;
+    opts->sparseQP = 2;
     opts->printLevel = 2;
     opts->debugLevel = 1;
-    opts->which_QPsolver = QPSOLVER::QPOASES;
-    opts->qpOASES_printLevel = 1;
 
+    opts->QPsol = QPSOLVER::qpOASES;
+    qpOASES_options QPopts;
+    QPopts.printLevel = 1;
+    opts->QPsol_opts = &QPopts;
+    
     //opts->maxConvQP = 5;
+
 
     /*-------------------------------------------------*/
     /* Create blockSQP method object and run algorithm */
@@ -342,7 +348,7 @@ int main( int argc, const char* argv[] )
     ret = meth->run( 100 );
 
     meth->finish();
-    if( ret == 1 )
+    if ( ret == RES::IT_FINISHED )
         printf("\033[0;36m***Maximum number of iterations reached.***\n\033[0m");
 
     printf("\nPrimal solution:\n");

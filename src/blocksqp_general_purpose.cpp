@@ -98,7 +98,7 @@ double estimateSmallestEigenvalue( const Matrix &B )
         radius = 0.0;
         for (j = 0; j < dim; j++)
             if (j != i)
-                radius += fabs( B( i,j ) );
+                radius += std::abs( B( i,j ) );
 
         if (B(i,i) - radius < lambdaMin)
             lambdaMin = B(i,i) - radius;
@@ -114,19 +114,12 @@ double adotb( const Matrix &a, const Matrix &b )
 {
     double norm = 0.0;
 
-    if( a.N() != 1 || b.N() != 1 )
-    {
-        printf("a or b is not a vector!\n");
-    }
-    else if( a.M() != b.M() )
-    {
-        printf("a and b must have the same dimension!\n");
-    }
-    else
-    {
-        for( int k=0; k<a.M(); k++ )
-            norm += a(k) * b(k);
-    }
+    if (a.n != 1) throw ParameterError("adotb: a is not a vector");
+    else if (b.n != 1) throw ParameterError("adotb: b is not a vector");
+    else if (a.m != b.m) throw ParameterError("adotb: a and b have different lengths");
+
+    for( int k=0; k<a.M(); k++ )
+        norm += a(k) * b(k);
 
     return norm;
 }
@@ -174,7 +167,7 @@ double l1VectorNorm( const Matrix &v )
     else
     {
         for( int k=0; k<v.M(); k++ )
-            norm += fabs(v( k ));
+            norm += std::abs(v( k ));
     }
 
     return norm;
@@ -194,7 +187,7 @@ double l2VectorNorm( const Matrix &v )
             norm += v( k )* v( k );
     }
 
-    return sqrt(norm);
+    return std::sqrt(norm);
 }
 
 double lInfVectorNorm( const Matrix &v )
@@ -290,26 +283,26 @@ double l1ConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &l
 double l2ConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con )
 {
     double norm = 0.0;
-    int i;
     int nVar = xi.M();
 
     // Violation of simple bounds
-    for( i=0; i<nVar; i++ )
+    for (int i = 0; i < nVar; i++){
         if( xi( i ) > ub_var( i ) )
             norm += xi( i ) - ub_var( i );
         if( xi( i ) < lb_var( i ) )
             norm += lb_var( i ) - xi( i );
+    }
 
     // Calculate sum of constraint violations
-    for( i=0; i<constr.M(); i++ )
+    for (int i = 0; i < constr.M(); i++){
         if( constr( i ) > ub_con( i ) )
             norm += pow(constr( i ) - ub_con( i ), 2);
         else if( constr( i ) < lb_con( i ) )
             norm += pow(lb_con( i ) - constr( i ), 2);
+    }
 
     return sqrt(norm);
 }
-
 
 /**
  * Calculate l_Infinity norm of constraint violations
@@ -344,5 +337,35 @@ double lInfConstraintNorm(const Matrix &xi, const Matrix &constr, const Matrix &
 
     return norm;
 }
+
+double lInfConstraintNorm(const Matrix &xi, const Matrix &constr, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con, const Matrix &weights){
+
+    double norm = 0.0;
+    int nVar = xi.M();
+    int nCon = constr.M();
+
+    // Violation of simple bounds
+    for (int i = 0; i < nVar; i++){
+        if ((lb_var(i) - xi(i))*std::abs(weights(i)) > norm){
+            norm = (lb_var(i) - xi(i))*std::abs(weights(i));
+        }
+        else if ((xi(i) - ub_var(i))*std::abs(weights(i)) > norm){
+            norm = (xi(i) - ub_var(i))*std::abs(weights(i));
+        }
+    }
+
+    // Find out the largest constraint violation
+    for(int i = 0; i < nCon; i++){
+
+        if ((lb_con(i) - constr(i))*std::abs(weights(nVar + i)) > norm){
+            norm = (lb_con(i) - constr(i))*std::abs(weights(nVar + i));
+        }
+        else if ((constr(i) - ub_con(i))*std::abs(weights(nVar + i)) > norm){
+            norm = (constr(i) - ub_con(i))*std::abs(weights(nVar + i));
+        }
+    }
+    return norm;
+}
+
 
 } // namespace blockSQP

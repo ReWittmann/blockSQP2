@@ -22,11 +22,7 @@
 //#include "blocksqp_lapack.h"
 
 namespace blockSQP
-{/*
-class NotImplementedError : public std::logic_error{
-public:
-    NotImplementedError(std::string info) : std::logic_error("Missing implementation of " + info){}
-};*/
+{
 
 double l1VectorNorm( const Matrix &v );
 double l2VectorNorm( const Matrix &v );
@@ -36,6 +32,7 @@ double l1ConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &l
 double l1ConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con );
 double l2ConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con );
 double lInfConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con );
+double lInfConstraintNorm( const Matrix &xi, const Matrix &constr, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con, const Matrix &weights);
 
 double adotb( const Matrix &a, const Matrix &b );
 void Atimesb( const Matrix &A, const Matrix &b, Matrix &result );

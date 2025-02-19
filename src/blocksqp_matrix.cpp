@@ -21,18 +21,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
-
-#ifdef _WIN32
-    // For Windows systems, include Windows-specific headers
-    #include <windows.h>
-#elif defined(__APPLE__)
-    // For macOS, include the Accelerate framework
-    #include <Accelerate/Accelerate.h>
-#elif defined(__linux__)
-    // For Linux, include OpenBLAS or other libraries
-    #include <cblas.h>
-#endif
-
+#include "cblas.h"
 #define MATRIX_DEBUG
 
 namespace blockSQP
@@ -245,7 +234,7 @@ Matrix &Matrix::operator=( const Matrix &A )
 
             m = A.m;
             n = A.n;
-            ldim = A.ldim;
+            ldim = A.m;
 
             malloc();
 
@@ -371,8 +360,7 @@ Matrix &Matrix::Dimension( int M, int N, int LDIM )
             free();
             m = M;
             n = N;
-            ldim = LDIM;
-
+            ldim = std::max(LDIM, m);
             malloc();
         }
     }
@@ -631,10 +619,14 @@ Matrix Matrix::operator*(const Matrix &M2) const{
 	if (n != M2.m){
 		throw std::invalid_argument("Matrox *: Mismatched matrix sizes");
 	}
-    if (m == 0){
-        throw std::invalid_argument("Matrix *: Cannot multiply along chaining dimension zero");
+    if (n == 0 && m > 0 && M2.n > 0){
+        throw std::invalid_argument("Matrix *: Cannot multiply along chaining dimension zero into a true 2D matrix");
     }
     #endif
+    //NEW
+    if (m == 0) return Matrix(0, M2.n);
+    else if (n == 0) return Matrix(m, M2.n);
+    //
 
     double *array_3 = new double[m * M2.n];
     cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, M2.n, n, 1.0, array, ldim, M2.array, M2.ldim, 0., array_3, m);
@@ -699,7 +691,8 @@ Matrix vertcat(std::vector<Matrix> M_k){
     int m = 0;
     double *array;
 
-    for (int i = 0; i < M_k.size(); i++){
+    //for (int i = 0; i < M_k.size(); i++){
+    for (std::vector<Matrix>::size_type i = 0; i < M_k.size(); i++){
         #ifdef MATRIX_DEBUG
         if (M_k[i].n != n){
             throw std::invalid_argument("Matrix vertcat: Mismatched matrix sizes of " + std::to_string(n) + " and " + std::to_string(M_k[i].n));
@@ -713,7 +706,7 @@ Matrix vertcat(std::vector<Matrix> M_k){
     int ind;
     for (int j = 0; j<n; j++){
         ind = 0;
-        for (int k = 0; k<M_k.size(); k++){
+        for (std::vector<Matrix>::size_type k = 0; k<M_k.size(); k++){
             for (int i = 0; i<M_k[k].m; i++){
                 array[ind + i + j*m] = M_k[k](i,j);
             }
@@ -1367,12 +1360,15 @@ Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2){
         throw std::invalid_argument("sparse_dense_multiply: Cannot multiply along chaining dimension zero");
     }
     #endif
-
-	// int index_offsets[M2.m] = {0};
-    std::vector<int> index_offsets(M2.m, 0);  // This will initialize the vector with 'M2.m' elements, all set to 0.
-
+    
+    /*
+	int index_offsets[M2.m] = {0};
 	int first_rows[M2.m];
 	int min_inds[M2.m];
+    */
+
+    int *index_offsets = new int[M2.m], *first_rows = new int[M2.m], *min_inds = new int[M2.m];
+
 	int min_end;
 	int min_row;
 	int num_inds = 0;
@@ -1441,7 +1437,8 @@ Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2){
 	for (int k = 0; k<=M2.n; k++){
 		COLIND[k] = colind_m[k];
 	}
-    
+
+    delete[] index_offsets; delete[] first_rows; delete[] min_inds;
 	return Sparse_Matrix(M1.m, M2.n, c_ind, NZ, ROW, COLIND);
 }
 
@@ -1659,7 +1656,7 @@ Sparse_Matrix horzcat(std::vector<Sparse_Matrix> &mats){
 	int *row;
 	int *colind;
 
-	for (int k = 0; k<mats.size(); k++){
+	for (std::vector<Matrix>::size_type k = 0; k<mats.size(); k++){
         #ifdef MATRIX_DEBUG
         if (mats[k].m != m){
             throw std::invalid_argument("Sparse_Matrix horzcat: Incompatible matrix sizes");
@@ -1675,7 +1672,7 @@ Sparse_Matrix horzcat(std::vector<Sparse_Matrix> &mats){
 
 	int row_offset = 0;
 	int col_offset = 0;
-	for (int k = 0; k < mats.size(); k++){
+	for (std::vector<Matrix>::size_type k = 0; k < mats.size(); k++){
 
 		for (int l = 0; l < mats[k].n; l++){
 			colind[col_offset + l] = mats[k].colind[l] + row_offset;
@@ -1701,7 +1698,7 @@ Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
     int* row;
     int* colind;
 
-    for (int k = 0; k < mats.size(); k++){
+    for (std::vector<Matrix>::size_type k = 0; k < mats.size(); k++){
         #ifdef MATRIX_DEBUG
         if (mats[k].n != n){
             throw std::invalid_argument("Sparse_Matrix vertcat: Incompatible matrix sizes");
@@ -1720,7 +1717,7 @@ Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
     int ind = 0;
     for (int j = 0; j<n; j++){
         row_offset = 0;
-        for (int k = 0; k < mats.size(); k++){
+        for (std::vector<Matrix>::size_type k = 0; k < mats.size(); k++){
             for (int i = mats[k].colind[j]; i<mats[k].colind[j+1]; i++){
                 nz[ind] = mats[k].nz[i];
                 row[ind] = mats[k].row[i] + row_offset;
@@ -1816,16 +1813,9 @@ CSR_Matrix::CSR_Matrix(int M, int N, double *NZ, int *COL, int *ROWIND, bool FD)
 CSR_Matrix::CSR_Matrix(const CSR_Matrix &M1){
     m = M1.m;
     n = M1.n;
-    if (free_data){
-        delete[] nz;
-        delete[] col;
-        delete[] rowind;
-    }
 
     if (M1.free_data){
-
         int nnz = M1.rowind[M1.m];
-
         nz = new double[nnz];
         col = new int[nnz];
         rowind = new int[M1.m + 1];

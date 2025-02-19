@@ -17,42 +17,6 @@
 
 namespace blockSQP{
 
-////Helper methods/////
-/*
-void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar,
-                                            double *&hessNz){
-    if (hessNz == NULL)
-        hessNz = new double[nVar * nVar];
-
-    int bsize, bstart = 0, ind = 0;
-    //Iterate over hessian blocks
-    for (int h = 0; h <nBlocks; h++){
-        bsize = hess[h].m;
-        //Iterate over second dimension
-        for (int j = 0; j < bsize; j++){
-            //Iterate over first dimension
-             //Segment above hessian block
-            for (int i = 0; i < bstart; i++){
-                hessNz[ind] = 0;
-                ++ind;
-            }
-             //Hessian block
-            for (int i = 0; i < hess[h].m; i++){
-                hessNz[ind] = hess[h](i, j);
-                ++ind;
-            }
-             //Segment below hessian block
-            for (int i = bstart + bsize; i < nVar; i++){
-                hessNz[ind] = 0;
-                ++ind;
-            }
-        }
-        bstart += bsize;
-    }
-    return;
-}*/
-
-
 void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
                                             double *&hessNz){
     if (hessNz == NULL)
@@ -88,76 +52,6 @@ void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, doub
     }
     return;
 }
-
-
-
-/*
-void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar,
-                             double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
-    int iBlock, count, colCountTotal, rowOffset, i, j;
-    int nnz, nCols, nRows;
-
-    // 1) count nonzero elements
-    nnz = 0;
-    for (iBlock=0; iBlock<nBlocks; iBlock++)
-        for (i=0; i<hess_[iBlock].N(); i++)
-            for (j=i; j<hess_[iBlock].N(); j++)
-                if (fabs(hess_[iBlock]( i,j )) > eps){
-                    nnz++;
-                    if( i != j )// off-diagonal elements count twice
-                        nnz++;
-                }
-
-    delete[] hessNz_;
-    delete[] hessIndRow_;
-    delete[] hessIndCol_;
-    delete[] hessIndLo_;
-
-    hessNz_ = new double[nnz];
-    hessIndRow_ = new int[nnz];
-    hessIndCol_ = new int[nVar + 1];
-    hessIndLo_ = new int[nVar];
-
-    // 2) store matrix entries columnwise in hessNz
-    count = 0; // runs over all nonzero elements
-    colCountTotal = 0; // keep track of position in large matrix
-    rowOffset = 0;
-    for( iBlock=0; iBlock<nBlocks; iBlock++ )
-    {
-        nCols = hess_[iBlock].N();
-        nRows = hess_[iBlock].M();
-
-        for( i=0; i<nCols; i++ )
-        {
-            // column 'colCountTotal' starts at element 'count'
-            hessIndCol_[colCountTotal] = count;
-
-            for( j=0; j<nRows; j++ ){
-                if( (hess_[iBlock]( i,j ) > eps) || (-hess_[iBlock]( i,j ) > eps) )
-                {
-                    hessNz_[count] = hess_[iBlock]( i, j );
-                    hessIndRow_[count] = j + rowOffset;
-                    count++;
-                }
-            }
-            colCountTotal++;
-        }
-        rowOffset += nRows;
-    }
-    hessIndCol_[colCountTotal] = count;
-
-    // 3) Set reference to lower triangular matrix
-    for( j=0; j<nVar; j++ )
-    {
-        for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
-        hessIndLo_[j] = i;
-    }
-
-    if( count != nnz ){
-         std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
-    }
-}
-*/
 
 
 void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
@@ -231,22 +125,20 @@ void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, i
 }
 
 
-
-
-
 ///////////////////////
 
 //QPsolver base class implemented methods
-QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts): param(opts), nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks){
+QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPSOLVER_options *QPopts): nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks), Qparam(QPopts){
     //For managing QP solution times
-    time_limit = param->maxTimeQP;
+    default_time_limit = Qparam->maxTimeQP;
+    custom_time_limit = Qparam->maxTimeQP;
     time_limit_type = 0;
-    record_time = true;
+    skip_timeRecord = false;
 
-    dur_pos = 0;
-    avg_solution_duration = param->maxTimeQP/2.5;
+    dur_pos = 9; dur_count = 0;
+    QPtime_avg = default_time_limit/2.5;
     for (int i = 0; i < 10; i++){
-        solution_durations[i] = param->maxTimeQP/2.5;
+        solution_durations[i] = default_time_limit/2.5;
     }
     //Problem information
     convex_QP = false;
@@ -266,36 +158,58 @@ void QPsolver::set_constr(double *const jac_nz, int *const jac_row, int *const j
 }
 
 int QPsolver::get_QP_it(){return 0;}
-double QPsolver::get_solutionTime(){return -1.0;}
+double QPsolver::get_solutionTime(){return solution_durations[dur_pos];}
 
-//QPsolver factory
-QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts){
+
+void QPsolver::recordTime(double solTime){
+    dur_pos = (dur_pos + 1)%10;
+    solution_durations[dur_pos] = solTime;
+    dur_count += int(dur_count < 10);
+    QPtime_avg = 0.0;
+    for (int i = 0; i < dur_count; i++){
+        QPtime_avg += solution_durations[(dur_pos - i + 10)%10];
+    }
+    QPtime_avg /= dur_count;
+    return;
+}
+
+void QPsolver::reset_timeRecord(){
+    dur_pos = 0;
+    dur_count = 0;
+    QPtime_avg = default_time_limit/2.5;
+}
+
+void QPsolver::custom_timeLimit(double CTlim){
+    time_limit_type = 2;
+    custom_time_limit = CTlim;
+    return;
+}
+
+//QPsolver factory, handle checks for linked QP solvers
+QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *param){
+
+    if (param->QPsol != param->QPsol_opts->sol) throw ParameterError("QPsol_opts for wrong QPsol, should have been caught by SQPoptions::optionsConsistency");
+    //param->complete_QP_sol_opts has already been called through param->optionsConsistency in SQPmethod constructor, else we would need to call it here so all stanard QPsolvers options get added to param->QPsol_opts
 
     #ifdef QPSOLVER_QPOASES
-        if (opts->which_QPsolver == QPSOLVER::ANY || opts->which_QPsolver == QPSOLVER::QPOASES)
-            return new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, opts);
+    if (param->QPsol == QPSOLVER::qpOASES)
+        return new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, param->sparseQP, static_cast<qpOASES_options*>(param->QPsol_opts));
     #endif
     #ifdef QPSOLVER_GUROBI
-        if (opts->which_QPsolver == QPSOLVER::ANY || opts->which_QPsolver == QPSOLVER::GUROBI)
-            return new gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks, opts);
+    if (param->QPsol == QPSOLVER::gurobi)
+        return new gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks,  static_cast<gurobi_options*>(param->QPsol_opts));
     #endif
 
-    throw std::invalid_argument("Specified QPsolver was not linked");
-    return nullptr;
+    throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
 }
 
 //Interfaces to (third party) QP solvers
 
 #ifdef QPSOLVER_QPOASES
 
-qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, opts){
-    //Check for inconsistent options before construction
-    if (param->hessUpdate == 1 && param->sparseQP < 2){
-        throw ParameterError("qpOASES supports inertia checks for indefinite hessians only for schur-complement approach - set either hessUpdate != 1 or sparseQP = 2");
-    }
-
+qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int SPARSE, qpOASES_options *QPopts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts), sparseQP(SPARSE){
     //Initialize all qpOASES objects and data formats
-    if( param->sparseQP < 2 ){
+    if (sparseQP < 2){
         qp = new qpOASES::SQProblem(nVar, nCon);
         qpSave = new qpOASES::SQProblem(nVar, nCon);
         qp_check = new qpOASES::SQProblem(nVar, nCon);
@@ -317,18 +231,25 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     h_qp = nullptr;
 
     //Owned
-    if (param->sparseQP){
-        hess_nz = nullptr;
-        hess_row = nullptr;
-        hess_colind = nullptr;
-        hess_loind = nullptr;
+    if (sparseQP) hess_nz = nullptr;
+    else hess_nz = new double[nVar*nVar];
+
+    hess_row = nullptr;
+    hess_colind = nullptr;
+    hess_loind = nullptr;
+    
+    //Options
+    opts.enableEqualities = qpOASES::BT_TRUE;
+    opts.initialStatusBounds = qpOASES::ST_INACTIVE;
+    switch(static_cast<qpOASES_options*>(Qparam)->printLevel){
+        case 0: opts.printLevel = qpOASES::PL_NONE;     break;
+        case 1: opts.printLevel = qpOASES::PL_LOW;      break;
+        case 2: opts.printLevel = qpOASES::PL_MEDIUM;   break;
+        case 3: opts.printLevel = qpOASES::PL_HIGH;     break;
     }
-    else{
-        hess_nz = new double[nVar*nVar];
-        hess_row = nullptr;
-        hess_colind = nullptr;
-        hess_loind = nullptr;
-    }
+    opts.numRefinementSteps = 2;
+    opts.epsLITests =  2.2204e-08;
+    opts.terminationTolerance = static_cast<qpOASES_options*>(Qparam)->terminationTolerance;
 }
 
 qpOASES_solver::~qpOASES_solver(){
@@ -346,6 +267,7 @@ qpOASES_solver::~qpOASES_solver(){
     delete qp;
     delete qpSave;
     delete qp_check;
+
 }
 
 void qpOASES_solver::set_lin(const Matrix &grad_obj){
@@ -355,31 +277,30 @@ void qpOASES_solver::set_lin(const Matrix &grad_obj){
 
 
 void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A){
-    //by default, qpOASES defines +-inifinity as +-1e20 (see qpOASES Constants.hpp), so set bounds accordingly
+    //by default, qpOASES defines +-inifinity as +-1e20 (see qpOASES Constants.hpp), set bounds accordingly
 
     for (int i = 0; i < nVar; i++){
-        if (lb_x(i) > -param->inf)
+        if (lb_x(i) > -Qparam->inf)
             lb[i] = lb_x(i);
         else
             lb[i] = -1e20;
 
-        if (ub_x(i) < param->inf)
+        if (ub_x(i) < Qparam->inf)
             ub[i] = ub_x(i);
         else
             ub[i] = 1e20;
     }
     for (int i = 0; i < nCon; i++){
-        if (lb_A(i) > -param->inf)
+        if (lb_A(i) > -Qparam->inf)
             lbA[i] = lb_A(i);
         else
             lbA[i] = -1e20;
 
-        if (ub_A(i) < param->inf)
+        if (ub_A(i) < Qparam->inf)
             ubA[i] = ub_A(i);
         else
             ubA[i] = 1e20;
     }
-
     return;
 }
 
@@ -411,8 +332,8 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
 
     delete H_qp;
 
-    if (param->sparseQP){
-        convertHessian(param->eps, hess, nHess, nVar, regFactor, hess_nz, hess_row, hess_colind, hess_loind);
+    if (sparseQP){
+        convertHessian(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz, hess_row, hess_colind, hess_loind);
         H_qp = new qpOASES::SymSparseMat(nVar, nVar, hess_row, hess_colind, hess_nz);
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp)->createDiagInfo();
     }
@@ -425,67 +346,41 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
 }
 
 int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
-    // qpOASES options
-    qpOASES::Options opts;
-    opts.enableEqualities = qpOASES::BT_TRUE;
-    opts.initialStatusBounds = qpOASES::ST_INACTIVE;
+    double QPtime;
 
-    switch(param->qpOASES_printLevel){
-        case 0:
-            opts.printLevel = qpOASES::PL_NONE;
-            break;
-        case 1:
-            opts.printLevel = qpOASES::PL_LOW;
-            break;
-        case 2:
-            opts.printLevel = qpOASES::PL_MEDIUM;
-            break;
-        case 3:
-            opts.printLevel = qpOASES::PL_HIGH;
-            break;
-    }
+    if (convex_QP)  opts.enableInertiaCorrection = qpOASES::BT_TRUE;
+    else            opts.enableInertiaCorrection = qpOASES::BT_FALSE;
 
-    opts.numRefinementSteps = 2;
-    opts.epsLITests =  2.2204e-08;
-    opts.terminationTolerance = param->qpOASES_terminationTolerance;
-
-
-    if (convex_QP)
-        opts.enableInertiaCorrection = qpOASES::BT_TRUE;
-    else
-        opts.enableInertiaCorrection = qpOASES::BT_FALSE;
-
-    qp->setOptions( opts );
+    qp->setOptions(opts);
 
     // Other variables for qpOASES
 
     //Set time limit to prevent wasting time on ill conditioned QPs:
     // 0 - limit by 2.5*(average solution time), 2 - limit by custom time, else - limit by maximum time set in options
     if (time_limit_type == 0)
-        QP_time = std::min(2.5*avg_solution_duration, param->maxTimeQP);
+        QPtime = std::min(2.5*QPtime_avg, default_time_limit);
     else if (time_limit_type == 2)
-        QP_time = time_limit;
+        QPtime = custom_time_limit;
     else
-        QP_time = param->maxTimeQP;
+        QPtime = default_time_limit;
 
-    QP_it = param->maxItQP;
+    QP_it = Qparam->maxItQP;
     qpOASES::SolutionAnalysis solAna;
     qpOASES::returnValue ret;
-
 
     if ((qp->getStatus() == qpOASES::QPS_HOMOTOPYQPSOLVED ||
          qp->getStatus() == qpOASES::QPS_SOLVED) && use_hotstart){
         if (matrices_changed)
-            ret = qp->hotstart(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QP_time);
+            ret = qp->hotstart(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QPtime);
         else
-            ret = qp->hotstart(h_qp, lb, ub, lbA, ubA, QP_it, &QP_time);
+            ret = qp->hotstart(h_qp, lb, ub, lbA, ubA, QP_it, &QPtime);
     }
     else
-        ret = qp->init(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QP_time);
+        ret = qp->init(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QPtime);
 
 
     if (!convex_QP && ret == qpOASES::SUCCESSFUL_RETURN){
-        if (param->sparseQP == 2){
+        if (sparseQP == 2){
             *dynamic_cast<qpOASES::SQProblemSchur*>(qp_check) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp);
             ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qp_check));
         }
@@ -503,18 +398,11 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     if (ret == qpOASES::SUCCESSFUL_RETURN){
         use_hotstart = true;
         matrices_changed = false;
-
+        
         qp->getPrimalSolution(deltaXi.array);
         qp->getDualSolution(lambdaQP.array);
-
-        if (record_time){
-            avg_solution_duration -= solution_durations[dur_pos]/10.0;
-            solution_durations[dur_pos] = QP_time;
-            avg_solution_duration += QP_time/10;
-            dur_pos = (dur_pos + 1)%10;
-        }
-        else
-            record_time = true;
+        if (!skip_timeRecord) recordTime(QPtime);
+        else skip_timeRecord = false;
 
         QP_it += 1;
         *qpSave = *qp;
@@ -524,7 +412,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
     *qp = *qpSave;
 
-    std::cout << "QP could not be solved, qpOASES ret is " << ret << "\n";
+    //std::cout << "QP could not be solved, qpOASES ret is " << ret << "\n";
 
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
@@ -546,31 +434,28 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
 
 int qpOASES_solver::get_QP_it(){return QP_it;}
-double qpOASES_solver::get_solutionTime(){return solution_durations[(dur_pos + 9) % 10];}
 
 #endif
 
 
 #ifdef QPSOLVER_GUROBI
-gurobi_solver::gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, opts), obj_lin(0), obj_quad(0){
+gurobi_solver::gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, gurobi_options *QPopts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts), obj_lin(0), obj_quad(0){
     //Check for inconsistent options before construction
-    if (param->hessUpdate == 1 || param->hessUpdate == 4){
-        throw ParameterError("gurobi provides needed lagrange multipliers only for convex QPs, set e.g. hessUpdate = 2 to ensure positive definiteness");
-    }
-
     env = new GRBEnv();
     model = new GRBModel(env);
+    
+    model->set(GRB_IntParam_OutputFlag, static_cast<gurobi_options*>(Qparam)->OutputFlag);
+    model->set(GRB_IntParam_Method, static_cast<gurobi_options*>(Qparam)->Method);
+    model->set(GRB_IntParam_NumericFocus, static_cast<gurobi_options*>(Qparam)->NumericFocus);
+    model->set(GRB_IntParam_Presolve, static_cast<gurobi_options*>(Qparam)->Presolve);
+    model->set(GRB_IntParam_Aggregate, static_cast<gurobi_options*>(Qparam)->Aggregate);
 
-    model->set(GRB_IntParam_Method, param->gurobi_Method);
-    model->set(GRB_IntParam_NumericFocus, param->gurobi_NumericFocus);
-    model->set(GRB_IntParam_OutputFlag, param->gurobi_OutputFlag);
-    model->set(GRB_IntParam_Presolve, param->gurobi_Presolve);
-    model->set(GRB_IntParam_Aggregate, param->gurobi_Aggregate);
+    model->set(GRB_DoubleParam_OptimalityTol, static_cast<gurobi_options*>(Qparam)->OptimalityTol);
+    model->set(GRB_DoubleParam_FeasibilityTol, static_cast<gurobi_options*>(Qparam)->FeasibilityTol);
+    model->set(GRB_DoubleParam_PSDTol, static_cast<gurobi_options*>(Qparam)->PSDTol);
 
-    model->set(GRB_DoubleParam_OptimalityTol, param->gurobi_OptimalityTol);
-    model->set(GRB_DoubleParam_FeasibilityTol, param->gurobi_FeasibilityTol);
-    model->set(GRB_DoubleParam_PSDTol, param->gurobi_PSDTol);
     model->set(GRB_IntParam_NonConvex, 0);
+
 
     QP_vars = model->addVars(nVar, GRB_CONTINUOUS);
     QP_cons_lb = model->addConstrs(nCon);
@@ -597,23 +482,23 @@ void gurobi_solver::set_lin(const Matrix &grad_obj){
 
 void gurobi_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A){
     for (int i = 0; i < nVar; i++){
-        if (lb_x(i) > -param->inf)
+        if (lb_x(i) > -Qparam->inf)
             QP_vars[i].set(GRB_DoubleAttr_LB, lb_x(i));
         else
             QP_vars[i].set(GRB_DoubleAttr_LB, -GRB_INFINITY);
 
-        if (ub_x(i) < param->inf)
+        if (ub_x(i) < Qparam->inf)
             QP_vars[i].set(GRB_DoubleAttr_UB, ub_x(i));
         else
             QP_vars[i].set(GRB_DoubleAttr_UB, GRB_INFINITY);
     }
     for (int i = 0; i < nCon; i++){
-        if (lb_A(i) > -param->inf)
+        if (lb_A(i) > -Qparam->inf)
             QP_cons_lb[i].set(GRB_DoubleAttr_RHS, lb_A(i));
         else
             QP_cons_lb[i].set(GRB_DoubleAttr_RHS, -GRB_INFINITY);
 
-        if (ub_A(i) < param->inf)
+        if (ub_A(i) < Qparam->inf)
             QP_cons_ub[i].set(GRB_DoubleAttr_RHS, ub_A(i));
         else
             QP_cons_ub[i].set(GRB_DoubleAttr_RHS, GRB_INFINITY);
@@ -658,11 +543,14 @@ void gurobi_solver::set_hess(SymMatrix *const hess, bool pos_def, double regular
                 obj_quad += QP_vars[offset + i] * QP_vars[offset + j] * hess[k](i,j);
             }
             //Diagonal part, add a regularization, else QP solution seems to fail in some instances
-            //obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + param->gurobi_solver_regularization_factor);
+            //obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + static_cast<gurobi_options*>(Qparam)->regularization_factor);
             obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + regFactor);
         }
         offset += hess[k].m;
     }
+
+    //Unnecessary right now as gurobi only supplies lagrange multipliers for convex QPs
+    //model->set(GRB_IntParam_NonConvex, int(!pos_def));
     return;
 }
 
@@ -673,11 +561,11 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     //Set time limit to prevent wasting time on ill conditioned QPs:
     // 0 - limit by 2.5*(average solution time), 2 - limit by custom time, else - limit by maximum time set in options
     if (time_limit_type == 0)
-        model->set(GRB_DoubleParam_TimeLimit, std::min(2.5*avg_solution_duration, param->maxTimeQP));
+        model->set(GRB_DoubleParam_TimeLimit, std::min(2.5*QPtime_avg, default_time_limit));
     else if (time_limit_type == 2)
-        model->set(GRB_DoubleParam_TimeLimit, time_limit);
+        model->set(GRB_DoubleParam_TimeLimit, custom_time_limit);
     else
-        model->set(GRB_DoubleParam_TimeLimit, param->maxTimeQP);
+        model->set(GRB_DoubleParam_TimeLimit, default_time_limit);
 
 
     try{
@@ -697,6 +585,10 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
             lambdaQP(nVar + i) = QP_cons_lb[i].get(GRB_DoubleAttr_Pi);
             lambdaQP(nVar + i) += QP_cons_ub[i].get(GRB_DoubleAttr_Pi);
         }
+
+        if (!skip_timeRecord) recordTime(model->get(GRB_DoubleAttr_Runtime));
+        else skip_timeRecord = false;
+
         return 0;
     }
     else if (ret == 3)
@@ -717,9 +609,10 @@ int gurobi_solver::get_QP_it(){
     return model->get(GRB_IntAttr_BarIterCount) + int(model->get(GRB_DoubleAttr_IterCount));
 }
 
+/*
 double gurobi_solver::get_solutionTime(){
     return model->get(GRB_DoubleAttr_Runtime);
-}
+}*/
 
 
 #endif

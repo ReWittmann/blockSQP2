@@ -35,31 +35,36 @@ public:
     int nCon;
     int nHess;
 
-    SQPoptions *param;
+    QPSOLVER_options *Qparam;
 
     //Store the solution time of the last 10 successful QPs,
     //use it to limit the solution time of future QPs
     double solution_durations[10];
-    int dur_pos;
-    double avg_solution_duration;
+    int dur_pos, dur_count;
+    double QPtime_avg;
+
 
     //Solution time options
-    double time_limit;
-    //0: 2.5*average of past 10, 1: maxTimeQP from options, 2: time_limit
+    double default_time_limit, custom_time_limit;
+    //0: 2.5*average of past 10, 1: default_time_limit, 2: custom_time_limit
     int time_limit_type;
 
     //Set by set_hess
     bool convex_QP;
 
     //One time QP solving options (reset if a QP solve is successful)
-    bool record_time;
+    //bool record_time;
+    bool skip_timeRecord;
     bool use_hotstart;
 
 
 	//Arguments: Number of QP variables, number of linear constraints, options
-	///TODO: Check options for validity when constructing QPsolver
-    QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts);
+    QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPSOLVER_options *QPopts);
     virtual ~QPsolver();
+
+    void recordTime(double solTime);
+    void reset_timeRecord();
+    void custom_timeLimit(double CTlim); //This equivalent to setting custom_time_limit to CTlim and time_limit_type to 2
 
     //Setters for QP data. Only one of the setters for the constraint matrix (dense or sparse) is required
     virtual void set_lin(const Matrix &grad_obj) = 0;
@@ -79,13 +84,17 @@ public:
 };
 
 
+//Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
+//Preprocessor conditions for linked QP solvers are handled here.
 QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts);
 
-
+//QP solver implementations
 #ifdef QPSOLVER_QPOASES
     #include "qpOASES.hpp"
     class qpOASES_solver : public QPsolver{
     public:
+        qpOASES::Options opts;
+        int sparseQP;
 
         qpOASES::SQProblem*      qp;               ///< qpOASES qp object
         qpOASES::SQProblem*      qpSave;           ///< qpOASES qp object
@@ -104,9 +113,8 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
         bool matrices_changed;
 
         int QP_it;
-        double QP_time;
 
-        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts);
+        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int SPARSE, qpOASES_options *QPopts);
         ~qpOASES_solver();
 
         void set_lin(const Matrix &grad_obj);
@@ -119,7 +127,6 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
         int solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
-        double get_solutionTime();
     };
 #endif
 
@@ -142,7 +149,7 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
         GRBQuadExpr obj_quad;
 
 
-        gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts);
+        gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, gurobi_options *QPopts);
         ~gurobi_solver();
 
         void set_lin(const Matrix &grad_obj);
@@ -155,10 +162,9 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
         int solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
-        double get_solutionTime();
+        //double get_solutionTime();
     };
 #endif
-
 
 
 }

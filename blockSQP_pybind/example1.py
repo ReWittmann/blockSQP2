@@ -3,7 +3,7 @@ from Py_BlockSQP import BlockSQP_Problem
 import numpy as np
 import time
 
-opts = BlockSQP.SQPoptions();
+opts = BlockSQP.SQPoptions()
 opts.opttol = 1.0e-12
 opts.nlinfeastol = 1.0e-12
 opts.globalization = 0

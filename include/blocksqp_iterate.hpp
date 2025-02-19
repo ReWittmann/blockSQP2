@@ -60,27 +60,21 @@ class SQPiterate
         Matrix gammaMat;                              ///< Lagrangian gradient differences for last m steps
         Matrix gamma;                                 ///< alias for current Lagrangian gradient
 
-        //Scalar products for COL sizing. In full memory quasi newton, they are updated at the end of each SQP iteration. In limited memory, they are calculated when applying the up
+        //Scalar products for COL sizing. In full memory quasi newton, they are updated at the end of each SQP iteration. In limited memory, they are calculated when applying the update
         Matrix deltaNormSqMat;                          /// last m >= 2 squared step norms
         Matrix deltaGammaMat;                         /// last m >= 2 delta-gamma scalar products
         int dg_pos;                                   /// position of the current iterate within deltaNormSqMat and gammaNormMat as well as deltaMat and gammaMat if in limited memory
+        int dg_nsave;                                    /// number of saved delta-gamma pairs and their scalar products. These are required for limited memory updates and the scaling heuristic
 
-        //[blockwise] precalculated scalar products, needed for quasi-newton updates and sizing
-        Matrix deltaNormSq;                             ///< sTs, subvector of deltaNormSqMat
-        Matrix deltaGamma;                            ///< sTy, subvector of deltaGammaMat
+        //Damping may change gamma, old scalar product is required for COL sizing
+        Matrix deltaGammaOld;
+        Matrix deltaGammaOldFallback;
 
-        //[blockwise] norm and scalar product of the last delta-gamma pair for the secant update was successful and secand equation is fulfilled.
-        //Dampening may have been applied to gamma und thus to deltaGamma
-        //These are set during the update calculation (SR1, BFGS etc.) and required for COL sizing. They may be different for each of the two maintained hessians, so
-        //we need one pair for each hessian
+        //For full memory, no old steps delta and gradient differences gamma are saved. The sectioned norm of the step is required for COl sizing.
+        //The step deltaOld is required to restore the sectioned norm after variable rescaling
+        Matrix deltaNormSqOld;
+        Matrix deltaOld;
 
-        //For hess1
-        //Matrix deltaNormSqOld;
-        //Matrix deltaGammaOld;
-
-        //For hess2
-        //Matrix deltaNormSqOldFallback;
-        //Matrix deltaGammaOldFallback;
 
         int *nquasi;                                  ///< number of quasi-newton updates for each block since last hessian reset
         int *noUpdateCounter;                         ///< count skipped updates for each block
@@ -91,26 +85,9 @@ class SQPiterate
         int nRestIt;
 
         SymMatrix *hess;                              ///< [blockwise] pointer to current hessian (-approximation) of the Lagrangian
-
         SymMatrix *hess1;                             ///< [blockwise] first Hessian approximation
-        //For COL sizing of hess1
-        Matrix deltaNormSqOld;
-        Matrix deltaGammaOld;
-
         SymMatrix *hess2;                             ///< [blockwise] second Hessian approximation (convex)
-        //For COL sizing of hess2
-        Matrix deltaNormSqOldFallback;
-        Matrix deltaGammaOldFallback;
-
         SymMatrix *hess_alt;                          ///< [blockwise] space to store alternative hessians, such as convex combinations or temporarily used (scaled) identity hessians
-
-
-        /*
-        double *hessNz;                               ///< nonzero elements of Hessian (length)
-        int *hessIndRow;                              ///< row indices (length)
-        int *hessIndCol;                              ///< indices to first entry of columns (nCols+1)
-        int *hessIndLo;                               ///< Indices to first entry of lower triangle (including diagonal) (nCols)
-        */
 
         bool conv_qp_only;                            ///< If true, only convex sub-QPs are used to generate steps
         bool conv_qp_solved;
@@ -135,7 +112,7 @@ class SQPiterate
         /*
          * Variables for globalization strategy
          */
-        int steptype;                                 ///< -1: KKT-error reduction step, 0: Linesearch step, 1: Step with identity hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
+        int steptype;                                 ///< -2: Filter-overwriting step -1: Step heuristic, 0: Linesearch step, 1: Linesearch step with identity Hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
         int n_id_hess;                                ///< Number of condecutive uses of identity hessian as fallback
 
         double alpha;                                 ///< stepsize for line search
@@ -145,34 +122,54 @@ class SQPiterate
         Matrix trialXi;                               ///< new trial iterate (for line search)
         Matrix trialConstr;                           ///< constraints evaluated at trial point. Calculated in linesearch and used also in SOC
 
-        std::set< std::pair<double,double> > *filter; ///< Filter contains pairs (constrVio, objective)
+        std::set<std::pair<double, double>> *filter;  ///< Filter contains pairs (constrVio, objective)
 
-
+        
         //Parameters derived from given options, may change during iterations
-        //int hessUpdate;
-        //int fallbackUpdate;
-        //int hessMemSize;
         double modified_hess_regularizationFactor;
         double convKappa;
 
         //Ignore filter up to a limited amount of times close to a solution as rounding errors can caues errors in line search.
         int local_lenience;
+        
+        
+
+        double *rescaleFactors;
+        int n_scaleIt;                               ///< How many past steps are available (not necessarily used by heuristic) to compute the scaling.
+        double vfreeScale;
+        
+        bool nearSol;
+        double milestone;
+
+        //Fields used by KKT step-heuristic
+        bool step_heuristic_active;
+        //Previous KKT error for comparison
+        double tol_save;
+        
+        int n_extra;
+        bool sol_found; 
+        Matrix xiOpt_save;
+        Matrix lambdaOpt_save;
+        double objOpt_save;
+        Matrix constrOpt_save;
+        double tolOpt_save;
+        double cNormOpt_save;
+        double cNormSOpt_save;
 
     /*
      * Methods
      */
     public:
         /// Call allocation and initializing routines
-        SQPiterate( Problemspec* prob, SQPoptions* param, bool full );
+        SQPiterate( const Problemspec* prob, const SQPoptions* param, bool full );
         SQPiterate();
         SQPiterate( const SQPiterate &iter );
-        /// Convert *hess to column compressed sparse format
-        //void convertHessian( int num_vars, int num_hessblocks, double eps, SymMatrix *&hess_, double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ );
-        /// Convert *hess to double array (dense matrix)
-        //void convertHessian( Problemspec *prob, double eps, SymMatrix *&hess_ );
         /// Set initial filter, objective function, tolerances etc.
         void initIterate( SQPoptions* param );
         virtual ~SQPiterate( void );
+
+        void save_iterate();    //Save xi, lambda, tol, cNorm and cNormS
+        void restore_iterate(); //Restore the above from save
 };
 
 
@@ -221,8 +218,8 @@ public:
     Matrix corrected_lb_con;
     Matrix corrected_ub_con;
 
-    Matrix deltaXi_save;
-    Matrix lambdaQP_save;
+    Matrix deltaXi_save;    //For restoring original step if correction yields no full step
+    Matrix lambdaQP_save;   // ' '    ' ' 
     SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond, bool full);
 };
 

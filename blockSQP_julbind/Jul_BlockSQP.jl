@@ -155,6 +155,7 @@ module BlockSQP
 		nCon::Int32
 		nnz::Int32
 		blockIdx::Array{Int32, 1}
+		vblocks::Array{vblock, 1}
 
 		lb_var::Array{Float64, 1}
 		ub_var::Array{Float64, 1}
@@ -178,187 +179,19 @@ module BlockSQP
 		x_start::Array{Float64, 1}
 		lam_start::Array{Float64, 1}
 		
-		BlockSQP_Problem(nVar::Int32, nCon::Int32) = new(nVar, nCon, Int32(-1), Int32[0, nVar], 
+		BlockSQP_Problem(nVar::Int32, nCon::Int32) = new(nVar, nCon, Int32(-1), Int32[0, nVar], vblock[vblock(1, false)], 
 						Float64[], Float64[], Float64[], Float64[], -Inf, Inf,
 						fnothing, fnothing, fnothing, fnothing, fnothing, fnothing, fnothing, fnothing,
 						Int32[], Int32[], Float64[], Float64[]
 		)
 	end
-	
-	function BSQP_options(param::Dict)
-		cxx_opts = SQPoptions()
-		opt_keys = keys(param)
 
-		if "printLevel" in opt_keys
-			set_printLevel(cxx_opts, Int32(param["printLevel"]))
-		end
-		if "printColor" in opt_keys
-			set_printColor(cxx_opts, Int32(param["printColor"]))
-		end
-		if "debugLevel" in opt_keys
-			set_debugLevel(cxx_opts, Int32(param["debugLevel"]))
-		end
-		if "eps" in opt_keys
-			set_eps(cxx_opts, Float64(param["eps"]))
-		end
-		if "inf" in opt_keys
-			set_inf(cxx_opts, Float64(param["inf"]))
-		end
-		if "opttol" in opt_keys
-			set_opttol(cxx_opts, Float64(param["opttol"]))
-		end
-		if "nlinfeastol" in opt_keys
-			set_nlinfeastol(cxx_opts, Float64(param["nlinfeastol"]))
-		end
-		if "sparseQP" in opt_keys
-			set_sparseQP(cxx_opts, Int32(param["sparseQP"]))
-		end
-		if "globalization" in opt_keys
-			set_globalization(cxx_opts, Int32(param["globalization"]))
-		end
-		if "restoreFeas" in opt_keys
-			set_restoreFeas(cxx_opts, Int32(param["restoreFeas"]))
-		end
-		if "maxLineSearch" in opt_keys
-			set_maxLineSearch(cxx_opts, Int32(param["maxLineSearch"]))
-		end
-		if "maxConsecReducedSteps" in opt_keys
-			set_maxConsecReducedSteps(cxx_opts, Int32(param["maxConsecReducedSteps"]))
-		end
-		if "maxConsecSkippedUpdates" in opt_keys
-			set_maxConsecSkippedUpdates(cxx_opts, Int32(param["maxConsecSkippedUpdates"]))
-		end
-		if "maxItQP" in opt_keys
-			set_maxItQP(cxx_opts, Int32(param["maxItQP"]))
-		end
-		if "blockHess" in opt_keys
-			set_blockHess(cxx_opts, Int32(param["blockHess"]))
-		end
-		if "hessScaling" in opt_keys
-			set_hessScaling(cxx_opts, Int32(param["hessScaling"]))
-		end
-		if "fallbackScaling" in opt_keys
-			set_fallbackScaling(cxx_opts, Int32(param["fallbackScaling"]))
-		end
-		if "maxTimeQP" in opt_keys
-			set_maxTimeQP(cxx_opts, Int32(param["maxTimeQP"]))
-		end
-		if "iniHessDiag" in opt_keys
-			set_iniHessDiag(cxx_opts, Float64(param["iniHessDiag"]))
-		end
-		if "colEps" in opt_keys
-			set_colEps(cxx_opts, Float64(param["colEps"]))
-		end
-		if "olEps" in opt_keys
-			set_olEps(cxx_opts, Float64(param["olEps"]))
-		end
-		if "colTau1" in opt_keys
-			set_colTau1(cxx_opts, Float64(param["colTau1"]))
-		end
-		if "colTau2" in opt_keys
-			set_colTau2(cxx_opts, Float64(param["colTau2"]))
-		end
-		if "hessDamp" in opt_keys
-			set_hessDamp(cxx_opts, Int32(param["hessDamp"]))
-		end
-		if "hessDampFac" in opt_keys
-			set_hessDampFac(cxx_opts, Float64(param["hessDampFac"]))
-		end
-		if "minDampQuot" in opt_keys
-			set_minDampQuot(cxx_opts, Float64(param["minDampQuot"]))
-		end
-		if "hessUpdate" in opt_keys
-			set_hessUpdate(cxx_opts, Int32(param["hessUpdate"]))
-		end
-		if "fallbackUpdate" in opt_keys
-			set_fallbackUpdate(cxx_opts, Int32(param["fallbackUpdate"]))
-		end
-		if "indef_local_only" in opt_keys
-			set_indef_local_only(cxx_opts, Bool(param["indef_local_only"]))
-		end
-		if "hessLimMem" in opt_keys
-			set_hessLimMem(cxx_opts, Int32(param["hessLimMem"]))
-		end
-		if "hessMemsize" in opt_keys
-			set_hessMemsize(cxx_opts, Int32(param["hessMemsize"]))
-		end
-		if "whichSecondDerv" in opt_keys
-			set_whichSecondDerv(cxx_opts, Int32(param["whichSecondDerv"]))
-		end
-		if "skipFirstGlobalization" in opt_keys
-			set_skipFirstGlobalization(cxx_opts, Int32(param["skipFirstGlobalization"]))
-		end
-		if "convStrategy" in opt_keys
-			set_convStrategy(cxx_opts, Int32(param["convStrategy"]))
-		end
-		if "maxConvQP" in opt_keys
-			set_maxConvQP(cxx_opts, Int32(param["maxConvQP"]))
-		end
-		if "maxSOCiter" in opt_keys
-			set_maxSOCiter(cxx_opts, Int32(param["maxSOCiter"]))
-		end
-		if "max_bound_refines" in opt_keys
-			set_max_bound_refines(cxx_opts, Int32(param["max_bound_refines"]))
-		end
-		if "max_correction_steps" in opt_keys
-			set_max_correction_steps(cxx_opts, Int32(param["max_correction_steps"]))
-		end
-		if "dep_bound_tolerance" in opt_keys
-			set_dep_bound_tolerance(cxx_opts, Float64(param["dep_bound_tolerance"]))
-		end
-		if "which_QPsolver" in opt_keys
-			set_QPsolver(cxx_opts, StdString(param["which_QPsolver"]))
-		end
-		#QPsolver options
-		##qpOASES
-		if "qpOASES_printLevel" in opt_keys
-			set_qpOASES_print_level(cxx_opts, Int32(param["qpOASES_print_level"]))
-		end
-		if "qpOASES_terminationTolerance" in opt_keys
-			set_qpOASES_terminationTolerance(cxx_opts, Float64(param["qpOASES_terminationTolerance"]))
-		end
-		##gurobi
-		if "gurobi_Method" in opt_keys
-			set_gurobi_Method(cxx_opts, Int32(params["gurobi_Method"]))
-		end
-		if "gurobi_NumericFocus" in opt_keys
-			set_gurobi_NumericFocus(cxx_opts, Int32(params["gurobi_NumericFocus"]))
-		end
-		if "gurobi_OutputFlag" in opt_keys
-			set_gurobi_OutputFlag(cxx_opts, Int32(params["gurobi_OutputFlag"]))
-		end
-		if "gurobi_Presolve" in opt_keys
-			set_gurobi_Presolve(cxx_opts, Int32(params["gurobi_Presolve"]))
-		end
-		if "gurobi_Aggregate" in opt_keys
-			set_gurobi_Aggregate(cxx_opts, Int32(params["gurobi_Aggregate"]))
-		end
-		if "gurobi_BarHomogeneous" in opt_keys
-			set_gurobi_BarHomogeneous(cxx_opts, Int32(params["gurobi_BarHomogeneous"]))
-		end
-		if "gurobi_OptimalityTol" in opt_keys
-			set_gurobi_OptimalityTol(cxx_opts, Float64(params["gurobi_OptimalityTol"]))
-		end
-		if "gurobi_FeasibilityTol" in opt_keys
-			set_gurobi_FeasibilityTol(cxx_opts, Float64(params["gurobi_FeasibilityTol"]))
-		end
-		if "gurobi_PSDTol" in opt_keys
-			set_gurobi_PSDTol(cxx_opts, Float64(params["gurobi_PSDTol"]))
-		end
-
-		return cxx_opts
-
-			#=for option in ["printLevel", "printColor", "debugLevel", "qpOASES_print_level", "qpOASES_terminationTolerance", "eps", "inf", "opttol", "nlinfeastol", "sparseQP", "globalization", "restoreFeas", "maxLineSearch", "maxConsecReducedSteps", "maxConsecSkippedUpdates",
-							"maxItQP", "blockHess", "hessScaling", "fallbackScaling", "maxTimeQP", "iniHessDiag", "colEps", "colTau1", "colTau2", "hessDamp", "hessDampFac", "hessUpdate", "fallbackUpdate", "hessLimMem", "hessMemsize", "whichSecondDerv", "skipFirstGlobalization",
-							"convStrategy", "maxConvQP", "maxSOCiter", "max_bound_refines", "max_correction_steps", "dep_bound_tolerance"]
-				=#
-
-	end
 
 	struct Solver
 		BSQP_solver::SQPmethod
 		Cxx_Problem::Problemform
 		BSQP_options::SQPoptions
+		QPsol_opts::QPSOLVER_options
 		BSQP_stats::SQPstats
 		Jul_Problem::BlockSQP_Problem
 		Options::Dict
@@ -375,14 +208,203 @@ module BlockSQP
 			set_blockIdx(cxx_prob, J_prob.blockIdx)
 			set_nnz(cxx_prob, J_prob.nnz)
 			set_bounds(cxx_prob, J_prob.lb_var, J_prob.ub_var, J_prob.lb_con, J_prob.ub_con, J_prob.objLo, J_prob.objUp)
+			
+			VB = vblock_array(length(J_prob.vblocks))
+			for i = 1:length(J_prob.vblocks)
+				array_set(VB, i, J_prob.vblocks[i])
+			end
+			set_vblocks(cxx_prob, CxxRef(VB))
+			
+			#OLD: Create options class on the C++ side
+			#cxx_opts = BSQP_options(param)
+			
+			###################################################################################################################
+			#NEW: Create default options class on the C++ side
+			cxx_opts = SQPoptions()
+			opt_keys = keys(param)
+			
+			cxx_QPsol_opts = NULL_QPSOLVER_options()
+			#Pass the options. TODO: Is there a more elegant way to do this?
+			if "printLevel" in opt_keys
+				set_printLevel(cxx_opts, Int32(param["printLevel"]))
+			end
+			if "printColor" in opt_keys
+				set_printColor(cxx_opts, Int32(param["printColor"]))
+			end
+			if "debugLevel" in opt_keys
+				set_debugLevel(cxx_opts, Int32(param["debugLevel"]))
+			end
+			if "eps" in opt_keys
+				set_eps(cxx_opts, Float64(param["eps"]))
+			end
+			if "inf" in opt_keys
+				set_inf(cxx_opts, Float64(param["inf"]))
+			end
+			if "opttol" in opt_keys
+				set_opttol(cxx_opts, Float64(param["opttol"]))
+			end
+			if "nlinfeastol" in opt_keys
+				set_nlinfeastol(cxx_opts, Float64(param["nlinfeastol"]))
+			end
+			if "sparseQP" in opt_keys
+				set_sparseQP(cxx_opts, Int32(param["sparseQP"]))
+			end
+			if "globalization" in opt_keys
+				set_globalization(cxx_opts, Int32(param["globalization"]))
+			end
+			if "restoreFeas" in opt_keys
+				set_restoreFeas(cxx_opts, Int32(param["restoreFeas"]))
+			end
+			if "maxLineSearch" in opt_keys
+				set_maxLineSearch(cxx_opts, Int32(param["maxLineSearch"]))
+			end
+			if "maxConsecReducedSteps" in opt_keys
+				set_maxConsecReducedSteps(cxx_opts, Int32(param["maxConsecReducedSteps"]))
+			end
+			if "maxConsecSkippedUpdates" in opt_keys
+				set_maxConsecSkippedUpdates(cxx_opts, Int32(param["maxConsecSkippedUpdates"]))
+			end
+			if "maxItQP" in opt_keys
+				set_maxItQP(cxx_opts, Int32(param["maxItQP"]))
+			end
+			if "blockHess" in opt_keys
+				set_blockHess(cxx_opts, Int32(param["blockHess"]))
+			end
+			if "hessScaling" in opt_keys
+				set_hessScaling(cxx_opts, Int32(param["hessScaling"]))
+			end
+			if "fallbackScaling" in opt_keys
+				set_fallbackScaling(cxx_opts, Int32(param["fallbackScaling"]))
+			end
+			if "maxTimeQP" in opt_keys
+				set_maxTimeQP(cxx_opts, Int32(param["maxTimeQP"]))
+			end
+			if "iniHessDiag" in opt_keys
+				set_iniHessDiag(cxx_opts, Float64(param["iniHessDiag"]))
+			end
+			if "colEps" in opt_keys
+				set_colEps(cxx_opts, Float64(param["colEps"]))
+			end
+			if "olEps" in opt_keys
+				set_olEps(cxx_opts, Float64(param["olEps"]))
+			end
+			if "colTau1" in opt_keys
+				set_colTau1(cxx_opts, Float64(param["colTau1"]))
+			end
+			if "colTau2" in opt_keys
+				set_colTau2(cxx_opts, Float64(param["colTau2"]))
+			end
+			if "hessDamp" in opt_keys
+				set_hessDamp(cxx_opts, Int32(param["hessDamp"]))
+			end
+			if "hessDampFac" in opt_keys
+				set_hessDampFac(cxx_opts, Float64(param["hessDampFac"]))
+			end
+			if "minDampQuot" in opt_keys
+				set_minDampQuot(cxx_opts, Float64(param["minDampQuot"]))
+			end
+			if "hessUpdate" in opt_keys
+				set_hessUpdate(cxx_opts, Int32(param["hessUpdate"]))
+			end
+			if "fallbackUpdate" in opt_keys
+				set_fallbackUpdate(cxx_opts, Int32(param["fallbackUpdate"]))
+			end
+			if "indef_local_only" in opt_keys
+				set_indef_local_only(cxx_opts, Bool(param["indef_local_only"]))
+			end
+			if "hessLimMem" in opt_keys
+				set_hessLimMem(cxx_opts, Int32(param["hessLimMem"]))
+			end
+			if "hessMemsize" in opt_keys
+				set_hessMemsize(cxx_opts, Int32(param["hessMemsize"]))
+			end
+			if "whichSecondDerv" in opt_keys
+				set_whichSecondDerv(cxx_opts, Int32(param["whichSecondDerv"]))
+			end
+			if "skipFirstGlobalization" in opt_keys
+				set_skipFirstGlobalization(cxx_opts, Int32(param["skipFirstGlobalization"]))
+			end
+			if "convStrategy" in opt_keys
+				set_convStrategy(cxx_opts, Int32(param["convStrategy"]))
+			end
+			if "maxConvQP" in opt_keys
+				set_maxConvQP(cxx_opts, Int32(param["maxConvQP"]))
+			end
+			if "maxSOCiter" in opt_keys
+				set_maxSOCiter(cxx_opts, Int32(param["maxSOCiter"]))
+			end
+			if "max_bound_refines" in opt_keys
+				set_max_bound_refines(cxx_opts, Int32(param["max_bound_refines"]))
+			end
+			if "max_correction_steps" in opt_keys
+				set_max_correction_steps(cxx_opts, Int32(param["max_correction_steps"]))
+			end
+			if "dep_bound_tolerance" in opt_keys
+				set_dep_bound_tolerance(cxx_opts, Float64(param["dep_bound_tolerance"]))
+			end
+			if "QPsol" in opt_keys
+				set_QPsol(cxx_opts, StdString(param["QPsol"]))
+			end
+			if "QPsol_opts" in opt_keys
+				QPsol_param = param["QPsol_opts"]
+				QPopt_keys = keys(QPsol_param)
+				if get_QPsol(cxx_opts) == "qpOASES"
+					cxx_QPsol_opts = qpOASES_options()
+					if "printLevel" in QPopt_keys
+						set_printLevel(cxx_QPsol_opts, Int32(QPsol_param["printLevel"]))
+					end
+					if "terminationTolerance" in QPopt_keys
+						set_terminationTolerance(cxx_QPsol_opts, Float64(QPsol_param["terminationTolerance"]))
+					end
+				elseif get_QPsol(cxx_opts) == "gurobi"
+					cxx_QPsol_opts = gurobi_options()
+					if "Method" in QPopt_keys
+						set_Method(cxx_QPsol_opts, Int32(QPsol_param["Method"]))
+					end
+					if "NumericFocus" in QPopt_keys
+						set_NumericFocus(cxx_QPsol_opts, Int32(QPsol_param["NumericFocus"]))
+					end
+					if "OutputFlag" in QPopt_keys
+						set_OutputFlag(cxx_QPsol_opts, Int32(QPsol_param["OutputFlag"]))
+					end
+					if "Presolve" in QPopt_keys
+						set_Presolve(cxx_QPsol_opts, Int32(QPsol_param["Presolve"]))
+					end
+					if "Aggregate" in QPopt_keys
+						set_Aggregate(cxx_QPsol_opts, Int32(QPsol_param["Aggregate"]))
+					end
+					if "BarHomogeneous" in QPopt_keys
+						set_BarHomogeneous(cxx_QPsol_opts, Int32(QPsol_param["BarHomogeneous"]))
+					end
+					if "OptimalityTol" in QPopt_keys
+						set_OptimalityTol(cxx_QPsol_opts, Float64(QPsol_param["OptimalityTol"]))
+					end
+					if ("FeasibilityTol" in QPopt_keys)
+						set_FeasibilityTol(cxx_QPsol_opts, Float64(QPsol_param["FeasibilityTol"]))
+					end
+					if ("PSDTol" in QPopt_keys)
+						set_PSDTol(cxx_QPsol_opts, Float64(QPsol_param["PSDTol"]))
+					end
+				end
+				set_QPsol_opts(cxx_opts, CxxPtr(cxx_QPsol_opts))
+				#There is no need to throw errors for unknown QP solver specifications here as an error would already have been thrown when setting this option on the C++ side
+			end
+			if "autoScaling" in opt_keys
+				set_autoScaling(cxx_opts, Bool(param["autoScaling"]))
+			end
+			if "max_extra_steps" in opt_keys
+				set_max_extra_steps(cxx_opts, Int32(param["max_extra_steps"]))
+			end
+			if "max_local_lenience" in opt_keys
+				set_max_local_lenience(cxx_opts, Int32(param["max_local_lenience"]))
+			end
 
-			#Create options class on the C++ side
-			cxx_opts = BSQP_options(param)
+			###################################################################################################################
 
 			#Create method class on the C++ side
 			cxx_method = SQPmethod(CxxPtr(cxx_prob), CxxPtr(cxx_opts), CxxPtr(cxx_stats))
 
-			new(cxx_method, cxx_prob, cxx_opts, cxx_stats, J_prob, param)
+			new(cxx_method, cxx_prob, cxx_opts, cxx_QPsol_opts, cxx_stats, J_prob, param)
 		end
 	end
 	
@@ -405,28 +427,26 @@ module BlockSQP
 	end
 	
 
-	function init(meth::Solver)
+	function init!(meth::Solver)
 		cpp_init(meth.BSQP_solver)
 	end
   	
-	function run(meth::Solver, maxIt::Int32, warmStart::Int32)
-		return cpp_run(meth.BSQP_solver, maxIt, warmStart)
+	function run!(meth::Solver, maxIt::Integer, warmStart::Integer)
+		return cpp_run(meth.BSQP_solver, Int32(maxIt), Int32(warmStart))
 	end
 
-	function finish(meth::Solver)
+	function finish!(meth::Solver)
 		cpp_finish(meth.BSQP_solver)
 	end
 
 	function get_primal_solution(meth::Solver)
-		xi_ptr = get_primal(meth.BSQP_solver)
-		xi_arr = unsafe_wrap(Array{Float64, 1}, xi_ptr.cpp_object, meth.Jul_Problem.nVar, own = false)
-		return copy(xi_arr)
+		# xi_ptr = get_primal(meth.BSQP_solver)
+		return unsafe_wrap(Array{Float64, 1}, get_primal(meth.BSQP_solver).cpp_object, meth.Jul_Problem.nVar, own = true)
+		#return copy(xi_arr)
 	end
 
 	function get_dual_solution(meth::Solver)
-		lam_ptr = get_primal(meth.BSQP_solver)
-		lam_arr = unsafe_wrap(Array{Float64, 1}, lam_ptr.cpp_object, meth.Jul_Problem.nVar + meth.Jul_Problem.nCon, own = false)
-		return copy(lam_arr)
+		return unsafe_wrap(Array{Float64, 1}, get_primal(meth.BSQP_solver).cpp_object, meth.Jul_Problem.nVar + meth.Jul_Problem.nCon, own = true)
 	end
 
 
@@ -629,7 +649,6 @@ module BlockSQP
 		lambda_rest = unsafe_wrap(Array{Float64, 1}, release!(M_lambda_rest).cpp_object, nVar + nCon, own = true)
 
 		return xi_rest, lambda_rest
-
 	end
 	
 	
@@ -674,4 +693,3 @@ module BlockSQP
 	
 	
 end
-
