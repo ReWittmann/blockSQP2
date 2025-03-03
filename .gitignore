@@ -4,11 +4,14 @@ Makefile
 cmake_install.cmake
 CMakeCache.txt
 *.so
-CMakeLists.txt
+*.a
+CMakeLists_TEMPLATE.txt
 __pycache__
 example1
 TEST_*
 sqpits.csv
 updatesequence.txt
+.vscode
+.VSCodeCounter
 
 /build/*
