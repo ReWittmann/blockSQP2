@@ -94,10 +94,10 @@ set_target_properties(example1
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples")
 
-add_executable(TEST_condensing blockSQP/examples/TEST_condensing.cpp)
-target_compile_options(TEST_condensing PRIVATE -g -O0)
-target_link_libraries(TEST_condensing blockSQP)
-set_target_properties(TEST_condensing
+add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
+target_compile_options(example_condensing PRIVATE -g -O0)
+target_link_libraries(example_condensing blockSQP)
+set_target_properties(example_condensing
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
 )
