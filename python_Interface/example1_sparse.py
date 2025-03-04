@@ -1,4 +1,4 @@
-import blockSQP_pybind as blockSQP
+import py_blockSQP as blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem
 import numpy as np
 import time

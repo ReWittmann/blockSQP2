@@ -9,7 +9,9 @@ endif()
 project(BlockSQP    
 	DESCRIPTION "Sequential quadratic programming for problems with block-diagonal Hessian matrix."
 	HOMEPAGE_URL https://github.com/djanka2/blockSQP
-    	LANGUAGES CXX)
+    	LANGUAGES CXX
+)
+set(CMAKE_CXX_STANDARD 14)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -25,10 +27,19 @@ FetchContent_Declare(
 	qpos
 	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
 	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
+	SOURCE_SUBDIR 	HACKY_WORKAROUND_CMAKE_BAD  #Nonexistent folder to prevent add_subdirectory from being called
 )
 FetchContent_GetProperties(qpos)
+
+#Deprecated
+#[[
 if(NOT qpos_POPULATED)
     FetchContent_Populate(qpos)
+endif()
+]]#
+
+if(NOT qpos_POPULATED)
+	FetchContent_MakeAvailable(qpos)
 endif()
 
 add_library(qpOASES STATIC
@@ -119,14 +130,14 @@ if(PYTHON_INTERFACE)
 	FetchContent_Declare(
 		PYBIND11
 		GIT_REPOSITORY https://github.com/pybind/pybind11.git
-		GIT_TAG dd9ef9f901f3d49426f87a67666393970a6c9431
+		GIT_TAG a2e59f0e7065404b44dfe92a28aca47ba1378dc4	#2.13.6
 	)
 	FetchContent_MakeAvailable(PYBIND11)
 	
-	pybind11_add_module(blockSQP_pybind python_Interface/blockSQP_pybind.cpp)
-	target_include_directories(blockSQP_pybind PUBLIC blockSQP/include)
-	target_link_libraries(blockSQP_pybind PUBLIC blockSQP)
-	set_target_properties(blockSQP_pybind PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface)
+	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
+	target_include_directories(py_blockSQP PUBLIC blockSQP/include)
+	target_link_libraries(py_blockSQP PUBLIC blockSQP)
+	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface)
 endif()
 
 option(JULIA_INTERFACE "build julia interface" OFF)
