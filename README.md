@@ -1,6 +1,7 @@
 # BlockSQP - C++, Python, Julia - build system using qpOASES and MUMPS
 
-Both a Fortran and a C++ are required. 
+Both a Fortran and a C++ are required.
+
 Create build files by calling
 cmake -B build ${OPTIONS}
 
