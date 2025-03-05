@@ -61,7 +61,7 @@ add_library(qpOASES STATIC
 	${qpos_SOURCE_DIR}/src/QProblem.cpp           
 	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
 )
-target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ)
+target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
 target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
 
 target_include_directories(qpOASES

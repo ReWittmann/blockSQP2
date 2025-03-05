@@ -56,11 +56,14 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
         rest_opts->restoreFeas = 0;
         rest_opts->hessUpdate = 2;
         rest_opts->hessLimMem = 1;
-        rest_opts->hessScaling = 2;
+        rest_opts->hessScaling = 4;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
         rest_opts->QPsol = param->QPsol;
+        rest_opts->QPsol_opts = param->QPsol_opts;
         rest_opts->hessDampFac = 0.2;
+
+        //rest_opts->autoScaling = param->autoScaling;
         
         rest_prob = nullptr;
         rest_stats = nullptr;
@@ -648,17 +651,15 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
         nfree -= prob->vblocks[k].size*int(prob->vblocks[k].dependent);
     }
 
-    //nIt = std::min(stats->itCount, 5);
     nIt = std::min(vars->n_scaleIt, 5);
     for (int j = 0; j < nIt; j++){
-        accDfree = 0.; accDdep = 0.; accGfree = 0.; accGdep = 0.;//, accD = 0., accG = 0.;
+        accDfree = 0.; accDdep = 0.; accGfree = 0.; accGdep = 0.;
         scfree = 0; scdep = 0;
         pos = (vars->dg_pos - nIt + 1 + j + vars->dg_nsave)%vars->dg_nsave;
         ind_1 = 0;
         for (int k = 0; k < prob->n_vblocks; k++){
             for (int i = 0; i < prob->vblocks[k].size; i++){
-                if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){
-                //if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-10){
+                if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){ //Maybe set lower, e.g.1e-10
                     if (prob->vblocks[k].dependent){
                         accDdep += std::abs(vars->deltaMat(ind_1 + i, pos));
                         accGdep += std::abs(vars->gammaMat(ind_1 + i, pos));
@@ -681,48 +682,17 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
         else{
             accDfree = 0.; accDdep = 1.0;
             accGfree = 0.; accGdep = 1.0;
-            //accDfree = 1.0; accDdep = 1.0;
-            //accGfree = 1.0; accGdep = 1.0;
-        }
-        
-        /*
-        if (accDdep > 5e-7 && accDfree > 5e-7){
-            DFDratio += std::log(accDfree/accDdep);
-            std::cout << "FIRST COND TRUE\n";
         }
         if (accGdep > 5e-7 && accGfree > 5e-7){
             DFGratio += std::log(accGfree/accGdep);
-            std::cout << "SECOND COND TRUE\n";
-        }*/
-
-        /*
-        if (accDdep > 5e-7 && accDfree > 5e-7){
-            DFDratio += std::log(accDfree/accDdep);
-            std::cout << "FIRST COND TRUE\n";
-            cD += 1;
-        }
-        if (accGdep > 5e-7 && accGfree > 5e-7){
-            DFGratio += std::log(accGfree/accGdep);
-            std::cout << "SECOND COND TRUE\n";
-            cG += 1;
-        }
-        */
-        if (accGdep > 5e-7 && accGfree > 5e-7){
-            DFGratio += std::log(accGfree/accGdep);
-            std::cout << "SECOND COND TRUE\n";
             cG += 1;
             if (accDdep > 5e-7 && accDfree > 5e-7){
                 DFDratio += std::log(accDfree/accDdep);
-                std::cout << "FIRST COND TRUE\n";
                 cD += 1;
             }
         }
     }
     //If no scaling information was accumulated, DFDratio is set to 1.0 => all scaling factors are 1.0
-    /*
-    DFDratio = (nIt > 0) ? std::exp(DFDratio/nIt) : 1.0;
-    DFGratio = (nIt > 0) ? std::exp(DFGratio/nIt) : 1.0;
-    */
     DFDratio = (cD > 0) ? std::exp(DFDratio/cD) : 1.0;
     DFGratio = (cG > 0) ? std::exp(DFGratio/cG) : 1.0;
 
@@ -1062,16 +1032,17 @@ SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *
         rest_opts->whichSecondDerv = 0;
         rest_opts->restoreFeas = 0;
         //rest_opts->hessUpdate = param->hessUpdate;
-        rest_opts->hessUpdate = 2;
         rest_opts->hessLimMem = 1;
-        rest_opts->hessScaling = 2;
+        rest_opts->hessUpdate = 2;
+        rest_opts->hessScaling = 4;
         rest_opts->maxConvQP = param->maxConvQP;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
         rest_opts->QPsol = param->QPsol;
-        //rest_opts->qpOASES_terminationTolerance = param->qpOASES_terminationTolerance;
-        //rest_opts->qpOASES_printLevel = param->qpOASES_printLevel;
-
+        rest_opts->QPsol_opts = param->QPsol_opts;
+        
+        //rest_opts->autoScaling = param->autoScaling;
+        
         rest_prob = nullptr;
         rest_stats = nullptr;
         rest_method = nullptr;
@@ -1176,15 +1147,15 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
         rest_opts->whichSecondDerv = 0;
         rest_opts->restoreFeas = 0;
         //rest_opts->hessUpdate = param->hessUpdate;
-        rest_opts->hessUpdate = 2;
         rest_opts->hessLimMem = 1;
-        rest_opts->hessScaling = 2;
+        rest_opts->hessUpdate = 2;
+        rest_opts->hessScaling = 4;
         rest_opts->maxConvQP = param->maxConvQP;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
         rest_opts->QPsol = param->QPsol;
-        //rest_opts->qpOASES_terminationTolerance = param->qpOASES_terminationTolerance;
-        //rest_opts->qpOASES_printLevel = param->qpOASES_printLevel;
+
+        //rest_opts->autoScaling = param->autoScaling;
 
         rest_prob = nullptr;
         rest_stats = nullptr;
@@ -1284,16 +1255,17 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         rest_opts->globalization = 1;
         rest_opts->whichSecondDerv = 0;
         rest_opts->restoreFeas = 0;
-        rest_opts->hessUpdate = param->hessUpdate;
         rest_opts->hessLimMem = 1;
-        rest_opts->hessScaling = 2;
+        rest_opts->hessUpdate = 2;
+        rest_opts->hessScaling = 4;
         rest_opts->maxConvQP = param->maxConvQP;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
         rest_opts->QPsol = param->QPsol;
+        rest_opts->QPsol_opts = param->QPsol_opts;
         rest_opts->max_correction_steps = param->max_correction_steps;
-        //rest_opts->qpOASES_terminationTolerance = param->qpOASES_terminationTolerance;
-        //rest_opts->qpOASES_printLevel = param->qpOASES_printLevel;
+        
+        //rest_opts->autoScaling = param->autoScaling;
 
         rest_prob = nullptr;
         rest_stats = nullptr;

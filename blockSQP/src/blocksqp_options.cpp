@@ -27,7 +27,15 @@ namespace blockSQP
  * Default settings
  */
 
-SQPoptions::SQPoptions(){}
+SQPoptions::SQPoptions(){
+    #ifdef QPSOLVER_QPOASES
+        QPsol = QPSOLVER::qpOASES;
+    #elifdef QPSOLVER_GUROBI
+        QPsol = QPSOLVER::gurobi;
+    #elifdef QPSOLVER_QPALM
+        QPSOL = QPSOLVER::qpalm;
+    #endif
+}
 
 void SQPoptions::reset(){
     /* qpOASES: dense (0), sparse (1), or Schur (2)
