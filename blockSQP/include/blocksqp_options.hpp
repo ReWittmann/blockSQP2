@@ -154,15 +154,15 @@ class SQPoptions{
         double inf = std::numeric_limits<double>::infinity(); ///< values larger than this are regarded as numerically infinity
         double opttol = 1.0e-6;                 ///< optimality tolerance
         double nlinfeastol = 1.0e-6;            ///< nonlinear feasibility tolerance
-        bool allow_premature_termination = true; ///< Terminate with partial success if linesearch fails but we are feasible and KKT error is low enough
+        bool allow_premature_termination = false; ///< Terminate with partial success if linesearch fails but we are feasible and KKT error is low enough
         int max_extra_steps = 0;                ///< Maximum number of additional steps after (partial) termination criterion has been reached to further improve accuracy
 
         /* Algorithmic options */
         int sparseQP = 2;                       ///< which qpOASES variant is used (dense = 0/sparse = 1/Schur = 2)
         int globalization = 1;                  ///< Globalization strategy, 0 = off, 1 = filter line search
         bool restoreFeas = true;                ///< Use feasibility restoration phase
-        double restZeta = 1e-6;                 ///< Factors in restoration objective: f_rest = zeta*||xi_ref - xi||_2^2 + rho*||s||_2^2
-        double restRho = 1.0;
+        double restRho = 1.0;                 ///< Factors in restoration objective: f_rest = rho*||s||_2^2 + zeta*||xi_ref - xi||_2^2
+        double restZeta = 1.0e-6;
         int maxLineSearch = 10;                 ///< Maximum number of steps in line search
         int maxConsecReducedSteps = 12;         ///< Maximum number of consecutive reduced steps
         int maxConsecSkippedUpdates = 100;      ///< Maximum number of consecutive skipped updates

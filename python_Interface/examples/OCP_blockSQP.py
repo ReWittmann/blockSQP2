@@ -1,0 +1,132 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+import copy
+import os
+import sys
+sys.path.append(os.path.abspath('') + "/..")
+# sys.path.append('/home/reinhold/blockSQP_modified/blockSQP_pybind')
+
+import py_blockSQP
+from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
+
+itMax = 100
+
+step_plots = True
+plot_title = True
+
+import OCProblems
+#Available problems:
+# ['Lotka_Volterra_Fishing', 'Lotka_Volterra_multimode', 'Goddard_Rocket', 
+#  'Calcium_Oscillation', 'Batch_Reactor', 'Bioreactor', 'Hanging_Chain', 
+#  'Hanging_Chain_NQ', 'Catalyst_Mixing', 'Cushioned_Oscillation', 
+#  'D_Onofrio_Chemotherapy', 'D_Onofrio_Chemotherapy_VT', 'Egerstedt_Standard', 
+#  'Fullers', 'Electric_Car', 'F8_Aircraft', 'Gravity_Turn', 'Oil_Shale_Pyrolysis', 
+#  'Particle_Steering', 'Quadrotor_Helicopter', 'Supermarket_Refrigeration', 
+  # 'Three_Tank_Multimode', 'Time_Optimal_Car', 'Van_der_Pol_Oscillator', 
+#  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
+#  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
+
+OCprob = OCProblems.F8_Aircraft(nt=100, parallel = False)
+
+vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
+cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
+hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
+targets = py_blockSQP.condensing_targets(1)
+for i in range(len(OCprob.vBlock_sizes)):
+    vBlocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
+for i in range(len(OCprob.cBlock_sizes)):
+    cBlocks[i] = py_blockSQP.cblock(OCprob.cBlock_sizes[i])
+for i in range(len(OCprob.hessBlock_sizes)):
+    hBlocks[i] = OCprob.hessBlock_sizes[i]
+targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
+cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
+
+
+prob = Problemspec()
+prob.nVar = OCprob.nVar
+prob.nCon = OCprob.nCon
+
+prob.f = lambda x: OCprob.f(x)
+prob.grad_f = lambda x: OCprob.grad_f(x)
+prob.g = lambda x: OCprob.g(x)
+prob.make_sparse(OCprob.jac_g_nnz, OCprob.jac_g_row, OCprob.jac_g_colind)
+prob.jac_g_nz = lambda x: OCprob.jac_g_nz(x)
+prob.hess = OCprob.hess_lag
+
+prob.set_blockIndex(OCprob.hessBlock_index)
+prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
+
+prob.vblocks = vBlocks
+
+prob.x_start = OCprob.start_point
+prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
+prob.complete()
+
+scale_arr = 1.0;
+##SCALE
+prob_unscaled = prob
+prob = py_blockSQP.scaled_Problemspec(prob)
+scale = py_blockSQP.double_array(OCprob.nVar)
+scale_arr = np.array(scale, copy = False)
+scale_arr[:] = 1.0
+for i in range(OCprob.ntS):
+    OCprob.set_stage_control(scale_arr, i, [1.0])
+prob.arr_set_scale(scale)
+##
+
+opts = py_blockSQP.SQPoptions();
+opts.maxItQP = 100000
+opts.maxTimeQP = 5.0
+
+opts.maxConvQP = 1
+opts.convStrategy = 0
+opts.whichSecondDerv = 0
+opts.hessUpdate = 1
+opts.hessScaling = 2
+opts.fallbackUpdate = 2
+opts.fallbackScaling = 4
+
+opts.hessLimMem = True
+opts.hessMemsize = 20
+opts.opttol = 1e-6
+opts.nlinfeastol = 1e-6
+
+opts.autoScaling = False
+
+opts.max_extra_steps = 0
+opts.allow_premature_termination = False
+opts.max_local_lenience = 0
+
+###################
+opts.QPsol = 'qpOASES'
+QPopts = py_blockSQP.qpOASES_options()
+QPopts.terminationTolerance = 1e-10
+QPopts.printLevel = 0
+opts.QPsol_opts = QPopts
+#####################
+stats = py_blockSQP.SQPstats("./solver_outputs")
+optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+t0 = time.time()
+# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
+optimizer.init()
+#####################
+
+if (step_plots):
+    OCprob.plot(OCprob.start_point, dpi = 200, it = 0, title=plot_title)
+    ret = int(optimizer.run(1))
+    xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+    i = 1
+    OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
+    while ret == 0 and i < itMax:
+        ret = int(optimizer.run(1,1))
+        xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+        i += 1
+        OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
+else:
+    ret = int(optimizer.run(itMax))
+    xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+    OCprob.plot(xi, dpi=200, it = stats.itCount - 1, title=plot_title)
+    t1 = time.time()
+    print("Solved OCP in ", t1 - t0, "s\n")
+#####################

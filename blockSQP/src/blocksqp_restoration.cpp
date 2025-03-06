@@ -22,7 +22,7 @@
 
 namespace blockSQP{
 
-RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_zeta, double param_rho): zeta(param_zeta), rho(param_rho){
+RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
 
     int iVar, iCon;
 
@@ -1152,7 +1152,7 @@ void feasibility_Problem::recover_multipliers(const Matrix &lambda_rest, Matrix 
 
 
 
-TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference, double param_zeta, double param_rho): parent(parent_Problem), parent_cond(parent_CND), xi_ref(xi_Reference), zeta(param_zeta), rho(param_rho){
+TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference, double param_rho, double param_zeta): parent(parent_Problem), parent_cond(parent_CND), xi_ref(xi_Reference), rho(param_rho), zeta(param_zeta){
 
     // one slack variable for each true (not used for condensing) constraint
     nVar = parent->nVar + parent_cond->num_true_cons;

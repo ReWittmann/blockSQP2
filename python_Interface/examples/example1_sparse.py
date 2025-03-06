@@ -1,13 +1,17 @@
-import blockSQP_pybind as blockSQP
+import os
+import sys
+sys.path.append(os.path.abspath('') + "/..")
+
+import py_blockSQP as blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem
 import numpy as np
 import time
 
-opts = blockSQP.SQPoptions()
+opts = blockSQP.SQPoptions();
 opts.opttol = 1.0e-12
 opts.nlinfeastol = 1.0e-12
 opts.globalization = 0
-opts.hessUpdate = 2
+opts.hessUpdate = 1
 opts.fallbackUpdate = 2
 opts.hessScaling = 0
 opts.fallbackScaling = 0
@@ -16,9 +20,8 @@ opts.hessMemsize = 20
 opts.maxConsecSkippedUpdates = 200
 opts.blockHess = 1
 opts.whichSecondDerv = 0
-opts.sparseQP = 0
+opts.sparseQP = 2
 opts.printLevel = 2
-opts.debugLevel = 0
 opts.QPsol = "qpOASES"
 
 stats = blockSQP.SQPstats("./")
@@ -26,7 +29,7 @@ stats = blockSQP.SQPstats("./")
 prob = blockSQP_pyProblem()
 prob.nVar = 2
 prob.nCon = 1
-prob.set_blockIndex(np.array([0,1,2],dtype = np.int32))
+prob.set_blockIndex(np.array([0,1,2], dtype = np.int32))
 prob.set_bounds([-np.inf, -np.inf], [np.inf, np.inf], [0.], [0.])
 #######
 prob.x_start = [10.,10.]
@@ -35,8 +38,14 @@ prob.lam_start = [0.,0.,0.]
 prob.f = lambda x: x[0]**2 - 0.5*x[1]**2
 prob.g = lambda x: x[0] - x[1]
 prob.grad_f = lambda x: [2*x[0], -x[1]]
-prob.jac_g = lambda x: [[1,-1]]
+prob.jac_g_nz = lambda x: np.array([1,-1])
 #######
+jac_g_nnz = 2
+jac_g_ind_row = np.array([0,0])
+jac_g_ind_col = np.array([0,1,2])
+
+prob.make_sparse(jac_g_nnz, jac_g_ind_row, jac_g_ind_col)
+
 prob.complete()
 
 

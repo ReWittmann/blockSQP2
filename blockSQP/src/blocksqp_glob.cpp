@@ -451,7 +451,7 @@ int SQPmethod::feasibilityRestorationPhase(){
         delete rest_prob;
         delete rest_method;
         delete rest_stats;
-        rest_prob = new RestorationProblem(prob, vars->xi, param->restZeta, param->restRho);
+        rest_prob = new RestorationProblem(prob, vars->xi, param->restRho, param->restZeta);
         
         //TODO scaling in restoration phase
         //rest_prob->n_vblocks = prob->n_vblocks;
@@ -778,7 +778,7 @@ int SCQPmethod::feasibilityRestorationPhase(){
         delete rest_method;
         delete rest_stats;
 
-        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restZeta, param->restRho);
+        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restRho, param->restZeta);
         //rest_prob->n_vblocks = prob->n_vblocks;
         //rest_prob->vblocks = rest_vblocks;
 
@@ -1042,7 +1042,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
         delete rest_method;
         delete rest_stats;
 
-        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restZeta, param->restRho);
+        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restRho, param->restZeta);
         //rest_prob->n_vblocks = prob->n_vblocks;
         //rest_prob->vblocks = rest_vblocks;
 

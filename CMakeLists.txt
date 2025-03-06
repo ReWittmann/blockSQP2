@@ -62,7 +62,14 @@ add_library(qpOASES STATIC
 	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
 )
 target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
+#target_compile_options(qpOASES PRIVATE -O3)
 target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
+IF(UNIX)
+   target_compile_definitions(qpOASES PRIVATE LINUX)
+ELSEIF(WINDOWS)
+    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
+ENDIF()
+
 
 target_include_directories(qpOASES
 	PRIVATE ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/include ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/libseq
@@ -114,17 +121,12 @@ set_target_properties(example_condensing
 )
 
 option(PYTHON_INTERFACE "build python interface" OFF)
-set(PYTHON_PATH "" CACHE STRING "Path to Python install folder (default: empty)")
+set(PYTHON_INTERPRETER "" CACHE STRING "Path to Python install folder (default: empty)")
 
 if(PYTHON_INTERFACE)
-	if (NOT PYTHON_PATH STREQUAL "")
-		message(STATUS "Got python path ${PYTHON_PATH}")
-		set (PYTHON_PREFIX ${PYTHON_PATH})
-		set (PYTHON_EXECUTABLE ${PYTHON_PREFIX}/bin/python3.13)
-		set (PYTHON_LIBRARIES ${PYTHON_PREFIX}/lib/libpython3.13.a)
-		set (PYTHON_INCLUDE_DIRS ${PYTHON_PREFIX}/include/python3.13/cpython)
-		set (PYTHON_SITE_PACKAGES ${PYTHON_PREFIX}/python3.13/site-packages)
-		set (PYTHON_MODULE_EXTENSION .so)
+	if (NOT PYTHON_INTERPRETER STREQUAL "")
+		message(STATUS "Using python interpreter ${PYTHON_INTERPRETER}")
+		set (PYTHON_EXECUTABLE ${PYTHON_INTERPRETER})
 	endif()
 	
 	FetchContent_Declare(

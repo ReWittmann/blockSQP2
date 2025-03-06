@@ -191,7 +191,6 @@ public:
     void set_continuity_restoration(void (*REST_CONT)(void *jscope, double *xi, int *info)){
         restore_continuity = REST_CONT;
     }
-
 };
 
 class JL_Condenser{
@@ -211,7 +210,7 @@ class JL_Condenser{
         for (int i = 0; i < CBLOCKS.size(); i++){
             cblocks[i] = CBLOCKS[i];
         }
-
+        
         hsizes = new int[HSIZES.size()];
         for (int i = 0; i < HSIZES.size(); i++){
             hsizes[i] = HSIZES[i];

@@ -66,7 +66,7 @@ typedef T_array<blockSQP::cblock> cblock_array;
 typedef T_array<blockSQP::condensing_target> condensing_targets;
 typedef T_array<blockSQP::SymMatrix> SymMat_array;
 
-/*
+
 class condensing_args{
 public:
     blockSQP::Matrix grad_obj;
@@ -289,7 +289,7 @@ public:
         delete[] hess_cond_row;
     }
 };
-*/
+
 
 
 struct Prob_Data{
@@ -949,13 +949,13 @@ py::class_<blockSQP::Condenser>(m, "Condenser")
         {return new blockSQP::Condenser(v_arr.ptr, v_arr.size, c_arr.ptr, c_arr.size, hess_sizes.ptr, hess_sizes.size, c_targets.ptr, c_targets.size, add_dep_bounds);}),
         py::arg("vBlocks"), py::arg("cBlocks"), py::arg("hBlocks"), py::arg("Targets"), py::arg("add_dep_bounds") = 2, py::return_value_policy::take_ownership)
     .def("print_debug", &blockSQP::Condenser::print_debug)
-    /*.def("condense_args", [](blockSQP::Condenser &C, condensing_args &args) -> void{
+    .def("condense_args", [](blockSQP::Condenser &C, condensing_args &args) -> void{
             args.C = &C;
             C.full_condense(args.grad_obj, args.con_jac, args.hess.ptr, args.lb_var, args.ub_var, args.lb_con, args.ub_con,
                 args.condensed_h, args.condensed_Jacobian, args.condensed_hess.ptr, args.condensed_lb_var, args.condensed_ub_var, args.condensed_lb_con, args.condensed_ub_con
             );
             args.condensed_hess.size = C.condensed_num_hessblocks;
-            return;} )*/
+            return;})
     .def_readonly("num_hessblocks", &blockSQP::Condenser::num_hessblocks)
     .def_readonly("num_vars", &blockSQP::Condenser::num_vars)
     .def_readonly("num_cons", &blockSQP::Condenser::num_cons)
@@ -972,7 +972,7 @@ py::class_<SymMat_array>(m, "SymMat_array")
 	.def("__getitem__", [](SymMat_array &arr, int i) -> blockSQP::SymMatrix *{return arr.ptr + i;}, py::return_value_policy::reference)
 	.def("__setitem__", [](SymMat_array &arr, int i, blockSQP::SymMatrix &B) -> void{arr.ptr[i] = B;});
 
-/*
+
 py::class_<condensing_args>(m, "condensing_args")
     .def(py::init<>())
     .def_readwrite("grad_obj", &condensing_args::grad_obj)
@@ -997,7 +997,7 @@ py::class_<condensing_args>(m, "condensing_args")
     .def_readonly("delta_Lambda_rest", &condensing_args::delta_Lambda_rest)
     .def("solve_QPs", &condensing_args::solve_QPs)
     ;
-*/
+
 
 py::class_<blockSQP::TC_restoration_Problem, blockSQP::Problemspec>(m, "TC_restoration_Problem")
     .def(py::init<blockSQP::Problemspec*, blockSQP::Condenser*, const blockSQP::Matrix&, double, double>())

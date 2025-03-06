@@ -283,6 +283,7 @@ SQPiterate::~SQPiterate(void){
     delete[] rescaleFactors;
 }
 
+//TODO: Store scaling factors as well because they may change
 void SQPiterate::save_iterate(){
     xiOpt_save = xi;
     lambdaOpt_save = lambda;

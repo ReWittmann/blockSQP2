@@ -7,11 +7,14 @@ cmake -B build ${OPTIONS}
 
 The following OPTIONS may be set
     PYTHON_INTERFACE (ON/OFF)-  build the python interface
-    PYTHON_PATH (/...)-       path to your python installation folder containing bin, include, ...
+    PYTHON_INTERPRETER (/...)-  path to the python interpreter you wish to build for, set if different from default system python
     
     JULIA_INTERFACE (ON/OFF)-   build the julia interface, requires installing the CxxWrap.jl library via julia pkg
-    CXXWRAP_PATH (/...)-      path to the libcxxwrap-julia artifact of CxxWrap.jl, e.g. 
+    CXXWRAP_PATH (/...)-        path to the libcxxwrap-julia artifact of CxxWrap.jl, e.g. 
                         /path/to/.../.julia/artifacts/65c14d6c8b06e52ca794200129a8f3dd8b7ce34e/lib/cmake/JlCxx
+                        Search for cxxwrap in your artifacts folder, find libcxxwrap_julia_jll in your julia packages folder
+                        and find the git-tree-sha1 for your julia version and system. 
+                        
 Compile via calling either
 cmake --build build
     or

@@ -56,7 +56,7 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
         rest_opts->restoreFeas = 0;
         rest_opts->hessUpdate = 2;
         rest_opts->hessLimMem = 1;
-        rest_opts->hessScaling = 4;
+        rest_opts->hessScaling = 2;
         rest_opts->opttol = param->opttol;
         rest_opts->nlinfeastol = param->nlinfeastol;
         rest_opts->QPsol = param->QPsol;
@@ -122,7 +122,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         //return -1;
-        return RES::MISC_ERROR;
+        return print_RES(RES::MISC_ERROR);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
@@ -138,7 +138,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars, param, hasConverged );
-        if (hasConverged) return RES::success;
+        if (hasConverged) return print_RES(RES::success);
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
@@ -191,7 +191,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
 
                 if (qpError){
                     std::cout << "QP error, stop\n";
-                    return RES::QP_FAILURE;
+                    return print_RES(RES::QP_FAILURE);
                 }
             }
             else vars->steptype = 1;
@@ -203,7 +203,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
                 printf("InfoQP is %d\n", infoQP);
-                return RES::QP_FAILURE;
+                return print_RES(RES::QP_FAILURE);
             }
             else vars->steptype = 1;
         }
@@ -231,8 +231,8 @@ RES SQPmethod::run(int maxIt, int warmStart){
             }
             
             // If everything failed, abort.
-            if (feasError == 1 || feasError > 2) return RES::RESTORATION_FAILURE;
-            else if (feasError == 2) return RES::LOCAL_INFEASIBILITY;
+            if (feasError == 1 || feasError > 2) return print_RES(RES::RESTORATION_FAILURE);
+            else if (feasError == 2) return print_RES(RES::LOCAL_INFEASIBILITY);
         }
 
         /////////////////////////////////////////////////////////////
@@ -244,7 +244,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
             // No globalization strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
-                return RES::EVAL_FAILURE;
+                return print_RES(RES::EVAL_FAILURE);
             }
             vars->steptype = 0;
         }
@@ -335,7 +335,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
                 // If everything failed, abort.
                 if (lsError){
                     printf( "***Line search error. Stop.***\n" );
-                    return RES::LINESEARCH_FAILURE;
+                    return print_RES(RES::LINESEARCH_FAILURE);
                 }
             }
             else{

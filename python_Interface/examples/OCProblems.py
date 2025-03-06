@@ -4,7 +4,7 @@ import typing
 import matplotlib.pyplot as plt
 import math
 import copy
-
+plt.rcParams["text.usetex"] = True
 
 def RK4_integrator(ODE, M = 2):
     #M: RK4 steps per interval
@@ -20,7 +20,7 @@ def RK4_integrator(ODE, M = 2):
     
     f = cs.Function('f', [ODE['x'], p], [ODE['ode'], q])
     X0 = ODE['x']
-    
+    # U = ODE['p']
     U = p
     X = X0
     Q = 0
@@ -33,6 +33,9 @@ def RK4_integrator(ODE, M = 2):
         Q = Q + DT/6*(k1_q + 2*k2_q + 2*k3_q + k4_q)
     return cs.Function('F', [X0, U], [X, Q],['x0','p'],['xf','qf'])
 
+########################################
+###Optimal control problem base class###
+########################################
 
 class OCProblem:    
     #########################################################
@@ -117,12 +120,14 @@ class OCProblem:
     time_grid : typing.Optional[np.ndarray[np.int32]]
     time_grid_ref : typing.Optional[np.ndarray[np.int32]]
     ODE : typing.Dict[str,cs.MX]
+
     
-    odesol_single : object
-    odesol_ref : object
-    odesol_fill : object
-    odesol_multi : object
-    odesol_full : object
+    odesol_single : object #single shooting integrator x_0, [u_k] -> x1,x2,...
+    odesol_refC : object #Control-refined shooting interval integrator x_k, [u_k0,u_k1,...] -> x_{k+1}
+    odesol_refined : object #Control + state - refined shooting interval integrator x_k, [u_k0,u_k1,...] -> x_k0, x_k1, ... , x_{k+1}
+    # odesol_fill : object
+    odesol_multi : object #odesol_refined mapped over all shooting intervals
+    odesol_full : object #odesol_refC map-accumulated over all shooting intervals
     
     
     F_xf : cs.MX
@@ -144,7 +149,7 @@ class OCProblem:
     
     
     
-    def __init__(self, nt = 100, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
+    def __init__(self, nt = 100, refine = 1, integrator = 'rk4', parallel = False, N_threads = 4, **kwargs):
         if hasattr(self, 'default_params'):
             self.model_params = copy.copy(self.default_params)
         else:
@@ -154,12 +159,12 @@ class OCProblem:
         self.parallel = parallel
         self.N_threads = N_threads
         
-        self.NLP = dict()
-        self.time_grid = None
-        self.time_grid_ref = None
+        self.NLP = dict()       
+        self.time_grid = None        
+        self.time_grid_ref = None        
         self.odesol_single = None
-        self.odesol_ref = None
-        self.odesol_multi = None
+        self.odesol_refc = None
+        self.odesol_multi = None        
         
         self.ntS = nt
         self.ntR = refine
@@ -171,7 +176,7 @@ class OCProblem:
         raise NotImplementedError('Optimal control problem must be implemented in subclass')
     
     
-    def set_OCP_data(self, nx, np, nu, nq, lbx, ubx, lbp, ubp, lbu, ubu):
+    def set_OCP_data(self, nx, np, nu, nq, lbx, ubx, lbp, ubp, lbu, ubu):#, **kwargs):
         self.nx = nx
         self.nu = nu
         self.np = np
@@ -179,14 +184,19 @@ class OCProblem:
         self.nfree = self.nx
         self.x_init = [None]*self.nx
         self.fix_time = False
-        
+        # self.ntS = ntS
+        # self.ntR = ntR
         self.lbx = list(lbx)
         self.ubx = list(ubx)
         self.lbp = list(lbp)
         self.ubp = list(ubp)
         self.lbu = list(lbu)
         self.ubu = list(ubu)
-
+        # if hasattr(self, 'default_params'):
+        #     self.model_params = self.default_params
+        # else:
+        #     self.model_params = dict()
+        # self.model_params.update(kwargs)
         self.cBlock_sizes = []
         self.constr_arr = []
         self.lbc_arr = []
@@ -221,24 +231,26 @@ class OCProblem:
         self.fix_time = True
     
     def build_integrator(self):
-        if self.integration_method == 'cvodes':
-            print('cvodes')
+        if self.integration_method.lower() == 'cvodes':
+            # print('cvodes')
             self.odesol_single = cs.integrator('odesol_single', 'cvodes', self.ODE, {'linear_solver': 'csparse', 'augmented_options' : {'linear_solver' : 'csparse'}})
         else:
-            print('rk4')
+            # print('rk4')
             self.odesol_single = RK4_integrator(self.ODE)
         self.odesol_refined = self.odesol_single.mapaccum('odesol_refined',self.ntR, ['x0'], ['xf'])
         
         if self.ntR > 1:
-            self.odesol_ref = self.odesol_single.fold(self.ntR)
-            self.odesol_fill = self.odesol_single.mapaccum(self.ntR)
+            self.odesol_refC = self.odesol_single.fold(self.ntR)
+            # self.odesol_fill = self.odesol_single.mapaccum(self.ntR)
         else:
-            self.odesol_ref = self.odesol_single
-            self.odesol_fill = self.odesol_single
-        self.odesol_full = self.odesol_ref.mapaccum('odesol_full', self.ntS, ['x0'], ['xf'])
+            self.odesol_refC = self.odesol_single
+            # self.odesol_fill = self.odesol_single
+        self.odesol_full = self.odesol_refC.mapaccum('odesol_full', self.ntS, ['x0'], ['xf'])
         
     def integrate_full(self, xi):
         p_arr = [self.get_stage_param(xi, i) for i in range(self.ntS)]
+        # if self.fix_time:
+        #     p = cs.vertcat(cs.diff(self.time_grid_ref.reshape((1,-1)),1,1), p)
         p_exp_arr = []
         for i in range(self.ntS):
             for j in range(self.ntR):
@@ -250,10 +262,14 @@ class OCProblem:
             p_exp[0,:]/=self.ntR
         
         u = cs.horzcat(*(self.get_stage_control(xi, i) for i in range(self.ntS)))
+        # if self.fix_init:
+        #     start = self.x_init
+        # else:
+        #     start = self.get_stage_state(xi, 0)
         start = self.get_stage_state(xi, 0)
         out = self.odesol_full(x0 = start, p = cs.vertcat(p_exp, u))
         x_stages = out['xf']
-        for i in range(1,self.ntS):
+        for i in range(1,self.ntS + 1):
             self.set_stage_state(xi, i, x_stages[:,i-1])
         
         
@@ -264,7 +280,7 @@ class OCProblem:
         if block_sizes is None:
             self.cBlock_sizes.append(constr.numel())
         else:
-            self.cBlock_sizes.append(block_sizes)
+            self.cBlock_sizes += block_sizes
         self.constr_arr.append(constr)
         
         if isinstance(lbc, (int, float)):
@@ -281,13 +297,14 @@ class OCProblem:
         assert constr.numel()%len(ubc_t) == 0
         self.ubc_arr.append(np.concatenate([ubc_t]*(constr.numel()//len(ubc_t))))
         
+        # self.lbc_arr.append(np.array(lbc))
+        # self.ubc_arr.append(np.array(ubc))
     
     def set_objective(self, obj : cs.MX):
         self.NLP['f'] = obj
     
     
     def multiple_shooting(self):
-        
         if self.odesol_single is None:
             self.build_integrator()
         
@@ -309,10 +326,10 @@ class OCProblem:
         x_init = cs.vertcat(*x_init_arr)
         
         x_arr.append(x_init)
-        for i in range(1, self.ntS):
+        for i in range(1, self.ntS + 1):
             x_arr.append(cs.MX.sym(f'x_s_{i}', self.nx, 1))
         x_stages = cs.horzcat(*x_arr[1:])
-        x_s = cs.horzcat(*x_arr)
+        x_starts = cs.horzcat(*x_arr[0:self.ntS])
         
         u_arr = []
         for i in range(self.ntS):
@@ -342,12 +359,17 @@ class OCProblem:
         else:
             self.odesol_multi = self.odesol_refined.map(self.ntS)
         
-        out = self.odesol_multi(x0 = x_s, p = cs.vertcat(p_t_exp, u))
+        # if self.fix_time:
+        #     assert self.time_grid is not None
+        #     out = self.odesol_multi(x0 = x_starts, p = cs.vertcat(cs.diff(cs.DM(self.time_grid_ref).T, 1, 1), p_m_exp, u))
+        # else:
+        out = self.odesol_multi(x0 = x_starts, p = cs.vertcat(p_t_exp, u))
         self.F_xf = out['xf']
         self.F_qf = out['qf']
         
-        self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:-self.ntR:self.ntR]), 0., 0., [self.nx]*(self.ntS - 1))
-        
+        # self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:-self.ntR:self.ntR]), 0., 0., [self.nx]*(self.ntS - 1))
+        self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:self.ntR*self.ntS:self.ntR]), 0., 0., [self.nx]*self.ntS)
+
         #Evaluate state bounds at intermediate values of refinement is used
         if self.ntR > 1:
             F_x_eval = []
@@ -356,8 +378,10 @@ class OCProblem:
             self.add_constraint(cs.vec(cs.horzcat(*F_x_eval)), self.lbx, self.ubx)
         
         
-        self.x_eval = copy.copy(self.F_xf)
-        self.x_eval[:,self.ntR-1:-self.ntR:self.ntR] = x_s[:,1:]
+        # self.x_eval = copy.copy(self.F_xf)
+        self.x_eval = cs.horzcat(x_init, self.F_xf)
+        # self.x_eval[:,self.ntR-1:-self.ntR*:self.ntR] = x_s[:,1:]
+        self.x_eval[:,self.ntR:self.ntR*self.ntS + 1:self.ntR] = x_stages
         
         self.q_eval = self.F_qf
         self.q_tf = cs.sum2(self.q_eval)
@@ -376,12 +400,20 @@ class OCProblem:
         self.hessBlock_sizes = [0]
         self.vBlock_sizes = [0]
         self.vBlock_dependencies = [False]
+        # if not self.fix_init:
+        #     xopt_arr.append(x_arr[0])
+        #     self.hessBlock_sizes[0] += self.nx
+        #     self.vBlock_sizes[0] += self.nx
+        #     lbv_arr.append(self.lbx)
+        #     ubv_arr.append(self.ubx)
         xopt_arr.append(x_init_free)
         self.hessBlock_sizes[0] += self.nfree
         self.vBlock_sizes[0] += self.nfree
         lbv_arr.append(cs.DM(x_init_lb))
         ubv_arr.append(cs.DM(x_init_ub))
         
+        # lbv_arr += self.lbu*self.ntR
+        # ubv_arr += self.ubu*self.ntR
         xopt_arr.append(p_arr[0])
         for j in range(self.ntR):
             xopt_arr.append(u_arr[j])
@@ -403,13 +435,23 @@ class OCProblem:
             lbv_arr.append(cs.DM(self.lbx + self.lbp + self.lbu*self.ntR))
             ubv_arr.append(cs.DM(self.ubx + self.ubp + self.ubu*self.ntR))        
         
+        #Terminal state is a shooting variable
+        xopt_arr.append(x_arr[self.ntS])
+        self.hessBlock_sizes += [self.nx]
+        self.vBlock_sizes += [self.nx]
+        self.vBlock_dependencies += [True]
+        lbv_arr.append(cs.DM(self.lbx))
+        ubv_arr.append(cs.DM(self.ubx))
+        
+        
         self.hessBlock_index = list(np.cumsum([0] + self.hessBlock_sizes, dtype = np.int32))
+        # self.cBlock_sizes = [self.nx]*(self.ntS - 1)
         self.NLP['x'] = cs.vertcat(*xopt_arr)
         self.nVar = self.NLP['x'].numel()
         self.start_point = np.zeros(self.nVar)
         self.lb_var = np.array(cs.vertcat(*lbv_arr), dtype = np.float64).reshape(-1)
         self.ub_var = np.array(cs.vertcat(*ubv_arr), dtype = np.float64).reshape(-1)
-        self.ctarget_data = [self.ntS - 1, 0, 2*self.ntS, 0, self.ntS]
+        self.ctarget_data = [self.ntS, 0, 2*self.ntS, 0, self.ntS]
     
     def build_NLP(self):
         if 'x' not in self.NLP.keys() or 'f' not in self.NLP.keys():
@@ -460,21 +502,35 @@ class OCProblem:
                 else:
                     x_init_arr.append(xi[j])
                     j += 1
-            return np.array(x_init_arr)
+            return np.array(x_init_arr).reshape((self.nx, -1), order = 'F')
         else:
-            return xi[i*(self.np + self.ntR*self.nu) + (i-1)*self.nx + self.nfree: i*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree]
+            return xi[i*(self.np + self.ntR*self.nu) + (i-1)*self.nx + self.nfree: i*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree].reshape((self.nx, -1), order = 'F')
             
-   
+        # if self.fix_init and i == 0:
+        #     if type(xi) == np.ndarray:
+        #         return np.array(self.x_init)
+        #     else:
+        #         return type(xi)(self.x_init)
+        # ix = i - int(self.fix_init)    
+        # return xi[i*(self.np + self.ntR*self.nu) + ix*self.nx: i*(self.np + self.ntR*self.nu) + (ix+1)*self.nx]
+    
     def get_stage_param(self, xi, i:int):
         if self.np == 0:
             return np.array([])
         
-        return xi[i*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree:(i+1)*self.np + i*self.ntR*self.nu+ i*self.nx + self.nfree].reshape((self.np,-1))
+        return xi[i*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree:(i+1)*self.np + i*self.ntR*self.nu+ i*self.nx + self.nfree].reshape((self.np, -1), order = 'F')
 
+        
+        # ix = i + int(not self.fix_init)
+        # return xi[i*(self.np + self.ntR*self.nu) + ix*self.nx:(i+1)*self.np + i*self.ntR*self.nu+ ix*self.nx].reshape((self.np,-1))
+    
     def get_stage_control(self, xi, i:int):
         if self.nu == 0:
             return np.array([])
-        return xi[(i+1)*self.np + i*self.ntR*self.nu + i*self.nx + self.nfree:(i+1)*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree].reshape((self.nu,-1))
+        return xi[(i+1)*self.np + i*self.ntR*self.nu + i*self.nx + self.nfree:(i+1)*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree].reshape((self.nu,-1), order = 'F')
+
+        # ix = i + int(not self.fix_init)
+        # return xi[(i+1)*self.np + i*self.ntR*self.nu + ix*self.nx:(i+1)*(self.np + self.ntR*self.nu) + ix*self.nx].reshape((self.nu,-1))
     
     def set_stage_state(self, xi, i:int, val):
         val = np.array(val).reshape(-1)
@@ -485,49 +541,77 @@ class OCProblem:
                 val_free = np.array([val[i] for i in range(self.nx) if self.x_init[i] is None])
             xi[0:self.nfree] = val_free
             return
-        
         xi[i*(self.np + self.ntR*self.nu) + (i-1)*self.nx + self.nfree: i*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree] = np.array(val).reshape(-1)
         return
+        # if self.fix_init and i == 0:
+        #     return
+        # ix = i - int(self.fix_init)
+        # xi[i*(self.np + self.ntR*self.nu) + ix*self.nx: i*(self.np + self.ntR*self.nu) + (ix+1)*self.nx] = np.array(val).reshape(-1)
     
     def set_stage_param(self, xi, i:int, val):
         xi[i*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree:(i+1)*self.np + i*self.ntR*self.nu + i*self.nx + self.nfree] = np.array(val).reshape(-1)
+
+        # ix = i + int(not self.fix_init)
+        # xi[i*(self.np + self.ntR*self.nu) + ix*self.nx:(i+1)*self.np + i*self.ntR*self.nu + ix*self.nx] = np.array(val).reshape(-1)
         
     def set_stage_control(self, xi, i:int, val):
         val = np.array(val).reshape(-1)
         if self.nu*self.ntR/len(val) > 1:
+            # print(self.nu*self.ntR/len(val))
             assert self.nu*self.ntR % len(val) == 0
             val = np.tile(val, int((self.nu*self.ntR)/len(val)))
+            # val = np.concatenate([val]*(int((self.nu*self.ntR)/len(val)))).reshape(-1)
+            # print(val)
+            # print((i+1)*self.np + i*self.ntR*self.nu + i*self.nx + self.nfree)
+            # print((i+1)*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree)
+            # print(xi.shape)
+            # print(type(xi))
         xi[(i+1)*self.np + i*self.ntR*self.nu + i*self.nx + self.nfree:(i+1)*(self.np + self.ntR*self.nu) + i*self.nx + self.nfree] = val
         
+        
+        # ix = i + int(not self.fix_init)
+        # xi[(i+1)*self.np + i*self.ntR*self.nu + ix*self.nx:(i+1)*(self.np + self.ntR*self.nu) + ix*self.nx] = val
+    #Get all state state variables, including terminal state
     def get_state_arrays(self, xi):
-        x = np.concatenate([self.get_stage_state(xi,i) for i in range(self.ntS)]).reshape((self.nx,-1), order = 'F')
+        x = np.hstack([self.get_stage_state(xi,i) for i in range(self.ntS + 1)])
         if self.nx == 1:
             return x.reshape(-1)
         else:
             return tuple(x[i,:].reshape(-1) for i in range(self.nx))
         
     def get_control_arrays(self, xi):
-        u = np.concatenate([self.get_stage_control(xi,i) for i in range(self.ntS)], int(self.ntR > 1)).reshape((self.nu,-1), order = 'F')
+        u = np.hstack([self.get_stage_control(xi,i) for i in range(self.ntS)])
         if self.nu == 1:
             return u.reshape(-1)
         else:
             return tuple(u[i,:].reshape(-1) for i in range(self.nu))
     
+    def get_control_plot_arrays(self, xi):
+        u_arr = [self.get_stage_control(xi,i) for i in range(self.ntS)]
+        u_arr = [u_arr[0][:,0].reshape((self.nu, -1))] + u_arr
+        u = np.hstack(u_arr)
+        if self.nu == 1:
+            return u.reshape(-1)
+        else:
+            return tuple(u[i,:].reshape(-1) for i in range(self.nu))
+        
+    
     def get_param_arrays(self, xi):
-        p = np.concatenate([self.get_stage_param(xi,i) for i in range(self.ntS)]).reshape((self.np,-1), order = 'F')
+        p = np.hstack([self.get_stage_param(xi,i) for i in range(self.ntS)])
         if self.np == 1:
             return p.reshape(-1)
-        else:    
+        else:
             return tuple(p[i,:].reshape(-1) for i in range(self.np))
     
     def get_param_arrays_expanded(self, xi):
-        p = np.concatenate([self.get_stage_param(xi,i) for i in range(self.ntS) for j in range(self.ntR)]).reshape((self.np,-1), order = 'F')
+        p = np.hstack([self.get_stage_param(xi,i) for i in range(self.ntS) for j in range(self.ntR)])#.reshape((self.np,-1), order = 'F')
         if not self.fix_time:
             p[0,:]/=self.ntR
         if self.np == 1:
             return p.reshape(-1)
         else:
             return tuple(p[i,:].reshape(-1) for i in range(self.np))
+    
     
     def get_state_arrays_expanded(self, xi):
         x_arr = []
@@ -538,11 +622,20 @@ class OCProblem:
             if not self.fix_time:
                 p_i[0,:]/=self.ntR
             else:
-                p_i = cs.vertcat(self.time_grid_ref[i*self.ntS, (i+1)*self.ntS])
-            out = self.odesol_fill(x0 = x_i, p = cs.vertcat(p_i,u_i))
+                p_i = cs.vertcat(cs.diff(cs.DM(self.time_grid_ref[i*self.ntR:(i+1)*self.ntR + 1]).T, 1, 1), p_i)
+            # out = self.odesol_fill(x0 = x_i, p = cs.vertcat(p_i,u_i))
+            out = self.odesol_refined(x0 = x_i, p = cs.vertcat(p_i,u_i))
             x_arr.append(x_i)
             x_arr.append(out['xf'][:,:-1])
-        return np.array(cs.horzcat(*x_arr))
+        #Terminal state
+        x_arr.append(self.get_stage_state(xi, self.ntS))
+        x = np.array(cs.horzcat(*x_arr))
+        if self.nx == 1:
+            return x.reshape(-1)
+        else:
+            return tuple(x[i,:].reshape(-1) for i in range(self.nx))
+        
+        # return np.array(cs.horzcat(*x_arr))
     
     def plot(self, xi, dpi = None, title = None, it = None):
         raise NotImplementedError('No plot functionality for this problem')
@@ -556,14 +649,16 @@ def from_block_LT(HLT, dim):
             H[i,j] = HLT[i*dim + j - int((i*(i+1))/2)]
     return H
 
-#subclass template
+
+
+######################################
+###Optimal control problem template###
+######################################
+
 # class example_optimalControl(OCProblem):
-#     default_params = {'some_param':some value}
+#     default_params = {'some param':some value}
     
 #     def build_problem(self):
-         ###get model parameters
-#        some_param = (self.model_params[key] for key in ['some_param',...])
-
          ###Set nx, np, nu, nq, lbx, ubx, lbp, ubp, lbu, ubu###
          ###number + lower/upper bounds of states,controls,parameters,quadratures###
 #         self.set_OCP_data(2,1,0,1,[0,0],[np.inf, np.inf],[],[],[0],[1])
@@ -608,6 +703,11 @@ def from_block_LT(HLT, dim):
         #plot using e.g. matplotlib
 
 
+
+#######################################
+###Optimal control problem instances###
+#######################################
+
 class Lotka_Volterra_Fishing(OCProblem):
     default_params = {'c0':0.4, 'c1':0.2, 'x_init':[0.5,0.7], 't0':0., 'tf':12.}
     
@@ -626,23 +726,24 @@ class Lotka_Volterra_Fishing(OCProblem):
         self.multiple_shooting()
         self.set_objective(self.q_tf)
         self.build_NLP()
-        # self.build_NLP_functions()
         
         self.start_point = np.zeros(self.nVar)
-        for i in range(self.ntS):
+        for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.model_params['x_init'])
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0])
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1 = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        # x0, x1 = self.get_state_arrays_expanded(xi)
+        u = self.get_control_plot_arrays(xi)
+        
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x0, 'r-', label = 'x0')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
-        plt.plot(self.time_grid[:-1], x1, 'b--', label = 'x1')
+        plt.plot(self.time_grid, x0, 'r-', label = '$x_0$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
+        plt.plot(self.time_grid, x1, 'b--', label = '$x_1$')
         
-        plt.step(self.time_grid_ref[:-1], u.reshape(-1), color = 'g', label = 'u')
+        plt.step(self.time_grid_ref, u, color = 'g', label = r'$u\cdot 10$')
         plt.legend()
         
         ttl = None
@@ -682,21 +783,21 @@ class Lotka_Volterra_multimode(OCProblem):
         self.multiple_shooting()
         self.set_objective(self.q_tf)
         self.add_constraint(cs.sum1(self.u_eval),1.,1.)
-        for i in range(self.ntS):
+        for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.x_init)
         self.build_NLP()
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1 = self.get_state_arrays(xi)
-        w1,w2,w3 = self.get_control_arrays(xi)
+        w1,w2,w3 = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x0, 'r-', label = 'x0')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
-        plt.plot(self.time_grid[:-1], x1, 'b--', label = 'x1')
+        plt.plot(self.time_grid, x0, 'r-', label = '$x_0$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
+        plt.plot(self.time_grid, x1, 'b--', label = '$x_1$')
         
-        plt.step(self.time_grid_ref[:-1], w1, color = 'g', label = 'w1')
-        plt.step(self.time_grid_ref[:-1], w2, color = 'c', label = 'w2')
-        plt.step(self.time_grid_ref[:-1], w3, color = 'y', label = 'w3')
+        plt.step(self.time_grid_ref, w1, color = 'g', label = '$w_1$')
+        plt.step(self.time_grid_ref, w2, color = 'c', label = '$w_2$')
+        plt.step(self.time_grid_ref, w3, color = 'y', label = '$w_3$')
         
         plt.legend()
         
@@ -711,16 +812,12 @@ class Lotka_Volterra_multimode(OCProblem):
             plt.title(ttl)
         else:
             plt.title('')
-            
         plt.show()
     
-    
-    
-    
-    
+
 class Goddard_Rocket(OCProblem):
     default_params = {'rT':1.01, 'b':7.0, 'A':310.0, 'k':500.0, 'Tmax':3.5, 'C':0.6, 'x_init':[1.0,0.0,1.0]}
-            
+    
     def build_problem(self):
         
         self.set_OCP_data(3, 1, 1, 0, [1.0,0,self.model_params['C']], [np.inf,np.inf,np.inf],[0],[np.inf],[0],[1])
@@ -770,16 +867,16 @@ class Goddard_Rocket(OCProblem):
     def plot(self, xi, dpi = None, title = None, it = None):
         t_arr = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate(([0], t_arr))).reshape(-1)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         r,v,m = self.get_state_arrays_expanded(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], (r - 1)*100, 'b-', label = '(r-1)*100')
-        plt.plot(time_grid[:-1], v*20, 'g-', label = 'v*20')
-        plt.plot(time_grid[:-1], m, 'y-', label = 'm')
+        plt.plot(time_grid, (r - 1)*100, 'b-', label = r'$(r-1)\cdot 100$')
+        plt.plot(time_grid, v*20, 'g-', label = r'$v\cdot 20$')
+        plt.plot(time_grid, m, 'y-', label = '$m$')
         
-        plt.step(time_grid[:-1], u, color = 'r', label = 'u')
-        plt.legend()
+        plt.step(time_grid, u, color = 'r', label = '$u$')
+        plt.legend(fontsize = 'large')
         
         ttl = None
         if isinstance(title,str):
@@ -823,7 +920,9 @@ class Calcium_Oscillation(OCProblem):
     'tx2': 0.384306,
     'tx3': 0.28977
     }
-
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+    
     def build_problem(self):
         self.set_OCP_data(4,1,1,1,[0,0,0,0],[np.inf,np.inf,np.inf,np.inf],[1.1], [1.3], [1], [np.inf])
         self.fix_initial_value([0.03966, 1.09799, 0.00142, 1.65431])
@@ -865,14 +964,14 @@ class Calcium_Oscillation(OCProblem):
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1, x2, x3 = self.get_state_arrays(xi)
-        w = self.get_control_arrays(xi)        
+        w = self.get_control_plot_arrays(xi)        
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x0, 'b-', label = 'x0')
-        plt.plot(self.time_grid[:-1], x1, 'r-', label = 'x1')
-        plt.plot(self.time_grid[:-1], x2, 'g-', label = 'x2')
-        plt.plot(self.time_grid[:-1], x3, 'y-', label = 'x3')
-        plt.step(self.time_grid[:-1], (w-1.0)*20, 'g', label = '(w-1)*20')
+        plt.plot(self.time_grid, x0, 'b-', label = 'x0')
+        plt.plot(self.time_grid, x1, 'r-', label = 'x1')
+        plt.plot(self.time_grid, x2, 'g-', label = 'x2')
+        plt.plot(self.time_grid, x3, 'y-', label = 'x3')
+        plt.step(self.time_grid, (w-1.0)*20, 'g', label = '(w-1)*20')
         
         plt.legend()
         
@@ -918,16 +1017,16 @@ class Batch_Reactor(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, 298)
             # self.set_stage_state(self.start_point, i, self.x_init)
-        self.integrate_full(self.start_point)
+        # self.integrate_full(self.start_point)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays(xi)
-        T = self.get_control_arrays(xi)
+        T = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x1, 'r-', label = 'x1')
-        plt.plot(self.time_grid[:-1], x2, 'g-', label = 'x2')
-        plt.step(self.time_grid[:-1], T*0.01, 'g', label = 'T*0.01')
+        plt.plot(self.time_grid, x1, 'r-', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'g-', label = r'$x_2$')
+        plt.step(self.time_grid_ref, (T-298)*0.1, 'y', label = r'$(u-298)\cdot 0.1$')
         
         plt.legend()
         
@@ -987,26 +1086,24 @@ class Bioreactor(OCProblem):
         for i in range(self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_control(self.start_point, i, 28.7)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         plt.figure(dpi=dpi)
         
         X,S,P = self.get_state_arrays(xi)
-        Sf = self.get_control_arrays(xi)
+        Sf = self.get_control_plot_arrays(xi)
         if title is not None:
             plt.title(title)
         
-        plt.plot(self.time_grid[:-1], (X-5)*10, 'r-', label = '(X-5)*10')
-        plt.plot(self.time_grid[:-1], (S-10)*10, 'c-', label = '(S-10)*10')
-        plt.plot(self.time_grid[:-1], (P-20)*5, 'b-', label = '(P-20)*5')
+        plt.plot(self.time_grid, (X-5)*10, 'r-', label = r'$(X-5)\cdot 10$')
+        plt.plot(self.time_grid, (S-10)*10, 'c-', label = r'$(S-10)\cdot 10$')
+        plt.plot(self.time_grid, (P-20)*5, 'b-', label = r'$(P-20)\cdot 5$')
         
-        # plt.plot(self.time_grid[:-1], X, 'r-', label = 'X')
-        # plt.plot(self.time_grid[:-1], S, 'c-', label = 'S')
-        # plt.plot(self.time_grid[:-1], P, 'b-', label = 'P')
         
-        plt.step(self.time_grid[:-1], Sf, 'g', label = 'Sf')
+        plt.step(self.time_grid, Sf, 'g', label = 'Sf')
         
-        plt.legend()
+        plt.legend(fontsize = 'large')
         
         ttl = None
         if isinstance(title,str):
@@ -1036,7 +1133,7 @@ class Hanging_Chain(OCProblem):
         u = cs.MX.sym('u',1)
         dt = cs.MX.sym('dt',1)
         ode_rhs = u
-        quad = cs.vertcat(x1*(1.0+u**2)**0.5, (1.0+u**2)**0.5)#cs.sqrt(1+u**2)
+        quad = cs.vertcat(x1*(1.0+u**2)**0.5, (1.0+u**2)**0.5)
         self.ODE = {'x':x1, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
         self.multiple_shooting()
         self.set_objective(self.q_tf[0])
@@ -1055,19 +1152,19 @@ class Hanging_Chain(OCProblem):
             x1_start.append(2*abs(b - a)*t*(t - 2*tm) + a)
         x1_start = np.array(x1_start)
         u_start = np.diff(x1_start, 1, 0)/np.diff(self.time_grid, 1, 0)
-        # x2_start = x1_start[1:-1]*u_start[:-1]
         self.set_stage_control(self.start_point, 0, u_start[0])
         for i in range(1,self.ntS):
             self.set_stage_control(self.start_point, i, u_start[i])
             self.set_stage_state(self.start_point, i, [x1_start[i]])
+        self.set_stage_state(self.start_point, self.ntS, x1_start[self.ntS])
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        # u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x, 'r-', label = 'chain')
-        plt.plot(self.time_grid_ref[:-1], u*0.1, 'g-', label = 'u*0.1')
+        plt.plot(self.time_grid, x, 'r-', label = 'chain')
+        # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
         plt.legend()
         
         ttl = None
@@ -1083,6 +1180,73 @@ class Hanging_Chain(OCProblem):
             plt.title('')
             
         plt.show()
+
+
+class Hanging_Chain_NQ(Hanging_Chain):
+    default_params = {'a':1, 'b':3, 'Lp': 4}
+    def build_problem(self):
+        self.set_OCP_data(3,0,1,0,[0.], [10.], [], [], [-10., -np.inf, -np.inf], [20., np.inf, np.inf])
+        
+        a,b,Lp = (self.model_params[key] for key in ['a', 'b', 'Lp'])
+        self.fix_initial_value([a, 0, 0])
+        self.fix_time_horizon(0,1)
+        
+        x_ = cs.MX.sym('x_', 3)
+        x1, _ , _ = cs.vertsplit(x_)
+        u = cs.MX.sym('u',1)
+        dt = cs.MX.sym('dt',1)
+        # ode_rhs = u
+        ode_rhs = cs.vertcat(u, x1*(1.0+u**2)**0.5, (1.0+u**2)**0.5)
+        self.ODE = {'x':x_, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs}
+        self.multiple_shooting()
+        self.set_objective(self.x_eval[1, -1])
+        self.add_constraint(self.x_eval[2, -1] - Lp, 0., 0.)
+        self.add_constraint(self.x_eval[0, -1] - b, 0.,0.)
+        
+        self.build_NLP()
+        
+        if b > a:
+            tm = 0.25
+        else:
+            tm = 0.75
+        x1_start = []
+        for i in range(self.ntS+1):
+            t = self.time_grid[i]
+            x1_start.append(2*abs(b - a)*t*(t - 2*tm) + a)
+        x1_start = np.array(x1_start)
+        u_start = np.diff(x1_start, 1, 0)/np.diff(self.time_grid, 1, 0)
+        
+        x2_start = x1_start[1:]*u_start[:]
+        x3_start = u_start[:]
+        self.set_stage_control(self.start_point, 0, u_start[0])
+        for i in range(1,self.ntS):
+            self.set_stage_control(self.start_point, i, u_start[i])
+            self.set_stage_state(self.start_point, i, [x1_start[i], x2_start[i-1], x3_start[i-1]])
+        self.set_stage_state(self.start_point, self.ntS, [x1_start[self.ntS], x2_start[self.ntS - 1], x3_start[self.ntS - 1]])
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x, _, _ = self.get_state_arrays(xi)
+        # u = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid, x, 'r-', label = 'chain')
+        # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
+        plt.legend()
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Hanging chain problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+
 
 
 class Catalyst_Mixing(OCProblem):
@@ -1105,7 +1269,7 @@ class Catalyst_Mixing(OCProblem):
         
         self.build_NLP()
         
-        for j in range(self.ntS):
+        for j in range(self.ntS+1):
             self.set_stage_state(self.start_point, j, self.x_init)
         
     def plot(self, xi, dpi = None, title = None, it = None):
@@ -1113,11 +1277,11 @@ class Catalyst_Mixing(OCProblem):
         if title is not None:
             plt.title(title)
         x1,x2 = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
-        plt.plot(self.time_grid[:-1], x1, 'r-', label = 'x1')
-        plt.plot(self.time_grid[:-1], x2, 'b-', label = 'x2')
-        plt.step(self.time_grid[:-1], u, 'g', label = 'u')
-        plt.legend()
+        u = self.get_control_plot_arrays(xi)
+        plt.plot(self.time_grid, x1, 'r-', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'b-', label = r'$x_2$')
+        plt.step(self.time_grid, u, 'g', label = r'$u$')
+        plt.legend(fontsize = 'large')
         
         ttl = None
         if isinstance(title,str):
@@ -1133,6 +1297,80 @@ class Catalyst_Mixing(OCProblem):
         
         plt.show()
 
+#Continuously Stirred Tank Reactor
+#TODO: Find correct problem formulation
+# class CSTR(OCProblem):
+#     default_params = {
+#     'k10': 1.287e12,
+#     'k20': 1.287e12,
+#     'k30': 9.043e9,
+#     'E1': -9758.3,
+#     'E2': -9758.3,
+#     'E3': -8560.0,
+#     'H1': 4.2,
+#     'H2': -11.0,
+#     'H3': -41.85,
+#     'rho': 0.9342,
+#     'Cp': 3.01,
+#     'kw': 4032,
+#     'AR': 0.215,
+#     'VR': 10,
+#     'mK': 5,
+#     'CPK': 2.0,
+#     'cA0': 5.1,
+#     'theta0': 104.9
+#     }
+#     def build_problem(self):
+#         self.set_OCP_data(4,0,2,0,[-0.02,-0.02,50.,50.],[6.0,4.0,160.,160.],[],[],[3.,-9000], [35.,0.])
+#         x = cs.MX.sym('x',4)
+#         u = cs.MX.sym('u',2)
+#         cA,cB,theta,thetaK = cs.vertsplit(x)
+#         V,QK = cs.vertsplit(u)
+#         dt = cs.MX.sym('dt')
+        
+#         k10, k20, k30, E1, E2, E3, H1, H2, H3, rho, Cp, kw, AR, VR, mK, CPK, cA0, theta0 = (self.model_params[key] for key in self.default_params)
+#         self.fix_initial_value([2.14,1.09,114.2,112.9])
+#         self.fix_time_horizon(0,1500)
+        
+#         k1 = k10*cs.exp(E1/(theta + 273.15))
+#         k2 = k20*cs.exp(E2/(theta + 273.15))
+#         k3 = k30*cs.exp(E3/(theta + 273.15))
+        
+#         ode_rhs = cs.vertcat(
+#             V/VR * (cA0 - cA) - k1*cA - k3*cA**2,
+#             -V/VR * cB + k1*cA - k2*cB,
+#             V/VR*(theta0 - theta) + kw*AR/(rho*Cp*VR) * (thetaK - theta) - 1/(rho*Cp) * (k1*cA*H1 + k2*cB*H2 + k3*cA**2*H3),
+#             1/(mK*CPK) * (QK + kw*AR*(theta - thetaK))
+#             )
+        
+#         self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode': dt*ode_rhs}
+        
+#         self.multiple_shooting()
+#         self.set_objective(-self.x_eval[0,-1])
+#         self.build_NLP()
+        
+#         u_init = [14.19, -1113.5]
+#         self.set_stage_control(self.start_point, 0, u_init)
+#         for i in range(1,self.ntS):
+#             self.set_stage_state(self.start_point, i, self.x_init)
+#             self.set_stage_control(self.start_point, i, u_init)
+#         # self.integrate_full(self.start_point)
+        
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         V, Qk = self.get_control_plot_arrays(xi)
+#         cA,cB,theta,thetaK = self.get_state_arrays(xi)
+        
+#         plt.figure(dpi = dpi)
+#         plt.step(self.time_grid, V, 'b-', label = 'V')
+#         plt.step(self.time_grid, Qk/500, 'y-', label = 'Qk/500')
+        
+#         plt.plot(self.time_grid, cA, 'r-', label = 'cA')
+#         plt.plot(self.time_grid, cB, 'g-', label = 'cB')
+#         plt.plot(self.time_grid, theta, 'b-', label = 'theta')
+#         plt.plot(self.time_grid, thetaK/10, 'c-', label = 'thetaK/10')
+#         plt.legend()
+#         plt.show()
+        
 
 class Cushioned_Oscillation(OCProblem):
     default_params = {'m':5.,'c':10.,'x0':2.,'v0':5.,'umm':5.}
@@ -1158,18 +1396,19 @@ class Cushioned_Oscillation(OCProblem):
         for i in range(1,self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_param(self.start_point, i, 10/self.ntS)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x,v = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         time_grid = np.cumsum(np.concatenate([[0], p.reshape(-1)]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], x, 'b-', label = 'x')
-        plt.plot(time_grid[:-1], v, 'g-', label = 'v')
-        plt.step(time_grid[:-1], u, 'r', label = 'u')
-        plt.legend()
+        plt.plot(time_grid, x, 'b-', label = 'x')
+        plt.plot(time_grid, v, 'g-', label = 'v')
+        plt.step(time_grid, u, 'r', label = 'u')
+        plt.legend(loc='upper right')
         
         ttl = None
         if isinstance(title,str):
@@ -1183,7 +1422,6 @@ class Cushioned_Oscillation(OCProblem):
         else:
             plt.title('')
         plt.show()
-                              
 
 
 class D_Onofrio_Chemotherapy(OCProblem):
@@ -1243,20 +1481,18 @@ class D_Onofrio_Chemotherapy(OCProblem):
         self.set_objective(self.x_eval[0,-1] + alpha*self.q_tf[0])
         self.add_constraint(self.q_tf[1:3] - cs.DM([x2max,x3max]), [-np.inf,-np.inf], [0.,0.])
         self.build_NLP()
-        for i in range(1,self.ntS):
-            self.set_stage_state(self.start_point, i, self.x_init)
         self.integrate_full(self.start_point)
     
     def plot(self, xi, dpi = None, title = None, it = None):
         time_grid = self.time_grid
         x0,x1 = self.get_state_arrays(xi)
-        u0,u1 = self.get_control_arrays(xi)
+        u0,u1 = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], x0/100., 'r-', label = 'x0/100')
-        plt.plot(time_grid[:-1], x1/100., 'g-', label = 'x1/100')
-        plt.step(time_grid[:-1], u0, 'r-', label = 'u0')
-        plt.step(time_grid[:-1], u1*75, 'g-', label = 'u1*75')
+        plt.plot(time_grid, x0/100., 'r-', label = 'x0/100')
+        plt.plot(time_grid, x1/100., 'g-', label = 'x1/100')
+        plt.step(time_grid, u0, 'y-', label = 'u0')
+        plt.step(time_grid, u1*75, 'c-', label = 'u1*75')
         plt.legend()
         
         ttl = None
@@ -1271,7 +1507,102 @@ class D_Onofrio_Chemotherapy(OCProblem):
         else:
             plt.title('')
             
-        plt.show()
+        plt.show()    
+    
+class D_Onofrio_Chemotherapy_VT(OCProblem):
+    default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0.}
+    param_set_1 = {
+        'x00': 12000,
+        'x10': 15000,
+        'u1max': 1,
+        'x3max': 2
+    }
+    
+    param_set_2 = {
+        'x00': 12000,
+        'x10': 15000,
+        'u1max': 2,
+        'x3max': 10
+    }
+    
+    param_set_3 = {
+        'x00': 14000,
+        'x10': 5000,
+        'u1max': 1,
+        'x3max': 2
+    }
+    
+    param_set_4 = {
+        'x00': 14000,
+        'x10': 5000,
+        'u1max': 2,
+        'x3max': 10
+    }
+    
+    def __init__(self, nt = 20, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
+        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel,**kwargs)
+
+    
+    def build_problem(self):
+        zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
+        self.set_OCP_data(4,1,2,1,[0.1,0.1,0.,0.], [np.inf,np.inf,x2max,x3max], [4/self.ntS], [20/self.ntS], [0.,0.],[u0max,u1max])
+        #Note: Lower bounds 0.1,0.1 for differential states required as integrations fails at 0, 0 due to numerical errors causing negative states
+        self.fix_initial_value([x00,x10,x20,x30])
+        # self.fix_time_horizon(0, 6.0)
+        
+        x = cs.MX.sym('x', 4)
+        x0,x1,x2,x3 = cs.vertsplit(x)
+        u = cs.MX.sym('u', 2)
+        u0,u1 = cs.vertsplit(u)
+        p = cs.MX.sym('p', 1)
+        dt = p
+        # dt = cs.MX.sym('dt')
+        
+        ode_rhs = cs.vertcat(-zeta*x0*cs.log(x0/x1) - F*x0*u1,
+                             b*x0 - mu*x1 - d*x0**(2./3.)*x1 - G*u0*x1 - eta*x1*u1,
+                             u0,
+                             u1
+                             )
+        quad = u0**2
+        self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad':dt*quad}
+        self.multiple_shooting()
+        self.set_objective(20*self.p_tf*self.ntS+self.x_eval[0,-1] + alpha*self.q_tf)
+        self.build_NLP()
+        self.set_stage_param(self.start_point, 0, 4/self.ntS)
+        for i in range(1,self.ntS):
+            self.set_stage_param(self.start_point, i, 6/self.ntS)
+        self.integrate_full(self.start_point)
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        p = self.get_param_arrays(xi)
+        time_grid = np.cumsum(np.concatenate([[0], p]))
+        # time_grid = self.time_grid
+        x0,x1,x2,x3 = self.get_state_arrays(xi)
+        u0,u1 = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(time_grid, x0/100., 'r-', label = 'x0/100')
+        plt.plot(time_grid, x1/100., 'g-', label = 'x1/100')
+        plt.plot(time_grid, x2, 'b-', label = 'x2')
+        plt.plot(time_grid, x3, 'c-', label = 'x3')
+        plt.step(time_grid, u0, 'r-', label = 'u0')
+        plt.step(time_grid, u1*75, 'g-', label = 'u1*75')
+        plt.legend()
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'D\'Onofrio chemotherapy problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()   
+             
         
 
 class Egerstedt_Standard(OCProblem):
@@ -1303,18 +1634,19 @@ class Egerstedt_Standard(OCProblem):
         for i in range(1,self.ntS):
             self.set_stage_control(self.start_point, i, [1/3]*3)
             self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays(xi)
-        w1,w2,w3 = self.get_control_arrays(xi)
+        w1,w2,w3 = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x1, 'c-', label = 'x1')
-        plt.plot(self.time_grid[:-1], x2, 'y-', label = 'x2')
-        plt.step(self.time_grid[:-1], w1, 'r-', label = 'w1')
-        plt.step(self.time_grid[:-1], w2, 'b-', label = 'w2')
-        plt.step(self.time_grid[:-1], w3, 'g-', label = 'w3')
-        plt.legend(loc = 'center left')
+        plt.plot(self.time_grid, x1, 'c-', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'y-', label = r'$x_2$')
+        plt.step(self.time_grid, w1, 'r-', label = r'$w_1$')
+        plt.step(self.time_grid, w2, 'b-', label = r'$w_2$')
+        plt.step(self.time_grid, w3, 'g-', label = r'$w_3$')
+        plt.legend(loc = 'center left', fontsize = 'large')
         
         ttl = None
         if isinstance(title,str):
@@ -1355,16 +1687,17 @@ class Fullers(OCProblem):
         for i in range(1,self.ntS):
             self.set_stage_control(self.start_point, i, 0.5)
             self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x1*20, 'r-', label = 'x1*20')
-        plt.plot(self.time_grid[:-1], x2, 'b-', label = 'x2')
-        plt.step(self.time_grid[:-1], u, 'g-', label = 'u')
-        plt.legend(loc = 'right')
+        plt.plot(self.time_grid, x1*20, 'r-', label = r'$x_1\cdot 20$')
+        plt.plot(self.time_grid, x2, 'b-', label = r'$x_2 $')
+        plt.step(self.time_grid, u, 'g-', label = r'$u$')
+        plt.legend(loc = 'right', fontsize = 'large')
         
         ttl = None
         if isinstance(title,str):
@@ -1429,13 +1762,16 @@ class Electric_Car(OCProblem):
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1,x2 = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         
+        # if dpi is not None:
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x0, 'r-', label = 'x0')
-        plt.plot(self.time_grid[:-1], x1, 'g-', label = 'x1')
-        plt.plot(self.time_grid[:-1], x2, 'b-', label = 'x2')
-        plt.step(self.time_grid_ref[:-1], u*100, 'y-', label = 'u*100')
+        # else:
+        #     plt.figure(dpi = dpi)
+        plt.plot(self.time_grid, x0, 'r-', label = r'$x_0$')
+        plt.plot(self.time_grid, x1, 'g-', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'b-', label = r'$x_2$')
+        plt.step(self.time_grid_ref, u*100, 'y-', label = r'$u\cdot 100$')
         
         ttl = None
         if isinstance(title,str):
@@ -1477,18 +1813,19 @@ class F8_Aircraft(OCProblem):
         for i in range(0, self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_param(self.start_point, i, 5./self.ntS)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1,x2 = self.get_state_arrays(xi)
-        w = self.get_control_arrays(xi)
+        w = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         time_grid = np.cumsum(np.concatenate([[0.], p]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], x0, 'r-', label = 'x0')
-        plt.plot(time_grid[:-1], x1, 'g-', label = 'x1')
-        plt.plot(time_grid[:-1], x2, 'b-', label = 'x2')
-        plt.step(time_grid[:-1], w*20, 'y-', label = 'w*20')
+        plt.plot(time_grid, x0, 'r-', label = 'x0')
+        plt.plot(time_grid, x1, 'g-', label = 'x1')
+        plt.plot(time_grid, x2, 'b-', label = 'x2')
+        plt.step(time_grid, w*20, 'y-', label = 'w*20')
         plt.legend()
         
         ttl = None
@@ -1505,7 +1842,6 @@ class F8_Aircraft(OCProblem):
         
         plt.show()
         
-
 class Gravity_Turn(OCProblem):
     default_params = {
     "m0": 11.3,
@@ -1525,6 +1861,9 @@ class Gravity_Turn(OCProblem):
     "Tmax": 600.,
     "eps": 1e-6
     }
+    
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
 
     def build_problem(self):
         m0, m1, Isp, Fmax, cd, A, g0, r0, H, rho0, betaT, vT, hT, Tmin, Tmax, eps= (self.model_params[key] for key in ['m0', 'm1', 'Isp', 'Fmax', 'cd', 'A', 'g0', 'r0', 'H', 'rho0', 'betaT', 'vT', 'hT', 'Tmin', 'Tmax', 'eps'])
@@ -1561,25 +1900,25 @@ class Gravity_Turn(OCProblem):
         
     def plot(self, xi, dpi = None, title = None, it = None):
         m,v,beta,h = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0.],p]))
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], m, 'g-', label = 'm')
-        plt.plot(time_grid[:-1], v*10, 'b-', label = 'v*10')
-        plt.plot(time_grid[:-1], beta*20, 'r-', label = 'beta*20')
-        plt.plot(time_grid[:-1], h, 'y-', label = 'h')
-        plt.step(time_grid_ref[:-1], u*20, 'c-', label = 'u*20')
+        plt.plot(time_grid, m, 'g-', label = 'm')
+        plt.plot(time_grid, v*10, 'b-', label = 'v*10')
+        plt.plot(time_grid, beta*20, 'r-', label = 'beta*20')
+        plt.plot(time_grid, h, 'y-', label = 'h')
+        plt.step(time_grid_ref, u*20, 'c-', label = 'u*20')
         plt.legend()
         
         ttl = None
         if isinstance(title,str):
             ttl = title
         elif title == True:
-            ttl = 'Graviti turn maneuver problem'
+            ttl = 'Gravity turn maneuver problem'
         if ttl is not None:
             if isinstance(it, int):
                 ttl = ttl + f', iteration {it}'
@@ -1588,7 +1927,7 @@ class Gravity_Turn(OCProblem):
             plt.title('')
         plt.show()
 
-
+#TODO: Revisit
 class Oil_Shale_Pyrolysis(OCProblem):
     default_params = {'b1':20.3,
                       'b2':37.4,
@@ -1629,22 +1968,23 @@ class Oil_Shale_Pyrolysis(OCProblem):
             self.set_stage_param(self.start_point, i, 20./self.ntS)
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_control(self.start_point, i, 698.15)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,x3,x4 = self.get_state_arrays(xi)
-        T = self.get_control_arrays(xi)
+        T = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0.],p]))
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], x1, 'b-', label = 'x1')
-        plt.plot(time_grid[:-1], x2, 'g-', label = 'x2')
-        plt.plot(time_grid[:-1], x3, 'r-', label = 'x3')
-        plt.plot(time_grid[:-1], x4, 'c-', label = 'x4')
+        plt.plot(time_grid, x1, 'b-', label = 'x1')
+        plt.plot(time_grid, x2, 'g-', label = 'x2')
+        plt.plot(time_grid, x3, 'r-', label = 'x3')
+        plt.plot(time_grid, x4, 'c-', label = 'x4')
         
-        plt.step(time_grid_ref[:-1], (T - 698.15)/50, 'r', label = '(T-698.15)/50')
+        plt.step(time_grid_ref, (T - 698.15)/50, 'r', label = '(T-698.15)/50')
         plt.legend()
         
         ttl = None
@@ -1694,18 +2034,18 @@ class Particle_Steering(OCProblem):
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,y1,y2 = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0.],p]))
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], x1, 'b-', label = 'x1')
-        plt.plot(time_grid[:-1], x2, 'g-', label = 'x2')
-        plt.plot(time_grid[:-1], y1, 'y-', label = 'y1')
-        plt.plot(time_grid[:-1], y2, 'c-', label = 'y2')
-        plt.step(time_grid_ref[:-1], u*10, 'r', label = 'u*10')
+        plt.plot(time_grid, x1, 'b-', label = r'$x_1$')
+        plt.plot(time_grid, x2, 'g-', label = r'$x_2$')
+        plt.plot(time_grid, y1, 'y-', label = r'$y_1$')
+        plt.plot(time_grid, y2, 'c-', label = r'$y_2$')
+        plt.step(time_grid_ref, u*10, 'r', label = r'$u\cdot 10$')
         plt.legend()
         
         ttl = None
@@ -1755,22 +2095,21 @@ class Quadrotor_Helicopter(OCProblem):
         
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [1/2,0.,1/2, 0.001])
-            self.set_stage_state(self.start_point, i, [0.,0.,1.,0.,0.,0.])
         self.integrate_full(self.start_point)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,_,x3,_,x5,_ = self.get_state_arrays(xi)
-        w1,w2,w3,u = self.get_control_arrays(xi)
+        w1,w2,w3,u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x1, 'b--', label = 'x1')
-        plt.plot(self.time_grid[:-1], x3*3, 'g--', label = 'x3*3')
-        plt.plot(self.time_grid[:-1], x5*20, 'y--', label = 'x5*20')
+        plt.plot(self.time_grid, x1, 'b--', label = 'x1')
+        plt.plot(self.time_grid, x3*3, 'g--', label = 'x3*3')
+        plt.plot(self.time_grid, x5*20, 'y--', label = 'x5*20')
         
-        plt.step(self.time_grid[:-1], w1, 'r', label = 'w1')
-        plt.step(self.time_grid[:-1], w2, 'g', label = 'w2')
-        plt.step(self.time_grid[:-1], w3, 'b', label = 'w3')
-        plt.step(self.time_grid[:-1], u*2000, 'c', label = 'u*2000')
+        plt.step(self.time_grid, w1, 'r', label = 'w1')
+        plt.step(self.time_grid, w2, 'g', label = 'w2')
+        plt.step(self.time_grid, w3, 'b', label = 'w3')
+        plt.step(self.time_grid, u*2000, 'c', label = 'u*2000')
         plt.legend()
         
         ttl = None
@@ -1808,6 +2147,10 @@ class Supermarket_Refrigeration(OCProblem):
     "Vsl": 0.08,
     "etavol": 0.81
     }
+    
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+
     def build_problem(self):
         self.set_OCP_data(9, 1, 3, 1, [0., -5.,-20.,2.0,0.01, -5.,-20.0, 2.0, 0.01], [1.7, 10.,0.,5.0,20.,10.,0.,5.0,20.], [650./self.ntS], [750./self.ntS], [0.,0.,0.], [1.,1.,1.])
         
@@ -1845,16 +2188,16 @@ class Supermarket_Refrigeration(OCProblem):
         self.add_constraint(self.x_eval[:,0] - self.x_eval[:,-1], 0.,0.)
         self.build_NLP()
         
+        self.set_stage_state(self.start_point, 0, [1.] + [2.]*2 + [0.2] + [2.]*5)
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [1.,1.,1.])
-            self.set_stage_state(self.start_point, i, [1.] + [2.]*2 + [0.2] + [2.]*5)
             self.set_stage_param(self.start_point, i, [650/self.ntS])
         self.integrate_full(self.start_point)
         
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1,x2,x3,x4,x5,x6,x7,x8 = self.get_state_arrays(xi)
-        u0,u1,u2 = self.get_control_arrays(xi)
+        u0,u1,u2 = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0.],p]))
@@ -1862,10 +2205,10 @@ class Supermarket_Refrigeration(OCProblem):
         
         plt.figure(dpi = dpi)
         for val, clr, lbl in zip([x0,x1,x2,x3,x4,x5,x6,x7,x8], ['y-','c-','m-','r--','g--','b--','r.','g.','b.'], ['x0','x1','x2','x3','x4','x5','x6','x7','x8']):
-            plt.plot(time_grid[:-1], val, clr, label = lbl)
-        plt.step(time_grid_ref[:-1], u0, 'r', label = 'u0')
-        plt.step(time_grid_ref[:-1], u1, 'g', label = 'u1')
-        plt.step(time_grid_ref[:-1], u2, 'b', label = 'u2')
+            plt.plot(time_grid, val, clr, label = lbl)
+        plt.step(time_grid_ref, u0, 'r', label = 'u0')
+        plt.step(time_grid_ref, u1, 'g', label = 'u1')
+        plt.step(time_grid_ref, u2, 'b', label = 'u2')
         plt.legend()
         
         ttl = None
@@ -1912,19 +2255,20 @@ class Three_Tank_Multimode(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [1/3,1/3,1/3])
             self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,x3 = self.get_state_arrays(xi)
-        w1,w2,w3 = self.get_control_arrays(xi)
+        w1,w2,w3 = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x1, 'r-', label = 'x1')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
-        plt.plot(self.time_grid[:-1], x2, 'b-', label = 'x2')
-        plt.plot(self.time_grid[:-1], x3, 'c-', label = 'x3')
-        plt.step(self.time_grid[:-1], w1, color = 'g', label = 'w1')
-        plt.step(self.time_grid[:-1], w2, color = 'r', label = 'w2')
-        plt.step(self.time_grid[:-1], w3, color = 'b', label = 'w3')
-        plt.legend()
+        plt.plot(self.time_grid, x1, 'r-', label = r'x_1')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
+        plt.plot(self.time_grid, x2, 'b-', label = r'x_2')
+        plt.plot(self.time_grid, x3, 'c-', label = r'x_3')
+        plt.step(self.time_grid_ref, w1, color = 'g', label = r'w_1')
+        plt.step(self.time_grid_ref, w2, color = 'r', label = r'w_2')
+        plt.step(self.time_grid_ref, w3, color = 'b', label = r'w_3')
+        plt.legend(fontsize = 'large', loc = 'upper right')
         
         ttl = None
         if isinstance(title,str):
@@ -1961,19 +2305,24 @@ class Time_Optimal_Car(OCProblem):
         self.build_NLP()
         for i in range(self.ntS):
             self.set_stage_param(self.start_point, i, 10/self.ntS)
+        # for i in range(math.floor(self.ntS*0.5)):
+        #     self.set_stage_control(self.start_point, i, 1.)
+        # for i in range(math.floor(self.ntS*0.5), self.ntS):
+        #     self.set_stage_control(self.start_point, i, 0.5)
+        # self.integrate_full(self.start_point)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         z1,z2 = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0.],p]))
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid[:-1], z1, 'b-', label = 'z1')
-        plt.plot(time_grid[:-1], z2*5, 'g-', label = 'z2*5')
-        plt.step(time_grid_ref[:-1], u*20, 'r', label = 'u*20')
+        plt.plot(time_grid, z1, 'b-', label = 'z1')
+        plt.plot(time_grid, z2*5, 'g-', label = 'z2*5')
+        plt.step(time_grid_ref, u*20, 'r', label = 'u*20')
         plt.legend()
         
         ttl = None
@@ -1991,6 +2340,9 @@ class Time_Optimal_Car(OCProblem):
         plt.show()
         
 class Van_der_Pol_Oscillator(OCProblem):
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+
     default_params = dict()
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[-10.,-10.], [10.,10.], [], [], [-np.inf], [0.75])
@@ -2006,18 +2358,18 @@ class Van_der_Pol_Oscillator(OCProblem):
         self.multiple_shooting()
         self.set_objective(self.q_tf)
         self.build_NLP()
-        for i in range(self.ntS):
+        for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.x_init)
         
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x, 'g-', label = 'x')
-        plt.plot(self.time_grid[:-1], y, 'b-', label = 'y')
-        plt.step(self.time_grid_ref[:-1], u, 'r', label = 'u')
+        plt.plot(self.time_grid, x, 'g-', label = 'x')
+        plt.plot(self.time_grid, y, 'b-', label = 'y')
+        plt.step(self.time_grid_ref, u, 'r', label = 'u')
         plt.legend()
         
         ttl = None
@@ -2036,6 +2388,9 @@ class Van_der_Pol_Oscillator(OCProblem):
 
 
 class Van_der_Pol_Oscillator_2(OCProblem):
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+
     default_params = dict()
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[-10.,-10.], [10.,10.], [], [], [-np.inf], [0.75])
@@ -2051,18 +2406,18 @@ class Van_der_Pol_Oscillator_2(OCProblem):
         self.multiple_shooting()
         self.set_objective(self.q_tf)
         self.build_NLP()
-        for i in range(self.ntS):
+        for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.x_init)
         
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x, 'g-', label = 'x')
-        plt.plot(self.time_grid[:-1], y, 'b-', label = 'y')
-        plt.step(self.time_grid_ref[:-1], u, 'r', label = 'u')
+        plt.plot(self.time_grid, x, 'g-', label = 'x')
+        plt.plot(self.time_grid, y, 'b-', label = 'y')
+        plt.step(self.time_grid_ref, u, 'r', label = 'u')
         plt.legend()
         
         ttl = None
@@ -2080,6 +2435,9 @@ class Van_der_Pol_Oscillator_2(OCProblem):
         plt.show()    
 
 class Van_der_Pol_Oscillator_3(OCProblem):
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+
     default_params = dict()
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[-0.25,-0.25], [10.,10.], [], [], [-1.], [1.])
@@ -2097,16 +2455,18 @@ class Van_der_Pol_Oscillator_3(OCProblem):
         self.build_NLP()
         for i in range(self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
-            self.set_stage_control(self.start_point, i, [0.])
+            self.set_stage_control(self.start_point, i, [0.5])
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
+        self.integrate_full(self.start_point)
         
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y = self.get_state_arrays(xi)
-        u = self.get_control_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid[:-1], x, 'g-', label = 'x')
-        plt.plot(self.time_grid[:-1], y, 'b-', label = 'y')
-        plt.step(self.time_grid_ref[:-1], u, 'r', label = 'u')
+        plt.plot(self.time_grid, x, 'g-', label = 'x')
+        plt.plot(self.time_grid, y, 'b-', label = 'y')
+        plt.step(self.time_grid_ref, u, 'r', label = 'u')
         plt.legend()
         
         ttl = None
@@ -2122,82 +2482,84 @@ class Van_der_Pol_Oscillator_3(OCProblem):
             plt.title('')
             
         plt.show()    
+        
+class Ocean(OCProblem):
+    default_params = {
+        'rho':0.03,
+        'gamma':0.001,
+        'omega':0.1,
+        'b':50.,
+        'mu':0.5,
+        'a1':2.,
+        'a2':2.,
+        'nu':1.,
+        'c1':50.,
+        'c2':0.004,
+        'Spreind':600.,
+        'S0':2000.,
+        'R0':1e4,
+        'DL0':2.3e4
+        }
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
 
-
-# class Ocean(OCProblem):
-#     default_params = {
-#         'rho':0.03,
-#         'gamma':0.001,
-#         'omega':0.1,
-#         'b':50.,
-#         'mu':0.5,
-#         'a1':2.,
-#         'a2':2.,
-#         'v':1.,
-#         'nu':1.,
-#         'c1':50.,
-#         'c2':0.004,
-#         'Spreind':600.,
-#         'S0':2000.,
-#         'R0':1e4,
-#         'DL0':2.3e4
-#         }
     
-#     def build_problem(self):
-#         self.set_OCP_data(3,0,2,1,[0.,0.,0.],[1e5,1e5,np.inf],[],[],[0.,0.],[40.,40.])
+    def build_problem(self):
+        self.set_OCP_data(3,0,2,1,[0.,0.,0.],[1e5,1e5,np.inf],[],[],[0.,0.],[40.,40.])
         
-#         rho, gamma, omega, b, mu, a1, a2, v, nu, c1, c2, Spreind, S0, R0, DL0 = (self.model_params[key] for key in ['rho', 'gamma', 'omega', 'b', 'mu', 'a1', 'a2', 'v', 'nu', 'c1', 'c2', 'Spreind', 'S0', 'R0', 'DL0'])
-#         self.fix_time_horizon(0.,400.)
-#         self.fix_initial_value([S0,R0,0.])
+        rho, gamma, omega, b, mu, a1, a2, nu, c1, c2, Spreind, S0, R0, DL0 = (self.model_params[key] for key in ['rho', 'gamma', 'omega', 'b', 'mu', 'a1', 'a2', 'nu', 'c1', 'c2', 'Spreind', 'S0', 'R0', 'DL0'])
+        self.fix_time_horizon(0.,400.)
+        self.fix_initial_value([S0,R0,0.])
         
-#         x = cs.MX.sym('x',3)
-#         S,R,t = cs.vertsplit(x)
-#         u = cs.MX.sym('u',2)
-#         u1,u2 = cs.vertsplit(u)
-#         dt = cs.MX.sym('dt')
+        x = cs.MX.sym('x',3)
+        S,R,t = cs.vertsplit(x)
+        u = cs.MX.sym('u',2)
+        u1,u2 = cs.vertsplit(u)
+        dt = cs.MX.sym('dt')
         
-#         U = b*u1 - mu*u1**2
-#         A = a1*u2 + a2*u2**2
-#         C = c1 - c2*R
-#         D = v*(0.3*S-Spreind)**2
-#         DL = DL0 + R0 + S0 - R - S
+        U = b*u1 - mu*u1**2
+        A = a1*u2 + a2*u2**2
+        C = c1 - c2*R
+        D = nu*(0.3*S-Spreind)**2
+        DL = DL0 + R0 + S0 - R - S
         
-#         ode_rhs = cs.vertcat(u1 - u2 - gamma*(S - omega*DL), -u1, cs.DM(1.))
+        ode_rhs = cs.vertcat(u1 - u2 - gamma*(S - omega*DL), -u1, cs.DM(1.))
         
-#         quad = cs.exp(-rho*t)*(U - A - u1*C - D)
-#         self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
-#         self.multiple_shooting()
-#         self.set_objective(-self.q_tf)
-#         self.build_NLP()
+        quad = cs.exp(-rho*t)*(U - A - u1*C - D)
+        self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
+        self.multiple_shooting()
+        self.set_objective(-self.q_tf)
+        self.build_NLP()
         
-#         for i in range(self.ntS):
-#             self.set_stage_control(self.start_point, i, [30.,10.])
-#             self.set_stage_state(self.start_point, i, self.x_init)
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [30.,10.])
+            self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
-#     def plot(self, xi, dpi = None, title = None, it = None):
-#         S,R,_ = self.get_state_arrays(xi)
-#         u1,u2 = self.get_control_arrays(xi)
+    def plot(self, xi, dpi = None, title = None, it = None):
+        S,R,_ = self.get_state_arrays(xi)
+        u1,u2 = self.get_control_plot_arrays(xi)
         
-#         plt.figure(dpi = dpi)
-#         plt.plot(self.time_grid[:-1], S-2000, 'r-', label = 'S-2000')
-#         plt.plot(self.time_grid[:-1], R/1000, 'g-', label = 'R/1000')
-#         plt.step(self.time_grid_ref[:-1], u1, 'b', label = 'u1')
-#         plt.step(self.time_grid_ref[:-1], u2, 'c', label = 'u2')
-#         plt.legend()
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid, S-2000, 'r-', label = 'S-2000')
+        plt.plot(self.time_grid, R/1000, 'g-', label = 'R/1000')
+        plt.step(self.time_grid_ref, u1, 'b', label = 'u1')
+        plt.step(self.time_grid_ref, u2, 'c', label = 'u2')
+        plt.legend()
         
-#         ttl = None
-#         if isinstance(title,str):
-#             ttl = title
-#         elif title == True:
-#             ttl = 'Ocean problem'
-#         if ttl is not None:
-#             if isinstance(it, int):
-#                 ttl = ttl + f', iteration {it}'
-#             plt.title(ttl)
-#         else:
-#             plt.title('')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Ocean problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
             
-#         plt.show()
+        plt.show()
 
 class Lotka_OED(OCProblem):
     default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0}
@@ -2238,19 +2600,18 @@ class Lotka_OED(OCProblem):
         self.integrate_full(self.start_point)
         
     def plot(self, xi, dpi = None, title = None, it = None):
-        time_grid = self.time_grid
-        u,w1,w2 = self.get_control_arrays(xi)
+        u,w1,w2 = self.get_control_plot_arrays(xi)
         x1,x2,_,_,_,_,_,_,_ = self.get_state_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.step(time_grid[:-1], u, 'b-', label = 'u')
-        plt.step(time_grid[:-1], w1, 'y-', label = 'w1')
-        plt.step(time_grid[:-1], w2, 'g--', label = 'w2')
-        plt.plot(time_grid[:-1], x1, 'c-', label = 'x1')
-        plt.plot(time_grid[:-1], x2, 'm-', label = 'x2')
+        plt.step(self.time_grid_ref, u, 'b-', label = r'$u$')
+        plt.step(self.time_grid_ref, w1, 'y-', label = r'$w_1$')
+        plt.step(self.time_grid_ref, w2, 'g--', label = r'$w_2$')
+        plt.plot(self.time_grid, x1, 'c-', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'm-', label = r'$x_2$')
         plt.ylim(0.,4.)
         
-        plt.legend()
+        plt.legend(fontsize = 'large', loc = 'upper left')
         ttl = None
         if isinstance(title,str):
             ttl = title
@@ -2263,3 +2624,402 @@ class Lotka_OED(OCProblem):
         else:
             plt.title('')
         plt.show()
+
+class Lotka_OED_Q(Lotka_OED):
+    default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0}
+    def build_problem(self):
+        self.set_OCP_data(6, 0, 3, 5, [0.,0.]+[-np.inf]*4, [np.inf]*6,[],[],[0.]*3, [1.]*3)
+        tf,p1,p2,p3,p4,p5,p6,x_init,M = (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M'])
+        self.fix_time_horizon(0.,tf)
+        self.fix_initial_value(x_init + [0.]*4)
+        
+        S = cs.MX.sym('S', 6)
+        x1, x2, G11, G12, G21, G22 = cs.vertsplit(S)
+        #(Measurement -) Controls C
+        C = cs.MX.sym('C', 3)
+        u, w1, w2 = cs.vertsplit(C)
+        
+        dt = cs.MX.sym('dt', 1)
+        ode_rhs = cs.vertcat(
+                p1*x1 - p2*x1*x2 - p5*u*x1,
+                -p3*x2 + p4*x1*x2 - p6*u*x2,
+                (p1 - p2*x2 - p5*u)*G11 + (-p2*x1)*G21 - x1*x2,
+                (p1 - p2*x2 - p5*u)*G12 + (-p2*x1)*G22,
+                (p4*x2)*G11 + (-p3 + p4*x1 - p6*u)*G21,
+                (p4*x2)*G12 + (-p3 + p4*x1 - p6*u)*G22  + x1*x2,
+        )
+        quad_expr = cs.vertcat(
+                            w1, 
+                            w2,
+                            w1*(G11**2) + w2*(G21**2),
+                            w1*G11*G12 + w2*G21*G22,
+                            w1*(G12**2) + w2*(G22**2))
+        self.ODE = {'x': S, 'p':cs.vertcat(dt, C),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        F11T,F12T,F22T = cs.vertsplit(self.q_tf[2:5])
+        self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
+        self.add_constraint(self.q_tf[0:2] - M, -np.inf, 0.)
+        self.build_NLP()
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0., M/12., M/12.])
+        self.integrate_full(self.start_point)
+        
+    def plot(self, xi, dpi = None, title = None, it = None):
+        u,w1,w2 = self.get_control_plot_arrays(xi)
+        x1,x2,_,_,_,_, = self.get_state_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.step(self.time_grid_ref, u, 'b-', label = r'$u$')
+        plt.step(self.time_grid_ref, w1, 'y-', label = r'$w_1$')
+        plt.step(self.time_grid_ref, w2, 'g--', label = r'$w_2$')
+        plt.plot(self.time_grid, x1, 'c-', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'm-', label = r'$x_2$')
+        plt.ylim(0.,4.)
+        
+        plt.legend(fontsize = 'large', loc = 'upper left')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Lotka OED problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+class Fermenter(OCProblem):
+    #Janka PhD and Le master's thesis params
+    default_params = {'mux':2e5,
+                      'mup':5000,
+                      'gxg':5e4,
+                      'gx1':1e5,
+                      'gp1':2e4,
+                      'gx2':1500,
+                      'gp2':5e4
+                      }
+    
+    #MUSCOD II example params
+    # default_params = {'mux':2e5,
+    #                   'mup':5000,
+    #                   'gxg':5e4,
+    #                   'gx1':1e5,
+    #                   'gp1':2e4,
+    #                   'gx2':0.5e4,
+    #                   'gp2':1.5e3
+    #                   }
+    
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+
+    def build_problem(self):
+        self.set_OCP_data(6, 0, 3, 3, [0.,0.,0.,0.,0.3,0.], [0.1,0.04,0.03,0.1,0.45,0.1], [], [], [0.,0.,0.], [15.,1.,30.])
+        mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
+        self.fix_time_horizon(0.,1.)
+        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1])
+        x = cs.MX.sym('x', 6)
+        P,S1,S2,E,V,G = cs.vertsplit(x)
+        u = cs.MX.sym('u', 3)
+        uS1,uS2,uP = cs.vertsplit(u)
+        dt = cs.MX.sym('dt', 1)
+        
+        #In Le, first term in rhs for S1,S2 and G enters with positive sign, negative in Janka and MUSCOD
+        ode_rhs = cs.vertcat(
+                mup*E*S1*S2 - P*(uS1+uS2)/(25*V),
+                -gx1*E*S1*S2*G - gp1*E*S1*S2 + (0.42*uS1 - S1*(uS1 + uS2))/(25*V),
+                -gx2*E*S1*S2*G - gp2*E*S1*S2 + (0.333*uS2 - S2*(uS1 + uS2))/(25*V),
+                mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
+                uS1 + uS2 - uP,
+                -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V)
+            )
+        quad_expr = cs.vertcat(
+                uP*P + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),
+                0.0168*uS1,
+                0.01332*uS2
+            )
+        
+        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode':dt*ode_rhs, 'quad':dt*quad_expr}
+        self.multiple_shooting()
+        self.add_constraint(self.q_tf, [0.,0.,0.], [0.05,0.2,0.025])
+        self.set_objective(2*(0.009 + self.q_tf[1])*(0.009+self.q_tf[2])/self.q_tf[0])
+        self.build_NLP()
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [14*(self.ntS - 1 - i)/(self.ntS-1), 0.7, 0.5])
+            
+        self.integrate_full(self.start_point)
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        P,S1,S2,E,V,G = self.get_state_arrays(xi)
+        uS1,uS2,uP = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi=dpi)
+        plt.step(self.time_grid_ref, uS1/15, 'r', label = 'uS1/15')
+        plt.step(self.time_grid_ref, uS2/10, 'g', label = 'uS2/10')
+        plt.step(self.time_grid_ref, uP/30, 'b', label = 'uP/30')
+        
+        plt.plot(self.time_grid, P, 'r-', label = 'P')
+        plt.plot(self.time_grid, S1, 'g-', label = 'S1')
+        plt.plot(self.time_grid, S2, 'b-', label = 'S2')
+        plt.plot(self.time_grid, E, 'y-', label = 'E')
+        plt.plot(self.time_grid, V/3, 'c-', label = 'V/3')
+        plt.plot(self.time_grid, G, 'm-', label = 'G')
+        plt.legend()
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Fermenter problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+
+class Batch_Distillation(OCProblem):
+    default_params = {'M0init':100.,
+                      'MDinit':0.1,
+                      'x0init':0.5,
+                      'xinit':1.0,
+                      'xCinit':1.0,
+                      'xDinit':1.0,
+                      'alpha':0.2,
+                      'V':100,
+                      'm':0.1,
+                      'mC':0.1
+                      }
+    # tscale = 1e1 #1e2
+    # uscale = 1.0 #1.0
+    # M0scale = 1e-2
+    # MDscale = 1e-2
+    # xDscale = 1e2
+    # xCscale = 2.0
+    # x0scale = 2.0
+    
+    tscale = 1.0
+    uscale = 1.0
+    M0scale = 1.0
+    MDscale = 1.0
+    xDscale = 1.0
+    xCscale = 1.0
+    x0scale = 1.0
+    
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+
+    def build_problem(self):
+        M0init, MDinit, x0init, xinit, xCinit, xDinit, alpha, V, m, mC = (self.model_params[key] for key in ['M0init', 'MDinit', 'x0init', 'xinit', 'xCinit', 'xDinit', 'alpha', 'V', 'm', 'mC'])
+        # self.set_OCP_data(10,1,1,0, [0.]*9 + [MDinit],[np.inf]*10,[0.5/self.ntS * self.tscale],[10/self.ntS * self.tscale], [0. * self.uscale], [15. * self.uscale])
+        self.set_OCP_data(10,1,1,0, [0.]*8 + [0.] + [MDinit*self.MDscale],[np.inf] + [self.x0scale] + [1.0]*5 + [self.xCscale, self.xDscale] + [np.inf],[0.5/self.ntS * self.tscale],[10/self.ntS * self.tscale], [0. * self.uscale], [15. * self.uscale])
+        self.fix_initial_value([M0init*self.M0scale,x0init*self.x0scale] + [xinit]*5+[xCinit*self.xCscale,xDinit*self.xDscale,MDinit*self.MDscale])
+        
+        X = cs.MX.sym('X',10)
+        M0_,x0_,x1,x2,x3,x4,x5,xC_,xD_,MD_ = cs.vertsplit(X)
+        M0 = M0_/self.M0scale
+        MD = MD_/self.MDscale
+        x0 = x0_/self.x0scale
+        xC = xC_/self.xCscale
+        xD = xD_/self.xDscale
+        
+        R_ = cs.MX.sym('R')
+        R = R_/self.uscale
+        dt_ = cs.MX.sym('dt')
+        dt = dt_/self.tscale
+        
+        L = R/(1+R) * V
+        
+        y = lambda x: x*(1+alpha)/(x+alpha)
+        
+        ode_rhs = cs.vertcat(self.M0scale*(-V + L),
+                             self.x0scale*(1/M0 * (L*x1 - V*y(x0) + (V - L)*x0)),
+                             1/m * (L*x2 - V*y(x1) + V*y(x0) - L*x1),
+                             1/m * (L*x3 - V*y(x2) + V*y(x1) - L*x2),
+                             1/m * (L*x4 - V*y(x3) + V*y(x2) - L*x3),
+                             1/m * (L*x5 - V*y(x4) + V*y(x3) - L*x4),
+                             1/m * (L*xD - V*y(x5) + V*y(x4) - L*x5),
+                             self.xCscale*(V/mC * (y(x5) - xC)),
+                             self.xDscale*((V - L)/MD * (xC - xD)),
+                             self.MDscale*(V - L)
+                             )
+        
+        self.ODE = {'x':X, 'p':cs.vertcat(dt_,R_), 'ode':dt*ode_rhs}
+        self.multiple_shooting()
+        self.set_objective((1/self.tscale * self.p_tf*self.ntS - self.x_eval[9,-1]/self.MDscale))
+        self.add_constraint(self.x_eval[8,-1], 0.99*self.xDscale, np.inf)
+        self.build_NLP()
+        for j in range(self.ntS):
+            self.set_stage_param(self.start_point, j, 1/self.ntS * self.tscale)
+            # self.set_stage_param(self.start_point, j, 2.5/self.ntS * self.tscale)
+        
+        # for j in range(self.ntS):
+        #     self.set_stage_control(self.start_point, j, 8.*self.uscale)
+            
+        for j in range(math.floor(0.5*self.ntS)):
+            self.set_stage_control(self.start_point, j, 1.0*self.uscale)
+        for j in range(math.floor(0.5*self.ntS), self.ntS):
+            self.set_stage_control(self.start_point, j, 15.0*self.uscale)
+            
+            
+        self.integrate_full(self.start_point)
+        
+    def plot(self, xi, dpi = None, title = None, it = None):
+        M0_,x0_,x1,x2,x3,x4,x5,xC_,xD_,MD_ = self.get_state_arrays_expanded(xi)
+        
+        M0 = M0_/self.M0scale
+        MD = MD_/self.MDscale
+        x0 = x0_/self.x0scale
+        xC = xC_/self.xCscale
+        xD = xD_/self.xDscale
+        
+        R = self.get_control_plot_arrays(xi)
+        p = self.get_param_arrays_expanded(xi)
+        time_grid = np.cumsum(np.concatenate([[0], p/self.tscale])).reshape(-1)
+        
+        plt.figure(dpi=dpi)
+        plt.plot(time_grid, M0/100, 'r-', label = 'M0/100')
+        plt.plot(time_grid, x0, 'g-', label = 'x0')
+        plt.plot(time_grid, x1, 'b-', label = 'x1')
+        plt.plot(time_grid, x2, 'y-', label = 'x2')
+        plt.plot(time_grid, x3, 'c-', label = 'x3')
+        plt.plot(time_grid, x4, 'm-', label = 'x4')
+        plt.plot(time_grid, x5, 'r--', label = 'x5')
+        plt.plot(time_grid, xC, 'g--', label = 'xC')
+        plt.plot(time_grid, (xD-0.99)*100, 'b--', label = '(xD-0.99)*100')
+        plt.plot(time_grid, MD/100, 'y--', label = 'MD/100')
+        
+        plt.step(time_grid, R/10 / self.uscale, 'r', label = 'R/10')
+        plt.legend()
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Batch distillation problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+        
+
+class Hang_Glider(OCProblem):
+    default_params = {
+            'x0':0,
+            'y0':1000,
+            'ytf':900,
+            'dxbc':13.23,
+            'dybc':-1.288,
+            'c0':0.034,
+            'c1':0.069662,
+            'S':14.,
+            'rho':1.13,
+            'cmax':1.4,
+            'm':100,
+            'g':9.81,
+            'uC':2.5,
+            'rC':100
+            }
+    def build_problem(self):
+        x0, y0, ytf, dxbc, dybc, c0, c1, S, rho, cmax, m, g, uC, rC = (self.model_params[key] for key in ['x0', 'y0', 'ytf', 'dxbc', 'dybc', 'c0', 'c1', 'S', 'rho', 'cmax', 'm', 'g', 'uC', 'rC'])
+        self.set_OCP_data(4,1,1,0, [0.,0.,-np.inf,-np.inf], [np.inf,np.inf,np.inf,np.inf], [75/self.ntS], [250/self.ntS], [0], [cmax])
+        self.fix_initial_value([x0, dxbc, y0, dybc])
+        
+        XY = cs.MX.sym('XY', 4)
+        x,dx,y,dy = cs.vertsplit(XY)
+        cL = cs.MX.sym('cL')
+        dt = cs.MX.sym('dt')
+        
+        r = (x/rC - 2.5)**2
+        u = uC*(1 - r)*cs.exp(-r)
+        w = dy - u
+        v = cs.sqrt(dx**2 + w**2)
+        
+        D = 1/2 * (c0 + c1*cL**2)*rho*S*v**2
+        L = 1/2 * cL*rho*S*v**2
+        
+        ode_rhs = cs.vertcat(
+                dx,
+                1/m * (-L*w/v - D*dx/v),
+                dy,
+                1/m * (L*dx/v - D*w/v) - g
+                )
+        self.ODE = {'x':XY, 'p':cs.vertcat(dt,cL), 'ode':dt*ode_rhs}
+        self.multiple_shooting()
+        self.add_constraint(self.x_eval[1:4,-1] - cs.vertcat(dxbc, ytf, dybc), 0., 0.)
+        self.set_objective(-self.x_eval[0,-1])
+        self.build_NLP()
+        for j in range(self.ntS):
+            self.set_stage_control(self.start_point, j, cmax)
+            self.set_stage_param(self.start_point, j, 100/self.ntS)
+        self.integrate_full(self.start_point)
+        
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x, dx, y, dy = self.get_state_arrays(xi)
+        cL = self.get_control_plot_arrays(xi)
+        p = self.get_param_arrays_expanded(xi)
+        time_grid = np.cumsum(np.concatenate([[0], p])).reshape(-1)
+        
+        plt.figure(dpi=dpi)
+        plt.step(time_grid, cL, 'r', label = 'cL')
+        plt.plot(time_grid, x/500, 'g-', label = 'x/500')
+        plt.plot(time_grid, dx/10, 'g:', label = 'dx/10')
+        plt.plot(time_grid, (y-900)/100, 'b-', label = '(y-900)/1000')
+        plt.plot(time_grid, dy/10, 'b:', label = 'dy/10')
+        plt.legend()
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Hang glider problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+    
+
+
+LIBRARY = {
+    'Lotka_Volterra_Fishing': Lotka_Volterra_Fishing,
+    'Lotka_Volterra_multimode': Lotka_Volterra_multimode,
+    'Goddard_Rocket': Goddard_Rocket,
+    'Calcium_Oscillation': Calcium_Oscillation,
+    'Batch_Reactor': Batch_Reactor,
+    'Bioreactor': Bioreactor,
+    'Hanging_Chain': Hanging_Chain,
+    'Hanging_Chain_NQ': Hanging_Chain_NQ,
+    'Catalyst_Mixing': Catalyst_Mixing,
+    'Cushioned_Oscillation': Cushioned_Oscillation,
+    'D_Onofrio_Chemotherapy': D_Onofrio_Chemotherapy,
+    'D_Onofrio_Chemotherapy_VT': D_Onofrio_Chemotherapy_VT,
+    'Egerstedt_Standard': Egerstedt_Standard,
+    'Fullers': Fullers,
+    'Electric_Car': Electric_Car,
+    'F8_Aircraft': F8_Aircraft,
+    'Gravity_Turn': Gravity_Turn,
+    'Oil_Shale_Pyrolysis': Oil_Shale_Pyrolysis,
+    'Particle_Steering': Particle_Steering,
+    'Quadrotor_Helicopter': Quadrotor_Helicopter,
+    'Supermarket_Refrigeration': Supermarket_Refrigeration,
+    'Three_Tank_Multimode': Three_Tank_Multimode,
+    'Time_Optimal_Car': Time_Optimal_Car,
+    'Van_der_Pol_Oscillator': Van_der_Pol_Oscillator,
+    'Van_der_Pol_Oscillator_2': Van_der_Pol_Oscillator_2,
+    'Van_der_Pol_Oscillator_3': Van_der_Pol_Oscillator_3,
+    'Ocean': Ocean,
+    'Lotka_OED': Lotka_OED,
+    'Fermenter': Fermenter,
+    'Batch_Distillation': Batch_Distillation,
+    'Hang_Glider': Hang_Glider
+}
+
+def print_available_problems():
+    print(list(LIBRARY.keys()))
+    return

@@ -10,23 +10,23 @@ project(blockSQP
 
 #Link possible QP solvers
 #QPOASES
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/qpOASES/include)
-	set(QPSOLVER_LIB ${QPSOLVER_LIB} /home/reinhold/qpOASES/libs/libqpOASES.so)
+	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/LIB/qpOASES/include)
+	set(QPSOLVER_LIB ${QPSOLVER_LIB} /home/reinhold/LIB/qpOASES/libs/libqpOASES.so)
 	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPOASES)
 #GUROBI
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/gurobi/gurobi1102/linux64/include)
-	set(QPSOLVER_LIB ${QPSOLVER_LIB} /home/reinhold/gurobi/gurobi1102/linux64/lib/libgurobi_c++.a /home/reinhold/gurobi/gurobi1102/linux64/lib/libgurobi110.so)
+	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/LIB/gurobi/gurobi1102/linux64/include)
+	set(QPSOLVER_LIB ${QPSOLVER_LIB} /home/reinhold/LIB/gurobi/gurobi1102/linux64/lib/libgurobi_c++.a /home/reinhold/LIB/gurobi/gurobi1102/linux64/lib/libgurobi110.so)
 	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_GUROBI)
 #QPALM
 	find_package(Eigen3 REQUIRED)
 	add_library(QPALMCXX SHARED IMPORTED)
-	target_link_libraries(QPALMCXX INTERFACE /home/reinhold/QPALM/QPALM/libqpalm.a 
-		/home/reinhold/LADEL/LADEL/libladel.a /home/reinhold/LADEL/thirdparty/SuiteSparse/libladel_amd.a)
-	set_target_properties(QPALMCXX PROPERTIES IMPORTED_LOCATION /home/reinhold/QPALM/QPALM/interfaces/cxx/libqpalm_cxx.so)
+	target_link_libraries(QPALMCXX INTERFACE /home/reinhold/LIB/QPALM/QPALM/libqpalm.a 
+		/home/reinhold/LIB/LADEL/LADEL/libladel.a /home/reinhold/LIB/LADEL/thirdparty/SuiteSparse/libladel_amd.a)
+	set_target_properties(QPALMCXX PROPERTIES IMPORTED_LOCATION /home/reinhold/LIB/QPALM/QPALM/interfaces/cxx/libqpalm_cxx.so)
 
 	set(QPSOLVER_FLAGS ${QPSOLVER_FLAGS} -DQPSOLVER_QPALM)
-	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/LADEL/LADEL/include 
-		/home/reinhold/QPALM/QPALM/include /home/reinhold/QPALM/QPALM/interfaces/cxx/include)
+	set(QPSOLVER_INCLUDE ${QPSOLVER_INCLUDE} /home/reinhold/LIB/LADEL/LADEL/include 
+		/home/reinhold/LIB/QPALM/QPALM/include /home/reinhold/LIB/QPALM/QPALM/interfaces/cxx/include)
 	set(QPSOLVER_LIB ${QPSOLVER_LIB} QPALMCXX Eigen3::Eigen)
 #################
 
@@ -87,10 +87,10 @@ set_target_properties(example1
 	RUNTIME_OUTPUT_DIRECTORY "./examples"
 	)
 
-add_executable(TEST_condensing examples/TEST_condensing.cpp)
-target_compile_options(TEST_condensing PUBLIC -g -O0)
-target_link_libraries(TEST_condensing blockSQP)
-set_target_properties(TEST_condensing
+add_executable(example_condensing examples/example_condensing.cpp)
+target_compile_options(example_condensing PUBLIC -g -O0)
+target_link_libraries(example_condensing blockSQP)
+set_target_properties(example_condensing
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "./examples"
 )

@@ -162,6 +162,7 @@ double QPsolver::get_solutionTime(){return solution_durations[dur_pos];}
 
 
 void QPsolver::recordTime(double solTime){
+    //std::cout << "recorded time " << solTime << "\n";
     dur_pos = (dur_pos + 1)%10;
     solution_durations[dur_pos] = solTime;
     dur_count += int(dur_count < 10);
@@ -368,6 +369,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     else
         QPtime = default_time_limit;
 
+    //std::cout << "QPtime = " << QPtime << "\n";
     QP_it = Qparam->maxItQP;
     qpOASES::SolutionAnalysis solAna;
     qpOASES::returnValue ret;
@@ -420,7 +422,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
-
+    
     if( ret == qpOASES::RET_MAX_NWSR_REACHED )
         return 1;
     else if( ret == qpOASES::RET_HESSIAN_NOT_SPD ||
