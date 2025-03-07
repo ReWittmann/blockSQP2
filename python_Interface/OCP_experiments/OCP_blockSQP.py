@@ -1,12 +1,10 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import time
-import copy
 import os
 import sys
-sys.path.append(os.path.abspath('') + "/..")
-# sys.path.append('/home/reinhold/blockSQP_modified/blockSQP_pybind')
-
+try:
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+except:
+    sys.path.append(os.getcwd() + "/..")
 import py_blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 
@@ -14,6 +12,7 @@ itMax = 100
 
 step_plots = True
 plot_title = True
+
 
 import OCProblems
 #Available problems:
@@ -27,8 +26,40 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.F8_Aircraft(nt=100, parallel = False)
+OCprob = OCProblems.Hanging_Chain(nt=100, parallel = False)
 
+################################
+opts = py_blockSQP.SQPoptions();
+opts.maxItQP = 100000
+opts.maxTimeQP = 5.0
+
+opts.maxConvQP = 1
+opts.convStrategy = 0
+opts.whichSecondDerv = 0
+opts.hessUpdate = 1
+opts.hessScaling = 2
+opts.fallbackUpdate = 2
+opts.fallbackScaling = 4
+
+opts.hessLimMem = True
+opts.hessMemsize = 20
+opts.opttol = 1e-6
+opts.nlinfeastol = 1e-6
+
+opts.autoScaling = False
+
+opts.max_extra_steps = 0
+opts.allow_premature_termination = False
+opts.max_local_lenience = 0
+
+opts.QPsol = 'qpOASES'
+QPopts = py_blockSQP.qpOASES_options()
+QPopts.terminationTolerance = 1e-10
+QPopts.printLevel = 0
+opts.QPsol_opts = QPopts
+################################
+
+#Create condenser, chose SCQPmethod below to enable condensing
 vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
 cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
 hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
@@ -43,6 +74,8 @@ targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
 cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
 
 
+
+#Define blockSQP Problemspec
 prob = Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
@@ -73,41 +106,14 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS):
     OCprob.set_stage_control(scale_arr, i, [1.0])
 prob.arr_set_scale(scale)
-##
 
-opts = py_blockSQP.SQPoptions();
-opts.maxItQP = 100000
-opts.maxTimeQP = 5.0
-
-opts.maxConvQP = 1
-opts.convStrategy = 0
-opts.whichSecondDerv = 0
-opts.hessUpdate = 1
-opts.hessScaling = 2
-opts.fallbackUpdate = 2
-opts.fallbackScaling = 4
-
-opts.hessLimMem = True
-opts.hessMemsize = 20
-opts.opttol = 1e-6
-opts.nlinfeastol = 1e-6
-
-opts.autoScaling = False
-
-opts.max_extra_steps = 0
-opts.allow_premature_termination = False
-opts.max_local_lenience = 0
-
-###################
-opts.QPsol = 'qpOASES'
-QPopts = py_blockSQP.qpOASES_options()
-QPopts.terminationTolerance = 1e-10
-QPopts.printLevel = 0
-opts.QPsol_opts = QPopts
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
+
+#No condensing
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
-t0 = time.time()
+
+#Condensing
 # optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
@@ -127,6 +133,5 @@ else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
     OCprob.plot(xi, dpi=200, it = stats.itCount - 1, title=plot_title)
-    t1 = time.time()
     print("Solved OCP in ", t1 - t0, "s\n")
 #####################

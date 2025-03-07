@@ -42,7 +42,7 @@ enum class RES{
     MISC_ERROR = -10,
 };
 //Colored print output when exiting with  return print_RES(RES::__)
-RES print_RES(RES rs);
+RES print_RES(RES rs, bool acive = true);
 
 
 class NotImplementedError : public std::logic_error{

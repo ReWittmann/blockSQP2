@@ -190,7 +190,7 @@ class SQPoptions{
         //Conditioning tolerances for SR1 update. Update is skipped if denominator goes below a bound determined by this
         double SR1_abstol = 1e-18;
         double SR1_reltol = 1e-5;
-
+        
         bool hessLimMem = true;                 ///< Full or limited memory
         int hessMemsize = 20;                   ///< Memory size for L-BFGS updates
         int whichSecondDerv = 0;                ///< For which block should second derivatives be provided by the user (None = 0, last block = 1, all blocks = 2)
@@ -222,6 +222,8 @@ class SQPoptions{
         QPSOLVER_options *QPsol_opts = nullptr; ///< options to be passed to the specific qp solver
         int maxItQP = 5000;                     ///< Maximum number of QP iterations per SQP iteration
         double maxTimeQP = 10000.0;             ///< Maximum number of seconds per QP solve per SQP iteration
+
+        bool printRes = true;
     private:
         QPSOLVER_options *default_QPsol_opts = nullptr;
 

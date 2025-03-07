@@ -62,6 +62,8 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
         rest_opts->QPsol = param->QPsol;
         rest_opts->QPsol_opts = param->QPsol_opts;
         rest_opts->hessDampFac = 0.2;
+        
+        rest_opts->printRes = false;
 
         //rest_opts->autoScaling = param->autoScaling;
         
@@ -122,7 +124,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         //return -1;
-        return print_RES(RES::MISC_ERROR);
+        return print_RES(RES::MISC_ERROR, param->printRes);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
@@ -138,7 +140,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars, param, hasConverged );
-        if (hasConverged) return print_RES(RES::success);
+        if (hasConverged) return print_RES(RES::success, param->printRes);
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
@@ -191,7 +193,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
 
                 if (qpError){
                     std::cout << "QP error, stop\n";
-                    return print_RES(RES::QP_FAILURE);
+                    return print_RES(RES::QP_FAILURE, param->printRes);
                 }
             }
             else vars->steptype = 1;
@@ -203,7 +205,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
                 printf("InfoQP is %d\n", infoQP);
-                return print_RES(RES::QP_FAILURE);
+                return print_RES(RES::QP_FAILURE, param->printRes);
             }
             else vars->steptype = 1;
         }
@@ -231,8 +233,8 @@ RES SQPmethod::run(int maxIt, int warmStart){
             }
             
             // If everything failed, abort.
-            if (feasError == 1 || feasError > 2) return print_RES(RES::RESTORATION_FAILURE);
-            else if (feasError == 2) return print_RES(RES::LOCAL_INFEASIBILITY);
+            if (feasError == 1 || feasError > 2) return print_RES(RES::RESTORATION_FAILURE, param->printRes);
+            else if (feasError == 2) return print_RES(RES::LOCAL_INFEASIBILITY, param->printRes);
         }
 
         /////////////////////////////////////////////////////////////
@@ -244,7 +246,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
             // No globalization strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
-                return print_RES(RES::EVAL_FAILURE);
+                return print_RES(RES::EVAL_FAILURE, param->printRes);
             }
             vars->steptype = 0;
         }
@@ -259,8 +261,8 @@ RES SQPmethod::run(int maxIt, int warmStart){
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->sol_found){
                     vars->restore_iterate();
-                    if (vars->tol <= 1e-2*param->opttol && vars->cNormS <= 1e-2*param->nlinfeastol) return print_RES(RES::SUPER_SUCCESS);
-                    else return print_RES(RES::success);
+                    if (vars->tol <= 1e-2*param->opttol && vars->cNormS <= 1e-2*param->nlinfeastol) return print_RES(RES::SUPER_SUCCESS, param->printRes);
+                    else return print_RES(RES::success, param->printRes);
                 }
                 
                 // Heuristic 1: Check if the full step reduces the KKT error by at least kappaF (current gradients, new multipliers vs. old multipliers; new constr vio vs. old constr vio)
@@ -302,7 +304,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
 
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
                 if (param->allow_premature_termination && lsError && vars->cNormS <= param->nlinfeastol && vars->tol <= std::pow(param->opttol, 0.75))
-                    return print_RES(RES::FEAS_SUCCESS);
+                    return print_RES(RES::FEAS_SUCCESS, param->printRes);
 
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if (lsError && vars->cNorm > 0.01 * param->nlinfeastol && vars->steptype < 2){
@@ -335,7 +337,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
                 // If everything failed, abort.
                 if (lsError){
                     printf( "***Line search error. Stop.***\n" );
-                    return print_RES(RES::LINESEARCH_FAILURE);
+                    return print_RES(RES::LINESEARCH_FAILURE, param->printRes);
                 }
             }
             else{
@@ -384,7 +386,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
                     vars->sol_found = true;
                 }
             }
-            else return print_RES(RES::success);
+            else return print_RES(RES::success, param->printRes);
             //return RES::SUCCESS; //Convergence achieved!
         }
 
@@ -392,8 +394,8 @@ RES SQPmethod::run(int maxIt, int warmStart){
         if (vars->sol_found && param->max_extra_steps > 0){
             if (vars->n_extra >= param->max_extra_steps){
                 vars->restore_iterate();
-                if (vars->tol < 1e-2*param->opttol && vars->cNormS < 1e-2*param->nlinfeastol) return print_RES(RES::SUPER_SUCCESS);
-                else return print_RES(RES::success);
+                if (vars->tol < 1e-2*param->opttol && vars->cNormS < 1e-2*param->nlinfeastol) return print_RES(RES::SUPER_SUCCESS, param->printRes);
+                else return print_RES(RES::success, param->printRes);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
             if (std::min(vars->tol/param->opttol, vars->cNormS/param->nlinfeastol) < std::min(vars->tolOpt_save/param->opttol, vars->cNormSOpt_save/param->nlinfeastol))
