@@ -42,7 +42,7 @@ enum class SQPresult{
     misc_error = -10,
 };
 //Colored print output when exiting with  return print_RES(RES::__)
-SQPresult loud_SQPresult(SQPresult rs, bool rloud = true);
+SQPresult loud(SQPresult rs, bool enabled = true);
 
 
 class NotImplementedError : public std::logic_error{

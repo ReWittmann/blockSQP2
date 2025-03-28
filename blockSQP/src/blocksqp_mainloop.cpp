@@ -28,6 +28,7 @@
 
 namespace blockSQP{
 
+/*
 SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics ): prob(problem), param(parameters), stats(statistics){
     // Check if there are options that are infeasible and set defaults accordingly
     param->optionsConsistency(problem);
@@ -92,6 +93,8 @@ SQPmethod::~SQPmethod(){
     delete rest_stats;
     delete rest_method;
 }
+*/
+
 
 void SQPmethod::init(){
     // Print header and information about the algorithmic parameters
@@ -124,7 +127,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         //return -1;
-        return loud_SQPresult(SQPresult::misc_error, param->printRes);
+        return loud(SQPresult::misc_error, param->loud_SQPresult);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
@@ -140,7 +143,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars, param, hasConverged );
-        if (hasConverged) return loud_SQPresult(SQPresult::success, param->printRes);
+        if (hasConverged) return loud(SQPresult::success, param->loud_SQPresult);
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
@@ -149,9 +152,6 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         vars->hess2_updated = true;
     }
 
-    /*
-     * Main SQP Loop
-     */
 
     for (; it<maxIt; it++){
         //Enter new iteration
@@ -193,7 +193,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
 
                 if (qpError){
                     std::cout << "QP error, stop\n";
-                    return loud_SQPresult(SQPresult::qp_failure, param->printRes);
+                    return loud(SQPresult::qp_failure, param->loud_SQPresult);
                 }
             }
             else vars->steptype = 1;
@@ -205,7 +205,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
                 printf("InfoQP is %d\n", infoQP);
-                return loud_SQPresult(SQPresult::qp_failure, param->printRes);
+                return loud(SQPresult::qp_failure, param->loud_SQPresult);
             }
             else vars->steptype = 1;
         }
@@ -233,8 +233,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             
             // If everything failed, abort.
-            if (feasError == 1 || feasError > 2) return loud_SQPresult(SQPresult::restoration_failure, param->printRes);
-            else if (feasError == 2) return loud_SQPresult(SQPresult::local_infeasibility, param->printRes);
+            if (feasError == 1 || feasError > 2) return loud(SQPresult::restoration_failure, param->loud_SQPresult);
+            else if (feasError == 2) return loud(SQPresult::local_infeasibility, param->loud_SQPresult);
         }
 
         /////////////////////////////////////////////////////////////
@@ -246,7 +246,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             // No globalization strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
-                return loud_SQPresult(SQPresult::eval_failure, param->printRes);
+                return loud(SQPresult::eval_failure, param->loud_SQPresult);
             }
             vars->steptype = 0;
         }
@@ -261,11 +261,10 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->sol_found){
                     vars->restore_iterate();
-                    if (vars->tol <= 1e-2*param->opttol && vars->cNormS <= 1e-2*param->nlinfeastol) return loud_SQPresult(SQPresult::super_success, param->printRes);
-                    else return loud_SQPresult(SQPresult::success, param->printRes);
+                    if (vars->tol <= 1e-2*param->opttol && vars->cNormS <= 1e-2*param->nlinfeastol) return loud(SQPresult::super_success, param->loud_SQPresult);
+                    else return loud(SQPresult::success, param->loud_SQPresult);
                 }
                 
-
                 if (vars->KKT_heuristic_active){
                     std::cout << "filterLineSearch failed, try to reduce kktError\n" << std::flush;
                     vars->tol_save = vars->tol;
@@ -296,7 +295,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
 
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
                 if (param->allow_premature_termination && lsError && vars->cNormS <= param->nlinfeastol && vars->tol <= std::pow(param->opttol, 0.75))
-                    return loud_SQPresult(SQPresult::partial_success, param->printRes);
+                    return loud(SQPresult::partial_success, param->loud_SQPresult);
 
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if (lsError && vars->cNorm > 0.01 * param->nlinfeastol && vars->steptype < 2){
@@ -329,16 +328,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 // If everything failed, abort.
                 if (lsError){
                     printf( "***Line search error. Stop.***\n" );
-                    return loud_SQPresult(SQPresult::linesearch_failure, param->printRes);
+                    return loud(SQPresult::linesearch_failure, param->loud_SQPresult);
                 }
             }
             else{
                 vars->steptype = 0;
                 vars->KKT_heuristic_active = true;
-                /*
-                    if (vars->reducedStepCount > 3){}
-                */
-
             }
         }
         
@@ -369,7 +364,6 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         
 
         ///Decide wether it is time to terminate///
-
         //1. Check if termination criteria are satisfied. Either terminate or enter extra step phase
         if (hasConverged && vars->steptype < 2){
             if (param->max_extra_steps > 0){
@@ -378,7 +372,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     vars->sol_found = true;
                 }
             }
-            else return loud_SQPresult(SQPresult::success, param->printRes);
+            else return loud(SQPresult::success, param->loud_SQPresult);
             //return RES::SUCCESS; //Convergence achieved!
         }
 
@@ -386,8 +380,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         if (vars->sol_found && param->max_extra_steps > 0){
             if (vars->n_extra >= param->max_extra_steps){
                 vars->restore_iterate();
-                if (vars->tol < 1e-2*param->opttol && vars->cNormS < 1e-2*param->nlinfeastol) return loud_SQPresult(SQPresult::super_success, param->printRes);
-                else return loud_SQPresult(SQPresult::success, param->printRes);
+                if (vars->tol < 1e-2*param->opttol && vars->cNormS < 1e-2*param->nlinfeastol) return loud(SQPresult::super_success, param->loud_SQPresult);
+                else return loud(SQPresult::success, param->loud_SQPresult);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
             if (std::max(vars->tol/param->opttol, vars->cNormS/param->nlinfeastol) < std::max(vars->tolOpt_save/param->opttol, vars->cNormSOpt_save/param->nlinfeastol))
@@ -396,13 +390,13 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         }
         ///No termination at this point, proceed///
 
-        // Check if KKT error was indeed reduced, if not, disable linesearch heuristic until next successful linesearch
+        // Check if KKT error was indeed reduced, if not, disable KKT heuristic until next successful linesearch
         if (vars->steptype == -1){
             if (!(vars->tol < param->kappaF*vars->tol_save)){
-                std::cout << "KKT error was not sufficiently reduced, disable step heuristic\n";
+                std::cout << "KKT error was not sufficiently reduced, disable KKT heuristic\n";
                 vars->KKT_heuristic_active = false;
             }
-            else std::cout << "Step heuristic successful\n";
+            else std::cout << "KKT heuristic successful\n";
         }
 
         //If identity hessian was used three consecutive times, reset Hessian
@@ -932,7 +926,7 @@ void SQPmethod::printInfo( int printLevel )
 
 //////////////////////////////////////////////////////////////////////
 
-
+/*
 SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
 
     prob = problem;
@@ -1263,7 +1257,7 @@ SCQP_correction_method::~SCQP_correction_method(){
     delete[] SOC_corrections;
 }
 
-
+*/
 
 
 

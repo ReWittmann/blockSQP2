@@ -1,3 +1,13 @@
+/**
+ * \file blocksqp_qpsolver.cpp
+ * \author Reinhold Wittmann
+ * \date 2024-
+ *
+ *  Implementation of interfaces to third party qp solvers
+ *
+ */
+
+
 #include "blocksqp_qpsolver.hpp"
 #include "blocksqp_general_purpose.hpp"
 #include "blocksqp_problemspec.hpp"

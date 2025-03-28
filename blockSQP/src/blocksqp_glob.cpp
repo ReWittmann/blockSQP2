@@ -28,13 +28,11 @@
 namespace blockSQP
 {
 
-void SQPmethod::acceptStep( double alpha )
-{
-    acceptStep( vars->deltaXi, vars->lambdaQP, alpha, 0 );
+void SQPmethod::acceptStep(double alpha){
+    acceptStep(vars->deltaXi, vars->lambdaQP, alpha, 0);
 }
 
-void SQPmethod::acceptStep( const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS )
-{
+void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS){
     int k;
     double lStpNorm;
 

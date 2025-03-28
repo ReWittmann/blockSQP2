@@ -54,7 +54,7 @@ opts.autoScaling = False
 
 opts.max_extra_steps = 0
 opts.allow_premature_termination = False
-opts.max_local_lenience = 2
+opts.max_local_lenience = 0
 
 opts.QPsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()

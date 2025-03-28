@@ -31,11 +31,7 @@ namespace blockSQP
  * \author Dennis Janka
  * \date 2012-2015
  */
-class SQPiterate
-{
-    /*
-     * Variables
-     */
+class SQPiterate{
     public:
         double obj;                                   ///< objective value
         double cNorm;                                 ///< constraint violation
@@ -95,9 +91,7 @@ class SQPiterate
 
         int hess_num_accepted;                        ///< order of hessian convexification for last QP, ranging from 0 (no regularization) to options.maxConvQP (fallback)
 
-        /*
-         * Variables for QP solver
-         */
+
         bool use_homotopy;
 
         //Bounds for QP step, calculated in solveQP directly before invoking QP solver / condenser
@@ -109,9 +103,7 @@ class SQPiterate
 
         Matrix AdeltaXi;                              ///< product of constraint Jacobian with deltaXi (from SOC for SOC iterations after the first one), calculated in secondOrderCorrection method as needed
 
-        /*
-         * Variables for globalization strategy
-         */
+
         int steptype;                                 ///< -2: Filter-overwriting step -1: Step heuristic, 0: Linesearch step, 1: Linesearch step with identity Hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
         int n_id_hess;                                ///< Number of condecutive uses of identity hessian as fallback
 
@@ -133,7 +125,6 @@ class SQPiterate
         int local_lenience;
         
         
-
         double *rescaleFactors;
         int n_scaleIt;                               ///< How many past steps are available (not necessarily used by heuristic) to compute the scaling.
         double vfreeScale;
@@ -158,9 +149,7 @@ class SQPiterate
         double *scaleFactors_save;
         scaled_Problemspec *scaled_prob;
 
-    /*
-     * Methods
-     */
+    
     public:
         /// Call allocation and initializing routines
         SQPiterate(Problemspec* prob, const SQPoptions* param, bool full );

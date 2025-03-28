@@ -90,7 +90,8 @@ add_library(blockSQP SHARED
     	blockSQP/src/blocksqp_glob.cpp
    	blockSQP/src/blocksqp_hess.cpp
    	blockSQP/src/blocksqp_iter.cpp
-   	blockSQP/src/blocksqp_main.cpp
+   	blockSQP/src/blocksqp_method.cpp
+   	blockSQP/src/blocksqp_mainloop.cpp
    	blockSQP/src/blocksqp_options.cpp
    	blockSQP/src/blocksqp_qp.cpp
    	blockSQP/src/blocksqp_restoration.cpp

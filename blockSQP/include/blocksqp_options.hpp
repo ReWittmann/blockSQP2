@@ -223,7 +223,7 @@ class SQPoptions{
         int maxItQP = 5000;                     ///< Maximum number of QP iterations per SQP iteration
         double maxTimeQP = 10000.0;             ///< Maximum number of seconds per QP solve per SQP iteration
 
-        bool printRes = true;
+        bool loud_SQPresult = true;
     private:
         QPSOLVER_options *default_QPsol_opts = nullptr;
 
