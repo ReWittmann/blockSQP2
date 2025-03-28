@@ -1,3 +1,11 @@
+/**
+ * \file blockSQP_julbind.cpp
+ * \author Reinhold Wittmann
+ * \date 2024-
+ *
+ * CxxWrap based julia interface for the blockSQP nonlinear programming solver
+ */
+
 #include "jlcxx/jlcxx.hpp"
 #include "jlcxx/array.hpp"
 #include "jlcxx/functions.hpp"
@@ -355,17 +363,17 @@ mod.add_type<blockSQP::SQPstats>("SQPstats")
     ;
 
 
-mod.add_bits<blockSQP::RES>("RES", jlcxx::julia_type("CppEnum"));
-mod.set_const("IT_FINISHED", blockSQP::RES::IT_FINISHED);
-mod.set_const("FEAS_SUCCESS", blockSQP::RES::FEAS_SUCCESS);
-mod.set_const("SUCCESS", blockSQP::RES::success);
-mod.set_const("SUPER_SUCCESS", blockSQP::RES::SUPER_SUCCESS);
-mod.set_const("LOCAL_INFEASIBILITY", blockSQP::RES::LOCAL_INFEASIBILITY);
-mod.set_const("RESTORATION_FAILURE", blockSQP::RES::RESTORATION_FAILURE);
-mod.set_const("LINESEARCH_FAILURE", blockSQP::RES::LINESEARCH_FAILURE);
-mod.set_const("QP_FAILURE", blockSQP::RES::QP_FAILURE);
-mod.set_const("EVAL_FAILURE", blockSQP::RES::EVAL_FAILURE);
-mod.set_const("MISC_ERROR", blockSQP::RES::MISC_ERROR);
+mod.add_bits<blockSQP::SQPresult>("SQPresult", jlcxx::julia_type("CppEnum"));
+mod.set_const("it_finished", blockSQP::SQPresult::it_finished);
+mod.set_const("partial_success", blockSQP::SQPresult::partial_success);
+mod.set_const("success", blockSQP::SQPresult::success);
+mod.set_const("super_success", blockSQP::SQPresult::super_success);
+mod.set_const("local_infeasibility", blockSQP::SQPresult::local_infeasibility);
+mod.set_const("restoration_failure", blockSQP::SQPresult::restoration_failure);
+mod.set_const("linesearch_failure", blockSQP::SQPresult::linesearch_failure);
+mod.set_const("qp_failure", blockSQP::SQPresult::qp_failure);
+mod.set_const("eval_failure", blockSQP::SQPresult::eval_failure);
+mod.set_const("misc_error", blockSQP::SQPresult::misc_error);
 
 
 mod.add_type<blockSQP::Problemspec>("Problemspec");

@@ -30,7 +30,7 @@ prob.ub_var = Float64[Inf, Inf]
 prob.lb_con = Float64[0.0]
 prob.ub_con = Float64[0.0]
 
-#Set start-end indices of hessian blocks (blockIdx[0] = 0, blockIdx[-1] = nVar)
+#Set start-end indices of hessian blocks (blockIdx[0] = 0, blockIdx[length(blockIdx)] = nVar)
 prob.blockIdx = Int32[0, 1, 2]
 
 #Set initial values

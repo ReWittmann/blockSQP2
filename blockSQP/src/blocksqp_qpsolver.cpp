@@ -6,17 +6,9 @@
 #include <chrono>
 
 
-#ifdef QPSOLVER_QPOASES
-    #include "qpOASES.hpp"
-#endif
-
-#ifdef QPSOLVER_GUROBI
-    #include "gurobi_c++.h"
-#endif
-
-
 namespace blockSQP{
 
+/*
 void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
                                             double *&hessNz){
     if (hessNz == NULL)
@@ -123,7 +115,7 @@ void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, i
          std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
     }
 }
-
+*/
 
 ///////////////////////
 
@@ -208,7 +200,16 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
     throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
 }
 
-//Interfaces to (third party) QP solvers
+
+////////////////////////////////////////////////////////////////
+/////////////Interfaces to (third party) QP solvers/////////////
+////////////////////////////////////////////////////////////////
+
+
+
+///////////////////////
+///qpOASES interface///
+///////////////////////
 
 #ifdef QPSOLVER_QPOASES
 
@@ -444,6 +445,12 @@ int qpOASES_solver::get_QP_it(){return QP_it;}
 #endif
 
 
+
+
+//////////////////////
+///gurobi interface///
+//////////////////////
+
 #ifdef QPSOLVER_GUROBI
 gurobi_solver::gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, gurobi_options *QPopts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts), obj_lin(0), obj_quad(0){
     //Check for inconsistent options before construction
@@ -548,8 +555,6 @@ void gurobi_solver::set_hess(SymMatrix *const hess, bool pos_def, double regular
             for (int j = 0; j < i; j++){
                 obj_quad += QP_vars[offset + i] * QP_vars[offset + j] * hess[k](i,j);
             }
-            //Diagonal part, add a regularization, else QP solution seems to fail in some instances
-            //obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + static_cast<gurobi_options*>(Qparam)->regularization_factor);
             obj_quad += 0.5 * QP_vars[offset + i] * QP_vars[offset + i] * (hess[k](i,i) + regFactor);
         }
         offset += hess[k].m;
@@ -615,12 +620,13 @@ int gurobi_solver::get_QP_it(){
     return model->get(GRB_IntAttr_BarIterCount) + int(model->get(GRB_DoubleAttr_IterCount));
 }
 
-/*
-double gurobi_solver::get_solutionTime(){
-    return model->get(GRB_DoubleAttr_Runtime);
-}*/
 #endif
 
+
+
+/////////////////////
+///qpalm interface///
+/////////////////////
 
 #ifdef QPSOLVER_QPALM
 qpalm_solver::qpalm_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, qpalm_options *QPopts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts),
@@ -723,9 +729,7 @@ int qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     else
         settings.time_limit = default_time_limit;
 
-    settings.time_limit = 1.0;
     qpalm::Solver solver = {data, settings};
-    //qpalm::Solver solver(&data, settings);
     solver.solve();
 
     qpalm::SolutionView sol = solver.get_solution();
@@ -734,6 +738,7 @@ int qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     
     if (!strcmp(info.status, "solved")){
         for (int i = 0; i < nCon; i++){
+            //qpalm defines Lagrangian as f + lambda^T g, we have f - lambda^T g. Change sign of Lagrange multipliers.
             lambdaQP(nVar + i) = -sol.y(i);
         }
         for (int i = 0; i < nVar; i++){
@@ -755,8 +760,7 @@ int qpalm_solver::get_QP_it(){return info.iter;};
 
 
 
-}
+}//namespace blockSQP
 
-//
 
 

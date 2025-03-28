@@ -1,3 +1,12 @@
+/**
+ * \file py_blockSQP.cpp
+ * \author Reinhold Wittmann
+ * \date 2022-
+ *
+ * Pybind11 based python interface for the blockSQP nonlinear programming solver
+ */
+
+
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/numpy.h>
@@ -775,17 +784,17 @@ py::class_<Prob_Data>(m,"Prob_Data")
 	.def_readwrite("hess_arr", &Prob_Data::hess_arr)
 	;
 
-py::enum_<blockSQP::RES>(m, "RES")
-    .value("IT_FINISHED", blockSQP::RES::IT_FINISHED)
-    .value("FEAS_SUCCESS", blockSQP::RES::FEAS_SUCCESS)
-    .value("SUCCESS", blockSQP::RES::success)
-    .value("SUPER_SUCCESS", blockSQP::RES::SUPER_SUCCESS)
-    .value("LOCAL_INFEASIBILITY", blockSQP::RES::LOCAL_INFEASIBILITY)
-    .value("RESTORATION_FAILURE", blockSQP::RES::RESTORATION_FAILURE)
-    .value("LINESEARCH_FAILURE", blockSQP::RES::LINESEARCH_FAILURE)
-    .value("QP_FAILURE", blockSQP::RES::QP_FAILURE)
-    .value("EVAL_FAILURE", blockSQP::RES::EVAL_FAILURE)
-    .value("MISC_ERROR", blockSQP::RES::MISC_ERROR)
+py::enum_<blockSQP::SQPresult>(m, "SQPresult")
+    .value("it_finished", blockSQP::SQPresult::it_finished)
+    .value("partial_success", blockSQP::SQPresult::partial_success)
+    .value("success", blockSQP::SQPresult::success)
+    .value("super_success", blockSQP::SQPresult::super_success)
+    .value("local_infeasibility", blockSQP::SQPresult::local_infeasibility)
+    .value("restoration_failuer", blockSQP::SQPresult::restoration_failure)
+    .value("linesearch_failure", blockSQP::SQPresult::linesearch_failure)
+    .value("qp_failure", blockSQP::SQPresult::qp_failure)
+    .value("eval_failure", blockSQP::SQPresult::eval_failure)
+    .value("mic_error", blockSQP::SQPresult::misc_error)
     ;
 
 py::class_<blockSQP::Problemspec>(m, "Problemspec");

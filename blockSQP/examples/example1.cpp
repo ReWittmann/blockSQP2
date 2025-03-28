@@ -125,8 +125,7 @@ MyProblem::~MyProblem(){
 }
 
 
-void MyProblem::convertJacobian( const Matrix &constrJac, double *&jacNz, int *&jacIndRow, int *&jacIndCol, bool firstCall )
-{
+void MyProblem::convertJacobian( const Matrix &constrJac, double *&jacNz, int *&jacIndRow, int *&jacIndCol, bool firstCall ){
     int nnz, count, i, j;
 
     if( firstCall )
@@ -252,7 +251,7 @@ void MyProblem::evaluate( const Matrix &xi, const Matrix &lambda, double *objval
 int main( int argc, const char* argv[] )
 {
     using namespace blockSQP;
-    RES ret;
+    SQPresult ret;
     MyProblem *prob;
     SQPmethod *meth;
     SQPoptions *opts;
@@ -351,7 +350,7 @@ int main( int argc, const char* argv[] )
     ret = meth->run( 100 );
 
     meth->finish();
-    if ( ret == RES::IT_FINISHED )
+    if ( ret == SQPresult::it_finished)
         printf("\033[0;36m***Maximum number of iterations reached.***\n\033[0m");
 
     printf("\nPrimal solution:\n");

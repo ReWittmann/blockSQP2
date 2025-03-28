@@ -1,3 +1,11 @@
+
+#   \file py_blockSQP.cpp
+#   \author Reinhold Wittmann
+#   \date 2022-
+
+#   Python based problem specification for the blockSQP nonlinear programming solver
+
+
 import numpy as np
 import py_blockSQP
 import typing

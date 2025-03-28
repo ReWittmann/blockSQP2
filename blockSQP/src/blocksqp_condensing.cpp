@@ -1,3 +1,11 @@
+/**
+ * \file blocksqp_condensing.cpp
+ * \author Reinhold Wittmann
+ * \date 2023-
+ *
+ * Implementation of methods and data structures for Condenser class
+ */
+
 #include "blocksqp_condensing.hpp"
 #include "blocksqp_matrix.hpp"
 #include <string>
@@ -1891,6 +1899,55 @@ void Condenser::single_correction_recover(int tnum, const blockSQP::Matrix &xi_f
 
     return;
 }
+
+
+autonomous_Condenser::autonomous_Condenser(
+                    std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
+                    std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
+                    std::unique_ptr<int[]> HSIZES, int n_HBLOCKS,
+                    std::unique_ptr<condensing_target[]> TARGETS, int n_TARGETS, 
+                    int DEP_BOUNDS):
+                        Condenser(VBLOCKS.get(), n_VBLOCKS, CBLOCKS.get(), n_CBLOCKS, HSIZES.get(), n_HBLOCKS, TARGETS.get(), n_TARGETS, DEP_BOUNDS),
+                        auto_vblocks(std::move(VBLOCKS)), auto_cblocks(std::move(CBLOCKS)), auto_hess_block_sizes(std::move(HSIZES)), auto_targets(std::move(TARGETS)){}
+
+
+std::unique_ptr<autonomous_Condenser> create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
+    std::unique_ptr<cblock[]> rest_cblocks = std::make_unique<cblock[]>(parent->num_cblocks);
+	std::unique_ptr<vblock[]> rest_vblocks = std::make_unique<vblock[]>(parent->num_vblocks + 1);
+	std::unique_ptr<int[]> rest_hess_block_sizes = std::make_unique<int[]>(parent->num_hessblocks + parent->num_cons);
+	std::unique_ptr<condensing_target[]> rest_targets = std::make_unique<condensing_target[]>(parent->num_targets);
+
+    int N_vblocks = parent->num_vblocks + parent->num_true_cons;
+    int N_cblocks = parent->num_cblocks;
+    int N_hessblocks = parent->num_hessblocks + parent->num_true_cons;
+    int N_targets = parent->num_targets;
+
+    for (int i = 0; i<parent->num_vblocks; i++){
+        rest_vblocks[i] = parent->vblocks[i];
+    }
+    for (int i = parent->num_vblocks; i < N_vblocks; i++){
+        rest_vblocks[i] = vblock(1, false);
+    }
+
+    for (int i = 0; i<parent->num_cblocks; i++){
+        rest_cblocks[i] = parent->cblocks[i];
+    }
+
+    for (int i = 0; i<parent->num_hessblocks; i++){
+        rest_hess_block_sizes[i] = parent->hess_block_sizes[i];
+    }
+    for (int i = parent->num_hessblocks; i<N_hessblocks; i++){
+        rest_hess_block_sizes[i] = 1;
+    }
+
+    for (int i = 0; i<parent->num_targets; i++){
+        rest_targets[i] = parent->targets[i];
+    }
+
+    return std::make_unique<autonomous_Condenser>(std::move(rest_vblocks), N_vblocks, std::move(rest_cblocks), N_cblocks, std::move(rest_hess_block_sizes), N_hessblocks, std::move(rest_targets), N_targets, DEP_BOUNDS);
+}
+
+
 
 
 

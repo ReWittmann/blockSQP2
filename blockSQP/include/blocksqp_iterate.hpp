@@ -142,7 +142,7 @@ class SQPiterate
         double milestone;
 
         //Fields used by KKT step-heuristic
-        bool step_heuristic_active;
+        bool KKT_heuristic_active;
         //Previous KKT error for comparison
         double tol_save;
         

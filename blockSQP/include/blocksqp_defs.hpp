@@ -29,20 +29,20 @@ namespace blockSQP{
 
 typedef char PATHSTR[4096];
 
-enum class RES{
-    IT_FINISHED = 0,
-    FEAS_SUCCESS = 1,
+enum class SQPresult{
+    it_finished = 0,
+    partial_success = 1,
     success = 2,
-    SUPER_SUCCESS = 3,
-    LOCAL_INFEASIBILITY = -1,
-    RESTORATION_FAILURE = -2,
-    LINESEARCH_FAILURE = -3,
-    QP_FAILURE = -4,
-    EVAL_FAILURE = -5,
-    MISC_ERROR = -10,
+    super_success = 3,
+    local_infeasibility = -1,
+    restoration_failure = -2,
+    linesearch_failure = -3,
+    qp_failure = -4,
+    eval_failure = -5,
+    misc_error = -10,
 };
 //Colored print output when exiting with  return print_RES(RES::__)
-RES print_RES(RES rs, bool acive = true);
+SQPresult loud_SQPresult(SQPresult rs, bool rloud = true);
 
 
 class NotImplementedError : public std::logic_error{

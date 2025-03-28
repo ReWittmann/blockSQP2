@@ -97,6 +97,8 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_stats.cpp
    	blockSQP/src/blocksqp_qpsolver.cpp
    	blockSQP/src/blocksqp_defs.cpp
+   	blockSQP/src/blocksqp_scaling.cpp
+   	blockSQP/src/blocksqp_sqputils.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
 #target_compile_options(blockSQP PUBLIC -fPIC)

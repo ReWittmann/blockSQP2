@@ -629,6 +629,8 @@ void SQPmethod::calcSR1(int dpos, int iBlock, SymMatrix *hess){
  * Set deltaXi and gamma as a column in the matrix containing
  * the m most recent delta and gamma
  */
+
+ /*
 void SQPmethod::updateDeltaGamma(){
     Matrix smallDelta, smallGamma;
     int Bsize;
@@ -649,6 +651,7 @@ void SQPmethod::updateDeltaGamma(){
     }
     return;
 }
+*/
 
 /*
 void SQPmethod::updateScalarProducts(){

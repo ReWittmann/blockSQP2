@@ -102,7 +102,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
     convKappa = param->convKappa0;
     conv_qp_only = param->indef_local_only;
 
-    step_heuristic_active = true;
+    KKT_heuristic_active = true;
     n_extra = 0;
     sol_found = false;
     tol_save = std::numeric_limits<double>::infinity();

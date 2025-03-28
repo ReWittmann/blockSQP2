@@ -1,6 +1,11 @@
 # BlockSQP - C++, Python, Julia - build system using qpOASES and MUMPS
 
-Both a Fortran and a C++ compiler are required, change from defaults via -DCMAKE_FC_COMPILER=..., -DCMAKE_CXX_COMPILER=
+This is a modified version of the blockSQP nonlinear program solver that includes new cmake build specifications, a python interface and a julia interface.
+Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+
+
+
+Both a Fortran and a C++ compiler are required, change from defaults by adding -DCMAKE_FC_COMPILER=..., -DCMAKE_CXX_COMPILER= when invoking CMake
 
 Create build files by calling
 cmake -B build ${OPTIONS}
@@ -21,6 +26,7 @@ cmake --build build
     OR
 make -C build
 
+This places the binaries for C++/Python/Julia in their respective directories, alongside required helper files for Python/Julia.
 
 See 
     blockSQP/examples/example1,

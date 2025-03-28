@@ -1,3 +1,11 @@
+#=
+ * \file blockSQP.jl
+ * \author Reinhold Wittmann
+ * \date 2024-
+ *
+ * Julia side functions and structures for the blockSQP nonlinear programming solver
+=#
+
 module blockSQP
 	import Base.setproperty!, Base.getproperty
 	

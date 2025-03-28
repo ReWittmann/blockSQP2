@@ -3,6 +3,12 @@ blockSQP -- Sequential quadratic programming for problems with
 Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
 
 
+THIS IS A MODIFIED VERSION THAT DIFFERS FROM THE ORIGINAL SOURCE
+New features by
+    Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+
+
+
 Introduction
 ============
 blockSQP is a sequential quadratic programming method for finding local solutions

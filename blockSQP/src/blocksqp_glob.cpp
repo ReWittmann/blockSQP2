@@ -440,7 +440,7 @@ int SQPmethod::feasibilityRestorationPhase(){
 
     int info;
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
-    RES ret;
+    SQPresult ret;
     int maxRestIt = 20;
     int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
@@ -768,7 +768,7 @@ int SCQPmethod::feasibilityRestorationPhase(){
 
     int info;
     int feas_result = 1;
-    RES ret;
+    SQPresult ret;
     int maxRestIt = 20;
     int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
@@ -1030,7 +1030,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
     stats->nRestPhaseCalls++;
     int info;
     int feas_result = 1;
-    RES ret;
+    SQPresult ret;
     int maxRestIt = 20;
     int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;

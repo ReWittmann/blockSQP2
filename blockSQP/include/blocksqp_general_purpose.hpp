@@ -42,6 +42,11 @@ void Atimesb( double *Anz, int *AIndRow, int *AIndCol, const Matrix &b, Matrix &
 double estimateSmallestEigenvalue( const Matrix &B );
 //int inverse( const Matrix &A, Matrix &Ainv );
 
+void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+    double *&hessNz);
+void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+    double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_);
+
 } // namespace blockSQP
 
 #endif

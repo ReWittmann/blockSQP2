@@ -17,7 +17,6 @@
 #ifndef BLOCKSQP_METHOD_HPP
 #define BLOCKSQP_METHOD_HPP
 
-//#include "qpOASES.hpp"
 #include "blocksqp_defs.hpp"
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_problemspec.hpp"
@@ -29,11 +28,6 @@
 
 namespace blockSQP{
 
-/**
- * \brief Describes an SQP method for a given problem and set of algorithmic options.
- * \author Dennis Janka
- * \date 2012-2015
- */
 
 class SQPmethod{
 
@@ -53,13 +47,6 @@ class SQPmethod{
 
         scaled_Problemspec*      scaled_prob;
 
-    //NEW
-    /*
-        vblock *                 vblocks;
-        int                      n_vblocks;
-    */
-    //
-
     protected:
         bool                     initCalled;  ///< indicates if init() has been called (necessary for run())
 
@@ -75,7 +62,7 @@ class SQPmethod{
         /// Initialization, has to be called before run
         void init();
         /// Main Loop of SQP method
-        RES run( int maxIt, int warmStart = 0 );
+        SQPresult run( int maxIt, int warmStart = 0 );
         /// Call after the last call of run, to close output files etc.
         void finish();
         /// Print information about the SQP method
@@ -179,7 +166,7 @@ class SQPmethod{
         //void calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess);
         void calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping);
         /// Set pointer to correct step and Lagrange gradient difference in a limited memory context
-        void updateDeltaGamma();
+        void updateDeltaGammaData();
 
         /*
          * Scaling of Hessian Approximation

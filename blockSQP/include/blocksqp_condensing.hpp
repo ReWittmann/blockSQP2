@@ -1,3 +1,11 @@
+/**
+ * \file blocksqp_condensing.hpp
+ * \author Reinhold Wittmann
+ * \date 2023-
+ *
+ * Declaration of methods and data structures for Condenser class
+ */
+
 #ifndef BLOCKSQP_CONDENSING_HPP
 #define BLOCKSQP_CONDENSING_HPP
 
@@ -8,6 +16,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cassert>
+#include <memory>
 
 
 namespace blockSQP{
@@ -161,11 +170,6 @@ struct condensing_data{
 class Condenser{
 
     public:
-	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
-	//Condenser(const Condenser &C2);
-	Condenser(Condenser &&C);
-	~Condenser();
-
     //Constructor arguments
 	int num_cblocks;
 	int num_vblocks;
@@ -225,6 +229,12 @@ class Condenser{
     //Bounds on dependent variables in condensed QP, which can be manually added to a QP condensed with option add_dep_bounds = 1
     Matrix lb_dep_var;
     Matrix ub_dep_var;
+
+	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
+	//Condenser(const Condenser &C2);
+	Condenser(Condenser &&C);
+	virtual ~Condenser();
+
 
     void print_debug();
 
@@ -289,7 +299,26 @@ class Condenser{
 };
 
 
-}
+//Condenser for restoration problem of parent condenser problem
+class autonomous_Condenser : public Condenser{
+    public:
+    autonomous_Condenser(
+                        std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
+                        std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
+                        std::unique_ptr<int[]> HSIZES, int n_HBLOCKS, 
+                        std::unique_ptr<condensing_target[]> TARGETS, int n_TARGETS, 
+                        int DEP_BOUNDS = 2);
+	std::unique_ptr<vblock[]> auto_vblocks;
+    std::unique_ptr<cblock[]> auto_cblocks;
+	std::unique_ptr<int[]> auto_hess_block_sizes;
+	std::unique_ptr<condensing_target[]> auto_targets;
+};
+
+std::unique_ptr<autonomous_Condenser> create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS = 2);
+
+
+
+}//namespace blockSQP
 
 #endif
 

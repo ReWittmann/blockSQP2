@@ -323,29 +323,6 @@ int main(){
     std::cout << "Primal solution of condensed QP after restoration is\n" << xi_rest << "\n";
     std::cout << "Dual solution of condensed QP after restoration is\n" << lambda_rest << "\n";
 
-    /*
-    blockSQP::SymMatrix *hess_2 = new blockSQP::SymMatrix[4];
-    hess_2[0] = identity(1);
-    hess_2[1] = full_block;
-    hess_2[2] = full_block;
-    hess_2[3] = full_block;
-
-
-    blockSQP::SymMatrix *condensed_hess_2 = new blockSQP::SymMatrix[1];
-    blockSQP::Matrix condensed_h_2;
-    C->fallback_hessian_condense(hess_2, condensed_h_2, condensed_hess_2);
-
-    std::cout << "Second condensed hessian is\n" << condensed_hess_2[0] << "\n";
-    std::cout << "Condensed_h_2 = \n" << condensed_h_2 << "\n";
-
-    double t = 0.5;
-    blockSQP::SymMatrix *conv_cond_hess = new blockSQP::SymMatrix[1];
-
-    conv_cond_hess[0] = condensed_hess[0] * (1 - t) + condensed_hess_2[0] * t;
-
-
-    */
-
 
     delete qp_cond;
     delete A_qp_cond;

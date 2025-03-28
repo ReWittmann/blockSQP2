@@ -368,4 +368,112 @@ double lInfConstraintNorm(const Matrix &xi, const Matrix &constr, const Matrix &
 }
 
 
+
+void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+                                            double *&hessNz){
+    if (hessNz == NULL)
+        hessNz = new double[nVar * nVar];
+
+    int bsize, bstart = 0, ind = 0;
+    //Iterate over hessian blocks
+    for (int h = 0; h <nBlocks; h++){
+        bsize = hess[h].m;
+        //Iterate over second dimension
+        for (int j = 0; j < bsize; j++){
+            //Iterate over first dimension
+             //Segment above hessian block
+            for (int i = 0; i < bstart; i++){
+                hessNz[ind] = 0;
+                ++ind;
+            }
+             //Hessian block
+            for (int i = 0; i < hess[h].m; i++){
+                hessNz[ind] = hess[h](i, j);
+                //NEW
+                if (i == j) hessNz[ind] += regularizationFactor;
+
+                ++ind;
+            }
+             //Segment below hessian block
+            for (int i = bstart + bsize; i < nVar; i++){
+                hessNz[ind] = 0;
+                ++ind;
+            }
+        }
+        bstart += bsize;
+    }
+    return;
+}
+
+
+void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+                             double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
+    int iBlock, count, colCountTotal, rowOffset, i, j;
+    int nnz, nCols, nRows;
+
+    // 1) count nonzero elements
+    nnz = 0;
+    for (iBlock=0; iBlock<nBlocks; iBlock++){
+        for (i=0; i<hess_[iBlock].m; i++){
+            //Always count diagonal elements (regularization)
+            if (fabs(hess_[iBlock](i,i)) > eps || fabs(hess_[iBlock](i,i)) + regularizationFactor > eps)
+                nnz++;
+
+            for (j = i + 1; j < hess_[iBlock].m; j++){
+                if (fabs(hess_[iBlock]( i,j )) > eps)
+                    nnz += 2;
+            }
+        }
+    }
+
+    delete[] hessNz_;
+    delete[] hessIndRow_;
+    delete[] hessIndCol_;
+    delete[] hessIndLo_;
+
+    hessNz_ = new double[nnz];
+    hessIndRow_ = new int[nnz];
+    hessIndCol_ = new int[nVar + 1];
+    hessIndLo_ = new int[nVar];
+
+    // 2) store matrix entries columnwise in hessNz
+    count = 0; // runs over all nonzero elements
+    colCountTotal = 0; // keep track of position in large matrix
+    rowOffset = 0;
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){
+        nCols = hess_[iBlock].m;
+        nRows = hess_[iBlock].m;
+
+        for (i = 0; i < nCols; i++){
+            // column 'colCountTotal' starts at element 'count'
+            hessIndCol_[colCountTotal] = count;
+
+            for (j = 0; j < nRows; j++){
+                //if (hess_[iBlock]( i,j ) > eps || -hess_[iBlock]( i,j ) > eps ){
+                if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                    hessNz_[count] = hess_[iBlock](i, j);
+                    if (i == j) hessNz_[count] += regularizationFactor;
+
+                    hessIndRow_[count] = j + rowOffset;
+                    count++;
+                }
+            }
+            colCountTotal++;
+        }
+        rowOffset += nRows;
+    }
+    hessIndCol_[colCountTotal] = count;
+
+    // 3) Set reference to lower triangular matrix
+    for( j=0; j<nVar; j++ )
+    {
+        for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
+        hessIndLo_[j] = i;
+    }
+
+    if( count != nnz ){
+         std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
+    }
+}
+
 } // namespace blockSQP
