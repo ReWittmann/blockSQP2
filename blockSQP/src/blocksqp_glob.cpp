@@ -652,7 +652,7 @@ int SQPmethod::kktErrorReduction(){
         // evaluation error
         return 1;
     }
-
+    
     // Compute KKT error of the new point
 
     // scaled norm of Lagrangian gradient
@@ -663,10 +663,10 @@ int SQPmethod::kktErrorReduction(){
     else
         calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->constrJac,
                               trialGradLagrange, 0 );
-
+    
     trialGradNorm = lInfVectorNorm( trialGradLagrange );
     trialTol = trialGradNorm /( 1.0 + lInfVectorNorm( vars->lambdaQP ) );
-
+    
     if (std::max(cNormTrial, trialTol) < param->kappaF*std::max(vars->cNorm, vars->tol)){
         acceptStep(1.0);
         return 0;

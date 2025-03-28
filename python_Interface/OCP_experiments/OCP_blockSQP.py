@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import sys
+import time
 try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 except:
@@ -26,7 +27,10 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Hanging_Chain(nt=100, parallel = False)
+OCprob = OCProblems.Goddard_Rocket(nt=100, parallel = False)
+
+# OCprob = OCProblems.F8_Aircraft(nt = 100, parallel = False)
+# OCprob.set_stage_control(OCprob.start_point, 20, -0.0125)
 
 ################################
 opts = py_blockSQP.SQPoptions();
@@ -34,7 +38,7 @@ opts.maxItQP = 100000
 opts.maxTimeQP = 5.0
 
 opts.maxConvQP = 1
-opts.convStrategy = 0
+opts.convStrategy = 2
 opts.whichSecondDerv = 0
 opts.hessUpdate = 1
 opts.hessScaling = 2
@@ -50,7 +54,7 @@ opts.autoScaling = False
 
 opts.max_extra_steps = 0
 opts.allow_premature_termination = False
-opts.max_local_lenience = 0
+opts.max_local_lenience = 2
 
 opts.QPsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
@@ -92,21 +96,25 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
 
+# import copy
+# sp = copy.copy(OCprob.start_point)
+# OCprob.set_stage_control(sp, 22, 0.1)
+# prob.x_start = sp
+
 prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 prob.complete()
 
 scale_arr = 1.0;
-##SCALE
-prob_unscaled = prob
-prob = py_blockSQP.scaled_Problemspec(prob)
-scale = py_blockSQP.double_array(OCprob.nVar)
-scale_arr = np.array(scale, copy = False)
-scale_arr[:] = 1.0
-for i in range(OCprob.ntS):
-    OCprob.set_stage_control(scale_arr, i, [1.0])
-prob.arr_set_scale(scale)
-
+###SCALE###
+# prob_unscaled = prob
+# prob = py_blockSQP.scaled_Problemspec(prob)
+# scale = py_blockSQP.double_array(OCprob.nVar)
+# scale_arr = np.array(scale, copy = False)
+# scale_arr[:] = 1.0
+# for i in range(OCprob.ntS):
+#     OCprob.set_stage_control(scale_arr, i, [1.0])
+# prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
@@ -117,6 +125,7 @@ optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 # optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
+t0 = time.time()
 
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 200, it = 0, title=plot_title)
@@ -132,6 +141,7 @@ if (step_plots):
 else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
-    OCprob.plot(xi, dpi=200, it = stats.itCount - 1, title=plot_title)
-    print("Solved OCP in ", t1 - t0, "s\n")
+    # OCprob.plot(xi, dpi=200, it = stats.itCount - 1, title=plot_title)
+    # print("Solved OCP in ", t1 - t0, "s\n")
+t1 = time.time()
 #####################

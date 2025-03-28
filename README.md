@@ -1,10 +1,11 @@
 # BlockSQP - C++, Python, Julia - build system using qpOASES and MUMPS
 
-Both a Fortran and a C++ are required, change from defaults via -DCMAKE_FC_COMPILER=..., -DCMAKE_CXX_COMPILER=
+Both a Fortran and a C++ compiler are required, change from defaults via -DCMAKE_FC_COMPILER=..., -DCMAKE_CXX_COMPILER=
 
 Create build files by calling
 cmake -B build ${OPTIONS}
 
+Options are set via the argument -D${OPTION}=...
 The following OPTIONS may be set
     PYTHON_INTERFACE (ON/OFF)-  build the python interface
     PYTHON_INTERPRETER (/...)-  path to the python interpreter you wish to build for, set if different from default system python
@@ -15,9 +16,9 @@ The following OPTIONS may be set
                         Search for cxxwrap in your artifacts folder, find libcxxwrap_julia_jll in your julia packages folder
                         and find the git-tree-sha1 for your julia version and system. 
                         
-Compile via calling either
+Compile via
 cmake --build build
-    or
+    OR
 make -C build
 
 

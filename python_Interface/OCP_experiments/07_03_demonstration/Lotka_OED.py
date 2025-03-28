@@ -20,10 +20,10 @@ OCprob = OCProblems.Lotka_OED(nt = 100, parallel=False)
 opts = py_blockSQP.SQPoptions()
 #Solve convexified QPs
 #Add identities to SR1 Hessian, scaled by increasing factor κ
-opts.convStrategy = 1
+opts.convStrategy = 2
 
 #Number of attempted convexified QPs
-opts.maxConvQP = 4          #SR1 -- SR1 + I*κ -- BFGS
+opts.maxConvQP = 4         #SR1 -- SR1 + I*κ -- BFGS
 
 opts.hessUpdate = 1         #SR1
 opts.hessScaling = 2        #Oren-Luenberger sizing

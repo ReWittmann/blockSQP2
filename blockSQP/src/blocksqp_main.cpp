@@ -32,7 +32,6 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
     // Check if there are options that are infeasible and set defaults accordingly
     param->optionsConsistency(problem);
     
-    vars = new SQPiterate(prob, param, true);
     if (param->autoScaling){
         scaled_prob = new scaled_Problemspec(problem);
         prob = scaled_prob;
@@ -41,6 +40,7 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
         scaled_prob = nullptr;
         prob = problem;
     }
+    vars = new SQPiterate(prob, param, true);
 
     // Create a solver object for quadratic subproblems.
     sub_QP = create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, param);
@@ -398,7 +398,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
                 else return print_RES(RES::success, param->printRes);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
-            if (std::min(vars->tol/param->opttol, vars->cNormS/param->nlinfeastol) < std::min(vars->tolOpt_save/param->opttol, vars->cNormSOpt_save/param->nlinfeastol))
+            if (std::max(vars->tol/param->opttol, vars->cNormS/param->nlinfeastol) < std::max(vars->tolOpt_save/param->opttol, vars->cNormSOpt_save/param->nlinfeastol))
                 vars->save_iterate();
             vars->n_extra++;
         }
@@ -436,7 +436,7 @@ RES SQPmethod::run(int maxIt, int warmStart){
         if (vars->milestone > std::max(vars->tol, vars->cNormS)) vars->milestone = std::max(vars->tol, vars->cNormS);
 
 
-        //Increment memory counter of each block and scaleing memory counter unless step is restoration step.
+        //Increment memory counter of each block and scaling memory counter unless step is restoration step.
         if (vars->steptype < 3){
             for (int ind = 0; ind < vars->nBlocks; ind++){
                 vars->nquasi[ind] += int(vars->nquasi[ind] < param->hessMemsize);
@@ -644,8 +644,8 @@ bool SQPmethod::calcOptTol(){
 
 
 void SQPmethod::calc_free_variables_scaling(double *SF){
-    int nIt, pos, nfree = prob->nVar, ind_1, scfree, scdep, cD = 0, cG = 0;
-    double accDfree, accDdep, accGfree, accGdep, resF, DFGratio = 0., DFDratio = 0.;
+    int nIt, pos, nfree = prob->nVar, ind_1, scfree, scdep, count_delta = 0, count_gamma = 0;
+    double bardelta_u, bardelta_x, bargamma_u, bargamma_x, resF, rgamma = 0., rdelta = 0.;
 
     if (prob->n_vblocks < 1) return;
     nfree = prob->nVar;
@@ -655,7 +655,7 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
 
     nIt = std::min(vars->n_scaleIt, 5);
     for (int j = 0; j < nIt; j++){
-        accDfree = 0.; accDdep = 0.; accGfree = 0.; accGdep = 0.;
+        bardelta_u = 0.; bardelta_x = 0.; bargamma_u = 0.; bargamma_x = 0.;
         scfree = 0; scdep = 0;
         pos = (vars->dg_pos - nIt + 1 + j + vars->dg_nsave)%vars->dg_nsave;
         ind_1 = 0;
@@ -663,13 +663,13 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
             for (int i = 0; i < prob->vblocks[k].size; i++){
                 if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){ //Maybe set lower, e.g.1e-10
                     if (prob->vblocks[k].dependent){
-                        accDdep += std::abs(vars->deltaMat(ind_1 + i, pos));
-                        accGdep += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        bardelta_x += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_x += std::abs(vars->gammaMat(ind_1 + i, pos));
                         scdep += 1;
                     }
                     else{
-                        accDfree += std::abs(vars->deltaMat(ind_1 + i, pos));
-                        accGfree += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        bardelta_u += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_u += std::abs(vars->gammaMat(ind_1 + i, pos));
                         scfree += 1;
                     }
                 }
@@ -678,37 +678,37 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
         }
 
         if (scdep > 0 && scfree > 0){
-            accDdep /= scdep; accGdep /= scdep;
-            accDfree /= scfree; accGfree /= scfree;
+            bardelta_x /= scdep; bargamma_x /= scdep;
+            bardelta_u /= scfree; bargamma_u /= scfree;
         }
         else{
-            accDfree = 0.; accDdep = 1.0;
-            accGfree = 0.; accGdep = 1.0;
+            bardelta_u = 0.; bardelta_x = 1.0;
+            bargamma_u = 0.; bargamma_x = 1.0;
         }
-        if (accGdep > 5e-7 && accGfree > 5e-7){
-            DFGratio += std::log(accGfree/accGdep);
-            cG += 1;
-            if (accDdep > 5e-7 && accDfree > 5e-7){
-                DFDratio += std::log(accDfree/accDdep);
-                cD += 1;
+        if (bargamma_x > 5e-7 && bargamma_u > 5e-7){
+            rgamma += std::log(bargamma_u/bargamma_x);
+            count_gamma += 1;
+            if (bardelta_x > 5e-7 && bardelta_u > 5e-7){
+                rdelta += std::log(bardelta_u/bardelta_x);
+                count_delta += 1;
             }
         }
     }
-    //If no scaling information was accumulated, DFDratio is set to 1.0 => all scaling factors are 1.0
-    DFDratio = (cD > 0) ? std::exp(DFDratio/cD) : 1.0;
-    DFGratio = (cG > 0) ? std::exp(DFGratio/cG) : 1.0;
+    //If no scaling information was accumulated, rdelta is set to 1.0 => all scaling factors are 1.0
+    rdelta = (count_delta > 0) ? std::exp(rdelta/count_delta) : 1.0;
+    rgamma = (count_gamma > 0) ? std::exp(rgamma/count_gamma) : 1.0;
 
     resF = -1.0;
-    if (DFGratio > 2.0){
-        resF = DFGratio/2.0;
+    if (rgamma > 2.0){
+        resF = rgamma/2.0;
     }
-    else if (DFGratio < 1.0){
-        if (DFDratio > 1.0){
-            if (DFGratio < 0.1) resF = 10.0*DFGratio;
-            else resF = std::min(1.0, DFDratio*DFGratio);
+    else if (rgamma < 1.0){
+        if (rdelta > 1.0){
+            if (rgamma < 0.1) resF = 10.0*rgamma;
+            else resF = std::min(1.0, rdelta*rgamma);
         }
         else{
-            resF = DFGratio;
+            resF = rgamma;
         }
     }
 
@@ -803,7 +803,7 @@ void SQPmethod::apply_rescaling(double *resfactors){
             }
         }
     }
-
+    
     nmem = std::min(stats->itCount, vars->dg_nsave);
     for (int k = 0; k < nmem; k++){
         pos = (vars->dg_pos - nmem + 1 + k + vars->dg_nsave)%vars->dg_nsave;
@@ -820,7 +820,7 @@ void SQPmethod::apply_rescaling(double *resfactors){
     return;
 }
 
-//Set a new iterate, ignoring the filter and remove dominating entries
+//Set a new iterate, ignoring the filter and removing dominating entries
 void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHessian){
     vars->xi = xi;
     if (param->autoScaling){
@@ -969,7 +969,6 @@ SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *
     param = parameters; param->optionsConsistency();
     stats = statistics;
     cond = CND;
-    vars = new SCQPiterate(prob, param, cond, true);
 
     if (param->autoScaling){
         scaled_prob = new scaled_Problemspec(problem);
@@ -979,6 +978,7 @@ SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *
         scaled_prob = nullptr;
         prob = problem;
     }
+    vars = new SCQPiterate(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){
@@ -1085,7 +1085,6 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
     prob = problem;
     param = parameters; param->optionsConsistency();
     stats = statistics;
-    vars = new SCQPiterate(prob, param, cond, true);
 
     if (param->autoScaling){
         scaled_prob = new scaled_Problemspec(problem);
@@ -1095,6 +1094,7 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
         scaled_prob = nullptr;
         prob = problem;
     }
+    vars = new SCQPiterate(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){
@@ -1187,7 +1187,6 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     prob = problem;
     param = parameters; param->optionsConsistency();
     stats = statistics;
-    vars = new SCQP_correction_iterate(prob, param, cond, true);
 
     if (param->autoScaling){
         scaled_prob = new scaled_Problemspec(problem);
@@ -1197,6 +1196,7 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         scaled_prob = nullptr;
         prob = problem;
     }
+    vars = new SCQP_correction_iterate(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){

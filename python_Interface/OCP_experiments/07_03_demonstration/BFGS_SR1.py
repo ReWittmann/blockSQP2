@@ -12,7 +12,7 @@ import OCProblems
 
 #See mintoc.de for problem definitions
 #1.
-OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False)
+# OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False)
 
 #2.
 # OCprob = OCProblems.Egerstedt_Standard(nt = 100, parallel = False)
@@ -36,6 +36,7 @@ opts = py_blockSQP.SQPoptions()
 opts.maxItQP = 100000
 opts.maxTimeQP = 5.0
 
+# opts.whichSecondDerv = 2
 opts.maxConvQP = 1          #SR1 - BFGS
 opts.hessUpdate = 1         #SR1
 opts.hessScaling = 2        #Oren-Luenberger sizing

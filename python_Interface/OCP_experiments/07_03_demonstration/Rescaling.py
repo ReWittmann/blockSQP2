@@ -14,12 +14,11 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(nt=100, parallel = False)
 
 
 #Scale the controls from [0, 1] to [0, uscale]
-uscale = 100´
+uscale = 1000
 
 
 ################################
 opts = py_blockSQP.SQPoptions()
-
 
 
 opts.convStrategy = 1

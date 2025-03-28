@@ -23,7 +23,7 @@
 namespace blockSQP{
 
 
-SQPiterate::SQPiterate(const Problemspec* prob, const SQPoptions* param, bool full){
+SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
 
     int maxblocksize;
 
@@ -184,11 +184,11 @@ SQPiterate::SQPiterate(const Problemspec* prob, const SQPoptions* param, bool fu
 
         nquasi = new int[nBlocks]();
         dg_pos = -1;
-
+        
         // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
-        deltaNormSqOld.Dimension(nBlocks).Initialize( 1.0 );
+        deltaNormSqOld.Dimension(nBlocks).Initialize(1.0);
         deltaOld.Dimension(prob->nVar).Initialize(0.0);
-        deltaGammaOld.Dimension(nBlocks).Initialize( 0.0 );
+        deltaGammaOld.Dimension(nBlocks).Initialize(0.0);
 
         deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
 
@@ -198,9 +198,13 @@ SQPiterate::SQPiterate(const Problemspec* prob, const SQPoptions* param, bool fu
         if (param->autoScaling){
             rescaleFactors = new double[prob->nVar];
             vfreeScale = 1.0;
+            scaled_prob = dynamic_cast<scaled_Problemspec*>(prob);
+            scaleFactors_save = new double[prob->nVar];
         }
         else{
             rescaleFactors = nullptr;
+            scaled_prob = nullptr;
+            scaleFactors_save = nullptr;
         }
         n_scaleIt = 0;
     }
@@ -281,9 +285,10 @@ SQPiterate::~SQPiterate(void){
 
     delete[] nquasi;
     delete[] rescaleFactors;
+    delete[] scaleFactors_save;
 }
 
-//TODO: Store scaling factors as well because they may change
+//TODO: Store and restore scaling factors as well as they may change inbetween
 void SQPiterate::save_iterate(){
     xiOpt_save = xi;
     lambdaOpt_save = lambda;
@@ -292,6 +297,12 @@ void SQPiterate::save_iterate(){
     tolOpt_save = tol;
     cNormOpt_save = cNorm;
     cNormSOpt_save = cNormS;
+    if (scaled_prob){
+        for (int i = 0; i < xi.m; i++){
+            scaleFactors_save[i] = scaled_prob->scaling_factors[i];
+        }
+    }
+
     return;
 }
 
@@ -303,6 +314,9 @@ void SQPiterate::restore_iterate(){
     tol = tolOpt_save;
     cNorm = cNormOpt_save;
     cNormS = cNormSOpt_save;
+    if (scaled_prob){
+        scaled_prob->set_scale(scaleFactors_save);
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

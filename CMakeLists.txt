@@ -27,7 +27,7 @@ FetchContent_Declare(
 	qpos
 	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
 	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
-	SOURCE_SUBDIR 	HACKY_WORKAROUND_CMAKE_BAD  #Nonexistent folder to prevent add_subdirectory from being called
+	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
 )
 FetchContent_GetProperties(qpos)
 
@@ -121,7 +121,7 @@ set_target_properties(example_condensing
 )
 
 option(PYTHON_INTERFACE "build python interface" OFF)
-set(PYTHON_INTERPRETER "" CACHE STRING "Path to Python install folder (default: empty)")
+set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")
 
 if(PYTHON_INTERFACE)
 	if (NOT PYTHON_INTERPRETER STREQUAL "")

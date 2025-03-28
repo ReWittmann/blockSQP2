@@ -155,13 +155,15 @@ class SQPiterate
         double tolOpt_save;
         double cNormOpt_save;
         double cNormSOpt_save;
+        double *scaleFactors_save;
+        scaled_Problemspec *scaled_prob;
 
     /*
      * Methods
      */
     public:
         /// Call allocation and initializing routines
-        SQPiterate( const Problemspec* prob, const SQPoptions* param, bool full );
+        SQPiterate(Problemspec* prob, const SQPoptions* param, bool full );
         SQPiterate();
         SQPiterate( const SQPiterate &iter );
         /// Set initial filter, objective function, tolerances etc.
