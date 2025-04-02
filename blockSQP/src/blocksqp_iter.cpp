@@ -30,7 +30,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
     // Set nBlocks structure according to if we use block updates or not
     if (param->blockHess == 0 || prob->nBlocks == 1){
         nBlocks = 1;
-        blockIdx = new int[2];
+        blockIdx = std::make_unique<int[]>(2);
         blockIdx[0] = 0;
         blockIdx[1] = prob->nVar;
         maxblocksize = prob->nVar;
@@ -39,7 +39,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
     else if (param->blockHess == 2 && prob->nBlocks > 1){
         // hybrid strategy: 1 block for constraints, 1 for objective
         nBlocks = 2;
-        blockIdx = new int[3];
+        blockIdx = std::make_unique<int[]>(3);
         blockIdx[0] = 0;
         blockIdx[1] = prob->blockIdx[prob->nBlocks-1];
         blockIdx[2] = prob->nVar;
@@ -47,7 +47,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
     }
     else{   
         nBlocks = prob->nBlocks;
-        blockIdx = new int[nBlocks+1];
+        blockIdx = std::make_unique<int[]>(nBlocks+1);
         blockIdx[0] = 0;
         maxblocksize = 0;
         for(int iBlock = 0; iBlock < nBlocks; iBlock++){
@@ -82,9 +82,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
         jacIndCol = nullptr;
     }
     else{
-        jacNz = new double[prob->nnz];
-        jacIndRow = new int[prob->nnz];
-        jacIndCol = new int[prob->nVar + 1];
+        jacNz = std::make_unique<double[]>(prob->nnz);
+        jacIndRow = std::make_unique<int[]>(prob->nnz);
+        jacIndCol = std::make_unique<int[]>(prob->nVar + 1);
     }
 
     hess = nullptr;
@@ -114,7 +114,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
         int iBlock, varDim;
 
         // Create one Matrix for one diagonal block in the Hessian
-        hess1 = new SymMatrix[nBlocks];
+        hess1 = std::make_unique<SymMatrix[]>(nBlocks);
         for( iBlock=0; iBlock<nBlocks; iBlock++ )
         {
             varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
@@ -123,21 +123,21 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
 
         // For SR1 or finite differences, maintain two Hessians
         if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6 || param->hessUpdate > 6){
-            hess2 = new SymMatrix[nBlocks];
+            hess2 = std::make_unique<SymMatrix[]>(nBlocks);
             for (iBlock = 0; iBlock < nBlocks; iBlock++){
                 varDim = blockIdx[iBlock + 1] - blockIdx[iBlock];
                 hess2[iBlock].Dimension(varDim).Initialize(0.0);
             }
         }
 
-        hess_alt = new SymMatrix[nBlocks];
+        hess_alt = std::make_unique<SymMatrix[]>(nBlocks);
         for (iBlock = 0; iBlock < nBlocks; iBlock++){
             varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
             hess_alt[iBlock].Dimension( varDim ).Initialize(0.0);
         }
 
         // Set Hessian pointer
-        hess = hess1;
+        hess = hess1.get();
 
         ///Allocate additional variables needed by the algorithm
         int nVar = prob->nVar;
@@ -156,6 +156,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
         // trial step (temporary variable, for line search)
         trialXi.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
 
+        // trial Lagrange multipliers (temporary variable, stores recovered Lagrange multipliers from restoration problem)
+        trialLambda.Dimension(nVar + nCon, 1, nVar + nCon).Initialize(0.0);
+
         // Constraint function values at trial point
         trialConstr.Dimension(nCon, 1).Initialize(0.0);
 
@@ -173,16 +176,16 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
         lambdaQP.Dimension( nVar+nCon ).Initialize( 0.0 );
 
         // filter as a set of pairs
-        filter = new std::set<std::pair<double,double>>;
+        //filter = new std::set<std::pair<double,double>>;
 
         gamma.Submatrix(gammaMat, nVar, 1, 0, 0);
 
         // Scalars that are used in various Hessian update procedures
-        noUpdateCounter = new int[nBlocks];
+        noUpdateCounter = std::make_unique<int[]>(nBlocks);
         for (iBlock = 0; iBlock < nBlocks; iBlock++)
             noUpdateCounter[iBlock] = -1;
 
-        nquasi = new int[nBlocks]();
+        nquasi = std::unique_ptr<int[]>(new int[nBlocks]());
         dg_pos = -1;
         
         // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
@@ -196,10 +199,10 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
         local_lenience = std::max(param->max_local_lenience, 0);
 
         if (param->autoScaling){
-            rescaleFactors = new double[prob->nVar];
+            rescaleFactors = std::make_unique<double[]>(prob->nVar);
             vfreeScale = 1.0;
             scaled_prob = dynamic_cast<scaled_Problemspec*>(prob);
-            scaleFactors_save = new double[prob->nVar];
+            scaleFactors_save = std::make_unique<double[]>(prob->nVar);
         }
         else{
             rescaleFactors = nullptr;
@@ -215,7 +218,7 @@ SQPiterate::SQPiterate(){}
 SQPiterate::SQPiterate( const SQPiterate &iter ){
 
     nBlocks = iter.nBlocks;
-    blockIdx = new int[nBlocks+1];
+    blockIdx = std::make_unique<int[]>(nBlocks + 1);
     for (int i = 0; i < nBlocks + 1; i++)
         blockIdx[i] = iter.blockIdx[i];
 
@@ -227,19 +230,18 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
 
     constrJac = iter.constrJac;
     if (iter.jacNz != nullptr){
-
         int nVar = xi.M();
         int nnz = iter.jacIndCol[nVar];
 
-        jacNz = new double[nnz];
+        jacNz = std::make_unique<double[]>(nnz);
         for(int i = 0; i < nnz; i++)
             jacNz[i] = iter.jacNz[i];
 
-        jacIndRow = new int[nnz];
+        jacIndRow = std::make_unique<int[]>(nnz);
         for (int i = 0; i < nnz; i++)
             jacIndRow[i] = iter.jacIndRow[i];
 
-        jacIndCol = new int[nVar + 1];
+        jacIndCol = std::make_unique<int[]>(nVar + 1);
         for (int i = 0; i <= nVar; i++)
             jacIndCol[i] = iter.jacIndCol[i];
     }
@@ -272,20 +274,20 @@ void SQPiterate::initIterate( SQPoptions* param )
 }
 
 SQPiterate::~SQPiterate(void){
-    delete[] blockIdx;
-    delete[] noUpdateCounter;
-    delete[] jacNz;
-    delete[] jacIndRow;
-    delete[] jacIndCol;
+    //delete[] blockIdx;
+    //delete[] noUpdateCounter;
+    //delete[] jacNz;
+    //delete[] jacIndRow;
+    //delete[] jacIndCol;
 
-    delete filter;
-    delete[] hess1;
-    delete[] hess2;
-    delete[] hess_alt;
+    //delete filter;
+    //delete[] hess1;
+    //delete[] hess2;
+    //delete[] hess_alt;
 
-    delete[] nquasi;
-    delete[] rescaleFactors;
-    delete[] scaleFactors_save;
+    //delete[] nquasi;
+    //delete[] rescaleFactors;
+    //delete[] scaleFactors_save;
 }
 
 //TODO: Store and restore scaling factors as well as they may change inbetween
@@ -315,41 +317,40 @@ void SQPiterate::restore_iterate(){
     cNorm = cNormOpt_save;
     cNormS = cNormSOpt_save;
     if (scaled_prob){
-        scaled_prob->set_scale(scaleFactors_save);
+        scaled_prob->set_scale(scaleFactors_save.get());
     }
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond, bool full):
-    SQPiterate(prob, param, full)
-{
+        SQPiterate(prob, param, full){
     //Wrap sparse jacobian array
-    Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz, jacIndRow, jacIndCol);
+    Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
 
     //Allocate solution of condensed QP
     deltaXi_cond.Dimension(cond->condensed_num_vars);
     lambdaQP_cond.Dimension(cond->condensed_num_vars + cond->condensed_num_cons);
 
     //condensed_hess = nullptr;
-    condensed_hess = new SymMatrix[cond->condensed_num_hessblocks];
+    condensed_hess = std::make_unique<SymMatrix[]>(cond->condensed_num_hessblocks);
     condensed_hess_nz = nullptr;
     condensed_hess_row = nullptr;
     condensed_hess_colind = nullptr;
     condensed_hess_loind = nullptr;
 
     //condensed_hess_2 = nullptr;
-    condensed_hess_2 = new SymMatrix[cond->condensed_num_hessblocks];
+    condensed_hess_2 = std::make_unique<SymMatrix[]>(cond->condensed_num_hessblocks);
 }
 
 
 SCQPiterate::~SCQPiterate(){
-    Jacobian.nz = nullptr;
-    Jacobian.row = nullptr;
-    Jacobian.colind = nullptr;
+    //Jacobian.nz = nullptr;
+    //Jacobian.row = nullptr;
+    //Jacobian.colind = nullptr;
 
-    delete[] condensed_hess;
-    delete[] condensed_hess_2;
+    //delete[] condensed_hess;
+    //delete[] condensed_hess_2;
 }
 
 

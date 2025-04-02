@@ -5,7 +5,7 @@
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_options.hpp"
 #include "blocksqp_problemspec.hpp"
-
+#include <memory>
 
 #ifdef QPSOLVER_QPOASES
     #include "qpOASES.hpp"
@@ -91,35 +91,49 @@ public:
 
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
-QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *opts);
+QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
 
 //QP solver implementations
 #ifdef QPSOLVER_QPOASES
-    #include "qpOASES.hpp"
     class qpOASES_solver : public QPsolver{
-    public:
+        public:
         qpOASES::Options opts;
         int sparseQP;
 
+        /*
         qpOASES::SQProblem*      qp;               ///< qpOASES qp object
         qpOASES::SQProblem*      qpSave;           ///< qpOASES qp object
         qpOASES::SQProblem*      qp_check;         ///< for applying solution analysis
-
+        */
+        
+        std::unique_ptr<qpOASES::SQProblem> qp;
+        std::unique_ptr<qpOASES::SQProblem> qpSave;
+        std::unique_ptr<qpOASES::SQProblem>  qpCheck; 
+        
+        /*
         qpOASES::Matrix* A_qp;                     ///< qpOASES constraint matrix
         qpOASES::SymmetricMatrix* H_qp;            ///< qpOASES quadratic objective matrix
+        */
+        std::unique_ptr<qpOASES::Matrix> A_qp;
+        std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
+
         double* h_qp;                              ///< linear term in objective
-        double *lb, *ub, *lbA, *ubA;               ///< bounds for variables, bounds for constraints
+
+        std::unique_ptr<double[]> lb, ub, lbA, ubA;
+        //double *lb, *ub, *lbA, *ubA;               ///< bounds for variables, bounds for constraints
 
         Matrix jacT;                               ///< transpose of the dense constraint jacobian
 
-        double *hess_nz;
-        int *hess_row, *hess_colind, *hess_loind;
+        std::unique_ptr<double[]> hess_nz;
+        std::unique_ptr<int[]> hess_row, hess_colind, hess_loind;
+        //double *hess_nz;
+        //int *hess_row, *hess_colind, *hess_loind;
 
         bool matrices_changed;
 
         int QP_it;
 
-        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int SPARSE, qpOASES_options *QPopts);
+        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, int SPARSE, qpOASES_options *QPopts);
         ~qpOASES_solver();
 
         void set_lin(const Matrix &grad_obj);

@@ -389,7 +389,7 @@ public:
     }
 
 
-    void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol) override {
+    void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol) override {
         Cpp_Data.xi.ptr = xi.array;
         Cpp_Data.lambda.ptr = lambda.array;
         Cpp_Data.jacIndRow.ptr = jacIndRow;
@@ -400,7 +400,9 @@ public:
     }
 
 
-    void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, blockSQP::Matrix &constrJac, blockSQP::SymMatrix *&hess, int dmode, int *info) override {
+    void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, 
+            double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, blockSQP::Matrix &constrJac,
+            blockSQP::SymMatrix *hess, int dmode, int *info) override {
         Cpp_Data.xi.ptr = xi.array;
         Cpp_Data.lambda.ptr = lambda.array;
         Cpp_Data.dmode = dmode;
@@ -425,7 +427,9 @@ public:
     }
 
 
-    void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol, blockSQP::SymMatrix *&hess, int dmode, int *info) override {
+    void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, 
+                    blockSQP::Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, blockSQP::SymMatrix *hess, 
+                        int dmode, int *info) override {
         Cpp_Data.xi.ptr = xi.array;
         Cpp_Data.lambda.ptr = lambda.array;
         Cpp_Data.dmode = dmode;
@@ -794,7 +798,7 @@ py::enum_<blockSQP::SQPresult>(m, "SQPresult")
     .value("linesearch_failure", blockSQP::SQPresult::linesearch_failure)
     .value("qp_failure", blockSQP::SQPresult::qp_failure)
     .value("eval_failure", blockSQP::SQPresult::eval_failure)
-    .value("mic_error", blockSQP::SQPresult::misc_error)
+    .value("misc_error", blockSQP::SQPresult::misc_error)
     ;
 
 py::class_<blockSQP::Problemspec>(m, "Problemspec");
@@ -849,7 +853,8 @@ py::class_<blockSQP::SQPstats>(m,"SQPstats")
 
 py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
 	.def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*>())
-	.def_readonly("vars", &blockSQP::SQPmethod::vars)
+	 //.def_readonly("vars", &blockSQP::SQPmethod::vars)
+    .def_property_readonly("vars", [](blockSQP::SQPmethod *meth){return meth->vars.get();})
 	.def_readonly("stats", &blockSQP::SQPmethod::stats)
 	.def("init", &blockSQP::SQPmethod::init)
 	.def("run", &blockSQP::SQPmethod::run, py::arg("maxIt"), py::arg("warmStart") = 0)
@@ -857,10 +862,10 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
     .def("resetHessians", static_cast<void (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::resetHessians))
     .def_readwrite("param", &blockSQP::SQPmethod::param)
     .def("set_iterate_", &blockSQP::SQPmethod::set_iterate)
-    .def("get_xi", &blockSQP::SQPmethod::get_xi, py::return_value_policy::take_ownership)
-    .def("get_lambda", &blockSQP::SQPmethod::get_lambda, py::return_value_policy::take_ownership)
-    .def("get_scaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.scaled_prob->scaling_factors, M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
-    .def("get_rescaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.vars->rescaleFactors, M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
+    .def("get_xi", static_cast<blockSQP::Matrix (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::get_xi), py::return_value_policy::take_ownership)
+    .def("get_lambda", static_cast<blockSQP::Matrix (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::get_lambda), py::return_value_policy::take_ownership)
+    .def("get_scaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.scaled_prob->scaling_factors.get(), M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
+    .def("get_rescaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.vars->rescaleFactors.get(), M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
     .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->autoScaling){M.apply_rescaling(arr->ptr);} return;})
     .def("dec_nquasi", [](blockSQP::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
@@ -960,6 +965,7 @@ py::class_<blockSQP::Condenser>(m, "Condenser")
     .def("print_debug", &blockSQP::Condenser::print_debug)
     .def("condense_args", [](blockSQP::Condenser &C, condensing_args &args) -> void{
             args.C = &C;
+            args.condensed_hess.resize(C.condensed_num_hessblocks);
             C.full_condense(args.grad_obj, args.con_jac, args.hess.ptr, args.lb_var, args.ub_var, args.lb_con, args.ub_con,
                 args.condensed_h, args.condensed_Jacobian, args.condensed_hess.ptr, args.condensed_lb_var, args.condensed_ub_var, args.condensed_lb_con, args.condensed_ub_con
             );
@@ -1027,7 +1033,7 @@ py::class_<blockSQP::TC_feasibility_Problem, blockSQP::Problemspec>(m, "TC_feasi
 	.def_readwrite("lb_con", &blockSQP::TC_feasibility_Problem::lb_con)
 	.def_readwrite("ub_con", &blockSQP::TC_feasibility_Problem::ub_con)
 	.def_readonly("nBlocks", &blockSQP::TC_feasibility_Problem::nBlocks)
-	.def_readonly("xi_orig", &blockSQP::TC_feasibility_Problem::xi_orig)
+	.def_readonly("xi_orig", &blockSQP::TC_feasibility_Problem::xi_parent)
 	.def_readonly("slack", &blockSQP::TC_feasibility_Problem::slack)
 	.def_property("jac_orig_nz", [](blockSQP::TC_feasibility_Problem &P)->double_pointer_interface{double_pointer_interface nonzeros; nonzeros.size = P.nnz; nonzeros.ptr = P.jac_orig_nz; return nonzeros;}, nullptr)
 	.def_property("jac_orig_row", [](blockSQP::TC_feasibility_Problem &P)->int_pointer_interface{int_pointer_interface row; row.size = P.nnz; row.ptr = P.jac_orig_row; return row;}, nullptr)

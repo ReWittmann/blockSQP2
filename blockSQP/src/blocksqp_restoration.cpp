@@ -22,14 +22,22 @@
 
 namespace blockSQP{
 
+
+void abstractRestorationProblem::update_xi_ref(const Matrix &xiReference){return;}
+
+
 RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
 
     int iVar, iCon;
 
     parent = parentProblem;
+    /*
     xiRef.Dimension( parent->nVar ).Initialize(0.);
     for(int i=0; i<parent->nVar; i++)
         xiRef( i ) = xiReference( i );
+    */
+    
+    xi_ref = xiReference;
 
     /* nCon slack variables */
     nVar = parent->nVar + parent->nCon;
@@ -65,19 +73,20 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
 }
 
 RestorationProblem::~RestorationProblem(){
-    delete[] jacNzOrig;
-    delete[] jacIndRowOrig;
-    delete[] jacIndColOrig;
+    //delete[] jacNzOrig;
+    //delete[] jacIndRowOrig;
+    //delete[] jacIndColOrig;
 }
 
 
+void RestorationProblem::update_xi_ref(const Matrix &xiReference){
+    xi_ref = xiReference;
+}
 
-
-void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
-                                   double *objval, Matrix &constr,
-                                   Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                                   SymMatrix *&hess, int dmode, int *info )
-{
+void RestorationProblem::evaluate(
+        const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr,
+        Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
+        SymMatrix *hess, int dmode, int *info){
     int iCon, i;
     double diff, regTerm;
     Matrix xiOrig, slack;
@@ -108,24 +117,23 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
 
     // Second part: regularization term
     regTerm = 0.0;
-    for( i=0; i<parent->nVar; i++ )
-    {
-        diff = xiOrig( i ) - xiRef( i );
+    for (i = 0; i < parent->nVar; i++){
+        diff = xiOrig(i) - xi_ref(i);
         regTerm += diagScale(i) * diagScale(i) * diff * diff;
     }
     regTerm = 0.5 * zeta * regTerm;
     *objval += regTerm;
 
-    if( dmode > 0 )
-    {// compute objective gradient
+    if (dmode > 0){
+        // compute objective gradient
 
         // gradient w.r.t. xi (regularization term)
-        for( i=0; i<parent->nVar; i++ )
-            gradObj( i ) = zeta * diagScale( i ) * diagScale( i ) * (xiOrig( i ) - xiRef( i ));
+        for (i = 0; i < parent->nVar; i++)
+            gradObj(i) = zeta*diagScale(i)*diagScale(i) * (xiOrig(i) - xi_ref(i));
 
         // gradient w.r.t. slack variables
-        for( i=parent->nVar; i<nVar; i++ )
-            gradObj( i ) = rho * xi( i );
+        for (i = parent->nVar; i < nVar; i++)
+            gradObj(i) = rho * xi(i);
     }
 
     *info = 0;
@@ -135,7 +143,7 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
 void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
                                    double *objval, Matrix &constr,
                                    Matrix &gradObj, Matrix &constrJac,
-                                   SymMatrix *&hess, int dmode, int *info )
+                                   SymMatrix *hess, int dmode, int *info )
 {
     int iCon, i;
     double diff, regTerm;
@@ -143,19 +151,19 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
     Matrix slack;
 
     // The first nVar elements of the variable vector correspond to the variables of the original problem
-    xiOrig.Submatrix( xi, parent->nVar, 1, 0, 0 );
-    slack.Submatrix( xi, parent->nCon, 1, parent->nVar, 0 );
-    if( dmode != 0 )
-        constrJacOrig.Submatrix( constrJac, parent->nCon, parent->nVar, 0, 0 );
+    xiOrig.Submatrix(xi, parent->nVar, 1, 0, 0);
+    slack.Submatrix(xi, parent->nCon, 1, parent->nVar, 0);
+    if (dmode != 0)
+        constrJacOrig.Submatrix(constrJac, parent->nCon, parent->nVar, 0, 0);
 
     // Evaluate constraints of the original problem
-    parent->evaluate( xiOrig, lambda, objval, constr,
-                      gradObj, constrJacOrig, hess, dmode, info );
+    parent->evaluate(xiOrig, lambda, objval, constr,
+                     gradObj, constrJacOrig, hess, dmode, info);
 
     // Subtract slacks
-    for( iCon=0; iCon<nCon; iCon++ )
-        constr( iCon ) -= slack( iCon );
-
+    for (iCon = 0; iCon < nCon; iCon++){
+        constr(iCon) -= slack(iCon);
+    }
 
     //Evaluate objective: minimize slacks plus deviation from reference point
     if( dmode < 0 )
@@ -172,7 +180,7 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
     regTerm = 0.0;
     for( i=0; i<parent->nVar; i++ )
     {
-        diff = xiOrig( i ) - xiRef( i );
+        diff = xiOrig( i ) - xi_ref( i );
         regTerm += diagScale(i) * diagScale(i) * diff * diff;
     }
     regTerm = 0.5 * zeta * regTerm;
@@ -183,7 +191,7 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
 
         // gradient w.r.t. xi (regularization term)
         for( i=0; i<parent->nVar; i++ )
-            gradObj( i ) = zeta * diagScale( i ) * diagScale( i ) * (xiOrig( i ) - xiRef( i ));
+            gradObj( i ) = zeta * diagScale( i ) * diagScale( i ) * (xiOrig( i ) - xi_ref( i ));
 
         // gradient w.r.t. slack variables
         for( i=parent->nVar; i<nVar; i++ )
@@ -194,88 +202,84 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
 }
 
 
-void RestorationProblem::initialize( Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol )
-{
-    int i, info, nnzOrig;
+void RestorationProblem::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
+    int i, info;
     double objval;
-    Matrix xiOrig, slack, constrRef;
+    Matrix constrRef;
 
-    xiOrig.Submatrix( xi, parent->nVar, 1, 0, 0 );
-    slack.Submatrix( xi, parent->nCon, 1, parent->nVar, 0 );
+    xi_parent.Submatrix(xi, parent->nVar, 1, 0, 0);
+    slack.Submatrix(xi, parent->nCon, 1, parent->nVar, 0);
 
     // Allocate the sparse jacobian of the parent problem
-    jacNzOrig = new double[parent->nnz];
-    jacIndRowOrig = new int[parent->nnz];
-    jacIndColOrig = new int[parent->nVar + 1];
+    
+    //jacNzOrig = new double[parent->nnz];
+    //jacIndRowOrig = new int[parent->nnz];
+    //jacIndColOrig = new int[parent->nVar + 1];
 
-    parent->initialize( xiOrig, lambda, jacNzOrig, jacIndRowOrig, jacIndColOrig );
-    nnzOrig = jacIndColOrig[parent->nVar];
+
+    //parent->initialize( xiOrig, lambda, jacNzOrig, jacIndRowOrig, jacIndColOrig );
+    parent->initialize(xi_parent, lambda, jacNz, jacIndRow, jacIndCol);
+    //nnzOrig = jacIndColOrig[parent->nVar];
 
     // Copy sparse Jacobian from parent problem
-    for( i=0; i<nnzOrig; i++ )
-    {
+    /*
+    for (i = 0; i < nnzOrig; i++){
         jacNz[i] = jacNzOrig[i];
         jacIndRow[i] = jacIndRowOrig[i];
     }
-    for( i=0; i<=parent->nVar; i++ )
+    for (i = 0; i <= parent->nVar; i++){
         jacIndCol[i] = jacIndColOrig[i];
+    }
+    */
+    
 
     // Jacobian entries for slacks (one nonzero entry per column)
-    for( i=nnzOrig; i<nnz; i++ )
-    {
+    for (i = parent->nnz; i < nnz; i++){
         jacNz[i] = -1.0;
-        jacIndRow[i] = i-nnzOrig;
+        jacIndRow[i] = i - parent->nnz;
     }
-    for( i=parent->nVar; i<nVar+1; i++ )
-        jacIndCol[i] = nnzOrig + i - parent->nVar;
+    for (i = parent->nVar; i < nVar + 1; i++){
+        jacIndCol[i] = parent->nnz + i - parent->nVar;
+    }
 
     // The reference point is the starting value for the restoration phase
-    for( i=0; i<parent->nVar; i++ )
-        xiOrig( i ) = xiRef( i );
+    for (i = 0; i < parent->nVar; i++){
+        xi_parent(i) = xi_ref(i);
+    }
 
     // Initialize slack variables such that the constraints are feasible
-    constrRef.Dimension( nCon );
-    parent->evaluate( xiOrig, &objval, constrRef, &info );
+    constrRef.Dimension(nCon);
+    parent->evaluate(xi_parent, &objval, constrRef, &info);
 
-    for( i=0; i<nCon; i++ )
-    {
-        if( constrRef( i ) <= parent->lb_con(i))// if lower bound is violated
-            slack( i ) = constrRef( i ) - parent->lb_con(i);
-        else if( constrRef( i ) > parent->ub_con(i))// if upper bound is violated
-            slack( i ) = constrRef( i ) - parent->ub_con(i);
+    for (i = 0; i < nCon; i++){
+        if (constrRef(i) < parent->lb_con(i))// if lower bound is violated
+            slack(i) = constrRef(i) - parent->lb_con(i);
+        else if (constrRef(i) > parent->ub_con(i))// if upper bound is violated
+            slack(i) = constrRef(i) - parent->ub_con(i);
     }
 
     // Set diagonal scaling matrix
-    diagScale.Dimension( parent->nVar ).Initialize( 1.0 );
-    for( i=0; i<parent->nVar; i++ )
-        if( fabs( xiRef( i ) ) > 1.0 )
-            diagScale( i ) = 1.0 / fabs( xiRef( i ) );
+    diagScale.Dimension(parent->nVar).Initialize(1.0);
+    for (i = 0; i < parent->nVar; i++){
+        if (fabs(xi_ref(i)) > 1.0)
+            diagScale(i) = 1.0/fabs(xi_ref(i));
+    }
 
-    // Regularization factor zeta and rho \todo wie setzen?
-    //OLD
-    //zeta = 1.0e-3;
-    //rho = 1.0e3;
-
-    //NEW
-    //zeta = 1.0e-3;
-    //rho = 1.0e3;
-
-    lambda.Initialize( 0.0 );
+    lambda.Initialize(0.0);
 }
 
 
-void RestorationProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
-{
+void RestorationProblem::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){
     int i, info;
     double objval;
-    Matrix xiOrig, slack, constrJacOrig, constrRef;
+    Matrix constrJacOrig, constrRef;
 
-    xiOrig.Submatrix( xi, parent->nVar, 1, 0, 0 );
+    xi_parent.Submatrix( xi, parent->nVar, 1, 0, 0 );
     slack.Submatrix( xi, parent->nCon, 1, parent->nVar, 0 );
     constrJacOrig.Submatrix( constrJac, parent->nCon, parent->nVar, 0, 0 );
 
     // Call initialize of the parent problem to set up linear constraint matrix correctly
-    parent->initialize( xiOrig, lambda, constrJacOrig );
+    parent->initialize( xi_parent, lambda, constrJacOrig );
 
     // Jacobian entries for slacks
     for( i=0; i<parent->nCon; i++ )
@@ -283,11 +287,11 @@ void RestorationProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJ
 
     // The reference point is the starting value for the restoration phase
     for( i=0; i<parent->nVar; i++ )
-        xiOrig( i ) = xiRef( i );
+        xi_parent( i ) = xi_ref( i );
 
     // Initialize slack variables such that the constraints are feasible
     constrRef.Dimension( nCon );
-    parent->evaluate( xiOrig, &objval, constrRef, &info );
+    parent->evaluate( xi_parent, &objval, constrRef, &info );
 
     for( i=0; i<nCon; i++ )
     {
@@ -300,8 +304,8 @@ void RestorationProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJ
     // Set diagonal scaling matrix
     diagScale.Dimension( parent->nVar ).Initialize( 1.0 );
     for( i=0; i<parent->nVar; i++ )
-        if( fabs( xiRef( i ) ) > 1.0 )
-            diagScale( i ) = 1.0 / fabs( xiRef( i ) );
+        if( fabs( xi_ref( i ) ) > 1.0 )
+            diagScale( i ) = 1.0 / fabs( xi_ref( i ) );
 
     // Regularization factor zeta and rho \todo wie setzen?
     zeta = 1.0e-3;
@@ -341,7 +345,22 @@ void RestorationProblem::printInfo()
 }
 
 
+void RestorationProblem::recover_xi(const Matrix &xi_rest, Matrix &xi_orig){
+    for (int i = 0; i < parent->nVar; i++){
+        xi_orig(i) = xi_rest(i);
+    }
+    return;
+}
 
+void RestorationProblem::recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig){
+    for (int i = 0; i < parent->nVar; i++){
+        lambda_orig(i) = lambda_rest(i);
+    }
+    for (int i = parent->nVar; i < parent->nVar + parent->nCon; i++){
+        lambda_orig(i) = lambda_rest(parent->nCon + i);
+    }
+    return;
+}
 
 
 //##############################################
@@ -1152,8 +1171,11 @@ void feasibility_Problem::recover_multipliers(const Matrix &lambda_rest, Matrix 
 
 
 
-TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference, double param_rho, double param_zeta): parent(parent_Problem), parent_cond(parent_CND), xi_ref(xi_Reference), rho(param_rho), zeta(param_zeta){
-
+TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference,
+                                                 double param_rho, double param_zeta):
+        parent_cond(parent_CND), xi_ref(xi_Reference), rho(param_rho), zeta(param_zeta){
+    
+    parent = parent_Problem;
     // one slack variable for each true (not used for condensing) constraint
     nVar = parent->nVar + parent_cond->num_true_cons;
     nCon = parent->nCon;
@@ -1196,7 +1218,6 @@ TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, Cond
 
 }
 
-
 TC_restoration_Problem::~TC_restoration_Problem(){
     delete[] jac_orig_nz;
     delete[] jac_orig_row;
@@ -1205,12 +1226,16 @@ TC_restoration_Problem::~TC_restoration_Problem(){
 }
 
 
-void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol){
+void TC_restoration_Problem::update_xi_ref(const Matrix &xiReference){
+    xi_ref = xiReference;
+}
+
+void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
 
     int info;
     double objval;
 
-    xi_orig.Submatrix( xi, parent->nVar, 1, 0, 0 );
+    xi_parent.Submatrix( xi, parent->nVar, 1, 0, 0 );
     slack.Submatrix( xi, parent_cond->num_true_cons, 1, parent->nVar, 0 );
 
     //Allocate the sparse jacobian of the parent problem
@@ -1219,7 +1244,7 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
     jac_orig_colind = new int[parent->nVar + 1];
 
     // Call initialize of the parent problem. There, the sparse Jacobian is intialized
-    parent->initialize(xi_orig, lambda, jac_orig_nz, jac_orig_row, jac_orig_colind);
+    parent->initialize(xi_parent, lambda, jac_orig_nz, jac_orig_row, jac_orig_colind);
 
     //Initialize restoration jacobian: Slacks only for true constraints
     for (int i = 0; i < parent->nnz; i++){
@@ -1251,12 +1276,12 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
 
     // The reference point is the starting value for the restoration phase
     for(int i=0; i<parent->nVar; i++){
-        xi_orig(i) = xi_ref(i);
+        xi_parent(i) = xi_ref(i);
     }
 
     // Initialize slack variables such that the constraints are feasible, allocate and use vector for original constraints
     constr_orig.Dimension(parent->nCon);
-    parent->evaluate(xi_orig, &objval, constr_orig, &info);
+    parent->evaluate(xi_parent, &objval, constr_orig, &info);
 
     ind_1 = 0;
     ind_2 = 0;
@@ -1299,17 +1324,17 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
 void TC_restoration_Problem::evaluate(
                                 const Matrix &xi, const Matrix &lambda,
                                 double *objval, Matrix &constr,
-                                Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                                SymMatrix *&hess, int dmode, int *info){
+                                Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
+                                SymMatrix *hess, int dmode, int *info){
 
     double diff, regTerm;
 
     // The first nVar elements of the variable vector correspond to the variables of the original problem
-    xi_orig.Submatrix( xi, parent->nVar, 1, 0, 0 );
+    xi_parent.Submatrix( xi, parent->nVar, 1, 0, 0 );
     slack.Submatrix( xi, parent_cond->num_true_cons, 1, parent->nVar, 0 );
 
     // Evaluate constraints of the original problem
-    parent->evaluate(xi_orig, lambda, objval, constr_orig,
+    parent->evaluate(xi_parent, lambda, objval, constr_orig,
                       gradObj, jacNz, jacIndRow, jacIndCol, hess, dmode, info);
 
     // Subtract slacks from true constraints (not conditions)
@@ -1349,7 +1374,7 @@ void TC_restoration_Problem::evaluate(
     // Second part: regularization term
     regTerm = 0.0;
     for(int i = 0; i < parent->nVar; i++){
-        diff = xi_orig(i) - xi_ref(i);
+        diff = xi_parent(i) - xi_ref(i);
         regTerm += diagScale(i) * diagScale(i) * diff * diff;
     }
     regTerm = 0.5 * zeta * regTerm;
@@ -1358,7 +1383,7 @@ void TC_restoration_Problem::evaluate(
     if(dmode > 0){
         // gradient w.r.t. xi (regularization term)
         for(int i=0; i<parent->nVar; i++){
-            gradObj(i) = zeta * diagScale(i) * diagScale(i) * (xi_orig(i) - xi_ref(i));
+            gradObj(i) = zeta * diagScale(i) * diagScale(i) * (xi_parent(i) - xi_ref(i));
         }
 
         // gradient w.r.t. slack variables
@@ -1373,12 +1398,12 @@ void TC_restoration_Problem::evaluate(
 
 
 void TC_restoration_Problem::reduceConstrVio(Matrix &xi, int *info){
-    xi_orig.Submatrix(xi, parent->nVar, 1, 0, 0);
-    parent->reduceConstrVio(xi_orig, info);
+    xi_parent.Submatrix(xi, parent->nVar, 1, 0, 0);
+    parent->reduceConstrVio(xi_parent, info);
     return;
 }
 
-
+/*
 void TC_restoration_Problem::recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig){
 
     for (int i = 0; i < parent->nVar; i++){
@@ -1393,8 +1418,71 @@ void TC_restoration_Problem::recover_multipliers(const Matrix &lambda_rest, Matr
     }
     return;
 }
+*/
+
+void TC_restoration_Problem::recover_xi(const Matrix &xi_rest, Matrix &xi_orig){
+    for (int i = 0; i < parent->nVar; i++){
+        xi_orig(i) = xi_rest(i);
+    }
+    return;
+}
+
+void TC_restoration_Problem::recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig){
+    for (int i = 0; i < parent->nVar; i++){
+        lambda_orig(i) = lambda_rest(i);
+    }
+    int ind_1 = parent->nVar;
+    int ind_2 = parent->nVar + parent_cond->num_true_cons;
+
+    for (int i = 0; i < parent->nCon; i++){
+        lambda_orig(ind_1 + i) = lambda_rest(ind_2 + i);
+    }
+    return;
+}
 
 
+
+holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
+    int N_vblocks = parent->num_vblocks + parent->num_true_cons;
+    int N_cblocks = parent->num_cblocks;
+    int N_hessblocks = parent->num_hessblocks + parent->num_true_cons;
+    int N_targets = parent->num_targets;
+
+	std::unique_ptr<vblock[]> rest_vblocks = std::make_unique<vblock[]>(N_vblocks);
+    std::unique_ptr<cblock[]> rest_cblocks = std::make_unique<cblock[]>(N_cblocks);
+	std::unique_ptr<int[]> rest_hess_block_sizes = std::make_unique<int[]>(N_hessblocks);
+	std::unique_ptr<condensing_target[]> rest_targets = std::make_unique<condensing_target[]>(N_targets);
+
+    for (int i = 0; i < parent->num_vblocks; i++){
+        rest_vblocks[i] = parent->vblocks[i];
+    }
+    for (int i = parent->num_vblocks; i < N_vblocks; i++){
+        rest_vblocks[i] = vblock(1, false);
+    }
+
+    for (int i = 0; i < parent->num_cblocks; i++){
+        rest_cblocks[i] = parent->cblocks[i];
+    }
+
+    for (int i = 0; i<parent->num_hessblocks; i++){
+        rest_hess_block_sizes[i] = parent->hess_block_sizes[i];
+    }
+    for (int i = parent->num_hessblocks; i<N_hessblocks; i++){
+        rest_hess_block_sizes[i] = 1;
+    }
+
+    for (int i = 0; i<parent->num_targets; i++){
+        rest_targets[i] = parent->targets[i];
+    }
+
+    return new holding_Condenser(std::move(rest_vblocks), N_vblocks, std::move(rest_cblocks), N_cblocks, std::move(rest_hess_block_sizes), N_hessblocks, std::move(rest_targets), N_targets, DEP_BOUNDS);
+}
+
+
+
+
+
+/*
 void TC_restoration_Problem::recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig, double &lambda_step_norm){
 
     lambda_step_norm = 0.;
@@ -1418,7 +1506,7 @@ void TC_restoration_Problem::recover_multipliers(const Matrix &lambda_rest, Matr
 
     return;
 }
-
+*/
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem, Condenser *parent_CND): parent(parent_Problem), parent_cond(parent_CND){
@@ -1473,12 +1561,12 @@ TC_feasibility_Problem::~TC_feasibility_Problem(){
 }
 
 
-void TC_feasibility_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol){
+void TC_feasibility_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
 
     int info;
     double objval;
 
-    xi_orig.Submatrix( xi, parent->nVar, 1, 0, 0 );
+    xi_parent.Submatrix( xi, parent->nVar, 1, 0, 0 );
     slack.Submatrix( xi, parent_cond->num_true_cons, 1, parent->nVar, 0 );
 
     //Allocate the sparse jacobian of the parent problem
@@ -1487,7 +1575,7 @@ void TC_feasibility_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
     jac_orig_colind = new int[parent->nVar + 1];
 
     // Call initialize of the parent problem. There, the sparse Jacobian is intialized
-    parent->initialize(xi_orig, lambda, jac_orig_nz, jac_orig_row, jac_orig_colind);
+    parent->initialize(xi_parent, lambda, jac_orig_nz, jac_orig_row, jac_orig_colind);
 
     //Initialize restoration jacobian: Slacks only for true constraints
     for (int i = 0; i < parent->nnz; i++){
@@ -1519,7 +1607,7 @@ void TC_feasibility_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
 
     // Initialize slack variables such that the constraints are feasible, allocate and use vector for original constraints
     constr_orig.Dimension(parent->nCon);
-    parent->evaluate(xi_orig, &objval, constr_orig, &info);
+    parent->evaluate(xi_parent, &objval, constr_orig, &info);
 
     ind_1 = 0;
     ind_2 = 0;
@@ -1549,22 +1637,22 @@ void TC_feasibility_Problem::initialize(Matrix &xi, Matrix &lambda, double *&jac
 void TC_feasibility_Problem::evaluate(
                                 const Matrix &xi, const Matrix &lambda,
                                 double *objval, Matrix &constr,
-                                Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                                SymMatrix *&hess, int dmode, int *info){
+                                Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
+                                SymMatrix *hess, int dmode, int *info){
 
     // The first nVar elements of the variable vector correspond to the variables of the original problem
-    xi_orig.Submatrix( xi, parent->nVar, 1, 0, 0 );
+    xi_parent.Submatrix( xi, parent->nVar, 1, 0, 0 );
     slack.Submatrix( xi, parent_cond->num_true_cons, 1, parent->nVar, 0 );
 
     for (int i = 0; i < parent->nVar; i++){
-        if (std::isnan(xi_orig(i))){
+        if (std::isnan(xi_parent(i))){
             std::cout << "Submatrix value is nan!\n" << "Index = " << i << "\nMatrix value = " << xi(i) << "\n";
             throw std::invalid_argument("Submatrix value is nan!");
         }
     }
 
     // Evaluate constraints of the original problem
-    parent->evaluate(xi_orig, lambda, objval, constr_orig,
+    parent->evaluate(xi_parent, lambda, objval, constr_orig,
                       gradObj, jacNz, jacIndRow, jacIndCol, hess, dmode, info);
 
     // Subtract slacks from true constraints (not conditions)
@@ -1621,8 +1709,8 @@ void TC_feasibility_Problem::evaluate(
 
 void TC_feasibility_Problem::reduceConstrVio(Matrix &xi, int *info){
 
-    xi_orig.Submatrix(xi, parent->nVar, 1, 0, 0);
-    parent->reduceConstrVio(xi_orig, info);
+    xi_parent.Submatrix(xi, parent->nVar, 1, 0, 0);
+    parent->reduceConstrVio(xi_parent, info);
 
     return;
 }

@@ -2094,10 +2094,10 @@ class F8_Aircraft(OCProblem):
         time_grid = np.cumsum(np.concatenate([[0.], p]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid, x0, 'r-', label = 'x0')
-        plt.plot(time_grid, x1, 'g-', label = 'x1')
-        plt.plot(time_grid, x2, 'b-', label = 'x2')
-        plt.step(time_grid, w*20, 'y-', label = 'w*20')
+        plt.plot(time_grid, x0, 'r-', label = r'$x_0$')
+        plt.plot(time_grid, x1, 'g-', label = r'$x_1$')
+        plt.plot(time_grid, x2, 'b-', label = r'$x_2$')
+        plt.step(time_grid, w*20, 'y-', label = r'$w\cdot20$')
         plt.legend()
         
         ttl = None
@@ -2424,15 +2424,16 @@ class Supermarket_Refrigeration(OCProblem):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
 
     def build_problem(self):
-        self.set_OCP_data(9, 1, 3, 1, [0., -5.,-20.,2.0,0.01, -5.,-20.0, 2.0, 0.01], [1.7, 10.,0.,5.0,20.,10.,0.,5.0,20.], [650./self.ntS], [750./self.ntS], [0.,0.,0.], [1.,1.,1.])
+        self.set_OCP_data(10, 1, 3, 0, [0., -5.,-20.,2.0,0.01, -5.,-20.0, 2.0, 0.01] + [-np.inf], [1.7, 10.,0.,5.0,20.,10.,0.,5.0,20.] + [np.inf], [650./self.ntS], [750./self.ntS], [0.,0.,0.], [1.,1.,1.])
+        self.fix_initial_value([None]*9 + [0.])
         
         Qairload, mrefconst, Mgoods, Cpgoods, UAgoodsair, Mwall, Cpwall, UAairwall, Mair, Cpair, UAwallrefmax, taufill, TSH, Mrefmax, Vsuc, Vsl, etavol = (self.model_params[key] for key in ['Qairload', 'mrefconst', 'Mgoods', 'Cpgoods', 'UAgoodsair', 'Mwall', 'Cpwall', 'UAairwall', 'Mair', 'Cpair', 'UAwallrefmax', 'taufill', 'TSH', 'Mrefmax', 'Vsuc', 'Vsl', 'etavol'])
         
-        x = cs.MX.sym('x', 9)
+        x = cs.MX.sym('x', 10)
         u = cs.MX.sym('u', 3)
         dt = cs.MX.sym('dt')
         
-        x0,x1,x2,x3,x4,x5,x6,x7,x8 = cs.vertsplit(x)
+        x0,x1,x2,x3,x4,x5,x6,x7,x8,_ = cs.vertsplit(x)
         u0,u1,u2 = cs.vertsplit(u)
         
         Te = -4.3544 * x0**2 + 29.224 * x0 - 51.2005
@@ -2450,14 +2451,14 @@ class Supermarket_Refrigeration(OCProblem):
             -(UAgoodsair*(x5 - x7))/(Mgoods * Cpgoods),
             (UAairwall*(x7 - x6) - UAwallrefmax/Mrefmax * x8 * (x6 - Te))/(Mwall * Cpwall),
             (UAgoodsair*(x5 - x7) + Qairload - UAairwall*(x7 - x6))/(Mair * Cpair),
-            (Mrefmax - x8)/taufill * u1 - (UAwallrefmax/(Mrefmax*Deltahlg)) * x8 * (x6 - Te) * (1 - u1)
+            (Mrefmax - x8)/taufill * u1 - (UAwallrefmax/(Mrefmax*Deltahlg)) * x8 * (x6 - Te) * (1 - u1),
+            u2*0.5*etavol*Vsl*f
         )
-        quad = u2*0.5*etavol*Vsl*f
         
-        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode': dt*ode_rhs, 'quad': dt*quad}
+        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode': dt*ode_rhs}
         self.multiple_shooting()
-        self.set_objective(self.q_tf/(self.p_tf*self.ntS))
-        self.add_constraint(self.x_eval[:,0] - self.x_eval[:,-1], 0.,0.)
+        self.set_objective(self.x_eval[9,-1]/(self.p_tf*self.ntS))
+        self.add_constraint(self.x_eval[0:9,0] - self.x_eval[0:9,-1], 0.,0.)
         self.build_NLP()
         
         self.set_stage_state(self.start_point, 0, [1.] + [2.]*2 + [0.2] + [2.]*5)
@@ -2468,7 +2469,7 @@ class Supermarket_Refrigeration(OCProblem):
         
         
     def plot(self, xi, dpi = None, title = None, it = None):
-        x0,x1,x2,x3,x4,x5,x6,x7,x8 = self.get_state_arrays(xi)
+        x0,x1,x2,x3,x4,x5,x6,x7,x8,_ = self.get_state_arrays(xi)
         u0,u1,u2 = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
@@ -2949,70 +2950,6 @@ class Lotka_OED(OCProblem):
             plt.title('')
         plt.show()
 
-class Lotka_OED_Q(Lotka_OED):
-    default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0}
-    def build_problem(self):
-        self.set_OCP_data(6, 0, 3, 5, [0.,0.]+[-np.inf]*4, [np.inf]*6,[],[],[0.]*3, [1.]*3)
-        tf,p1,p2,p3,p4,p5,p6,x_init,M = (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M'])
-        self.fix_time_horizon(0.,tf)
-        self.fix_initial_value(x_init + [0.]*4)
-        
-        S = cs.MX.sym('S', 6)
-        x1, x2, G11, G12, G21, G22 = cs.vertsplit(S)
-        #(Measurement -) Controls C
-        C = cs.MX.sym('C', 3)
-        u, w1, w2 = cs.vertsplit(C)
-        
-        dt = cs.MX.sym('dt', 1)
-        ode_rhs = cs.vertcat(
-                p1*x1 - p2*x1*x2 - p5*u*x1,
-                -p3*x2 + p4*x1*x2 - p6*u*x2,
-                (p1 - p2*x2 - p5*u)*G11 + (-p2*x1)*G21 - x1*x2,
-                (p1 - p2*x2 - p5*u)*G12 + (-p2*x1)*G22,
-                (p4*x2)*G11 + (-p3 + p4*x1 - p6*u)*G21,
-                (p4*x2)*G12 + (-p3 + p4*x1 - p6*u)*G22  + x1*x2,
-        )
-        quad_expr = cs.vertcat(
-                            w1, 
-                            w2,
-                            w1*(G11**2) + w2*(G21**2),
-                            w1*G11*G12 + w2*G21*G22,
-                            w1*(G12**2) + w2*(G22**2))
-        self.ODE = {'x': S, 'p':cs.vertcat(dt, C),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
-        self.multiple_shooting()
-        F11T,F12T,F22T = cs.vertsplit(self.q_tf[2:5])
-        self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
-        self.add_constraint(self.q_tf[0:2] - M, -np.inf, 0.)
-        self.build_NLP()
-        for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [0., M/12., M/12.])
-        self.integrate_full(self.start_point)
-        
-    def plot(self, xi, dpi = None, title = None, it = None):
-        u,w1,w2 = self.get_control_plot_arrays(xi)
-        x1,x2,_,_,_,_, = self.get_state_arrays(xi)
-        
-        plt.figure(dpi = dpi)
-        plt.step(self.time_grid_ref, u, 'b-', label = r'$u$')
-        plt.step(self.time_grid_ref, w1, 'y-', label = r'$w_1$')
-        plt.step(self.time_grid_ref, w2, 'g--', label = r'$w_2$')
-        plt.plot(self.time_grid, x1, 'c-', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'm-', label = r'$x_2$')
-        plt.ylim(0.,4.)
-        
-        plt.legend(fontsize = 'large', loc = 'upper left')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka OED problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
 
 class Fermenter(OCProblem):
     #Janka PhD and Le master's thesis params
@@ -3039,43 +2976,40 @@ class Fermenter(OCProblem):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
 
     def build_problem(self):
-        self.set_OCP_data(6, 0, 3, 3, [0.,0.,0.,0.,0.3,0.], [0.1,0.04,0.03,0.1,0.45,0.1], [], [], [0.,0.,0.], [15.,1.,30.])
+        self.set_OCP_data(9, 0, 3, 0, [0.,0.,0.,0.,0.3,0.] + [0.,0.,0.], [0.1,0.04,0.03,0.1,0.45,0.1] + [0.05,0.2,0.025], [], [], [0.,0.,0.], [15.,1.,30.])
         mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
         self.fix_time_horizon(0.,1.)
-        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1])
-        x = cs.MX.sym('x', 6)
-        P,S1,S2,E,V,G = cs.vertsplit(x)
+        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1] + [0., 0.009, 0.009])
+        x = cs.MX.sym('x', 9)
+        P,S1,S2,E,V,G, _,_,_ = cs.vertsplit(x)
         u = cs.MX.sym('u', 3)
         uS1,uS2,uP = cs.vertsplit(u)
         dt = cs.MX.sym('dt', 1)
         
-        #In Le, first term in rhs for S1,S2 and G enters with positive sign, negative in Janka and MUSCOD
+        #In Le, first term in rhs for S1, S2 and G enters with positive sign, negative in Janka and MUSCOD
+        #Janka and MUSCOD seem to be correct
         ode_rhs = cs.vertcat(
                 mup*E*S1*S2 - P*(uS1+uS2)/(25*V),
                 -gx1*E*S1*S2*G - gp1*E*S1*S2 + (0.42*uS1 - S1*(uS1 + uS2))/(25*V),
                 -gx2*E*S1*S2*G - gp2*E*S1*S2 + (0.333*uS2 - S2*(uS1 + uS2))/(25*V),
                 mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
                 uS1 + uS2 - uP,
-                -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V)
-            )
-        quad_expr = cs.vertcat(
-                uP*P + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),
+                -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
+                uP + (uS1 + uS2 - uP)/25 * P + V*P,
                 0.0168*uS1,
                 0.01332*uS2
-            )
+        )
         
-        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode':dt*ode_rhs, 'quad':dt*quad_expr}
+        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode':dt*ode_rhs}
         self.multiple_shooting()
-        self.add_constraint(self.q_tf, [0.,0.,0.], [0.05,0.2,0.025])
-        self.set_objective(2*(0.009 + self.q_tf[1])*(0.009+self.q_tf[2])/self.q_tf[0])
+        self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
         self.build_NLP()
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [14*(self.ntS - 1 - i)/(self.ntS-1), 0.7, 0.5])
-            
         self.integrate_full(self.start_point)
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        P,S1,S2,E,V,G = self.get_state_arrays(xi)
+        P,S1,S2,E,V,G,_,_,_ = self.get_state_arrays(xi)
         uS1,uS2,uP = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi=dpi)
@@ -3309,7 +3243,6 @@ class Hang_Glider(OCProblem):
         plt.show()
     
 class Tubular_Reactor(OCProblem):
-    
     def build_problem(self):
         self.set_OCP_data(1,0,1,1, [-np.inf], [np.inf], [], [], [0.], [5.])
         self.fix_time_horizon(0.,1.)

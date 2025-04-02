@@ -14,8 +14,8 @@
  *  Declaration of all constants and inclusion of standard header files.
  */
 
-#ifndef BLOCKSQP_DEFS_H
-#define BLOCKSQP_DEFS_H
+#ifndef BLOCKSQP_DEFS_HPP
+#define BLOCKSQP_DEFS_HPP
 
 //#include "math.h"
 #include <cmath>

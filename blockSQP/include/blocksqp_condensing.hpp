@@ -156,14 +156,6 @@ struct condensing_data{
 
     blockSQP::Matrix h_2;
     blockSQP::SymMatrix H_dense_2;
-
-    //Slices of different bounds (e.g. during SOC)
-    /*
-    std::vector<blockSQP::Matrix> c_k_2;
-    std::vector<blockSQP::Matrix> r_k_2;
-    std::vector<blockSQP::Matrix> q_k_2;
-    */
-
 };
 
 
@@ -205,6 +197,7 @@ class Condenser{
 	int* hess_block_ranges;
 
     int* condensed_hess_block_sizes;
+    int* condensed_blockIdx;
 
 	//Additional option: How should dependent variable bounds be added to the condensed QP:
     //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
@@ -231,7 +224,6 @@ class Condenser{
     Matrix ub_dep_var;
 
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
-	//Condenser(const Condenser &C2);
 	Condenser(Condenser &&C);
 	virtual ~Condenser();
 
@@ -247,7 +239,7 @@ class Condenser{
 	//Complete condensing for new quadratic subproblem
 	void full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::Sparse_Matrix &con_jac, const blockSQP::SymMatrix *const hess,
                         const blockSQP::Matrix &lb_var, const blockSQP::Matrix &ub_var, const blockSQP::Matrix &lb_con, const blockSQP::Matrix &ub_con,
-            blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *&condensed_hess,
+            blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *condensed_hess,
                         blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con);
 
 	//Condensing for a single block of variables and conditions with condensable structure
@@ -268,7 +260,7 @@ class Condenser{
     ///BlockSQP specific methods: Condense a positive definite fallback hessian approximation for lifting an indefinite hessian via convex combinations
 
     //Update condensed QP with a different hessian. This also affects the linear term in the condensed QP.
-    void fallback_hessian_condense(const blockSQP::SymMatrix *const hess_2, blockSQP::Matrix &condensed_h_2, blockSQP::SymMatrix *&condensed_hess_2);
+    void fallback_hessian_condense(const blockSQP::SymMatrix *const hess_2, blockSQP::Matrix &condensed_h_2, blockSQP::SymMatrix *condensed_hess_2);
     void single_hess_condense(int tnum, const blockSQP::SymMatrix *const sub_hess);
 
     //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
@@ -280,7 +272,7 @@ class Condenser{
 
 
     //Update condensed QP with a new hessian
-    void new_hessian_condense(const blockSQP::SymMatrix *const hess, blockSQP::Matrix &condensed_h, blockSQP::SymMatrix *&condensed_hess);
+    void new_hessian_condense(const blockSQP::SymMatrix *const hess, blockSQP::Matrix &condensed_h, blockSQP::SymMatrix *condensed_hess);
     void single_new_hess_condense(int tnum, const blockSQP::SymMatrix *const sub_hess);
 
     //Update condensed QP with new constraint bounds. grad_obj must not be changed and is used to construct the new linear term condensed_h, which DOES change
@@ -295,14 +287,13 @@ class Condenser{
     void recover_correction_var_mult(const blockSQP::Matrix &xi_cond, const blockSQP::Matrix &lambda_cond, const blockSQP::Matrix *const target_corrections, blockSQP::Matrix &xi_full, blockSQP::Matrix &lambda_full);
     void single_correction_recover(int tnum, const blockSQP::Matrix &xi_free, const blockSQP::Matrix &mu, const blockSQP::Matrix &lambda, const blockSQP::Matrix &sigma, const blockSQP::Matrix &correction,
                             blockSQP::Matrix &xi_full, blockSQP::Matrix &nu, blockSQP::Matrix &mu_lambda);
-
 };
 
 
-//Condenser for restoration problem of parent condenser problem
-class autonomous_Condenser : public Condenser{
+//Condenser holding its own layout information
+class holding_Condenser : public Condenser{
     public:
-    autonomous_Condenser(
+    holding_Condenser(
                         std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
                         std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
                         std::unique_ptr<int[]> HSIZES, int n_HBLOCKS, 
@@ -314,7 +305,7 @@ class autonomous_Condenser : public Condenser{
 	std::unique_ptr<condensing_target[]> auto_targets;
 };
 
-std::unique_ptr<autonomous_Condenser> create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS = 2);
+//holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS = 2);
 
 
 

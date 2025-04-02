@@ -96,11 +96,12 @@ class Matrix
       /** Flag == 0: bracket output
         * Flag == 1: Matlab output
         * else: plain output */
+       /*
       const Matrix &Print( FILE* = stdout,   ///< file for output
                              int = 13,       ///< number of digits
                              int = 1         ///< Flag for format
                            ) const;
-
+      */
 };
 
 std::ostream& operator<<(std::ostream& os, const Matrix &M);
@@ -151,10 +152,12 @@ class SymMatrix{
 
         Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
 
+        /*
         const SymMatrix &Print( FILE* = stdout,   ///< file for output
                              int = 13,       ///< number of digits
                              int = 1         ///< Flag for format
                            ) const;
+        */
 };
 
 std::ostream& operator<<(std::ostream& os, const SymMatrix &M);
@@ -169,7 +172,15 @@ class CSR_Matrix;
 
 class Sparse_Matrix{
 	public:
-		Sparse_Matrix(int, int, int, double*, int*, int*);
+		int m;
+		int n;
+		int nnz;
+		double *nz;
+		int *row;
+		int *colind;
+    bool memoryOwned;
+
+    Sparse_Matrix(int, int, int, double*, int*, int*, bool memOwn = true);
 		Sparse_Matrix(const Sparse_Matrix &M);
 		Sparse_Matrix(Sparse_Matrix &&M);
 		Sparse_Matrix(const CSR_Matrix &M);
@@ -178,12 +189,6 @@ class Sparse_Matrix{
 		void operator=(const Sparse_Matrix &M);
 		void operator=(Sparse_Matrix &&M);
 		Sparse_Matrix operator+(const Sparse_Matrix &M2) const;
-		int m;
-		int n;
-		int nnz;
-		double *nz;
-		int *row;
-		int *colind;
 		//Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end);
 		Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
 		Matrix get_dense_slice(int m_start, int m_end, int n_start, int n_end) const;

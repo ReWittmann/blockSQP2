@@ -109,9 +109,9 @@ void SQPmethod::init(){
 
     // Set initial values for all xi and set the Jacobian for linear constraints
     if( param->sparseQP )
-        prob->initialize( vars->xi, vars->lambda, vars->jacNz, vars->jacIndRow, vars->jacIndCol );
+        prob->initialize(vars->xi, vars->lambda, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
     else
-        prob->initialize( vars->xi, vars->lambda, vars->constrJac );
+        prob->initialize(vars->xi, vars->lambda, vars->constrJac);
 
     initCalled = true;
 }
@@ -134,15 +134,15 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         // SQP iteration 0
         if (param->sparseQP)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+whichDerv, &infoEval);
+                            vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->constrJac, vars->hess1, 1+whichDerv, &infoEval);
+                            vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
 
         /// Check if converged
         hasConverged = calcOptTol();
-        stats->printProgress( prob, vars, param, hasConverged );
+        stats->printProgress( prob, vars.get(), param, hasConverged );
         if (hasConverged) return loud(SQPresult::success, param->loud_SQPresult);
 
         /// Set initial Hessian approximation
@@ -347,11 +347,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Evaluate functions and gradients at the new xi
         if (param->sparseQP){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+whichDerv, &infoEval);
+                            vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         }
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->constrJac, vars->hess1, 1+whichDerv, &infoEval);
+                            vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
 
         /// Check if converged
@@ -360,7 +360,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Calculate difference of old and new Lagrange gradient: gamma = -gamma + dL(xi_k+1, lambda_k+1)
         calcLagrangeGradient(vars->gamma, 1);
         
-        stats->printProgress(prob, vars, param, false);
+        stats->printProgress(prob, vars.get(), param, false);
         
 
         ///Decide wether it is time to terminate///
@@ -442,16 +442,16 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
                 if (param->fallbackUpdate <= 2)
-                    calcHessianUpdateLimitedMemory(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+                    calcHessianUpdateLimitedMemory(param->fallbackUpdate, param->fallbackScaling, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
                 if (param->whichSecondDerv < 2){
                     //Calculate/Update first (pos. indefinite) hessian
                     if (param->hessUpdate <= 2 || param->hessUpdate > 6)
-                        calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1);
+                        calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1.get());
                     else if (param->hessUpdate == 4)
-                        calcFiniteDiffHessian(vars->hess1);
+                        calcFiniteDiffHessian(vars->hess1.get());
                     vars->hess2_updated = false;
                 }
                 vars->hess2_updated = false;
@@ -461,15 +461,15 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Vectors deltaXi and gamma need not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
             if (param->whichSecondDerv < 2){
                 if (param->hessUpdate <= 2)
-                    calcHessianUpdate(param->hessUpdate, param->hessScaling, vars->hess1);
+                    calcHessianUpdate(param->hessUpdate, param->hessScaling, vars->hess1.get());
                 else if (param->hessUpdate == 4)
-                    calcFiniteDiffHessian(vars->hess1);
+                    calcFiniteDiffHessian(vars->hess1.get());
             }
 
             //Also update the fallback hessian as we need to update it in every iteration regardless of whether it is needed
             if (vars->hess2 != nullptr){
                 if (param->fallbackUpdate <= 2)
-                    calcHessianUpdate(param->fallbackUpdate, param->fallbackScaling, vars->hess2);
+                    calcHessianUpdate(param->fallbackUpdate, param->fallbackScaling, vars->hess2.get());
                 vars->hess2_updated = true;
             }
         }
@@ -491,7 +491,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         }
         //The scaling factor adjustment in one line of code
         //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->maxConvQP + 1 + (param->maxConvQP - 3) * (vars->hess_num_accepted == param->maxConvQP))*(param->maxConvQP > 2) + (1 - 2*(vars->hess_num_accepted < param->maxConvQP))*(param->maxConvQP <= 2))) * (param->convStrategy >= 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->convStrategy < 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
-        vars->hess = vars->hess1;
+        vars->hess = vars->hess1.get();
 
         //stats->itCount++;
         skipLineSearch = false;

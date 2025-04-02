@@ -22,6 +22,7 @@
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_options.hpp"
+#include <memory>
 
 namespace blockSQP
 {
@@ -45,9 +46,13 @@ class SQPiterate{
         Matrix constr;                                ///< constraint vector
 
         Matrix constrJac;                             ///< full constraint Jacobian (not used in sparse mode)
-        double *jacNz;                                ///< nonzero elements of Jacobian (length)
-        int *jacIndRow;                               ///< row indices (length)
-        int *jacIndCol;                               ///< indices to first entry of columns (nCols+1)
+        
+        //double *jacNz;                                ///< nonzero elements of Jacobian (length)
+        //int *jacIndRow;                               ///< row indices (length)
+        //int *jacIndCol;                               ///< indices to first entry of columns (nCols+1)
+        std::unique_ptr<double[]> jacNz;
+        std::unique_ptr<int[]> jacIndRow;
+        std::unique_ptr<int[]> jacIndCol;
 
         Matrix deltaMat;                              ///< last m primal steps
         Matrix deltaXi;                               ///< alias for current step (first stores full step from QP, then gets modified by globalization)
@@ -72,18 +77,21 @@ class SQPiterate{
         Matrix deltaOld;
 
 
-        int *nquasi;                                  ///< number of quasi-newton updates for each block since last hessian reset
-        int *noUpdateCounter;                         ///< count skipped updates for each block
+        //int *nquasi;                                  ///< number of quasi-newton updates for each block since last hessian reset
+        //int *noUpdateCounter;                         ///< count skipped updates for each block
+        std::unique_ptr<int[]> nquasi;
+        std::unique_ptr<int[]> noUpdateCounter;
 
         int nBlocks;                                  ///< number of diagonal blocks in Hessian
-        int *blockIdx;                                ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
+        std::unique_ptr<int[]> blockIdx;                                ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
 
         int nRestIt;
 
-        SymMatrix *hess;                              ///< [blockwise] pointer to current hessian (-approximation) of the Lagrangian
-        SymMatrix *hess1;                             ///< [blockwise] first Hessian approximation
-        SymMatrix *hess2;                             ///< [blockwise] second Hessian approximation (convex)
-        SymMatrix *hess_alt;                          ///< [blockwise] space to store alternative hessians, such as convex combinations or temporarily used (scaled) identity hessians
+        SymMatrix *hess;                              ///< [blockwise] pointer to current Hessian (-approximation) of the Lagrangian
+        
+        std::unique_ptr<SymMatrix[]> hess1;                             ///< [blockwise] first Hessian approximation
+        std::unique_ptr<SymMatrix[]> hess2;                             ///< [blockwise] second Hessian approximation (convex)
+        std::unique_ptr<SymMatrix[]> hess_alt;                          ///< [blockwise] space to store alternative hessians, such as convex combinations or temporarily used (scaled) identity hessians
 
         bool conv_qp_only;                            ///< If true, only convex sub-QPs are used to generate steps
         bool conv_qp_solved;
@@ -112,9 +120,10 @@ class SQPiterate{
         int reducedStepCount;                         ///< count number of consecutive reduced steps,
 
         Matrix trialXi;                               ///< new trial iterate (for line search)
-        Matrix trialConstr;                           ///< constraints evaluated at trial point. Calculated in linesearch and used also in SOC
+        Matrix trialLambda;
+        Matrix trialConstr;                           ///< constraints evaluated at trial point. Calculated in linesearch and used also in SOC                           
 
-        std::set<std::pair<double, double>> *filter;  ///< Filter contains pairs (constrVio, objective)
+        std::set<std::pair<double, double>> filter;   ///< Filter contains pairs (constrVio, objective)
 
         
         //Parameters derived from given options, may change during iterations
@@ -125,7 +134,7 @@ class SQPiterate{
         int local_lenience;
         
         
-        double *rescaleFactors;
+        std::unique_ptr<double[]> rescaleFactors;
         int n_scaleIt;                               ///< How many past steps are available (not necessarily used by heuristic) to compute the scaling.
         double vfreeScale;
         
@@ -146,10 +155,8 @@ class SQPiterate{
         double tolOpt_save;
         double cNormOpt_save;
         double cNormSOpt_save;
-        double *scaleFactors_save;
+        std::unique_ptr<double[]> scaleFactors_save;
         scaled_Problemspec *scaled_prob;
-
-    
     public:
         /// Call allocation and initializing routines
         SQPiterate(Problemspec* prob, const SQPoptions* param, bool full );
@@ -166,18 +173,13 @@ class SQPiterate{
 
 
 class SCQPiterate : public SQPiterate{
-public:
-
+    public:
     //Wrapper object for sparse jacobian arrays, need it to invoke condensing
     Sparse_Matrix Jacobian;
 
-    /*
-     * Variables of condensed QP
-     */
-
     Matrix condensed_h;
     Sparse_Matrix condensed_Jacobian;
-    SymMatrix *condensed_hess;
+    std::unique_ptr<SymMatrix[]> condensed_hess;
     Matrix condensed_lb_var;
     Matrix condensed_ub_var;
     Matrix condensed_lb_con;
@@ -192,7 +194,7 @@ public:
     double t_hess;
 
     //Condensed fallback hessian
-    SymMatrix *condensed_hess_2;
+    std::unique_ptr<SymMatrix[]> condensed_hess_2;
 
     //Solutions of condensed QP
     Matrix deltaXi_cond;
@@ -208,7 +210,7 @@ public:
     Matrix corrected_h;
     Matrix corrected_lb_con;
     Matrix corrected_ub_con;
-
+    
     Matrix deltaXi_save;    //For restoring original step if correction yields no full step
     Matrix lambdaQP_save;   // ' '    ' ' 
     SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond, bool full);

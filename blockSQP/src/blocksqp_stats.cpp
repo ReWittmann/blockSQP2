@@ -19,11 +19,9 @@
 #include "blocksqp_stats.hpp"
 #include "blocksqp_general_purpose.hpp"
 
-namespace blockSQP
-{
+namespace blockSQP{
 
-SQPstats::SQPstats( PATHSTR myOutpath )
-{
+SQPstats::SQPstats(PATHSTR myOutpath){
     strcpy( outpath, myOutpath );
 
     itCount = 0;
@@ -205,14 +203,11 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
 }
 
 
-void SQPstats::initStats( SQPoptions *param )
-{
+void SQPstats::initStats(SQPoptions *param){
     PATHSTR filename;
 
     // Open files
-
-    if( param->debugLevel > 0 )
-    {
+    if (param->debugLevel > 0){
         // SQP progress
         strcpy( filename, outpath );
         strcat( filename, "sqpits.csv" );
@@ -224,8 +219,7 @@ void SQPstats::initStats( SQPoptions *param )
         updateFile = fopen( filename, "w" );
     }
 
-    if( param->debugLevel > 1 )
-    {
+    if (param->debugLevel > 1){
         // Primal variables
         strcpy( filename, outpath );
         strcat( filename, "pv.csv" );
@@ -631,7 +625,7 @@ void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparseQP )
     // Print sparse Jacobian and Hessian
     if( sparseQP )
     {
-        printJacobian( prob->nCon, prob->nVar, vars->jacNz, vars->jacIndRow, vars->jacIndCol );
+        printJacobian( prob->nCon, prob->nVar, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
         //printHessian( prob->nVar, vars->hessNz, vars->hessIndRow, vars->hessIndCol );
     }
 

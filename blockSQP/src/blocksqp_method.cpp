@@ -31,23 +31,32 @@
 namespace blockSQP{
 
 
-std::unique_ptr<SQPoptions> default_restorationOptions(SQPoptions *param){
-    std::unique_ptr<SQPoptions> rest_opts = std::make_unique<SQPoptions>();
+//Constructor helper methods
 
-    rest_opts->restoreFeas = 0;
-    rest_opts->hessUpdate = 2;
-    rest_opts->hessLimMem = 1;
-    rest_opts->hessScaling = 2;
-    rest_opts->opttol = param->opttol;
-    rest_opts->nlinfeastol = param->nlinfeastol;
-    rest_opts->QPsol = param->QPsol;
-    rest_opts->QPsol_opts = param->QPsol_opts;
-    rest_opts->hessDampFac = 0.2;
-    rest_opts->loud_SQPresult = false;
+SQPoptions* create_restoration_options(SQPoptions *parent_options){
+    SQPoptions *rest_param = new SQPoptions();
 
-    return rest_opts;
+    //General restoration options
+    rest_param->restoreFeas = 0;
+    rest_param->hessLimMem = 1;
+    rest_param->hessUpdate = 2;
+    rest_param->hessScaling = 2;
+    rest_param->hessDampFac = 0.2;
+    //rest_param->hessScaling = 4;
+    //rest_param->hessDampFac = 1./3.;
+
+    rest_param->loud_SQPresult = false;
+    //Do not print to any file
+    rest_param->debugLevel = 0;
+
+    //Derived from parent method options
+    rest_param->opttol = parent_options->opttol;
+    rest_param->nlinfeastol = parent_options->nlinfeastol;
+    rest_param->QPsol = parent_options->QPsol;
+    rest_param->QPsol_opts = parent_options->QPsol_opts;
+
+    return rest_param;
 }   
-
 
 
 
@@ -56,70 +65,40 @@ SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *st
     param->optionsConsistency(problem);
     
     if (param->autoScaling){
-        scaled_prob = new scaled_Problemspec(problem);
-        prob = scaled_prob;
+        //scaled_prob = new scaled_Problemspec(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        prob = scaled_prob.get();
     }
     else{
         scaled_prob = nullptr;
         prob = problem;
     }
-    vars = new SQPiterate(prob, param, true);
+    vars = std::make_unique<SQPiterate>(prob, param, true);
 
     // Create a solver object for quadratic subproblems.
-    sub_QP = create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, param);
+    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, vars->blockIdx.get(), param));
     
     initCalled = false;
     
     //Setup the feasibility restoration problem
     if (param->restoreFeas){
-        rest_opts = new SQPoptions();
-        // Set options for the SQP method for this problem
-        rest_opts->globalization = 1;
-        rest_opts->whichSecondDerv = 0;
-        rest_opts->restoreFeas = 0;
-        rest_opts->hessUpdate = 2;
-        rest_opts->hessLimMem = 1;
-        rest_opts->hessScaling = 2;
-        rest_opts->opttol = param->opttol;
-        rest_opts->nlinfeastol = param->nlinfeastol;
-        rest_opts->QPsol = param->QPsol;
-        rest_opts->QPsol_opts = param->QPsol_opts;
-        rest_opts->hessDampFac = 0.2;
-        
-        rest_opts->loud_SQPresult = false;
+        rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
+        rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->restRho, param->restZeta);
+        rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
-        //rest_opts->autoScaling = param->autoScaling;
-        
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
-    }
-    else{
-        rest_prob = nullptr;
-        rest_opts = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
-    }
+        rest_xi.Dimension(rest_prob->nVar);
+        rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
+        rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);
+   }
 }
 
 SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), sub_QP(nullptr),
-    rest_prob(nullptr), rest_opts(nullptr), rest_stats(nullptr), rest_method(nullptr), scaled_prob(nullptr), initCalled(false){}
+    rest_prob(nullptr), rest_param(nullptr), rest_stats(nullptr), rest_method(nullptr), scaled_prob(nullptr), initCalled(false){}
 
-SQPmethod::~SQPmethod(){
-    delete vars;
-    delete sub_QP;
-
-    delete scaled_prob;
-    delete rest_prob;
-    delete rest_opts;
-    delete rest_stats;
-    delete rest_method;
-}
+SQPmethod::~SQPmethod(){}
 
 
-
-
-SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
+SCQPmethod::SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
 
     prob = problem;
     param = parameters; param->optionsConsistency();
@@ -127,108 +106,39 @@ SCQPmethod::SCQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *
     cond = CND;
 
     if (param->autoScaling){
-        scaled_prob = new scaled_Problemspec(problem);
-        prob = scaled_prob;
+        //scaled_prob = new scaled_Problemspec(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        prob = scaled_prob.get();
     }
     else{
         scaled_prob = nullptr;
         prob = problem;
     }
-    vars = new SCQPiterate(prob, param, cond, true);
+    vars = std::make_unique<SCQPiterate>(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparseQP == 0){
-        throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
-    }
-    if (param->blockHess != 1){
-        throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
-    }
-
-
-    sub_QP = create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, param);
-
+    if (param->sparseQP == 0) throw ParameterError("Condensing only works with sparse QPs");
+    if (param->blockHess != 1) throw ParameterError("Condensing requires block diagonal hessian for efficient linear algebra");
+    
+    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
     initCalled = false;
 
     if (param->restoreFeas){
-        //Setup condenser for the restoration problem
-        int N_vblocks = cond->num_vblocks + cond->num_true_cons;
-        int N_cblocks = cond->num_cblocks;
-        int N_hessblocks = cond->num_hessblocks + cond->num_true_cons;
-        int N_targets = cond->num_targets;
+        rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
+        rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restRho, param->restZeta);
+        rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
-        rest_vblocks = new vblock[N_vblocks];
-        rest_cblocks = new cblock[N_cblocks];
-        rest_h_sizes = new int[N_hessblocks];
-        rest_targets = new condensing_target[N_targets];
-
-        for (int i = 0; i<cond->num_vblocks; i++){
-            rest_vblocks[i] = cond->vblocks[i];
-        }
-        for (int i = cond->num_vblocks; i < N_vblocks; i++){
-            rest_vblocks[i] = vblock(1, false);
-        }
-
-        for (int i = 0; i<cond->num_cblocks; i++){
-            rest_cblocks[i] = cond->cblocks[i];
-        }
-
-        for (int i = 0; i<cond->num_hessblocks; i++){
-            rest_h_sizes[i] = cond->hess_block_sizes[i];
-        }
-        for (int i = cond->num_hessblocks; i<N_hessblocks; i++){
-            rest_h_sizes[i] = 1;
-        }
-
-        for (int i = 0; i<cond->num_targets; i++){
-            rest_targets[i] = cond->targets[i];
-        }
-        rest_cond = new Condenser(rest_vblocks, N_vblocks, rest_cblocks, N_cblocks, rest_h_sizes, N_hessblocks, rest_targets, N_targets, 0);
-
-        //Setup options for the restoration problem
-        rest_opts = new SQPoptions();
-        rest_opts->globalization = 1;
-        rest_opts->whichSecondDerv = 0;
-        rest_opts->restoreFeas = 0;
-        //rest_opts->hessUpdate = param->hessUpdate;
-        rest_opts->hessLimMem = 1;
-        rest_opts->hessUpdate = 2;
-        rest_opts->hessScaling = 4;
-        rest_opts->maxConvQP = param->maxConvQP;
-        rest_opts->opttol = param->opttol;
-        rest_opts->nlinfeastol = param->nlinfeastol;
-        rest_opts->QPsol = param->QPsol;
-        rest_opts->QPsol_opts = param->QPsol_opts;
-        
-        //rest_opts->autoScaling = param->autoScaling;
-        
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
-    }
-    else{
-        rest_vblocks = nullptr;
-        rest_cblocks = nullptr;
-        rest_h_sizes = nullptr;
-        rest_targets = nullptr;
-        rest_cond = nullptr;
-        rest_opts = nullptr;
-
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
+        rest_xi.Dimension(rest_prob->nVar);
+        rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
+        rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);
     }
 }
 
-SCQPmethod::SCQPmethod(): cond(nullptr), rest_cond(nullptr), rest_vblocks(nullptr), rest_cblocks(nullptr), rest_h_sizes(nullptr), rest_targets(nullptr)
-{};
+SCQPmethod::SCQPmethod(){}
 
-SCQPmethod::~SCQPmethod(){
-    delete[] rest_vblocks;
-    delete[] rest_cblocks;
-    delete[] rest_h_sizes;
-    delete[] rest_targets;
-    delete rest_cond;
-}
+
+SCQPmethod::~SCQPmethod(){}
 
 
 SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
@@ -243,14 +153,15 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
     stats = statistics;
 
     if (param->autoScaling){
-        scaled_prob = new scaled_Problemspec(problem);
-        prob = scaled_prob;
+        //scaled_prob = new scaled_Problemspec(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        prob = scaled_prob.get();
     }
     else{
         scaled_prob = nullptr;
         prob = problem;
     }
-    vars = new SCQPiterate(prob, param, cond, true);
+    vars = std::make_unique<SCQPiterate>(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){
@@ -260,76 +171,19 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
 
-    sub_QP = create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, param);
+    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
 
     initCalled = false;
 
     if (param->restoreFeas){
-        //Setup condenser for the restoration problem
-        int N_vblocks = cond->num_vblocks + cond->num_true_cons;
-        int N_cblocks = cond->num_cblocks;
-        int N_hessblocks = cond->num_hessblocks + cond->num_true_cons;
-        int N_targets = cond->num_targets;
+        rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
+        rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restRho, param->restZeta);
+        rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
-        rest_vblocks = new vblock[N_vblocks];
-        rest_cblocks = new cblock[N_cblocks];
-        rest_h_sizes = new int[N_hessblocks];
-        rest_targets = new condensing_target[N_targets];
-
-        for (int i = 0; i<cond->num_vblocks; i++){
-            rest_vblocks[i] = cond->vblocks[i];
-        }
-        for (int i = cond->num_vblocks; i < N_vblocks; i++){
-            rest_vblocks[i] = vblock(1, false);
-        }
-
-        for (int i = 0; i<cond->num_cblocks; i++){
-            rest_cblocks[i] = cond->cblocks[i];
-        }
-
-        for (int i = 0; i<cond->num_hessblocks; i++){
-            rest_h_sizes[i] = cond->hess_block_sizes[i];
-        }
-        for (int i = cond->num_hessblocks; i<N_hessblocks; i++){
-            rest_h_sizes[i] = 1;
-        }
-
-        for (int i = 0; i<cond->num_targets; i++){
-            rest_targets[i] = cond->targets[i];
-        }
-        rest_cond = new Condenser(rest_vblocks, N_vblocks, rest_cblocks, N_cblocks, rest_h_sizes, N_hessblocks, rest_targets, N_targets, 0);
-
-        //Setup options for the restoration problem
-        rest_opts = new SQPoptions();
-        rest_opts->globalization = 1;
-        rest_opts->whichSecondDerv = 0;
-        rest_opts->restoreFeas = 0;
-        //rest_opts->hessUpdate = param->hessUpdate;
-        rest_opts->hessLimMem = 1;
-        rest_opts->hessUpdate = 2;
-        rest_opts->hessScaling = 4;
-        rest_opts->maxConvQP = param->maxConvQP;
-        rest_opts->opttol = param->opttol;
-        rest_opts->nlinfeastol = param->nlinfeastol;
-        rest_opts->QPsol = param->QPsol;
-
-        //rest_opts->autoScaling = param->autoScaling;
-
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
-    }
-    else{
-        rest_vblocks = nullptr;
-        rest_cblocks = nullptr;
-        rest_h_sizes = nullptr;
-        rest_targets = nullptr;
-        rest_cond = nullptr;
-        rest_opts = nullptr;
-
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
+        rest_xi.Dimension(rest_prob->nVar);
+        rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
+        rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);
     }
 }
 
@@ -345,14 +199,15 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     stats = statistics;
 
     if (param->autoScaling){
-        scaled_prob = new scaled_Problemspec(problem);
-        prob = scaled_prob;
+        //scaled_prob = new scaled_Problemspec(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        prob = scaled_prob.get();
     }
     else{
         scaled_prob = nullptr;
         prob = problem;
     }
-    vars = new SCQP_correction_iterate(prob, param, cond, true);
+    vars = std::make_unique<SCQP_correction_iterate>(prob, param, cond, true);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){
@@ -362,7 +217,7 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
 
-    sub_QP = create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, param);
+    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
 
     initCalled = false;
 
@@ -374,72 +229,14 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     }
 
     if (param->restoreFeas){
-        //Setup condenser for the restoration problem
-        int N_vblocks = cond->num_vblocks + cond->num_true_cons;
-        int N_cblocks = cond->num_cblocks;
-        int N_hessblocks = cond->num_hessblocks + cond->num_true_cons;
-        int N_targets = cond->num_targets;
+        rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
+        rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restRho, param->restZeta);
+        rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
-        rest_vblocks = new vblock[N_vblocks];
-        rest_cblocks = new cblock[N_cblocks];
-        rest_h_sizes = new int[N_hessblocks];
-        rest_targets = new condensing_target[N_targets];
-
-        for (int i = 0; i<cond->num_vblocks; i++){
-            rest_vblocks[i] = cond->vblocks[i];
-        }
-        for (int i = cond->num_vblocks; i < N_vblocks; i++){
-            rest_vblocks[i] = vblock(1, false);
-        }
-
-        for (int i = 0; i<cond->num_cblocks; i++){
-            rest_cblocks[i] = cond->cblocks[i];
-        }
-
-        for (int i = 0; i<cond->num_hessblocks; i++){
-            rest_h_sizes[i] = cond->hess_block_sizes[i];
-        }
-        for (int i = cond->num_hessblocks; i<N_hessblocks; i++){
-            rest_h_sizes[i] = 1;
-        }
-
-        for (int i = 0; i<cond->num_targets; i++){
-            rest_targets[i] = cond->targets[i];
-        }
-        rest_cond = new Condenser(rest_vblocks, N_vblocks, rest_cblocks, N_cblocks, rest_h_sizes, N_hessblocks, rest_targets, N_targets, 0);
-
-        //Setup options for the restoration problem
-        rest_opts = new SQPoptions();
-        rest_opts->globalization = 1;
-        rest_opts->whichSecondDerv = 0;
-        rest_opts->restoreFeas = 0;
-        rest_opts->hessLimMem = 1;
-        rest_opts->hessUpdate = 2;
-        rest_opts->hessScaling = 4;
-        rest_opts->maxConvQP = param->maxConvQP;
-        rest_opts->opttol = param->opttol;
-        rest_opts->nlinfeastol = param->nlinfeastol;
-        rest_opts->QPsol = param->QPsol;
-        rest_opts->QPsol_opts = param->QPsol_opts;
-        rest_opts->max_correction_steps = param->max_correction_steps;
-        
-        //rest_opts->autoScaling = param->autoScaling;
-
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
-    }
-    else{
-        rest_vblocks = nullptr;
-        rest_cblocks = nullptr;
-        rest_h_sizes = nullptr;
-        rest_targets = nullptr;
-        rest_cond = nullptr;
-        rest_opts = nullptr;
-
-        rest_prob = nullptr;
-        rest_stats = nullptr;
-        rest_method = nullptr;
+        rest_xi.Dimension(rest_prob->nVar);
+        rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
+        rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);
     }
 }
 

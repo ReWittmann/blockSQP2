@@ -476,4 +476,85 @@ void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, i
     }
 }
 
+
+
+
+void convertHessian_noalloc(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+                                            double *hessNz){
+    int bsize, bstart = 0, ind = 0;
+    //Iterate over hessian blocks
+    for (int h = 0; h <nBlocks; h++){
+        bsize = hess[h].m;
+        //Iterate over second dimension
+        for (int j = 0; j < bsize; j++){
+            //Iterate over first dimension
+             //Segment above hessian block
+            for (int i = 0; i < bstart; i++){
+                hessNz[ind] = 0;
+                ++ind;
+            }
+             //Hessian block
+            for (int i = 0; i < hess[h].m; i++){
+                hessNz[ind] = hess[h](i, j);
+                //NEW
+                if (i == j) hessNz[ind] += regularizationFactor;
+
+                ++ind;
+            }
+             //Segment below hessian block
+            for (int i = bstart + bsize; i < nVar; i++){
+                hessNz[ind] = 0;
+                ++ind;
+            }
+        }
+        bstart += bsize;
+    }
+    return;
+}
+
+
+void convertHessian_noalloc(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+                             double *hessNz_, int *hessIndRow_, int *hessIndCol_, int *hessIndLo_ ){
+    int iBlock, count, colCountTotal, rowOffset, i, j;
+    int nCols, nRows;
+
+    // 2) store matrix entries columnwise in hessNz
+    count = 0; // runs over all nonzero elements
+    colCountTotal = 0; // keep track of position in large matrix
+    rowOffset = 0;
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){
+        nCols = hess_[iBlock].m;
+        nRows = hess_[iBlock].m;
+
+        for (i = 0; i < nCols; i++){
+            // column 'colCountTotal' starts at element 'count'
+            hessIndCol_[colCountTotal] = count;
+
+            for (j = 0; j < nRows; j++){
+                //if (hess_[iBlock]( i,j ) > eps || -hess_[iBlock]( i,j ) > eps ){
+                if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                    hessNz_[count] = hess_[iBlock](i, j);
+                    if (i == j) hessNz_[count] += regularizationFactor;
+
+                    hessIndRow_[count] = j + rowOffset;
+                    count++;
+                }
+            }
+            colCountTotal++;
+        }
+        rowOffset += nRows;
+    }
+    hessIndCol_[colCountTotal] = count;
+
+    // 3) Set reference to lower triangular matrix
+    for( j=0; j<nVar; j++ )
+    {
+        for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
+        hessIndLo_[j] = i;
+    }
+    return;
+}
+
+
+
 } // namespace blockSQP

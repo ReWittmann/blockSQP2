@@ -126,13 +126,13 @@ void SQPmethod::scaling_heuristic(){
     for (int i = 0; i < prob->nVar; i++){
         vars->rescaleFactors[i] = 1.0;
     }
-    calc_free_variables_scaling(vars->rescaleFactors);
-    apply_rescaling(vars->rescaleFactors);
+    calc_free_variables_scaling(vars->rescaleFactors.get());
+    apply_rescaling(vars->rescaleFactors.get());
     return;
 }
 
 // Apply rescaling to the iterate and the scalable problem specification. 
-void SQPmethod::apply_rescaling(double *resfactors){
+void SQPmethod::apply_rescaling(const double *resfactors){
     Matrix deltai, smallDelta, smallGamma;
     int pos, Bsize, nmem;
 

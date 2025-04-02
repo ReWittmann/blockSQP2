@@ -21,6 +21,7 @@
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_condensing.hpp"
 #include <limits>
+#include <memory>
 
 namespace blockSQP{
 
@@ -67,9 +68,9 @@ class Problemspec{
         /// Set initial values for xi (and possibly lambda) and parts of the Jacobian that correspond to linear constraints (sparse version).
         virtual void initialize( Matrix &xi,            ///< optimization variables
                                  Matrix &lambda,        ///< Lagrange multipliers
-                                 double *&jacNz,        ///< nonzero elements of constraint Jacobian
-                                 int *&jacIndRow,       ///< row indices of nonzero elements
-                                 int *&jacIndCol        ///< starting indices of columns
+                                 double *jacNz,        ///< nonzero elements of constraint Jacobian
+                                 int *jacIndRow,       ///< row indices of nonzero elements
+                                 int *jacIndCol        ///< starting indices of columns
                                  ){};
 
         /// Evaluate objective, constraints, and derivatives (dense version).
@@ -79,7 +80,7 @@ class Problemspec{
                                Matrix &constr,          ///< constraint function values
                                Matrix &gradObj,         ///< gradient of objective
                                Matrix &constrJac,       ///< constraint Jacobian (dense)
-                               SymMatrix *&hess,        ///< Hessian of the Lagrangian (blockwise)
+                               SymMatrix *hess,        ///< Hessian of the Lagrangian (blockwise)
                                int dmode,               ///< derivative mode
                                int *info                ///< error flag
                                ){};
@@ -90,10 +91,10 @@ class Problemspec{
                                double *objval,          ///< objective function value
                                Matrix &constr,          ///< constraint function values
                                Matrix &gradObj,         ///< gradient of objective
-                               double *&jacNz,          ///< nonzero elements of constraint Jacobian
-                               int *&jacIndRow,         ///< row indices of nonzero elements
-                               int *&jacIndCol,         ///< starting indices of columns
-                               SymMatrix *&hess,        ///< Hessian of the Lagrangian (blockwise)
+                               double *jacNz,          ///< nonzero elements of constraint Jacobian
+                               int *jacIndRow,         ///< row indices of nonzero elements
+                               int *jacIndCol,         ///< starting indices of columns
+                               SymMatrix *hess,        ///< Hessian of the Lagrangian (blockwise)
                                int dmode,               ///< derivative mode
                                int *info                ///< error flag
                                ){};
@@ -122,7 +123,7 @@ public:
 
     Problemspec *unscaled_prob;
 
-    double *scaling_factors;
+    std::unique_ptr<double[]> scaling_factors;
     Matrix xi_unscaled;
 
     scaled_Problemspec(Problemspec *UNSCprob);
@@ -135,10 +136,10 @@ public:
 
 
     void initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac);
-    void initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol);
+    void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
 
-    void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *&hess, int dmode, int *info);
-    void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol, SymMatrix *&hess, int dmode, int *info);
+    void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info);
+    void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info);
     void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info);
 
     void reduceConstrVio(Matrix &xi, int* info);

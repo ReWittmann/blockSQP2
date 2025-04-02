@@ -24,28 +24,36 @@
 #include "blocksqp_iterate.hpp"
 #include "blocksqp_stats.hpp"
 #include "blocksqp_qpsolver.hpp"
+#include "blocksqp_restoration.hpp"
 #include <iostream>
+#include <memory>
 
 namespace blockSQP{
 
-
 class SQPmethod{
-
     public:
-        Problemspec*             prob;        ///< Problem structure (has to provide evaluation routines)
+        //Provided problem data and algorithmic settings
+        Problemspec*             prob;        ///< Pointer to used problem, may be original problem or scalable problem wrapper
         SQPoptions*              param;       ///< Set of algorithmic options and parameters for this method
         SQPstats*                stats;       ///< Statistics object for current SQP run
 
-        SQPiterate*              vars;        ///< All SQP variables for this method
-        QPsolver*                sub_QP;      ///< Class wrapping an external QP solver
+        std::unique_ptr<SQPiterate> vars;     ///< All SQP variables for this method
+        std::unique_ptr<QPsolver>   sub_QP;   ///< Class wrapping an external QP solver
 
-    //Feasibility restoration problem
-        Problemspec*             rest_prob;
-        SQPoptions*              rest_opts;
-        SQPstats*                rest_stats;
-        SQPmethod*               rest_method;
+        //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is acitvated
+        std::unique_ptr<scaled_Problemspec> scaled_prob;
 
-        scaled_Problemspec*      scaled_prob;
+
+        // Objects for feasibility restoration
+        //Feasibility restoration problem
+        std::unique_ptr<abstractRestorationProblem> rest_prob;
+        std::unique_ptr<SQPoptions>  rest_param;
+        std::unique_ptr<SQPstats>    rest_stats;
+        std::unique_ptr<SQPmethod>   rest_method;
+        //Returned iterates from restoration method. We do not assume that they are identical to those stored in the method (future scaling for restoration problems!)
+        Matrix rest_xi;
+        Matrix rest_lambda;
+        Matrix rest_lambdaQP;
 
     protected:
         bool                     initCalled;  ///< indicates if init() has been called (necessary for run())
@@ -59,12 +67,16 @@ class SQPmethod{
         SQPmethod();
         virtual ~SQPmethod();
 
+        // Main interface methods
         /// Initialization, has to be called before run
         void init();
         /// Main Loop of SQP method
         SQPresult run( int maxIt, int warmStart = 0 );
         /// Call after the last call of run, to close output files etc.
         void finish();
+
+
+        // Utility methods
         /// Print information about the SQP method
         void printInfo( int printLevel );
         /// Compute gradient of Lagrangian function (dense version)
@@ -75,10 +87,11 @@ class SQPmethod{
         void calcLagrangeGradient( Matrix &gradLagrange, int flag );
         /// Update optimization tolerance (similar to SNOPT) in current iterate
         bool calcOptTol();
+        /// Set pointer to correct step and Lagrange gradient difference in a limited memory context
+        void updateDeltaGammaData();
 
-        /*
-         * Solve QP subproblem
-         */
+
+        // Solution of quadratic subproblems
         /// Update the bounds on the current step, i.e. the QP variables
         void updateStepBounds();
         /// Update the bounds on the current step for a second order correction, i.e. lb_s = lb - constr(trialXi) + constrJac(Xi)*deltaXi = prob->lb_con - vars->trialConstr + vars->AdeltaXi
@@ -95,9 +108,8 @@ class SQPmethod{
         /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
         virtual void setIdentityHessian();
 
-        /*
-         * Globalization Strategy
-         */
+
+        // Filter line search, restoration phase and associated heuristics
         /// No globalization strategy
         int fullstep();
         /// Set new primal dual iterate
@@ -111,6 +123,10 @@ class SQPmethod{
         void set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHessian = false);
         Matrix get_xi();
         Matrix get_lambda();
+        void get_xi(Matrix &xi_hold);
+        void get_lambda(Matrix &lambda_hold);
+        void get_lambdaQP(Matrix &lambdaQP_hold);
+
         /// Reduce stepsize if a step is rejected
         void reduceStepsize( double *alpha );
         /// Determine steplength alpha by a filter based line search similar to IPOPT
@@ -127,19 +143,18 @@ class SQPmethod{
         int feasibilityRestorationHeuristic();
         /// Start feasibility restoration phase (solve NLP)
         virtual int feasibilityRestorationPhase();
+        /// Main loop of restoration phase - check acceptability of the filter after each step
+        int innerRestorationPhase(abstractRestorationProblem *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
 
-        /*
-         * Hessian Approximation
-         */
+
+        // Hessian approximation and sizing
+
         /// Set initial Hessian: Identity matrix
         void calcInitialHessian(SymMatrix *hess);
-        /// [blockwise] Set initial Hessian: Identity matrix
         void calcInitialHessian(int iBlock, SymMatrix *hess);
-
         void calcInitialHessians();
-
         void calcScaledInitialHessian(double scale, SymMatrix *hess);
         void calcScaledInitialHessian(int iBlock, double scale, SymMatrix *hess);
 
@@ -150,9 +165,6 @@ class SQPmethod{
         /// Shortcut method to reset the hessian and the fallback hessian if it is in use
         void resetHessians();
 
-        ///
-        /// Update methods for the block hessian. May store data in vars for the specific hessian given (hess1 or hess2)
-        ///
         /// Compute current Hessian approximation by finite differences
         int calcFiniteDiffHessian(SymMatrix *hess);
         /// Compute full memory Hessian approximations based on update formulas
@@ -160,94 +172,74 @@ class SQPmethod{
         /// Compute limited memory Hessian approximations based on update formulas
         void calcHessianUpdateLimitedMemory(int updateType, int hessScaling, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
-        //void calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock, SymMatrix *hess);
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification
-        //void calcBFGS( const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess);
         void calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping);
-        /// Set pointer to correct step and Lagrange gradient difference in a limited memory context
-        void updateDeltaGammaData();
 
-        /*
-         * Scaling of Hessian Approximation
-         */
-        /// [blockwise] Update scalars for COL sizing of Hessian approximation (full memory, save last 2)
-        void updateScalarProducts();
-        /// [blockwise] Update scalars for COL sizing of Hessian approximation (limited memory, save param->hessMemsize)
-        void updateScalarProductsLimitedMemory();
-
-        /// [blockwise] Size Hessian using SP, OL, or mean sizing factor
-        //void sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option, SymMatrix *hess);
+        /// Oren-Luenberger sizing of initial Hessian
         void sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int option);
-        /// [blockwise] Size Hessian using the COL scaling factor
-        //void sizeHessianCOL( const Matrix &gamma, const Matrix &delta, const double deltaNormSq, const double deltaNormSqOld, const double deltaGamma, const double deltaGammaOld, int iBlock, SymMatrix *hess);
+        /// Centered Oren-Luenberger sizing
         void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
 
-        /*
-        * Automatic scaling of variables
-        */
-        /// Calculate relative scale factors for variable block number nBlock, result is multiplied to SF = double[nVar].
-        //void calc_block_variables_scaling(int nBlock, double *SF);
-        /// Scale the variable blocks relative to each other, recommended when using convexification strategy of adding scaled identities. Result is multiplied to SF
-        //void calc_blocks_scaling(double *SF);
+
+        // Rescaling of the problem (only variables)
         void calc_free_variables_scaling(double *SF);
-
-        /// Rescale the problem specification and the iteration data with the given rescaling factors
-        void apply_rescaling(double *resfactors);
-
+        void apply_rescaling(const double *resfactors);
         void scaling_heuristic();
-        
 };
 
 ////////////////////////////////////////////////////////////
 
 //Sequential Condensed Quadratic Programming method
 class SCQPmethod : public SQPmethod{
-public:
+    public:
     Condenser *cond;
-
-    //Restoration problem with own condenser
-    Condenser*              rest_cond;
-    vblock*                 rest_vblocks;
-    cblock*                 rest_cblocks;
-    int*                    rest_h_sizes;
-    condensing_target*      rest_targets;
+    
+    //Condenser for restoration problem
+    std::unique_ptr<Condenser> rest_cond;
 
     SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
     SCQPmethod();
     virtual ~SCQPmethod();
 
+    // QP solution methods incorporating the condensing step
     virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+
+    // Restoration phase with slack variables omitted for dependency constraints (continuity conditions in multiple shooting) 
     virtual int feasibilityRestorationPhase();
 
-    //Try to convexify condensed Hessian by adding scaled identities
+    // Convexification strategy for condensed Hessians
     void convexify_condensed(SymMatrix *condensed_hess, int idx, int maxQP);
 };
 
 
 class SCQP_bound_method : public SCQPmethod{
-public:
+    public:
     SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
 
+    // condensed QP solution methods incorporating QP resolves with violated bounds added
     virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 };
 
 
 class SCQP_correction_method : public SCQPmethod{
-public:
+    public:
     Matrix *corrections;
     Matrix *SOC_corrections;
+
 
     SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
     virtual ~SCQP_correction_method();
 
-    //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+    // condensed QP solution methods incorporating QP resolves with added corrections
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
     virtual int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
 
+    // filterLineSearch that calls modified SOC from above 
     virtual int filterLineSearch();
+    // feasiblity restoration phase that calls the correction method.
     virtual int feasibilityRestorationPhase();
 };
 

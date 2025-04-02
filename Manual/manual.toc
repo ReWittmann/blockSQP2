@@ -1,0 +1,21 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {section}{\numberline {2}Building \texttt {blockSQP}\ }{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Building the C++ package}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Building the python and julia interfaces}{3}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Building via CMake}{3}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Setting up a problem}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Sparsity format}{4}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The C++ interface}{5}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Class \texttt {ProblemSpec}}{5}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Class \texttt {Condenser}}{8}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Class \texttt {SQPmethod}and \texttt {SCQPmethod}}{8}{subsubsection.3.2.3}%
+\contentsline {subsection}{\numberline {3.3}The python interface}{9}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}The julia interface}{11}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Options and parameters}{11}{section.4}%
+\contentsline {subsection}{\numberline {4.1}List of algorithmic options}{11}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}List of algorithmic parameters}{13}{subsection.4.2}%
+\contentsline {section}{\numberline {5}Output}{13}{section.5}%
+\contentsline {section}{\nonumberline References}{14}{section*.3}%
+\contentsline {section}{\numberline {A}License}{15}{appendix.A}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

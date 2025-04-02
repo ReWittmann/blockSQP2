@@ -1,30 +1,30 @@
-include("./Jul_BlockSQP.jl")
-using .BlockSQP
+include("./blockSQP.jl")
+using .blockSQP
 
-vblocks = Array{BlockSQP.vblock, 1}(undef, 7)
-vblocks[1] = BlockSQP.vblock(Int32(1), false)
+vblocks = Array{blockSQP.vblock, 1}(undef, 7)
+vblocks[1] = blockSQP.vblock(Int32(1), false)
 
-vblocks[2] = BlockSQP.vblock(Int32(2), true)
-vblocks[3] = BlockSQP.vblock(Int32(1), false)
+vblocks[2] = blockSQP.vblock(Int32(2), true)
+vblocks[3] = blockSQP.vblock(Int32(1), false)
 
-vblocks[4] = BlockSQP.vblock(Int32(2), true)
-vblocks[5] = BlockSQP.vblock(Int32(1), false)
+vblocks[4] = blockSQP.vblock(Int32(2), true)
+vblocks[5] = blockSQP.vblock(Int32(1), false)
 
-vblocks[6] = BlockSQP.vblock(Int32(2), true)
-vblocks[7] = BlockSQP.vblock(Int32(1), false)
+vblocks[6] = blockSQP.vblock(Int32(2), true)
+vblocks[7] = blockSQP.vblock(Int32(1), false)
 
-cblocks = Array{BlockSQP.cblock, 1}(undef, 4)
-cblocks[1] = BlockSQP.cblock(Int32(2))
-cblocks[2] = BlockSQP.cblock(Int32(2))
-cblocks[3] = BlockSQP.cblock(Int32(2))
-cblocks[4] = BlockSQP.cblock(Int32(1))
+cblocks = Array{blockSQP.cblock, 1}(undef, 4)
+cblocks[1] = blockSQP.cblock(Int32(2))
+cblocks[2] = blockSQP.cblock(Int32(2))
+cblocks[3] = blockSQP.cblock(Int32(2))
+cblocks[4] = blockSQP.cblock(Int32(1))
 
 hsizes = Int32[1, 3, 3, 3]
 
-targets = Array{BlockSQP.condensing_target, 1}(undef, 1)
-targets[1] = BlockSQP.condensing_target(Int32(3), Int32(0), Int32(7), Int32(0), Int32(3))
+targets = Array{blockSQP.condensing_target, 1}(undef, 1)
+targets[1] = blockSQP.condensing_target(Int32(3), Int32(0), Int32(7), Int32(0), Int32(3))
 
-cond = BlockSQP.Condenser(vblocks, cblocks, hsizes, targets, Int32(2))
+cond = blockSQP.Condenser(vblocks, cblocks, hsizes, targets, Int32(2))
 
 print("Created condenser julia struct\n")
 
@@ -32,7 +32,7 @@ print("Created condenser julia struct\n")
 NZ = Float64[-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,1,1,1,1]
 ROW = Int32[0,1,6,0,2,6,1,3,6,2,3,6,2,4,6,3,5,6,4,5,6,4,6,5,6,6]
 COLIND = Int32[0,3,6,9,12,15,18,21,23,25,26]
-con_jac = BlockSQP.sparse_Matrix(7, 10, NZ, ROW, COLIND)
+con_jac = blockSQP.sparse_Matrix(7, 10, NZ, ROW, COLIND)
 
 
 full_block = Float64[0.75;-0.25;-0.25;; -0.25; 0.75; 0.25;; -0.25; 0.25; 1.25]
@@ -51,7 +51,7 @@ lb_con = Float64[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, -1.9]
 ub_con = Float64[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 1.9]
 
 
-condensed_h, condensed_jacobian, condensed_hess, condensed_lb_var, condensed_ub_var, condensed_lb_con, condensed_ub_con = BlockSQP.full_condense(cond, grad_obj, con_jac, hess, lb_var, ub_var, lb_con, ub_con)
+condensed_h, condensed_jacobian, condensed_hess, condensed_lb_var, condensed_ub_var, condensed_lb_con, condensed_ub_con = blockSQP.full_condense(cond, grad_obj, con_jac, hess, lb_var, ub_var, lb_con, ub_con)
 #    condensed_h, condensed_jacobian, condensed_hess, condensed_lb_var, condensed_ub_var, condensed_lb_con, condensed_ub_con
 
 
@@ -83,7 +83,7 @@ xi_cond = Float64[-0.2, -0.05, -0.05, -0.2]
 lambda_cond = Float64[0, 0, 0, 0, 0.7375, 0, 0.4625, 0, 0.275, 0, 0.23125]
 
 
-xi_rest, lambda_rest = BlockSQP.recover_var_mult(cond, xi_cond, lambda_cond)
+xi_rest, lambda_rest = blockSQP.recover_var_mult(cond, xi_cond, lambda_cond)
 
 print("xi_rest=\n")
 display(xi_rest)

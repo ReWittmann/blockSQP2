@@ -27,9 +27,7 @@
 namespace blockSQP
 {
 
-/**
- * Initial Hessian: Identity matrix
- */
+
 void SQPmethod::calcInitialHessian(SymMatrix *hess){
     for (int iBlock=0; iBlock<vars->nBlocks; iBlock++ )
         //if objective derv is computed exactly, don't set the last block!
@@ -41,9 +39,6 @@ void SQPmethod::calcInitialHessian(SymMatrix *hess){
 }
 
 
-/**
- * Initial Hessian for one block: Identity matrix
- */
 void SQPmethod::calcInitialHessian(int iBlock, SymMatrix *hess){
     hess[iBlock].Initialize(0.0);
     // Each block is a diagonal matrix
@@ -52,8 +47,8 @@ void SQPmethod::calcInitialHessian(int iBlock, SymMatrix *hess){
 }
 
 void SQPmethod::calcInitialHessians(){
-    calcInitialHessian(vars->hess1);
-    if (vars->hess2 != nullptr) calcInitialHessian(vars->hess2);
+    calcInitialHessian(vars->hess1.get());
+    if (vars->hess2 != nullptr) calcInitialHessian(vars->hess2.get());
 }
 
 
@@ -75,8 +70,6 @@ void SQPmethod::calcScaledInitialHessian(int iBlock, double scale, SymMatrix *he
 }
 
 
-
-
 void SQPmethod::resetHessian(SymMatrix *hess){
     for( int iBlock=0; iBlock<vars->nBlocks; iBlock++ )
         //if objective derv is computed exactly, don't set the last block!
@@ -95,7 +88,7 @@ void SQPmethod::resetHessian(int iBlock, SymMatrix *hess){
     vars->nquasi[iBlock] = 0;
     calcInitialHessian(iBlock, hess);
 
-    if (hess == vars->hess1){
+    if (hess == vars->hess1.get()){
         vars->deltaNormSqOld( iBlock ) = 1.0;
         vars->deltaGammaOld( iBlock ) = 0.0;
     }
@@ -106,14 +99,12 @@ void SQPmethod::resetHessian(int iBlock, SymMatrix *hess){
 }
 
 void SQPmethod::resetHessians(){
-    resetHessian(vars->hess1);
-    if (vars->hess2 != nullptr) resetHessian(vars->hess2);
+    resetHessian(vars->hess1.get());
+    if (vars->hess2 != nullptr) resetHessian(vars->hess2.get());
     return;
 }
 
-/**
- * Approximate Hessian by finite differences
- */
+
 int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess)
 {
     int iVar, jVar, k, iBlock, maxBlock, info, idx, idx1, idx2;
@@ -135,7 +126,7 @@ int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess)
             maxBlock = vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock];
 
     // Compute original Lagrange gradient
-    calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->gradLagrange, 0 );
+    calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->gradLagrange, 0 );
 
     for( iVar = 0; iVar<maxBlock; iVar++ )
     {
@@ -181,9 +172,9 @@ int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess)
         if( param->sparseQP )
         {
             prob->evaluate( vars->xi, vars->lambda, &dummy, varsP.constr, varsP.gradObj,
-                            varsP.jacNz, varsP.jacIndRow, varsP.jacIndCol, hess, 1, &info );
-            calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.jacNz, varsP.jacIndRow,
-                                  varsP.jacIndCol, varsP.gradLagrange, 0 );
+                            varsP.jacNz.get(), varsP.jacIndRow.get(), varsP.jacIndCol.get(), hess, 1, &info );
+            calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.jacNz.get(), varsP.jacIndRow.get(),
+                                  varsP.jacIndCol.get(), varsP.gradLagrange, 0 );
         }
         else
         {
@@ -217,7 +208,6 @@ int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess)
 }
 
 
-//void SQPmethod::sizeInitialHessian( const Matrix &gamma, const Matrix &delta, int iBlock, int option, SymMatrix *hess)
 void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int option){
     int i, j;
     double scale;
@@ -228,23 +218,19 @@ void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int op
 
     switch (option){
         case 1: //Shanno-Phua
-            //scale = adotb(gamma, gamma) / fmax(adotb(delta, gamma)*param->iniHessDiag, myEps);
             gamma.Submatrix(vars->gammaMat, vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock], 1, vars->blockIdx[iBlock], dpos);
             scale = adotb(gamma, gamma) / fmax(vars->deltaGammaMat(iBlock, dpos)*param->iniHessDiag, myEps);
             break;
         case 2: //Oren-Luenberger
-            //scale = adotb(delta, gamma) / fmax(adotb(delta, delta)*param->iniHessDiag, myEps);
             scale = vars->deltaGammaMat(iBlock, dpos) / fmax(vars->deltaNormSqMat(iBlock, dpos)*param->iniHessDiag, myEps);
             if (scale < 0) scale *= -1;
             scale = fmin(scale, 1.0);
             break;
         case 3: //Geometric mean of 1 and 2
-            //scale = sqrt(adotb(gamma, gamma)/fmax(adotb(delta, delta)*param->iniHessDiag, myEps));
             gamma.Submatrix(vars->gammaMat, vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock], 1, vars->blockIdx[iBlock], dpos);
             scale = sqrt(adotb(gamma, gamma)/fmax(vars->deltaNormSqMat(iBlock, dpos)*param->iniHessDiag, myEps));
             break;
         case 4: //First COL sizing, = OL sizing with different bounds
-            //scale = adotb(delta, gamma) / fmax(adotb(delta, delta)*param->iniHessDiag, myEps);
             scale = vars->deltaGammaMat(iBlock, dpos) / fmax(vars->deltaNormSqMat(iBlock, dpos)*param->iniHessDiag, myEps);
             if (scale < 0) scale *= -1;
             scale = fmax(fmin(scale, 1.0), param->olEps);
@@ -265,8 +251,6 @@ void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int op
     return;
 }
 
-
-//void SQPmethod::sizeHessianCOL(const Matrix &gamma, const Matrix &delta, const double deltaNormSq, const double deltaNormSqOld, const double deltaGamma, const double deltaGammaOld, int iBlock, SymMatrix *hess)
 void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
     int Bsize = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
     double theta, scale, myEps = 1.0e3 * param->eps;
@@ -279,7 +263,7 @@ void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
     deltaNormSq = vars->deltaNormSqMat(iBlock, dpos);
     deltaNormSqOld = vars->deltaNormSqOld(iBlock);
     deltaGamma = vars->deltaGammaMat(iBlock, dpos);
-    if (hess == vars->hess1) deltaGammaOld = vars->deltaGammaOld(iBlock);
+    if (hess == vars->hess1.get()) deltaGammaOld = vars->deltaGammaOld(iBlock);
     else deltaGammaOld = vars->deltaGammaOldFallback(iBlock);
 
     deltaBdelta = 0.0;
@@ -316,9 +300,7 @@ void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
         stats->averageSizingFactor += 1.0;
 }
 
-/**
- * Apply BFGS or SR1 update blockwise and size blocks
- */
+
 void SQPmethod::calcHessianUpdate(int updateType, int hessScaling, SymMatrix *hess){
     int iBlock, nBlocks;
     int nVarLocal;
@@ -337,10 +319,6 @@ void SQPmethod::calcHessianUpdate(int updateType, int hessScaling, SymMatrix *he
 
     for (iBlock = 0; iBlock < nBlocks; iBlock++){
         nVarLocal = hess[iBlock].m;
-
-        // smallGamma and smallDelta are subvectors of gamma and delta, corresponding to partially separability
-        //gammai.Submatrix(vars->gammaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        //deltai.Submatrix(vars->deltaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
 
         // Is this the first iteration or the first after a Hessian reset?
         firstIter = (vars->nquasi[iBlock] == 1);
@@ -369,7 +347,6 @@ void SQPmethod::calcHessianUpdate(int updateType, int hessScaling, SymMatrix *he
     for (int i = 0; i < prob->nVar; i++){
         vars->deltaOld(i) = vars->deltaMat(i, vars->dg_pos);
     }
-    //vars->deltaNormSqOld = vars->deltaNormSq;
 
     // statistics: average sizing factor
     stats->averageSizingFactor /= nBlocks;
@@ -394,45 +371,18 @@ void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int hessScaling, 
     stats->hessSkipped = 0;
     stats->averageSizingFactor = 0.0;
 
-    for (iBlock = 0; iBlock < nBlocks; iBlock++){
-        //nVarLocal = hess[iBlock].m;
-        //Bsize = vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock];
-        // smallGamma and smallDelta are submatrices of gammaMat, deltaMat,
-        // i.e. subvectors of gamma and delta from m prev. iterations
-        //smallGamma.Submatrix(vars->gammaMat, nVarLocal, vars->dg_nsave, vars->blockIdx[iBlock], 0);
-        //smallDelta.Submatrix(vars->deltaMat, nVarLocal, vars->dg_nsave, vars->blockIdx[iBlock], 0);
-        
+    for (iBlock = 0; iBlock < nBlocks; iBlock++){        
         // Memory structure
         n_updates = vars->nquasi[iBlock];
         posOldest = (vars->dg_pos - n_updates + 1 + vars->dg_nsave) % vars->dg_nsave;
 
         // Set B_0 (pretend it's the first step)
         calcInitialHessian(iBlock, hess);
-        //vars->deltaNormSqOld( iBlock ) = 1.0;
-        //vars->deltaGammaOld( iBlock ) = 0.0;
         vars->noUpdateCounter[iBlock] = -1;
         
-        // Size the initial update, but with the most recent delta/gamma-pair
-        //gammai.Submatrix(smallGamma, nVarLocal, 1, 0, vars->dg_pos);
-        //deltai.Submatrix(smallDelta, nVarLocal, 1, 0, vars->dg_pos);
-        //sizeInitialHessian( gammai, deltai, iBlock, hessScaling, hess);
         sizeInitialHessian(vars->dg_pos, iBlock, hess, hessScaling);
-
-        // OL sizing with different bounds on sizing factor and most recent delta/gamma-pair if COL sizing is used
-        //if (hessScaling == 4) sizeHessianCOL(gammai, deltai, iBlock, true, hess);
-
         for (int i = 0; i < n_updates; i++){
             pos = (posOldest + i) % vars->dg_nsave;
-
-            // Get new vector from list
-            //gammai.Submatrix( smallGamma, nVarLocal, 1, 0, pos );
-            //deltai.Submatrix( smallDelta, nVarLocal, 1, 0, pos );
-
-            //vars->deltaNormSqOld(iBlock) = vars->deltaNormSqMat(iBlock, pos);
-
-            //vars->deltaNormSq.Submatrix(vars->deltaNormSqMat, vars->nBlocks, 1, 0, pos);
-            //vars->deltaGamma.Submatrix(vars->deltaGammaMat, vars->nBlocks, 1, 0, pos);
-
             // Save statistics, we want to record them only for the most recent update
             averageSizingFactor = stats->averageSizingFactor;
             hessDamped = stats->hessDamped;
@@ -475,9 +425,6 @@ void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int hessScaling, 
     stats->averageSizingFactor /= nBlocks;
     return;
 }
-
-
-
 
 
 //void SQPmethod::calcBFGS(const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess){
@@ -536,7 +483,7 @@ void SQPmethod::calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping){
     }
 
     //Save h2 for COL sizing in next iteration
-    if (hess == vars->hess1) vars->deltaGammaOld(iBlock) = h2;
+    if (hess == vars->hess1.get()) vars->deltaGammaOld(iBlock) = h2;
     else vars->deltaGammaOldFallback(iBlock) = h2;
 
     // For statistics: count number of damped blocks
@@ -562,7 +509,7 @@ void SQPmethod::calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping){
     return;
 }
 
-//void SQPmethod::calcSR1( const Matrix &gamma, const Matrix &delta, int iBlock, SymMatrix *hess){
+
 void SQPmethod::calcSR1(int dpos, int iBlock, SymMatrix *hess){
     int Bsize = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
     Matrix delta, gamma, gmBdelta;
@@ -573,19 +520,6 @@ void SQPmethod::calcSR1(int dpos, int iBlock, SymMatrix *hess){
     delta.Submatrix(vars->deltaMat, Bsize, 1, vars->blockIdx[iBlock], dpos);
     gamma.Submatrix(vars->gammaMat, Bsize, 1, vars->blockIdx[iBlock], dpos);
     B = &hess[iBlock];
-
-    // gmBdelta = gamma - B*delta
-
-    /*
-    gmBdelta.Dimension(Bsize, 1);
-    for (int i = 0; i < Bsize; i++){
-        gmBdelta(i) = gamma(i);
-        for (int j = 0; j < Bsize; j++){
-            gmBdelta(i) -= (*B)(i,j)*delta(j);
-        }
-        h += gmBdelta(i)*delta(i);
-    }
-    */
 
     gmBdelta.Dimension(Bsize).Initialize(0.);
     for (int i = 0; i < Bsize; i++){
@@ -601,7 +535,7 @@ void SQPmethod::calcSR1(int dpos, int iBlock, SymMatrix *hess){
     }
 
     //Update the scalar products (no damping here!)
-    if (hess == vars->hess1) vars->deltaGammaOld(iBlock) = vars->deltaGammaMat(iBlock, dpos);
+    if (hess == vars->hess1.get()) vars->deltaGammaOld(iBlock) = vars->deltaGammaMat(iBlock, dpos);
     else vars->deltaGammaOldFallback(iBlock) = vars->deltaGammaMat(iBlock, dpos);
 
     // B_k+1 = B_k + gmBdelta * gmBdelta^T / h
@@ -623,65 +557,6 @@ void SQPmethod::calcSR1(int dpos, int iBlock, SymMatrix *hess){
     }
     return;
 }
-
-
-/**
- * Set deltaXi and gamma as a column in the matrix containing
- * the m most recent delta and gamma
- */
-
- /*
-void SQPmethod::updateDeltaGamma(){
-    Matrix smallDelta, smallGamma;
-    int Bsize;
-    //Update position of current calculated delta-gamma pair
-    vars->dg_pos = (vars->dg_pos + 1) % vars->dg_nsave;
-
-    //set deltaXi and gamma as storage for the next step
-    vars->deltaXi.Submatrix(vars->deltaMat, prob->nVar, 1, 0, (vars->dg_pos + 1)%vars->dg_nsave);
-    vars->gamma.Submatrix(vars->gammaMat, prob->nVar, 1, 0, (vars->dg_pos + 1)%vars->dg_nsave);
-
-    //Precalculate some scalar products
-    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++){
-        Bsize = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
-        smallDelta.Submatrix(vars->deltaMat, Bsize, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        smallGamma.Submatrix(vars->gammaMat, Bsize, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        vars->deltaNormSqMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallDelta);
-        vars->deltaGammaMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallGamma);
-    }
-    return;
-}
-*/
-
-/*
-void SQPmethod::updateScalarProducts(){
-    Matrix smallDelta, smallGamma;
-    int nVarLocal;
-
-    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++){
-        nVarLocal = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
-        smallDelta.Submatrix(vars->deltaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        smallGamma.Submatrix(vars->gammaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        vars->deltaNormSqMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallDelta);
-        vars->deltaGammaMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallGamma);
-    }
-    return;
-}
-
-void SQPmethod::updateScalarProductsLimitedMemory(){
-    Matrix smallDelta, smallGamma;
-    int nVarLocal;
-
-    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++){
-        nVarLocal = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
-        smallDelta.Submatrix(vars->deltaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        smallGamma.Submatrix(vars->gammaMat, nVarLocal, 1, vars->blockIdx[iBlock], vars->dg_pos);
-        vars->deltaNormSqMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallDelta);
-        vars->deltaGammaMat(iBlock, vars->dg_pos) = adotb(smallDelta, smallGamma);
-    }
-    return;
-}
-*/
 
 } // namespace blockSQP
 

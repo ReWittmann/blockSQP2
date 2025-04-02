@@ -6,6 +6,7 @@ try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 except:
     sys.path.append(os.getcwd() + "/..")
+
 import py_blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 
@@ -27,13 +28,13 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt=100, parallel = False)
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt=100, parallel = True)
 
 # OCprob = OCProblems.F8_Aircraft(nt = 100, parallel = False)
 # OCprob.set_stage_control(OCprob.start_point, 20, -0.0125)
 
 ################################
-opts = py_blockSQP.SQPoptions();
+opts = py_blockSQP.SQPoptions()
 opts.maxItQP = 100000
 opts.maxTimeQP = 5.0
 

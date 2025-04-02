@@ -317,6 +317,12 @@ Condenser::Condenser(
             for (int i = 0; i < num_hessblocks - ind_2; i++){
                 condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
             }
+
+            condensed_blockIdx = new int[condensed_num_hessblocks + 1];
+            condensed_blockIdx[0] = 0;
+            for (int i = 1; i < condensed_num_hessblocks + 1; i++){
+                condensed_blockIdx[i] = condensed_blockIdx[i-1] + condensed_hess_block_sizes[i-1];
+            }
 		}
 /*
 Condenser(const Condenser &C){
@@ -352,6 +358,7 @@ Condenser::Condenser(Condenser &&C){
     num_true_cons = C.num_true_cons;
     condensed_num_hessblocks = C.condensed_num_hessblocks;
     condensed_hess_block_sizes = C.condensed_hess_block_sizes;
+    condensed_blockIdx = C.condensed_blockIdx;
 
     cranges = C.cranges;
     vranges = C.vranges;
@@ -405,6 +412,7 @@ Condenser::~Condenser(){
 	delete[] h_starts;
 	delete[] h_ends;
     delete[] condensed_hess_block_sizes;
+    delete[] condensed_blockIdx;
 	delete[] condensed_v_starts;
 	delete[] condensed_v_ends;
     delete[] hess_block_ranges;
@@ -572,7 +580,7 @@ int Condenser::get_hessblock_index(int v_ind){
 
 
 void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::Sparse_Matrix &con_jac, const blockSQP::SymMatrix *const hess, const blockSQP::Matrix &lb_var, const blockSQP::Matrix &ub_var, const blockSQP::Matrix &lb_con, const blockSQP::Matrix &ub_con,
-    blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *&condensed_hess, blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con
+    blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *condensed_hess, blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con
 ){
     std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
 
@@ -660,9 +668,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     //std::cout << "Assembling the reduced jacobian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 //Assemble condensed block-hessian
-    if (condensed_hess == nullptr){
-        condensed_hess = new blockSQP::SymMatrix[condensed_num_hessblocks];
-    }
+    //if (condensed_hess == nullptr) condensed_hess = new blockSQP::SymMatrix[condensed_num_hessblocks];
 
     T0 = std::chrono::steady_clock::now();
 
@@ -1095,15 +1101,14 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
 }
 
 
-void Condenser::fallback_hessian_condense(const blockSQP::SymMatrix *const hess_2, blockSQP::Matrix &condensed_h_2, blockSQP::SymMatrix *&condensed_hess_2){
+void Condenser::fallback_hessian_condense(const blockSQP::SymMatrix *const hess_2, blockSQP::Matrix &condensed_h_2, blockSQP::SymMatrix *condensed_hess_2){
 
     for (int tnum = 0; tnum < num_targets; tnum++){
         single_hess_condense(tnum, hess_2 + h_starts[tnum]);
     }
 
-    if (condensed_hess_2 == nullptr){
-        condensed_hess_2 = new blockSQP::SymMatrix[condensed_num_hessblocks];
-    }
+    //if (condensed_hess_2 == nullptr) condensed_hess_2 = new blockSQP::SymMatrix[condensed_num_hessblocks];
+    
 
     //Assemble second condensed block hessian
     int ind_1 = 0;
@@ -1355,15 +1360,13 @@ void Condenser::single_convex_combination_recover(int tnum, const blockSQP::Matr
 
 
 
-void Condenser::new_hessian_condense(const blockSQP::SymMatrix *const hess, blockSQP::Matrix &condensed_h, blockSQP::SymMatrix *&condensed_hess){
+void Condenser::new_hessian_condense(const blockSQP::SymMatrix *const hess, blockSQP::Matrix &condensed_h, blockSQP::SymMatrix *condensed_hess){
 
     for (int tnum = 0; tnum < num_targets; tnum++){
         single_new_hess_condense(tnum, hess + h_starts[tnum]);
     }
 
-    if (condensed_hess == nullptr){
-        condensed_hess = new blockSQP::SymMatrix[condensed_num_hessblocks];
-    }
+    //if (condensed_hess == nullptr) condensed_hess = new blockSQP::SymMatrix[condensed_num_hessblocks];
 
     //Assemble second condensed block hessian
     int ind_1 = 0;
@@ -1901,35 +1904,36 @@ void Condenser::single_correction_recover(int tnum, const blockSQP::Matrix &xi_f
 }
 
 
-autonomous_Condenser::autonomous_Condenser(
+holding_Condenser::holding_Condenser(
                     std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
                     std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
                     std::unique_ptr<int[]> HSIZES, int n_HBLOCKS,
                     std::unique_ptr<condensing_target[]> TARGETS, int n_TARGETS, 
                     int DEP_BOUNDS):
                         Condenser(VBLOCKS.get(), n_VBLOCKS, CBLOCKS.get(), n_CBLOCKS, HSIZES.get(), n_HBLOCKS, TARGETS.get(), n_TARGETS, DEP_BOUNDS),
-                        auto_vblocks(std::move(VBLOCKS)), auto_cblocks(std::move(CBLOCKS)), auto_hess_block_sizes(std::move(HSIZES)), auto_targets(std::move(TARGETS)){}
+                        auto_vblocks(std::move(VBLOCKS)), auto_cblocks(std::move(CBLOCKS)), auto_hess_block_sizes(std::move(HSIZES)), auto_targets(std::move(TARGETS))
+                        {}
 
-
-std::unique_ptr<autonomous_Condenser> create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
-    std::unique_ptr<cblock[]> rest_cblocks = std::make_unique<cblock[]>(parent->num_cblocks);
-	std::unique_ptr<vblock[]> rest_vblocks = std::make_unique<vblock[]>(parent->num_vblocks + 1);
-	std::unique_ptr<int[]> rest_hess_block_sizes = std::make_unique<int[]>(parent->num_hessblocks + parent->num_cons);
-	std::unique_ptr<condensing_target[]> rest_targets = std::make_unique<condensing_target[]>(parent->num_targets);
-
+/*
+holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
     int N_vblocks = parent->num_vblocks + parent->num_true_cons;
     int N_cblocks = parent->num_cblocks;
     int N_hessblocks = parent->num_hessblocks + parent->num_true_cons;
     int N_targets = parent->num_targets;
 
-    for (int i = 0; i<parent->num_vblocks; i++){
+	std::unique_ptr<vblock[]> rest_vblocks = std::make_unique<vblock[]>(N_vblocks);
+    std::unique_ptr<cblock[]> rest_cblocks = std::make_unique<cblock[]>(N_cblocks);
+	std::unique_ptr<int[]> rest_hess_block_sizes = std::make_unique<int[]>(N_hessblocks);
+	std::unique_ptr<condensing_target[]> rest_targets = std::make_unique<condensing_target[]>(N_targets);
+
+    for (int i = 0; i < parent->num_vblocks; i++){
         rest_vblocks[i] = parent->vblocks[i];
     }
     for (int i = parent->num_vblocks; i < N_vblocks; i++){
         rest_vblocks[i] = vblock(1, false);
     }
 
-    for (int i = 0; i<parent->num_cblocks; i++){
+    for (int i = 0; i < parent->num_cblocks; i++){
         rest_cblocks[i] = parent->cblocks[i];
     }
 
@@ -1944,9 +1948,9 @@ std::unique_ptr<autonomous_Condenser> create_restoration_Condenser(Condenser *pa
         rest_targets[i] = parent->targets[i];
     }
 
-    return std::make_unique<autonomous_Condenser>(std::move(rest_vblocks), N_vblocks, std::move(rest_cblocks), N_cblocks, std::move(rest_hess_block_sizes), N_hessblocks, std::move(rest_targets), N_targets, DEP_BOUNDS);
+    return new holding_Condenser(std::move(rest_vblocks), N_vblocks, std::move(rest_cblocks), N_cblocks, std::move(rest_hess_block_sizes), N_hessblocks, std::move(rest_targets), N_targets, DEP_BOUNDS);
 }
-
+*/
 
 
 

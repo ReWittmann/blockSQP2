@@ -25,8 +25,7 @@
 #include <iostream>
 #include <fstream>
 
-namespace blockSQP
-{
+namespace blockSQP{
 
 void SQPmethod::acceptStep(double alpha){
     acceptStep(vars->deltaXi, vars->lambdaQP, alpha, 0);
@@ -95,17 +94,17 @@ void SQPmethod::force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, doub
     //Remove filter entries that dominate the set point
     std::set<std::pair<double,double>>::iterator iter;
     std::set<std::pair<double,double>>::iterator iterToRemove;
-    iter = vars->filter->begin();
+    iter = vars->filter.begin();
 
-    while (iter != vars->filter->end()){
+    while (iter != vars->filter.end()){
         if (iter->first < vars->cNorm && iter->second < vars->obj){
             iterToRemove = iter;
             iter++;
-            vars->filter->erase(iterToRemove);
+            vars->filter.erase(iterToRemove);
         }
         else iter++;
     }
-    for (std::set<std::pair<double,double>>::iterator iter = vars->filter->begin(); iter != vars->filter->end(); iter++){
+    for (std::set<std::pair<double,double>>::iterator iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
         
     }
 
@@ -120,8 +119,7 @@ void SQPmethod::force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, doub
  * xi = xi + deltaXi
  * lambda = lambdaQP
  */
-int SQPmethod::fullstep()
-{
+int SQPmethod::fullstep(){
     double alpha = 1.0;
     double objTrial, cNormTrial;
     int info;
@@ -129,7 +127,6 @@ int SQPmethod::fullstep()
 
     // Backtracking line search
     for(int k = 0; k<10; k++){
-
         // Compute new trial point
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
@@ -179,7 +176,7 @@ int SQPmethod::filterLineSearch(){
     int nVar = prob->nVar;
 
     // Compute ||constr(xi)|| at old point
-    cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+    cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
 
     // Backtracking line search
     for (k = 0; k<param->maxLineSearch; k++){
@@ -204,18 +201,18 @@ int SQPmethod::filterLineSearch(){
 
         // Compute grad(f)^T * deltaXi
         dfTdeltaXi = 0.0;
-        for(int i = 0; i < nVar; i++)
-            dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
+        for (int i = 0; i < nVar; i++)
+            dfTdeltaXi += vars->gradObj(i) * vars->deltaXi(i);
 
         // Compute objective and at ||constr(trialXi)||_1 at trial point
-        prob->evaluate( vars->trialXi, &objTrial, vars->trialConstr, &info );
+        prob->evaluate(vars->trialXi, &objTrial, vars->trialConstr, &info);
         stats->nFunCalls++;
 
         //cNormTrial = l1ConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
-        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+        cNormTrial = lInfConstraintNorm(vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
 
         // Reduce step if evaluation fails, if lower bound is violated or if objective is NaN
-        if(info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
+        if (info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
             // evaluation error, reduce stepsize
             reduceStepsize(&alpha);
             continue;
@@ -333,13 +330,13 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
         //Update AdeltaXi, where we use the original step in the first iteration and the previous SOC step in the following iterations (thats why we don't do it in the solve_SOC_QP method)
         if (k == 0){
             if (param->sparseQP)
-                Atimesb(vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->deltaXi, vars->AdeltaXi);
+                Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->deltaXi, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, vars->deltaXi, vars->AdeltaXi);
         }
         else{
             if (param->sparseQP)
-                Atimesb(vars->jacNz, vars->jacIndRow, vars->jacIndCol, deltaXiSOC, vars->AdeltaXi);
+                Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), deltaXiSOC, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, deltaXiSOC, vars->AdeltaXi);
         }
@@ -428,47 +425,36 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
  *
  * "The dreaded restoration phase" -- Nick Gould
  */
-
- // TODO: Reduce code redundancy with SQPmethod subclass restoration phases
 int SQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
     if (param->restoreFeas == 0) throw std::logic_error("feasibility restoration called when restoreFeas == 0, this should not happen");
 
+    //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
+    bool warmStart = false;
+    if (vars->steptype != 3){
+        rest_prob->update_xi_ref(vars->xi);
+        vars->nRestIt = 0;
+        rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());
+        rest_method->init();
+    }
+    else warmStart = true;
+    //Invoke the restoration loop with setup problem and method
+    return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
+}
 
+
+int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
     int info;
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresult ret;
     int maxRestIt = 20;
-    int warmStart;
     double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
 
-    // Iterate until a point acceptable to the filter is found
-    if (vars->steptype != 3){
-        warmStart = 0;
-        delete rest_prob;
-        delete rest_method;
-        delete rest_stats;
-        rest_prob = new RestorationProblem(prob, vars->xi, param->restRho, param->restZeta);
-        
-        //TODO scaling in restoration phase
-        //rest_prob->n_vblocks = prob->n_vblocks;
-        //rest_prob->vblocks = rest_vblocks;
-
-        rest_stats = new SQPstats(stats->outpath);
-        rest_method = new SQPmethod( rest_prob, rest_opts, rest_stats );
-        vars->nRestIt = 0;
-
-        rest_method->init();
-    }
-    else{
-        warmStart = 1;
-    }
-
-    for (; vars->nRestIt<maxRestIt; vars->nRestIt++){
+    for (; vars->nRestIt < maxRestIt; vars->nRestIt++){
         // One iteration for minimum norm NLP
-        ret = rest_method->run(1, warmStart);
-        warmStart = 1;
+        ret = rest_method->run(1, RwarmStart);
+        RwarmStart = 1;
         
         // If restMethod yields error, stop restoration phase
         if (int(ret) < 0){
@@ -476,27 +462,27 @@ int SQPmethod::feasibilityRestorationPhase(){
             break;
         }
 
-        //Require sufficient progress
+        // Require sufficient progress
         stepsize_sum += rest_method->vars->alpha;
-        if (stepsize_sum < 1.0){
+        if (stepsize_sum < min_stepsize_sum){
             continue;
         }
 
         // Get new xi from the restoration phase
-        for(int i = 0; i < prob->nVar; i++)
-            vars->trialXi( i ) = rest_method->vars->xi( i );
+        rest_method->get_xi(rest_xi);
+        rest_prob->recover_xi(rest_xi, vars->trialXi);
 
         // Compute objective at trial point
-        prob->evaluate( vars->trialXi, &objTrial, vars->constr, &info );
+        prob->evaluate(vars->trialXi, &objTrial, vars->constr, &info);
         stats->nFunCalls++;
-        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+        cNormTrial = lInfConstraintNorm(vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
         if (info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial))
             continue;
 
         // Is this iterate acceptable for the filter?
         if (!pairInFilter(cNormTrial, objTrial)){
             // success
-            printf("Found a point acceptable for the filter.\n");
+            std::cout << "Found a point acceptable for the filter.\n";
             feas_result = 0;
             break;
         }
@@ -518,22 +504,16 @@ int SQPmethod::feasibilityRestorationPhase(){
         }
 
         // Store the infinity norm of the multiplier step
+        rest_method->get_lambda(rest_lambda);
+        rest_prob->recover_lambda(rest_lambda, vars->trialLambda);
         vars->lambdaStepNorm = 0.0;
-        for (int i = 0; i < prob->nVar; i++){
-            if((lStpNorm = fabs(rest_method->vars->lambda(i) - vars->lambda(i))) > vars->lambdaStepNorm){
-                vars->lambdaStepNorm = lStpNorm;
-            }
-            vars->lambda(i) = rest_method->vars->lambda(i);
-            vars->lambdaQP(i) = rest_method->vars->lambdaQP(i);
+        for (int i = 0; i < vars->lambda.m; i++){
+            if (lStpNorm  = fabs(vars->trialLambda(i) - vars->lambda(i)) > vars->lambdaStepNorm) vars->lambdaStepNorm = lStpNorm;
+            vars->lambda(i) = vars->trialLambda(i);
         }
-        //Skip dual variables for the slack variables
-        for (int i = prob->nVar; i < prob->nVar + prob->nCon; i++){
-            if((lStpNorm = fabs(rest_method->vars->lambda(prob->nCon + i) - vars->lambda(i))) > vars->lambdaStepNorm){
-                vars->lambdaStepNorm = lStpNorm;
-            }
-            vars->lambda(i) = rest_method->vars->lambda(prob->nCon + i);
-            vars->lambdaQP(i) = rest_method->vars->lambdaQP(prob->nCon + i);
-        }
+
+        rest_method->get_lambdaQP(rest_lambdaQP);
+        rest_prob->recover_lambda(rest_lambdaQP, vars->lambdaQP);
 
         vars->alpha = 1.0;
         vars->nSOCS = 0;
@@ -546,7 +526,7 @@ int SQPmethod::feasibilityRestorationPhase(){
         vars->n_scaleIt = 0;
     }
     else if (feas_result == 2){
-        stats->printProgress( prob, vars, param, 0 );
+        stats->printProgress( prob, vars.get(), param, 0 );
         printf("The problem seems to be locally infeasible. Infeasibilities minimized.\n");
     }
 
@@ -656,8 +636,8 @@ int SQPmethod::kktErrorReduction(){
     // scaled norm of Lagrangian gradient
     trialGradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
     if( param->sparseQP )
-        calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->jacNz,
-                              vars->jacIndRow, vars->jacIndCol, trialGradLagrange, 0 );
+        calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->jacNz.get(),
+                              vars->jacIndRow.get(), vars->jacIndCol.get(), trialGradLagrange, 0 );
     else
         calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->constrJac,
                               trialGradLagrange, 0 );
@@ -679,8 +659,8 @@ int SQPmethod::kktErrorReduction(){
 bool SQPmethod::pairInFilter( double cNorm, double obj )
 {
     std::set< std::pair<double,double> >::iterator iter;
-    std::set< std::pair<double,double> > *filter;
-    filter = vars->filter;
+    //std::set< std::pair<double,double> > *filter;
+    //filter = vars->filter;
 
     /*
      * A pair is in the filter if:
@@ -693,14 +673,11 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
      * as dominated
      */
 
-    for( iter=filter->begin(); iter!=filter->end(); iter++ )
-        if (
-            (cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->nlinfeastol && iter->first < 0.01 * param->nlinfeastol)) &&
-            obj >= iter->second - param->gammaF * iter->first
-        ){
+    for (iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
+        if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->nlinfeastol && iter->first < 0.01 * param->nlinfeastol)) &&
+             obj >= iter->second - param->gammaF * iter->first)
             return 1;
-        }
-
+    }
     return 0;
 }
 
@@ -708,19 +685,18 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
 void SQPmethod::initializeFilter()
 {
     std::set< std::pair<double,double> >::iterator iter;
-    std::pair<double,double> initPair ( param->thetaMax, prob->objLo );
+    std::pair<double,double> initPair (param->thetaMax, prob->objLo);
 
     // Remove all elements
-    iter=vars->filter->begin();
-    while (iter != vars->filter->end())
-    {
+    iter = vars->filter.begin();
+    while (iter != vars->filter.end()){
         std::set< std::pair<double,double> >::iterator iterToRemove = iter;
         iter++;
-        vars->filter->erase( iterToRemove );
+        vars->filter.erase(iterToRemove);
     }
 
     // Initialize with pair ( maxConstrViolation, objLowerBound );
-    vars->filter->insert( initPair );
+    vars->filter.insert(initPair);
 }
 
 
@@ -734,140 +710,50 @@ void SQPmethod::augmentFilter( double cNorm, double obj )
     std::pair<double,double> entry ( (1.0 - param->gammaTheta)*cNorm, obj - param->gammaF*cNorm );
 
     // Augment filter by current element
-    vars->filter->insert( entry );
+    vars->filter.insert( entry );
 
     // Remove dominated elements
-    iter=vars->filter->begin();
-    while (iter != vars->filter->end())
+    iter=vars->filter.begin();
+    while (iter != vars->filter.end())
     {
         //printf(" iter->first=%g, entry.first=%g, iter->second=%g, entry.second=%g\n",iter->first, entry.first, iter->second, entry.second);
         if( iter->first > entry.first && iter->second > entry.second )
         {
             std::set< std::pair<double,double> >::iterator iterToRemove = iter;
             iter++;
-            vars->filter->erase( iterToRemove );
+            vars->filter.erase( iterToRemove );
         }
         else
             iter++;
     }
-
+    return;
 }
-
-
-/////////////////////////////////////////////////////
 
 
 int SCQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if( param->restoreFeas == 0 )
-        return 2;
+    if (param->restoreFeas == 0) throw std::logic_error("feasibility restoration called when restoreFeas == 0, this should not happen");
 
+    //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-
-    int info;
-    int feas_result = 1;
-    SQPresult ret;
-    int maxRestIt = 20;
     int warmStart;
-    double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
-
+    // Iterate until a point acceptable to the filter is found
     if (vars->steptype != 3){
-        delete rest_prob;
-        delete rest_method;
-        delete rest_stats;
-
-        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restRho, param->restZeta);
+        rest_prob->update_xi_ref(vars->xi);
+        //TODO scaling in restoration phase
         //rest_prob->n_vblocks = prob->n_vblocks;
         //rest_prob->vblocks = rest_vblocks;
 
-        rest_stats = new SQPstats(stats->outpath);
-        rest_method = new SCQPmethod(rest_prob, rest_opts, rest_stats, rest_cond);
-        vars->nRestIt = 0;
-
-        rest_method->init();
-
         warmStart = 0;
+        vars->nRestIt = 0;
+        rest_method = std::make_unique<SCQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get(), rest_cond.get());
+        rest_method->init();
     }
-    else{
-        warmStart = 1;
-    }
-
-    for(; vars->nRestIt<maxRestIt; vars->nRestIt++){
-
-        // One iteration for minimum norm NLP
-        ret = rest_method->run( 1, warmStart );
-        warmStart = 1;
-
-        // If restMethod yields error, stop restoration phase
-        if (int(ret) < 0){
-            feas_result = 3;
-            break;
-        }
-
-        stepsize_sum += rest_method->vars->alpha;
-        if (stepsize_sum < 1.0) continue;
-
-        // Get new xi from the restoration phase
-        for(int i = 0; i < prob->nVar; i++)
-            vars->trialXi( i ) = rest_method->vars->xi( i );
-
-        // Compute objective at trial point
-        prob->evaluate( vars->trialXi, &objTrial, vars->constr, &info );
-        stats->nFunCalls++;
-        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
-        if( info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial) )
-            continue;
-
-        // Is this iterate acceptable for the filter?
-        if( !pairInFilter( cNormTrial, objTrial ) ){
-            // success
-            printf("Found a point acceptable for the filter.\n");
-            feas_result = 0;
-            break;
-        }
-
-        // If minimum norm NLP has converged, declare local infeasibility
-        if( rest_method->vars->tol < param->opttol && rest_method->vars->cNormS < param->nlinfeastol )
-        {
-            feas_result = 2;
-            break;
-        }
-    }
-
-    // Success or locally infeasible
-    if (feas_result < 2){
-        for (int i = 0; i < prob->nVar; i++){
-            //TODO check sign
-            vars->deltaXi(i) = -vars->xi(i);
-            vars->xi(i) = vars->trialXi(i);
-            vars->deltaXi(i) += vars->xi(i);
-        }
-
-        // Store the infinity norm of the multiplier step
-        vars->lambdaStepNorm = 0.0;
-
-        dynamic_cast<TC_restoration_Problem*>(rest_prob)->recover_multipliers(rest_method->vars->lambda, vars->lambda, vars->lambdaStepNorm);
-        dynamic_cast<TC_restoration_Problem*>(rest_prob)->recover_multipliers(rest_method->vars->lambdaQP, vars->lambdaQP);
-
-        vars->alpha = 1.0;
-        vars->nSOCS = 0;
-
-        // reset reduced step counter
-        vars->reducedStepCount = 0;
-
-        // reset Hessian and limited memory information
-        resetHessians();
-        vars->n_scaleIt = 0;
-    }
-
-    if (feas_result == 2){
-        stats->printProgress( prob, vars, param, 0 );
-        printf("The problem seems to be locally infeasible. Infeasibilities minimized.\n");
-    }
-
-    return feas_result;
+    else warmStart = 1;
+    
+    //Invoke the restoration phase with setup problem and method
+    return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
-
 
 
 int SCQP_correction_method::filterLineSearch(){
@@ -901,12 +787,12 @@ int SCQP_correction_method::filterLineSearch(){
         //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
         //work with a different variable (CSQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
         if (k == 0){
-            static_cast<SCQP_correction_iterate*>(vars)->deltaXi_save = vars->deltaXi;
-            static_cast<SCQP_correction_iterate*>(vars)->lambdaQP_save = vars->lambdaQP;
+            static_cast<SCQP_correction_iterate*>(vars.get())->deltaXi_save = vars->deltaXi;
+            static_cast<SCQP_correction_iterate*>(vars.get())->lambdaQP_save = vars->lambdaQP;
 
             info = bound_correction(vars->deltaXi, vars->lambdaQP);
 
-            //If model bound correction failed for indefinite hessian, resolve with convex hessian and try again
+            //If model bound correction failed for indefinite Hessian, resolve with convex Hessian and try again
             if (info && !vars->conv_qp_solved){
                 if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
                 else{k = 0; alpha = 1.0;}
@@ -914,8 +800,8 @@ int SCQP_correction_method::filterLineSearch(){
         }
         else if (k == 1){
             //Both bound and second order corrections are only tried in the first iteration, restore original step for backtracking line search
-            vars->deltaXi = static_cast<SCQP_correction_iterate*>(vars)->deltaXi_save;
-            vars->lambdaQP = static_cast<SCQP_correction_iterate*>(vars)->lambdaQP_save;
+            vars->deltaXi = static_cast<SCQP_correction_iterate*>(vars.get())->deltaXi_save;
+            vars->lambdaQP = static_cast<SCQP_correction_iterate*>(vars.get())->lambdaQP_save;
         }
 
         // Compute new trial point and truncate any bound violation
@@ -1020,119 +906,30 @@ int SCQP_correction_method::filterLineSearch(){
     return 0;
 }
 
-
 int SCQP_correction_method::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
     if (param->restoreFeas == 0) throw std::logic_error("feasibility restoration called when restoreFeas == 0, this should not happen");
 
+    //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-    int info;
-    int feas_result = 1;
-    SQPresult ret;
-    int maxRestIt = 20;
     int warmStart;
-    double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
-
     // Iterate until a point acceptable to the filter is found
     if (vars->steptype != 3){
-        warmStart = 0;
-        delete rest_prob;
-        delete rest_method;
-        delete rest_stats;
-
-        rest_prob = new TC_restoration_Problem(prob, cond, vars->xi, param->restRho, param->restZeta);
+        rest_prob->update_xi_ref(vars->xi);
+        //TODO scaling in restoration phase
         //rest_prob->n_vblocks = prob->n_vblocks;
         //rest_prob->vblocks = rest_vblocks;
 
-        rest_stats = new SQPstats(stats->outpath);
-        rest_method = new SCQP_correction_method(rest_prob, rest_opts, rest_stats, rest_cond);
+        warmStart = 0;
         vars->nRestIt = 0;
-
+        rest_method = std::make_unique<SCQP_correction_method>(rest_prob.get(), rest_param.get(), rest_stats.get(), rest_cond.get());
         rest_method->init();
     }
-    else{
-        warmStart = 1;
-    }
-
-    for(; vars->nRestIt<maxRestIt; vars->nRestIt++){
-        // One iteration for minimum norm NLP
-        ret = rest_method->run( 1, warmStart );
-        warmStart = 1;
-
-        // If restMethod yields error, stop restoration phase
-        if (int(ret) < 0){
-            feas_result = 3;
-            break;
-        }
-
-        stepsize_sum += rest_method->vars->alpha;
-        if (stepsize_sum < 1.0) continue;
-        
-        // Get new xi from the restoration phase
-        for(int i = 0; i < prob->nVar; i++)
-            vars->trialXi( i ) = rest_method->vars->xi( i );
-
-        // Compute objective at trial point
-        prob->evaluate( vars->trialXi, &objTrial, vars->constr, &info );
-        stats->nFunCalls++;
-        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
-        if( info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial) )
-            continue;
-
-        // Is this iterate acceptable for the filter?
-        if( !pairInFilter( cNormTrial, objTrial ) )
-        {
-            // success
-            printf("Found a point acceptable for the filter.\n");
-            feas_result = 0;
-            break;
-        }
-
-        // If minimum norm NLP has converged, declare local infeasibility
-        if( rest_method->vars->tol < param->opttol && rest_method->vars->cNormS < param->nlinfeastol )
-        {
-            feas_result = 2;
-            break;
-        }
-    }
-
-    // Success or locally infeasible
-    if (feas_result < 2){
-        for (int i = 0; i < prob->nVar; i++){
-            //TODO check sign
-            vars->deltaXi(i) = -vars->xi(i);
-            vars->xi(i) = vars->trialXi(i);
-            vars->deltaXi(i) += vars->xi(i);
-        }
-
-        // Store the infinity norm of the multiplier step
-        vars->lambdaStepNorm = 0.0;
-
-        dynamic_cast<TC_restoration_Problem*>(rest_prob)->recover_multipliers(rest_method->vars->lambda, vars->lambda, vars->lambdaStepNorm);
-        dynamic_cast<TC_restoration_Problem*>(rest_prob)->recover_multipliers(rest_method->vars->lambdaQP, vars->lambdaQP);
-
-        vars->alpha = 1.0;
-        vars->nSOCS = 0;
-
-        // reset reduced step counter
-        vars->reducedStepCount = 0;
-
-        // reset Hessian and limited memory information
-        resetHessians();
-        vars->n_scaleIt = 0;
-
-        // dont use homotopy for next QP since it may differ greatly from previous QP
-        //vars->use_homotopy = false;
-    }
-
-    if (feas_result == 2){
-        stats->printProgress( prob, vars, param, 0 );
-        printf("The problem seems to be locally infeasible. Infeasibilities minimized.\n");
-    }
-
-    return feas_result;
+    else warmStart = 1;
+    
+    //Invoke the restoration phase with setup problem and method
+    return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
-
 
 
 

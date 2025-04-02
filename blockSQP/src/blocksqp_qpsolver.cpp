@@ -18,116 +18,6 @@
 
 namespace blockSQP{
 
-/*
-void convertHessian(blockSQP::SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
-                                            double *&hessNz){
-    if (hessNz == NULL)
-        hessNz = new double[nVar * nVar];
-
-    int bsize, bstart = 0, ind = 0;
-    //Iterate over hessian blocks
-    for (int h = 0; h <nBlocks; h++){
-        bsize = hess[h].m;
-        //Iterate over second dimension
-        for (int j = 0; j < bsize; j++){
-            //Iterate over first dimension
-             //Segment above hessian block
-            for (int i = 0; i < bstart; i++){
-                hessNz[ind] = 0;
-                ++ind;
-            }
-             //Hessian block
-            for (int i = 0; i < hess[h].m; i++){
-                hessNz[ind] = hess[h](i, j);
-                //NEW
-                if (i == j) hessNz[ind] += regularizationFactor;
-
-                ++ind;
-            }
-             //Segment below hessian block
-            for (int i = bstart + bsize; i < nVar; i++){
-                hessNz[ind] = 0;
-                ++ind;
-            }
-        }
-        bstart += bsize;
-    }
-    return;
-}
-
-
-void convertHessian(double eps, blockSQP::SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
-                             double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
-    int iBlock, count, colCountTotal, rowOffset, i, j;
-    int nnz, nCols, nRows;
-
-    // 1) count nonzero elements
-    nnz = 0;
-    for (iBlock=0; iBlock<nBlocks; iBlock++){
-        for (i=0; i<hess_[iBlock].m; i++){
-            //Always count diagonal elements (regularization)
-            if (fabs(hess_[iBlock](i,i)) > eps || fabs(hess_[iBlock](i,i)) + regularizationFactor > eps)
-                nnz++;
-
-            for (j = i + 1; j < hess_[iBlock].m; j++){
-                if (fabs(hess_[iBlock]( i,j )) > eps)
-                    nnz += 2;
-            }
-        }
-    }
-
-    delete[] hessNz_;
-    delete[] hessIndRow_;
-    delete[] hessIndCol_;
-    delete[] hessIndLo_;
-
-    hessNz_ = new double[nnz];
-    hessIndRow_ = new int[nnz];
-    hessIndCol_ = new int[nVar + 1];
-    hessIndLo_ = new int[nVar];
-
-    // 2) store matrix entries columnwise in hessNz
-    count = 0; // runs over all nonzero elements
-    colCountTotal = 0; // keep track of position in large matrix
-    rowOffset = 0;
-    for (iBlock = 0; iBlock < nBlocks; iBlock++){
-        nCols = hess_[iBlock].m;
-        nRows = hess_[iBlock].m;
-
-        for (i = 0; i < nCols; i++){
-            // column 'colCountTotal' starts at element 'count'
-            hessIndCol_[colCountTotal] = count;
-
-            for (j = 0; j < nRows; j++){
-                //if (hess_[iBlock]( i,j ) > eps || -hess_[iBlock]( i,j ) > eps ){
-                if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
-                    hessNz_[count] = hess_[iBlock](i, j);
-                    if (i == j) hessNz_[count] += regularizationFactor;
-
-                    hessIndRow_[count] = j + rowOffset;
-                    count++;
-                }
-            }
-            colCountTotal++;
-        }
-        rowOffset += nRows;
-    }
-    hessIndCol_[colCountTotal] = count;
-
-    // 3) Set reference to lower triangular matrix
-    for( j=0; j<nVar; j++ )
-    {
-        for( i=hessIndCol_[j]; i<hessIndCol_[j+1] && hessIndRow_[i]<j; i++);
-        hessIndLo_[j] = i;
-    }
-
-    if( count != nnz ){
-         std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
-    }
-}
-*/
-
-///////////////////////
 
 //QPsolver base class implemented methods
 QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPSOLVER_options *QPopts): nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks), Qparam(QPopts){
@@ -189,14 +79,14 @@ void QPsolver::custom_timeLimit(double CTlim){
 }
 
 //QPsolver factory, handle checks for linked QP solvers
-QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPoptions *param){
+QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *param){
 
     if (param->QPsol != param->QPsol_opts->sol) throw ParameterError("QPsol_opts for wrong QPsol, should have been caught by SQPoptions::optionsConsistency");
     //param->complete_QP_sol_opts has already been called through param->optionsConsistency in SQPmethod constructor, else we would need to call it here so all stanard QPsolvers options get added to param->QPsol_opts
 
     #ifdef QPSOLVER_QPOASES
     if (param->QPsol == QPSOLVER::qpOASES)
-        return new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, param->sparseQP, static_cast<qpOASES_options*>(param->QPsol_opts));
+        return new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, blockIdx, param->sparseQP, static_cast<qpOASES_options*>(param->QPsol_opts));
     #endif
     #ifdef QPSOLVER_GUROBI
     if (param->QPsol == QPSOLVER::gurobi)
@@ -223,37 +113,72 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, SQPop
 
 #ifdef QPSOLVER_QPOASES
 
-qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int SPARSE, qpOASES_options *QPopts): QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts), sparseQP(SPARSE){
+qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, int SPARSE, qpOASES_options *QPopts):
+                    QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts), sparseQP(SPARSE){
     //Initialize all qpOASES objects and data formats
+    /*
     if (sparseQP < 2){
         qp = new qpOASES::SQProblem(nVar, nCon);
         qpSave = new qpOASES::SQProblem(nVar, nCon);
-        qp_check = new qpOASES::SQProblem(nVar, nCon);
+        qpCheck = new qpOASES::SQProblem(nVar, nCon);
     }
     else{
         qp = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
         qpSave = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
-        qp_check = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
+        qpCheck = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
     }
+    */
+    if (sparseQP < 2){
+        qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+        qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+        qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+    }
+    else{
+        qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50));
+        qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50));
+        qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50));
+    }
+
     //Owned
     A_qp = nullptr;
     H_qp = nullptr;
-    lb = new double[nVar];
-    ub = new double[nVar];
-    lbA = new double[nCon];
-    ubA = new double[nCon];
 
-    //Not owned
+    lb = std::make_unique<double[]>(nVar);
+    ub = std::make_unique<double[]>(nVar);
+    lbA = std::make_unique<double[]>(nCon);
+    ubA = std::make_unique<double[]>(nCon);
+
+    //lb = new double[nVar];
+    //ub = new double[nVar];
+    //lbA = new double[nCon];
+    //ubA = new double[nCon];
+
     h_qp = nullptr;
 
     //Owned
+    /*
     if (sparseQP) hess_nz = nullptr;
     else hess_nz = new double[nVar*nVar];
 
     hess_row = nullptr;
     hess_colind = nullptr;
     hess_loind = nullptr;
+    */
+
+    if (sparseQP){
+        int hess_nzCount;
+        for (int i = 0; i < n_QP_hessblocks; i++){
+            hess_nzCount += (blockIdx[i+1] - blockIdx[i])*(blockIdx[i+1] - blockIdx[i]);
+        }
+        //Allocate enough memory to support all structurally nonzero elements being nonzero.
+        hess_nz = std::make_unique<double[]>(hess_nzCount);
+        hess_row = std::make_unique<int[]>(hess_nzCount);
+        hess_colind = std::make_unique<int[]>(n_QP_var + 1);
+        hess_loind = std::make_unique<int[]>(n_QP_var + 1);
+    }
+    else hess_nz = std::make_unique<double[]>(nVar*nVar);
     
+
     //Options
     opts.enableEqualities = qpOASES::BT_TRUE;
     opts.initialStatusBounds = qpOASES::ST_INACTIVE;
@@ -269,20 +194,20 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
 }
 
 qpOASES_solver::~qpOASES_solver(){
-    delete[] hess_nz;
-    delete[] hess_row;
-    delete[] hess_colind;
-    delete[] hess_loind;
-    delete[] lb;
-    delete[] ub;
-    delete[] lbA;
-    delete[] ubA;
+    //delete[] hess_nz;
+    //delete[] hess_row;
+    //delete[] hess_colind;
+    //delete[] hess_loind;
+    //delete[] lb;
+    //delete[] ub;
+    //delete[] lbA;
+    //delete[] ubA;
 
-    delete A_qp;
-    delete H_qp;
-    delete qp;
-    delete qpSave;
-    delete qp_check;
+    //delete A_qp;
+    //delete H_qp;
+    //delete qp;
+    //delete qpSave;
+    //delete qp_check;
 
 }
 
@@ -322,16 +247,17 @@ void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Ma
 
 
 void qpOASES_solver::set_constr(const Matrix &constr_jac){
-    delete A_qp;
+    //delete A_qp;
     Transpose(constr_jac, jacT);
-    A_qp = new qpOASES::DenseMatrix(nCon, nVar, nVar, jacT.array);
+    //A_qp = new qpOASES::DenseMatrix(nCon, nVar, nVar, jacT.array);
+    A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
     return;
 }
 
 void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
-    delete A_qp;
-    A_qp = new qpOASES::SparseMatrix(nCon, nVar,
-            jac_row, jac_colind, jac_nz);
+    //delete A_qp;
+    //A_qp = new qpOASES::SparseMatrix(nCon, nVar, jac_row, jac_colind, jac_nz);
+    A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, jac_row, jac_colind, jac_nz);
 
     matrices_changed = true;
     return;
@@ -346,16 +272,18 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
     else
         regFactor = 0.0;
 
-    delete H_qp;
+    //delete H_qp;
 
     if (sparseQP){
-        convertHessian(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz, hess_row, hess_colind, hess_loind);
-        H_qp = new qpOASES::SymSparseMat(nVar, nVar, hess_row, hess_colind, hess_nz);
-        dynamic_cast<qpOASES::SymSparseMat*>(H_qp)->createDiagInfo();
+        convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
+        //H_qp = new qpOASES::SymSparseMat(nVar, nVar, hess_row, hess_colind, hess_nz);
+        H_qp = std::make_unique<qpOASES::SymSparseMat>(nVar, nVar, hess_row.get(), hess_colind.get(), hess_nz.get());
+        dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
     }
     else{
-        convertHessian(hess, nHess, nVar, regFactor, hess_nz);
-        H_qp = new qpOASES::SymDenseMat(nVar, nVar, nVar, hess_nz);
+        convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
+        //H_qp = new qpOASES::SymDenseMat(nVar, nVar, nVar, hess_nz);
+        H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
     }
     matrices_changed = true;
     return;
@@ -388,22 +316,22 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     if ((qp->getStatus() == qpOASES::QPS_HOMOTOPYQPSOLVED ||
          qp->getStatus() == qpOASES::QPS_SOLVED) && use_hotstart){
         if (matrices_changed)
-            ret = qp->hotstart(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QPtime);
+            ret = qp->hotstart(H_qp.get(), h_qp, A_qp.get(), lb.get(), ub.get(), lbA.get(), ubA.get(), QP_it, &QPtime);
         else
-            ret = qp->hotstart(h_qp, lb, ub, lbA, ubA, QP_it, &QPtime);
+            ret = qp->hotstart(h_qp, lb.get(), ub.get(), lbA.get(), ubA.get(), QP_it, &QPtime);
     }
     else
-        ret = qp->init(H_qp, h_qp, A_qp, lb, ub, lbA, ubA, QP_it, &QPtime);
+        ret = qp->init(H_qp.get(), h_qp, A_qp.get(), lb.get(), ub.get(), lbA.get(), ubA.get(), QP_it, &QPtime);
 
 
     if (!convex_QP && ret == qpOASES::SUCCESSFUL_RETURN){
         if (sparseQP == 2){
-            *dynamic_cast<qpOASES::SQProblemSchur*>(qp_check) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp);
-            ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qp_check));
+            *dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp.get());
+            ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()));
         }
         else{
-            *qp_check = *qp;
-            ret = solAna.checkCurvatureOnStronglyActiveConstraints(qp_check);
+            *qpCheck = *qp;
+            ret = solAna.checkCurvatureOnStronglyActiveConstraints(qpCheck.get());
         }
     }
 
@@ -448,7 +376,6 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         return 3;}
     return 4;
 }
-
 
 int qpOASES_solver::get_QP_it(){return QP_it;}
 

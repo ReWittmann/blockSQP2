@@ -46,6 +46,11 @@ class blockSQP_pyProblem(py_blockSQP.Problemform):
     #Integrate states in an attempt to reduce infeasibility. May prevent resorting to a restoration phase
     _continuity_restoration: typing.Callable[[np.ndarray[np.float64]], np.ndarray[np.float64]]
     
+    def __init__(self, nVar = 0, nCon = 0):
+        py_blockSQP.Problemform.__init__(self)
+        self.nVar = nVar
+        self.nCon = nCon
+    
     ##Some setter methods##
     
     def set_bounds(self, lb_x, ub_x, lb_g, ub_g, objLo = -np.inf, objUp = np.inf):

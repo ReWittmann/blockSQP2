@@ -85,7 +85,7 @@ void SQPmethod::calcLagrangeGradient(const Matrix &lambda, const Matrix &gradObj
 void SQPmethod::calcLagrangeGradient( Matrix &gradLagrange, int flag )
 {
     if( param->sparseQP )
-        calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz, vars->jacIndRow, vars->jacIndCol, gradLagrange, flag );
+        calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), gradLagrange, flag );
     else
         calcLagrangeGradient( vars->lambda, vars->gradObj, vars->constrJac, gradLagrange, flag );
 }
@@ -161,19 +161,19 @@ void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHe
 
     if (param->sparseQP)
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->jacNz, vars->jacIndRow, vars->jacIndCol, vars->hess1, 1+param->whichSecondDerv, &infoEval);
+                        vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+param->whichSecondDerv, &infoEval);
     else
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->constrJac, vars->hess1, 1+param->whichSecondDerv, &infoEval);
+                        vars->constrJac, vars->hess1.get(), 1+param->whichSecondDerv, &infoEval);
 
     //Remove filter entries that dominate the set point
-    std::set<std::pair<double,double>>::iterator iter = vars->filter->begin();
+    std::set<std::pair<double,double>>::iterator iter = vars->filter.begin();
     std::set<std::pair<double,double>>::iterator iterToRemove;
-    while (iter != vars->filter->end()){
+    while (iter != vars->filter.end()){
         if (iter->first < vars->cNorm && iter->second < vars->obj){
             iterToRemove = iter;
             iter++;
-            vars->filter->erase(iterToRemove);
+            vars->filter.erase(iterToRemove);
         }
         else iter++;
     }
@@ -194,6 +194,35 @@ Matrix SQPmethod::get_xi(){
 
 Matrix SQPmethod::get_lambda(){
     return vars->lambda;
+}
+
+
+void SQPmethod::get_xi(Matrix &xi_hold){
+    if (param->autoScaling){
+        for (int i = 0; i < prob->nVar; i++){
+            xi_hold(i) = vars->xi(i)/scaled_prob->scaling_factors[i];
+        }
+    }
+    else{
+        for (int i = 0; i < prob->nVar; i++){
+            xi_hold(i) = vars->xi(i);
+        }
+    }
+    return;
+}
+
+void SQPmethod::get_lambda(Matrix &lambda_hold){
+    for (int i = 0; i < prob->nVar + prob->nCon; i++){
+        lambda_hold(i) = vars->lambda(i);
+    }
+    return;
+}
+
+void SQPmethod::get_lambdaQP(Matrix &lambdaQP_hold){
+    for (int i = 0; i < prob->nVar + prob->nCon; i++){
+        lambdaQP_hold(i) = vars->lambdaQP(i);
+    }
+    return;
 }
 
 

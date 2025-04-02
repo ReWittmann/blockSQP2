@@ -60,7 +60,7 @@ scaled_Problemspec::scaled_Problemspec(Problemspec *UNSCprob): unscaled_prob(UNS
 }
 
 scaled_Problemspec::~scaled_Problemspec(){
-    delete[] scaling_factors;
+    //delete[] scaling_factors;
 }
 
 void scaled_Problemspec::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){
@@ -74,7 +74,7 @@ void scaled_Problemspec::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJa
     return;
 }
 
-void scaled_Problemspec::initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol){
+void scaled_Problemspec::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
     unscaled_prob->initialize(xi, lambda, jacNz, jacIndRow, jacIndCol);
     for (int i = 0; i < nVar; i++){
         xi(i) *= scaling_factors[i];
@@ -85,7 +85,7 @@ void scaled_Problemspec::initialize(Matrix &xi, Matrix &lambda, double *&jacNz, 
     return;
 }
 
-void scaled_Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *&hess, int dmode, int *info){
+void scaled_Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info){
     for (int i = 0; i < nVar; i++){
         xi_unscaled(i) = xi(i)/scaling_factors[i];
     }
@@ -117,7 +117,7 @@ void scaled_Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double
     return;
 }
 
-void scaled_Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol, SymMatrix *&hess, int dmode, int *info){
+void scaled_Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info){
     for (int i = 0; i < nVar; i++){
         xi_unscaled(i) = xi(i)/scaling_factors[i];
     }

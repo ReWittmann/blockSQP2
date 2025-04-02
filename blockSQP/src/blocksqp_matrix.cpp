@@ -509,7 +509,7 @@ Matrix Matrix::without_rows(int *starts, int *ends, int n_slices) const{
     return Matrix(M, n, r_array);
 }
 
-
+/*
 const Matrix &Matrix::Print( FILE *f, int DIGITS, int flag ) const
 {    int i, j;
      double x;
@@ -557,6 +557,7 @@ const Matrix &Matrix::Print( FILE *f, int DIGITS, int flag ) const
 
     return *this;
 }
+*/
 
 std::ostream& operator<<(std::ostream &os, const Matrix &M){
 	for (int i = 0; i < M.m; i++){
@@ -985,7 +986,7 @@ Matrix SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end) cons
 	return Matrix(M_slc, N_slc, array_slc);
 }
 
-
+/*
 const SymMatrix &SymMatrix::Print( FILE *f, int DIGITS, int flag ) const
 {    int i, j;
      double x;
@@ -1033,7 +1034,7 @@ const SymMatrix &SymMatrix::Print( FILE *f, int DIGITS, int flag ) const
 
     return *this;
 }
-
+*/
 
 
 /* ----------------------------------------------------------------------- */
@@ -1079,8 +1080,8 @@ Matrix &Transpose( const Matrix &A, Matrix &T )
 //###Sparse_Matrix methods###
 //###########################
 
-Sparse_Matrix::Sparse_Matrix(int M, int N, int NNZ, double *NZ, int *ROW, int *COLIND):
-	m(M), n(N), nnz(NNZ), nz(NZ), row(ROW), colind(COLIND)
+Sparse_Matrix::Sparse_Matrix(int M, int N, int NNZ, double *NZ, int *ROW, int *COLIND, bool memOwn):
+	m(M), n(N), nnz(NNZ), nz(NZ), row(ROW), colind(COLIND), memoryOwned(memOwn)
 	{}
 
 Sparse_Matrix::Sparse_Matrix(const Sparse_Matrix &M){
@@ -1098,6 +1099,7 @@ Sparse_Matrix::Sparse_Matrix(const Sparse_Matrix &M){
 	for (int k = 0; k<=n;k++){
 		colind[k] = M.colind[k];
 	}
+    memoryOwned = true;
 }
 
 Sparse_Matrix::Sparse_Matrix(Sparse_Matrix &&M){
@@ -1114,6 +1116,8 @@ Sparse_Matrix::Sparse_Matrix(Sparse_Matrix &&M){
     M.nz = nullptr;
     M.row = nullptr;
     M.colind = nullptr;
+
+    memoryOwned = M.memoryOwned;
 }
 
 Sparse_Matrix::Sparse_Matrix(const CSR_Matrix &M){
@@ -1124,8 +1128,8 @@ Sparse_Matrix::Sparse_Matrix(const CSR_Matrix &M){
     nz = new double[nnz];
     row = new int[nnz];
     colind = new int[M.n + 1];
-
     CSC_CSR(n, m, M.nz, M.col, M.rowind, nz, row, colind);
+    memoryOwned = true;
 }
 
 
@@ -1137,14 +1141,17 @@ Sparse_Matrix::Sparse_Matrix(){
 	nz = nullptr;
 	row = nullptr;
 	colind = nullptr;
+    memoryOwned = false;
 };
 
 
 
 Sparse_Matrix::~Sparse_Matrix(){
-	delete[] nz;
-	delete[] row;
-	delete[] colind;
+    if (memoryOwned){
+        delete[] nz;
+        delete[] row;
+        delete[] colind;
+    }
 }
 
 void Sparse_Matrix::operator=(const Sparse_Matrix& M){
@@ -1166,6 +1173,7 @@ void Sparse_Matrix::operator=(const Sparse_Matrix& M){
 	for (int k = 0; k<=n;k++){
 		colind[k] = M.colind[k];
 	}
+    memoryOwned = true;
 
 	return;
 }
@@ -1188,6 +1196,7 @@ void Sparse_Matrix::operator=(Sparse_Matrix &&M){
     M.nz = nullptr;
     M.row = nullptr;
     M.colind = nullptr;
+    memoryOwned = M.memoryOwned;
 }
 
 Sparse_Matrix Sparse_Matrix::operator+(const Sparse_Matrix &M2) const{

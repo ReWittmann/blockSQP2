@@ -1,0 +1,49 @@
+\begin{thebibliography}{1}
+
+\bibitem{amestoy2000mumps}
+Patrick~R Amestoy, Iain~S Duff, Jean-Yves L’Excellent, and Jacko Koster.
+\newblock Mumps: a general purpose distributed memory sparse solver.
+\newblock In {\em International Workshop on Applied Parallel Computing}, pages
+  121--130. Springer, 2000.
+
+\bibitem{Ferreau2013}
+Hans~Joachim Ferreau, Christian Kirches, Andreas Potschka, Hans~Georg Bock, and
+  Moritz Diehl.
+\newblock {qpOASES: A parametric active-set algorithm for quadratic
+  programming}.
+\newblock {\em Mathematical Programming Computation}, pages 1--37, 2014.
+
+\bibitem{Janka2015}
+Dennis Janka.
+\newblock {\em {Sequential quadratic programming with indefinite Hessian
+  approximations for nonlinear optimum experimental design for parameter
+  estimation in differential–algebraic equations}}.
+\newblock PhD thesis, Ruprecht-Karls-Universit\"at Heidelberg, 2015.
+\newblock Available at
+  \url{http://archiv.ub.uni-heidelberg.de/volltextserver/19170/}.
+
+\bibitem{Janka2015b}
+Dennis Janka, Christian Kirches, Sebastian Sager, and Andreas W\"achter.
+\newblock {An SR1/BFGS SQP algorithm for nonconvex nonlinear programs with
+  block-diagonal Hessian matrix}.
+\newblock {\em submitted to Mathematical Programming Computation}, 2015.
+
+\bibitem{Koerkel2002}
+S.~K{\"o}rkel.
+\newblock {\em Numerische {M}ethoden f\"ur Optimale {V}ersuchsplanungsprobleme
+  bei nichtlinearen {DAE}-{M}odellen}.
+\newblock PhD thesis, Universit\"at {H}eidelberg, Heidelberg, 2002.
+
+\bibitem{Waechter2005b}
+Andreas W{\"a}chter and Lorenz~T Biegler.
+\newblock Line search filter methods for nonlinear programming: Local
+  convergence.
+\newblock {\em SIAM Journal on Optimization}, 16(1):32--48, 2005.
+
+\bibitem{Waechter2005}
+Andreas W{\"a}chter and Lorenz~T Biegler.
+\newblock Line search filter methods for nonlinear programming: Motivation and
+  global convergence.
+\newblock {\em SIAM Journal on Optimization}, 16(1):1--31, 2005.
+
+\end{thebibliography}

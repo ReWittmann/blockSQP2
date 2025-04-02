@@ -198,7 +198,7 @@ void SQPoptions::reset(){
 }
 
 SQPoptions::~SQPoptions(){
-    delete default_QPsol_opts;
+    //delete default_QPsol_opts;
 }
 
 
@@ -279,17 +279,16 @@ QPSOLVER_options::QPSOLVER_options(QPSOLVER SOL): sol(SOL){
 }
 
 void SQPoptions::complete_QPsol_opts(){
+    //Create default options if no options have been passed
     if (QPsol_opts == nullptr){
-        delete default_QPsol_opts;
-
-        if (QPsol == QPSOLVER::qpOASES) default_QPsol_opts = new qpOASES_options;
-        else if (QPsol == QPSOLVER::gurobi) default_QPsol_opts = new gurobi_options;
-        else if (QPsol == QPSOLVER::qpalm) default_QPsol_opts = new qpalm_options;
+        if (QPsol == QPSOLVER::qpOASES) default_QPsol_opts = std::make_unique<qpOASES_options>();
+        else if (QPsol == QPSOLVER::gurobi) default_QPsol_opts = std::make_unique<gurobi_options>();
+        else if (QPsol == QPSOLVER::qpalm) default_QPsol_opts = std::make_unique<qpalm_options>();
         else throw ParameterError("No valid option for QP solver");
 
-        QPsol_opts = default_QPsol_opts;
+        QPsol_opts = default_QPsol_opts.get();
     }
-    //Check for default values from constructor, don't overwrite if values were altered.
+    //Some values can also be set directly in the options, copy them over default QP solver options.
     if (QPsol_opts->eps == 1e-16) QPsol_opts->eps = eps;
     if (QPsol_opts->inf == std::numeric_limits<double>::infinity()) QPsol_opts->inf = inf;  
     if (QPsol_opts->maxTimeQP == 10.) QPsol_opts->maxTimeQP = maxTimeQP;
