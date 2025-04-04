@@ -330,12 +330,12 @@ int main( int argc, const char* argv[] )
     opts->debugLevel = 1;
 
     
-    opts->QPsol = QPSOLVER::qpOASES;
+    opts->QP_solver = QPsolvers::qpOASES;
     qpOASES_options QPopts;
     QPopts.printLevel = 1;
-    opts->QPsol_opts = &QPopts;
+    opts->QP_options = &QPopts;
     
-    //opts->QPsol = QPSOLVER::qpalm;
+    //opts->QP_solver = QPSOLVER::qpalm;
     
     //opts->maxConvQP = 5;
 

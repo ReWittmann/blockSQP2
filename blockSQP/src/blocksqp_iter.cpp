@@ -23,38 +23,9 @@
 namespace blockSQP{
 
 
-SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
+SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
 
-    int maxblocksize;
 
-    // Set nBlocks structure according to if we use block updates or not
-    if (param->blockHess == 0 || prob->nBlocks == 1){
-        nBlocks = 1;
-        blockIdx = std::make_unique<int[]>(2);
-        blockIdx[0] = 0;
-        blockIdx[1] = prob->nVar;
-        maxblocksize = prob->nVar;
-        //param->whichSecondDerv = 0;
-    }
-    else if (param->blockHess == 2 && prob->nBlocks > 1){
-        // hybrid strategy: 1 block for constraints, 1 for objective
-        nBlocks = 2;
-        blockIdx = std::make_unique<int[]>(3);
-        blockIdx[0] = 0;
-        blockIdx[1] = prob->blockIdx[prob->nBlocks-1];
-        blockIdx[2] = prob->nVar;
-        maxblocksize = std::max(blockIdx[1], blockIdx[2] - blockIdx[1]);
-    }
-    else{   
-        nBlocks = prob->nBlocks;
-        blockIdx = std::make_unique<int[]>(nBlocks+1);
-        blockIdx[0] = 0;
-        maxblocksize = 0;
-        for(int iBlock = 0; iBlock < nBlocks; iBlock++){
-            blockIdx[iBlock+1] = prob->blockIdx[iBlock+1];
-            if (blockIdx[iBlock+1] - blockIdx[iBlock] > maxblocksize) maxblocksize = blockIdx[iBlock+1] - blockIdx[iBlock];
-        }
-    }
 
     ///Allocate memory for variables that are updated during optimization:
     
@@ -87,130 +58,137 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param, bool full){
         jacIndCol = std::make_unique<int[]>(prob->nVar + 1);
     }
 
-    hess = nullptr;
-    hess1 = nullptr;
-    hess2 = nullptr;
-    hess_alt = nullptr;
+    //Allocate Hessian data
+    int maxblocksize;
+    // Set nBlocks structure according to if we use block updates or not
+    if (param->blockHess == 0 || prob->nBlocks == 1){
+        nBlocks = 1;
+        blockIdx = std::make_unique<int[]>(2);
+        blockIdx[0] = 0;
+        blockIdx[1] = prob->nVar;
+        maxblocksize = prob->nVar;
+        //param->whichSecondDerv = 0;
+    }
+    else if (param->blockHess == 2 && prob->nBlocks > 1){
+        // hybrid strategy: 1 block for constraints, 1 for objective
+        nBlocks = 2;
+        blockIdx = std::make_unique<int[]>(3);
+        blockIdx[0] = 0;
+        blockIdx[1] = prob->blockIdx[prob->nBlocks-1];
+        blockIdx[2] = prob->nVar;
+        maxblocksize = std::max(blockIdx[1], blockIdx[2] - blockIdx[1]);
+    }
+    else{   
+        nBlocks = prob->nBlocks;
+        blockIdx = std::make_unique<int[]>(nBlocks+1);
+        blockIdx[0] = 0;
+        maxblocksize = 0;
+        for(int iBlock = 0; iBlock < nBlocks; iBlock++){
+            blockIdx[iBlock+1] = prob->blockIdx[iBlock+1];
+            if (blockIdx[iBlock+1] - blockIdx[iBlock] > maxblocksize) maxblocksize = blockIdx[iBlock+1] - blockIdx[iBlock];
+        }
+    }
 
-    noUpdateCounter = nullptr;
-    nquasi = nullptr;
+    // Create one Matrix for one diagonal block in the Hessian
+    int Bsize;
+    hess1 = std::make_unique<SymMatrix[]>(nBlocks);
+    for (int iBlock = 0; iBlock < nBlocks; iBlock++){
+        Bsize = blockIdx[iBlock+1] - blockIdx[iBlock];
+        hess1[iBlock].Dimension(Bsize).Initialize(0.0);
+    }
+
+    // For SR1 or finite differences, maintain two Hessians
+    if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6 || param->hessUpdate > 6){
+        hess2 = std::make_unique<SymMatrix[]>(nBlocks);
+        for (int iBlock = 0; iBlock < nBlocks; iBlock++){
+            Bsize = blockIdx[iBlock + 1] - blockIdx[iBlock];
+            hess2[iBlock].Dimension(Bsize).Initialize(0.0);
+        }
+    }
+
+    hess_conv = std::make_unique<SymMatrix[]>(nBlocks);
+    for (int iBlock = 0; iBlock < nBlocks; iBlock++){
+        Bsize = blockIdx[iBlock+1] - blockIdx[iBlock];
+        hess_conv[iBlock].Dimension(Bsize).Initialize(0.0);
+    }
+    //Initialize current Hessian pointer to first Hessian
+    hess = hess1.get();
+
+    ///Allocate additional variables needed by the algorithm
+    int nVar = prob->nVar;
+    int nCon = prob->nCon;
+
+    //Allocate space for one more delta-gamma pair than hessMemsize so we don't overwrite the oldest pair directly after a successful QP solve.
+    //The linesearch may still fall back to the convex QP, which may require calculating the limited-memory fallback Hessian, which starts at the oldest step.
+    dg_nsave = std::max(std::max(int(param->hessLimMem)*param->hessMemsize + 1, int(param->autoScaling)*5), 1);
+    dg_pos = -1;
+
+    deltaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
+    gammaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
+    deltaNormSqMat.Dimension(nBlocks, dg_nsave).Initialize(0.0);
+    deltaGammaMat.Dimension(nBlocks, dg_nsave).Initialize(0.0);
+
+    deltaXi.Submatrix( deltaMat, nVar, 1, 0, 0 );
+    gamma.Submatrix(gammaMat, nVar, 1, 0, 0);
+
+    // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
+    deltaNormSqOld.Dimension(nBlocks).Initialize(1.0);
+    deltaOld.Dimension(prob->nVar).Initialize(0.0);
+    deltaGammaOld.Dimension(nBlocks).Initialize(0.0);
+    deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
+
+
+    AdeltaXi.Dimension( nCon ).Initialize( 0.0 );
+    lambdaQP.Dimension( nVar+nCon ).Initialize( 0.0 );
+    trialXi.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
+    trialLambda.Dimension(nVar + nCon, 1, nVar + nCon).Initialize(0.0);
+    trialConstr.Dimension(nCon, 1).Initialize(0.0);
+
+    // bounds for step (sub QP)
+    delta_lb_var.Dimension(nVar).Initialize(0.0);
+    delta_ub_var.Dimension(nVar).Initialize(0.0);
+
+    delta_lb_con.Dimension(nCon).Initialize(0.0);
+    delta_ub_con.Dimension(nCon).Initialize(0.0);
+
+    // Miscellaneous conters
+    nquasi = std::unique_ptr<int[]>(new int[nBlocks]());
+    noUpdateCounter = std::make_unique<int[]>(nBlocks);
+    for (int iBlock = 0; iBlock < nBlocks; iBlock++) noUpdateCounter[iBlock] = -1;
     nRestIt = 0;
 
-    modified_hess_regularizationFactor = param->hess_regularizationFactor;
-    nearSol = false;
-    milestone = std::numeric_limits<double>::infinity();
-    convKappa = param->convKappa0;
+    // Flags
     conv_qp_only = param->indef_local_only;
+    conv_qp_solved = false;
+    hess2_updated = true;
+    use_homotopy = true;            
 
-    KKT_heuristic_active = true;
+    KKT_heuristic_enabled = true;
+    KKTerror_save = param->inf; 
+    nearSol = false;
+    milestone = param->inf;
+    solution_found = false;
     n_extra = 0;
-    sol_found = false;
-    tol_save = std::numeric_limits<double>::infinity();
-    cNormOpt_save = std::numeric_limits<double>::infinity();
-    cNormSOpt_save = std::numeric_limits<double>::infinity();
 
-    if (full){
-        ///Allocate block hessian and fallback block hessian if needed
-        int iBlock, varDim;
+    // Convexification strategy
+    hess_num_accepted = 0;
+    convKappa = param->convKappa0;
 
-        // Create one Matrix for one diagonal block in the Hessian
-        hess1 = std::make_unique<SymMatrix[]>(nBlocks);
-        for( iBlock=0; iBlock<nBlocks; iBlock++ )
-        {
-            varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
-            hess1[iBlock].Dimension( varDim ).Initialize( 0.0 );
-        }
-
-        // For SR1 or finite differences, maintain two Hessians
-        if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6 || param->hessUpdate > 6){
-            hess2 = std::make_unique<SymMatrix[]>(nBlocks);
-            for (iBlock = 0; iBlock < nBlocks; iBlock++){
-                varDim = blockIdx[iBlock + 1] - blockIdx[iBlock];
-                hess2[iBlock].Dimension(varDim).Initialize(0.0);
-            }
-        }
-
-        hess_alt = std::make_unique<SymMatrix[]>(nBlocks);
-        for (iBlock = 0; iBlock < nBlocks; iBlock++){
-            varDim = blockIdx[iBlock+1] - blockIdx[iBlock];
-            hess_alt[iBlock].Dimension( varDim ).Initialize(0.0);
-        }
-
-        // Set Hessian pointer
-        hess = hess1.get();
-
-        ///Allocate additional variables needed by the algorithm
-        int nVar = prob->nVar;
-        int nCon = prob->nCon;
-
-        //Allocate space for one more delta-gamma pair than hessMemsize so we don't overwrite the oldest pair directly after a successful QP solve.
-        //The linesearch may still fall back to the convex QP, which may require calculating the limited-memory fallback Hessian, which starts at the oldest step.
-        dg_nsave = std::max(std::max(int(param->hessLimMem)*param->hessMemsize + 1, int(param->autoScaling)*5), 1);
-        deltaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
-        gammaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
-        deltaNormSqMat.Dimension(nBlocks, dg_nsave).Initialize(0.0);
-        deltaGammaMat.Dimension(nBlocks, dg_nsave).Initialize(0.0);
-
-        deltaXi.Submatrix( deltaMat, nVar, 1, 0, 0 );
-
-        // trial step (temporary variable, for line search)
-        trialXi.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
-
-        // trial Lagrange multipliers (temporary variable, stores recovered Lagrange multipliers from restoration problem)
-        trialLambda.Dimension(nVar + nCon, 1, nVar + nCon).Initialize(0.0);
-
-        // Constraint function values at trial point
-        trialConstr.Dimension(nCon, 1).Initialize(0.0);
-
-        // bounds for step (QP subproblem)
-        delta_lb_var.Dimension(nVar).Initialize(0.0);
-        delta_ub_var.Dimension(nVar).Initialize(0.0);
-
-        delta_lb_con.Dimension(nCon).Initialize(0.0);
-        delta_ub_con.Dimension(nCon).Initialize(0.0);
-
-        // product of constraint Jacobian with step (deltaXi)
-        AdeltaXi.Dimension( nCon ).Initialize( 0.0 );
-
-        // dual variables of QP (simple bounds and general constraints)
-        lambdaQP.Dimension( nVar+nCon ).Initialize( 0.0 );
-
-        // filter as a set of pairs
-        //filter = new std::set<std::pair<double,double>>;
-
-        gamma.Submatrix(gammaMat, nVar, 1, 0, 0);
-
-        // Scalars that are used in various Hessian update procedures
-        noUpdateCounter = std::make_unique<int[]>(nBlocks);
-        for (iBlock = 0; iBlock < nBlocks; iBlock++)
-            noUpdateCounter[iBlock] = -1;
-
-        nquasi = std::unique_ptr<int[]>(new int[nBlocks]());
-        dg_pos = -1;
-        
-        // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
-        deltaNormSqOld.Dimension(nBlocks).Initialize(1.0);
-        deltaOld.Dimension(prob->nVar).Initialize(0.0);
-        deltaGammaOld.Dimension(nBlocks).Initialize(0.0);
-
-        deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
-
-        use_homotopy = true;
-        local_lenience = std::max(param->max_local_lenience, 0);
-
-        if (param->autoScaling){
-            rescaleFactors = std::make_unique<double[]>(prob->nVar);
-            vfreeScale = 1.0;
-            scaled_prob = dynamic_cast<scaled_Problemspec*>(prob);
-            scaleFactors_save = std::make_unique<double[]>(prob->nVar);
-        }
-        else{
-            rescaleFactors = nullptr;
-            scaled_prob = nullptr;
-            scaleFactors_save = nullptr;
-        }
-        n_scaleIt = 0;
+    // Scaling heuristic
+    if (param->autoScaling){
+        rescaleFactors = std::make_unique<double[]>(prob->nVar);
+        vfreeScale = 1.0;
+        scaled_prob = static_cast<scaled_Problemspec*>(prob);
+        scaleFactors_save = std::make_unique<double[]>(prob->nVar);
     }
+    else scaled_prob = nullptr;
+    n_scaleIt = 0;
+    
+    //Derived from parameters
+    modified_hess_regularizationFactor = param->hess_regularizationFactor;
+
+    cNormOpt_save = param->inf;
+    cNormSOpt_save = param->inf;
 }
 
 SQPiterate::SQPiterate(){}
@@ -245,16 +223,8 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
         for (int i = 0; i <= nVar; i++)
             jacIndCol[i] = iter.jacIndCol[i];
     }
-    else{
-        jacNz = nullptr;
-        jacIndRow = nullptr;
-        jacIndCol = nullptr;
-    }
 
-    noUpdateCounter = nullptr;
     hess = nullptr;
-    hess1 = nullptr;
-    hess2 = nullptr;
 }
 
 
@@ -267,30 +237,16 @@ void SQPiterate::initIterate( SQPoptions* param )
     n_id_hess = 0;
 
     obj = param->inf;
-    tol = param->inf;
     cNorm = param->thetaMax;
+    cNormS = param->thetaMax;
     gradNorm = param->inf;
     lambdaStepNorm = 0.0;
+    tol = param->inf;
 }
 
-SQPiterate::~SQPiterate(void){
-    //delete[] blockIdx;
-    //delete[] noUpdateCounter;
-    //delete[] jacNz;
-    //delete[] jacIndRow;
-    //delete[] jacIndCol;
+SQPiterate::~SQPiterate(void){}
 
-    //delete filter;
-    //delete[] hess1;
-    //delete[] hess2;
-    //delete[] hess_alt;
 
-    //delete[] nquasi;
-    //delete[] rescaleFactors;
-    //delete[] scaleFactors_save;
-}
-
-//TODO: Store and restore scaling factors as well as they may change inbetween
 void SQPiterate::save_iterate(){
     xiOpt_save = xi;
     lambdaOpt_save = lambda;
@@ -323,8 +279,8 @@ void SQPiterate::restore_iterate(){
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond, bool full):
-        SQPiterate(prob, param, full){
+SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond):
+        SQPiterate(prob, param){
     //Wrap sparse jacobian array
     Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
 
@@ -332,31 +288,15 @@ SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond, 
     deltaXi_cond.Dimension(cond->condensed_num_vars);
     lambdaQP_cond.Dimension(cond->condensed_num_vars + cond->condensed_num_cons);
 
-    //condensed_hess = nullptr;
     condensed_hess = std::make_unique<SymMatrix[]>(cond->condensed_num_hessblocks);
-    condensed_hess_nz = nullptr;
-    condensed_hess_row = nullptr;
-    condensed_hess_colind = nullptr;
-    condensed_hess_loind = nullptr;
-
-    //condensed_hess_2 = nullptr;
     condensed_hess_2 = std::make_unique<SymMatrix[]>(cond->condensed_num_hessblocks);
 }
 
-
-SCQPiterate::~SCQPiterate(){
-    //Jacobian.nz = nullptr;
-    //Jacobian.row = nullptr;
-    //Jacobian.colind = nullptr;
-
-    //delete[] condensed_hess;
-    //delete[] condensed_hess_2;
-}
+SCQPiterate::~SCQPiterate(){}
 
 
-
-
-SCQP_correction_iterate::SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond, bool full): SCQPiterate(prob, param, cond, full){
+SCQP_correction_iterate::SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond): 
+        SCQPiterate(prob, param, cond){
     corrected_h.Dimension(cond->condensed_num_vars);
     corrected_lb_con.Dimension(cond->condensed_num_vars);
     corrected_ub_con.Dimension(cond->condensed_num_vars);

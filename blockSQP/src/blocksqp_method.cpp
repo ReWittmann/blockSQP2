@@ -45,40 +45,36 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     //rest_param->hessScaling = 4;
     //rest_param->hessDampFac = 1./3.;
 
-    rest_param->loud_SQPresult = false;
+    rest_param->result_output = false;
     //Do not print to any file
     rest_param->debugLevel = 0;
 
     //Derived from parent method options
     rest_param->opttol = parent_options->opttol;
     rest_param->nlinfeastol = parent_options->nlinfeastol;
-    rest_param->QPsol = parent_options->QPsol;
-    rest_param->QPsol_opts = parent_options->QPsol_opts;
+    rest_param->QP_solver = parent_options->QP_solver;
+    rest_param->QP_options = parent_options->QP_options;
 
     return rest_param;
 }   
 
 
 
-SQPmethod::SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics ): prob(problem), param(parameters), stats(statistics){
+SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics): 
+        prob(problem), param(parameters), stats(statistics){
     // Check if there are options that are infeasible and set defaults accordingly
     param->optionsConsistency(problem);
     
+    //Create scalable problem wrapper if automatic scaling is enabled.
     if (param->autoScaling){
-        //scaled_prob = new scaled_Problemspec(problem);
-        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
-    else{
-        scaled_prob = nullptr;
-        prob = problem;
-    }
-    vars = std::make_unique<SQPiterate>(prob, param, true);
+
+    vars = std::make_unique<SQPiterate>(prob, param);
 
     // Create a solver object for quadratic subproblems.
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, vars->blockIdx.get(), param));
-    
-    initCalled = false;
     
     //Setup the feasibility restoration problem
     if (param->restoreFeas){
@@ -106,22 +102,16 @@ SCQPmethod::SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *s
     cond = CND;
 
     if (param->autoScaling){
-        //scaled_prob = new scaled_Problemspec(problem);
-        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
-    else{
-        scaled_prob = nullptr;
-        prob = problem;
-    }
-    vars = std::make_unique<SCQPiterate>(prob, param, cond, true);
+    vars = std::make_unique<SCQPiterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0) throw ParameterError("Condensing only works with sparse QPs");
     if (param->blockHess != 1) throw ParameterError("Condensing requires block diagonal hessian for efficient linear algebra");
     
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
-    initCalled = false;
 
     if (param->restoreFeas){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
@@ -153,15 +143,10 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
     stats = statistics;
 
     if (param->autoScaling){
-        //scaled_prob = new scaled_Problemspec(problem);
-        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
-    else{
-        scaled_prob = nullptr;
-        prob = problem;
-    }
-    vars = std::make_unique<SCQPiterate>(prob, param, cond, true);
+    vars = std::make_unique<SCQPiterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){
@@ -172,8 +157,6 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
     }
 
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
-
-    initCalled = false;
 
     if (param->restoreFeas){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
@@ -199,15 +182,10 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     stats = statistics;
 
     if (param->autoScaling){
-        //scaled_prob = new scaled_Problemspec(problem);
-        scaled_prob = std::make_unique<scaled_Problemspec>(problem);
+        scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
-    else{
-        scaled_prob = nullptr;
-        prob = problem;
-    }
-    vars = std::make_unique<SCQP_correction_iterate>(prob, param, cond, true);
+    vars = std::make_unique<SCQP_correction_iterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparseQP == 0){
@@ -218,8 +196,6 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     }
 
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
-
-    initCalled = false;
 
     corrections = new Matrix[cond->num_targets];
     SOC_corrections = new Matrix[cond->num_targets];

@@ -49,17 +49,17 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
 
     // 'Nontrivial' convex combinations
     if (maxQP > 2 && idx < maxQP - 1){
-        //Store convex combination in vars->hess_alt, to avoid having to restore the second hessian if full memory updates are used
+        //Store convex combination in vars->hess_conv, to avoid having to restore the second hessian if full memory updates are used
         if (param->convStrategy == 0){
             for (int i = 0; i < vars->nBlocks; i++){
-                vars->hess_alt[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
+                vars->hess_conv[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
             }
         }
         else if (param->convStrategy == 1){
             if (idx == 1){
                 //Copy the first hessian to reserved space
                 for (int i = 0; i < vars->nBlocks; i++){
-                    vars->hess_alt[i] = vars->hess1[i];
+                    vars->hess_conv[i] = vars->hess1[i];
                 }
             }
 
@@ -69,7 +69,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             //std::cout << "H idScale = " << idScale << ", convKappa = " << vars->convKappa << "\n";
             for (int i = 0; i < vars->nBlocks; i++){
                 for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
-                    vars->hess_alt[i](j,j) += idScale;
+                    vars->hess_conv[i](j,j) += idScale;
                 }
             }
         }
@@ -77,7 +77,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             if (idx == 1){
                 //Copy the first hessian to reserved space
                 for (int i = 0; i < vars->nBlocks; i++){
-                    vars->hess_alt[i] = vars->hess1[i];
+                    vars->hess_conv[i] = vars->hess1[i];
                 }
             }
 
@@ -91,13 +91,13 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
                         offset = ind_1 + i;
                     }
                     if (!prob->vblocks[k].dependent){
-                        vars->hess_alt[ind_b](ind_1 + i - offset, ind_1 + i - offset) += idScale;
+                        vars->hess_conv[ind_b](ind_1 + i - offset, ind_1 + i - offset) += idScale;
                     }
                 }
                 ind_1 += prob->vblocks[k].size;
             }
         }
-        vars->hess = vars->hess_alt.get();
+        vars->hess = vars->hess_conv.get();
     }
     else{
         vars->hess = vars->hess2.get();
@@ -126,8 +126,8 @@ void SQPmethod::computeConvexHessian(){
 
 
 void SQPmethod::setIdentityHessian(){
-    calcInitialHessian(vars->hess_alt.get());
-    vars->hess = vars->hess_alt.get();
+    calcInitialHessian(vars->hess_conv.get());
+    vars->hess = vars->hess_conv.get();
 }
 
 

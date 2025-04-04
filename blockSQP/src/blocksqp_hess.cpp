@@ -105,12 +105,11 @@ void SQPmethod::resetHessians(){
 }
 
 
-int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess)
-{
+int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess){
     int iVar, jVar, k, iBlock, maxBlock, info, idx, idx1, idx2;
     double dummy, lowerVio, upperVio;
     Matrix pert;
-    SQPiterate varsP = SQPiterate( *vars );
+    SQPiterate varsP = SQPiterate(*vars);
 
     const double myDelta = 1.0e-4;
     const double minDelta = 1.0e-6;

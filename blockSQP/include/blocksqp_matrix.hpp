@@ -96,12 +96,12 @@ class Matrix
       /** Flag == 0: bracket output
         * Flag == 1: Matlab output
         * else: plain output */
-       /*
+       
       const Matrix &Print( FILE* = stdout,   ///< file for output
                              int = 13,       ///< number of digits
                              int = 1         ///< Flag for format
                            ) const;
-      */
+      
 };
 
 std::ostream& operator<<(std::ostream& os, const Matrix &M);
@@ -152,12 +152,12 @@ class SymMatrix{
 
         Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
 
-        /*
+        
         const SymMatrix &Print( FILE* = stdout,   ///< file for output
                              int = 13,       ///< number of digits
                              int = 1         ///< Flag for format
                            ) const;
-        */
+        
 };
 
 std::ostream& operator<<(std::ostream& os, const SymMatrix &M);

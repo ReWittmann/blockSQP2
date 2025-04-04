@@ -665,32 +665,32 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     .def_readwrite("kappaF", &blockSQP::SQPoptions::kappaF)
     .def_readwrite("max_extra_steps", &blockSQP::SQPoptions::max_extra_steps)
     .def_readwrite("allow_premature_termination", &blockSQP::SQPoptions::allow_premature_termination)
-	.def_property("QPsol", [](blockSQP::SQPoptions &opts)->std::string{
-        if (opts.QPsol == blockSQP::QPSOLVER::qpOASES) return "qpOASES";
-        else if (opts.QPsol == blockSQP::QPSOLVER::gurobi) return "gurobi";
-        else if (opts.QPsol == blockSQP::QPSOLVER::qpalm) return "qpalm";
+	.def_property("QP_solver", [](blockSQP::SQPoptions &opts)->std::string{
+        if (opts.QP_solver == blockSQP::QPsolvers::qpOASES) return "qpOASES";
+        else if (opts.QP_solver == blockSQP::QPsolvers::gurobi) return "gurobi";
+        else if (opts.QP_solver == blockSQP::QPsolvers::qpalm) return "qpalm";
         return "unset";
         },
     [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
-        if (QPsolver_name == "qpOASES") opts.QPsol = blockSQP::QPSOLVER::qpOASES;
-        else if (QPsolver_name == "gurobi") opts.QPsol = blockSQP::QPSOLVER::gurobi;
-        else if (QPsolver_name  == "qpalm") opts.QPsol = blockSQP::QPSOLVER::qpalm;
+        if (QPsolver_name == "qpOASES") opts.QP_solver = blockSQP::QPsolvers::qpOASES;
+        else if (QPsolver_name == "gurobi") opts.QP_solver = blockSQP::QPsolvers::gurobi;
+        else if (QPsolver_name  == "qpalm") opts.QP_solver = blockSQP::QPsolvers::qpalm;
         else throw blockSQP::ParameterError("Unknown QP solver, known (no neccessarily linked) are qpOASES, gurobi, qpalm");
         return;
     }
     )
-    .def_readwrite("QPsol_opts", &blockSQP::SQPoptions::QPsol_opts)
+    .def_readwrite("QP_options", &blockSQP::SQPoptions::QP_options)
 	;
 
-py::class_<blockSQP::QPSOLVER_options>(m, "QPSOLVER_options");
+py::class_<blockSQP::QPsolver_options>(m, "QPsolver_options");
 
-py::class_<blockSQP::qpOASES_options, blockSQP::QPSOLVER_options>(m, "qpOASES_options")
+py::class_<blockSQP::qpOASES_options, blockSQP::QPsolver_options>(m, "qpOASES_options")
     .def(py::init<>())
     .def_readwrite("printLevel", &blockSQP::qpOASES_options::printLevel)
     .def_readwrite("terminationTolerance", &blockSQP::qpOASES_options::terminationTolerance)
     ;
 
-py::class_<blockSQP::gurobi_options, blockSQP::QPSOLVER_options>(m, "gurobi_options")
+py::class_<blockSQP::gurobi_options, blockSQP::QPsolver_options>(m, "gurobi_options")
     .def(py::init<>())
     .def_readwrite("Method", &blockSQP::gurobi_options::Method)
     .def_readwrite("NumericFocus", &blockSQP::gurobi_options::NumericFocus)

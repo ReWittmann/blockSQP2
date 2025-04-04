@@ -240,9 +240,9 @@ class JL_Condenser{
 
 
 
-class NULL_QPSOLVER_options : public blockSQP::QPSOLVER_options{
+class NULL_QPsolver_options : public blockSQP::QPsolver_options{
     public:
-    NULL_QPSOLVER_options() : QPSOLVER_options(blockSQP::QPSOLVER::unset){}
+    NULL_QPsolver_options() : QPsolver_options(blockSQP::QPsolvers::unset){}
 };
 
 
@@ -252,9 +252,9 @@ namespace jlcxx{
     template<> struct SuperType<blockSQP::SCQP_bound_method>{typedef blockSQP::SCQPmethod type;};
     template<> struct SuperType<blockSQP::SCQP_correction_method>{typedef blockSQP::SCQPmethod type;};
 
-    template<> struct SuperType<NULL_QPSOLVER_options>{typedef blockSQP::QPSOLVER_options type;};
-    template<> struct SuperType<blockSQP::qpOASES_options>{typedef blockSQP::QPSOLVER_options type;};
-    template<> struct SuperType<blockSQP::gurobi_options>{typedef blockSQP::QPSOLVER_options type;};
+    template<> struct SuperType<NULL_QPsolver_options>{typedef blockSQP::QPsolver_options type;};
+    template<> struct SuperType<blockSQP::qpOASES_options>{typedef blockSQP::QPsolver_options type;};
+    template<> struct SuperType<blockSQP::gurobi_options>{typedef blockSQP::QPsolver_options type;};
 }
 
 
@@ -269,20 +269,20 @@ mod.add_type<vblock_array>("vblock_array")
     .method("array_get", [](vblock_array &ARR, int index){return ARR.ptr[index - 1];})
     ;
 
-mod.add_type<blockSQP::QPSOLVER_options>("QPSOLVER_options")
+mod.add_type<blockSQP::QPsolver_options>("QPsolver_options")
     ;
 
-mod.add_type<NULL_QPSOLVER_options>("NULL_QPSOLVER_options", jlcxx::julia_base_type<blockSQP::QPSOLVER_options>())
+mod.add_type<NULL_QPsolver_options>("NULL_QPsolver_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
     .constructor<>()
     ;
 
-mod.add_type<blockSQP::qpOASES_options>("qpOASES_options", jlcxx::julia_base_type<blockSQP::QPSOLVER_options>())
+mod.add_type<blockSQP::qpOASES_options>("qpOASES_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
     .constructor<>()
     .method("set_printLevel", [](blockSQP::qpOASES_options &QPopts, int val){QPopts.printLevel = val;})
     .method("set_terminationTolerance", [](blockSQP::qpOASES_options &QPopts, double val){QPopts.terminationTolerance = val;})
     ;
 
-mod.add_type<blockSQP::gurobi_options>("gurobi_options", jlcxx::julia_base_type<blockSQP::QPSOLVER_options>())
+mod.add_type<blockSQP::gurobi_options>("gurobi_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
     .constructor<>()
     .method("set_Method", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.Method = val;})
     .method("set_NumericFocus", [](blockSQP::gurobi_options &GRBopts, int val){std::cout << "Set NumericFocus to " << val << "\n"; GRBopts.NumericFocus = val;})
@@ -338,19 +338,19 @@ mod.add_type<blockSQP::SQPoptions>("SQPoptions")
     .method("set_max_correction_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_correction_steps = val;})
     .method("set_dep_bound_tolerance", [](blockSQP::SQPoptions &opts, double val){opts.dep_bound_tolerance = val;})
     .method("set_QPsol", [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
-        if (QPsolver_name == "qpOASES") opts.QPsol = blockSQP::QPSOLVER::qpOASES;
-        else if (QPsolver_name == "gurobi") opts.QPsol = blockSQP::QPSOLVER::gurobi;
+        if (QPsolver_name == "qpOASES") opts.QP_solver = blockSQP::QPsolvers::qpOASES;
+        else if (QPsolver_name == "gurobi") opts.QP_solver = blockSQP::QPsolvers::gurobi;
         else throw blockSQP::ParameterError("Unknown QP solver options, known are blockSQP::qpOASES_options, blockSQP::gurobi_options");
     })
     .method("get_QPsol", [](blockSQP::SQPoptions &opts){
-        if (opts.QPsol == blockSQP::QPSOLVER::qpOASES) return std::string("qpOASES");
-        else if (opts.QPsol == blockSQP::QPSOLVER::gurobi) return std::string("gurobi");
+        if (opts.QP_solver == blockSQP::QPsolvers::qpOASES) return std::string("qpOASES");
+        else if (opts.QP_solver == blockSQP::QPsolvers::gurobi) return std::string("gurobi");
         else throw blockSQP::ParameterError("Unknown QP solver name, known (no neccessarily linked) are qpOASES, gurobi");
     })
     
     //.method("get_QPsol", [](blockSQP::SQPoptions &opts){return 1;})
-    //.method("set_QPsol_opts", [](blockSQP::SQPoptions &opts, blockSQP::qpOASES_options QPopts){opts.QPsol_opts = &QPopts;})
-    .method("set_QPsol_opts", [](blockSQP::SQPoptions &opts, blockSQP::QPSOLVER_options *QPopts){opts.QPsol_opts = QPopts;})
+    //.method("set_QPsol_opts", [](blockSQP::SQPoptions &opts, blockSQP::qpOASES_options QPopts){opts.QP_options = &QPopts;})
+    .method("set_QPsol_opts", [](blockSQP::SQPoptions &opts, blockSQP::QPsolver_options *QPopts){opts.QP_options = QPopts;})
     .method("set_autoScaling", [](blockSQP::SQPoptions &opts, bool val){opts.autoScaling = val;})
 	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_local_lenience = val;})
     .method("set_max_extra_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_extra_steps = val;})

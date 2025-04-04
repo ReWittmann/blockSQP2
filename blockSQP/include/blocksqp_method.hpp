@@ -56,7 +56,7 @@ class SQPmethod{
         Matrix rest_lambdaQP;
 
     protected:
-        bool                     initCalled;  ///< indicates if init() has been called (necessary for run())
+        bool                     initCalled = false;  ///< indicates if init() has been called (necessary for run())
 
     /*
      * Methods

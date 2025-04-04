@@ -15,12 +15,11 @@
 #include <cmath>
 #include <chrono>
 
-
 namespace blockSQP{
 
 
 //QPsolver base class implemented methods
-QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPSOLVER_options *QPopts): nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks), Qparam(QPopts){
+QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts): nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks), Qparam(QPopts){
     //For managing QP solution times
     default_time_limit = Qparam->maxTimeQP;
     custom_time_limit = Qparam->maxTimeQP;
@@ -81,20 +80,20 @@ void QPsolver::custom_timeLimit(double CTlim){
 //QPsolver factory, handle checks for linked QP solvers
 QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *param){
 
-    if (param->QPsol != param->QPsol_opts->sol) throw ParameterError("QPsol_opts for wrong QPsol, should have been caught by SQPoptions::optionsConsistency");
-    //param->complete_QP_sol_opts has already been called through param->optionsConsistency in SQPmethod constructor, else we would need to call it here so all stanard QPsolvers options get added to param->QPsol_opts
+    if (param->QP_solver != param->QP_options->sol) throw ParameterError("QP_options for wrong QP_solver, should have been caught by SQPoptions::optionsConsistency");
+    //param->complete_QP_sol_opts has already been called through param->optionsConsistency in SQPmethod constructor, else we would need to call it here so all stanard QPsolvers options get added to param->QP_options
 
     #ifdef QPSOLVER_QPOASES
-    if (param->QPsol == QPSOLVER::qpOASES)
-        return new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, blockIdx, param->sparseQP, static_cast<qpOASES_options*>(param->QPsol_opts));
+    if (param->QP_solver == QPsolvers::qpOASES)
+        return new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, blockIdx, param->sparseQP, static_cast<qpOASES_options*>(param->QP_options));
     #endif
     #ifdef QPSOLVER_GUROBI
-    if (param->QPsol == QPSOLVER::gurobi)
-        return new gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<gurobi_options*>(param->QPsol_opts));
+    if (param->QP_solver == QPsolvers::gurobi)
+        return new gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<gurobi_options*>(param->QP_options));
     #endif
     #ifdef QPSOLVER_QPALM
-    if (param->QPsol == QPSOLVER::qpalm)
-        return new qpalm_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<qpalm_options*>(param->QPsol_opts));
+    if (param->QP_solver == QPsolvers::qpalm)
+        return new qpalm_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<qpalm_options*>(param->QP_options));
     #endif
 
     throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");

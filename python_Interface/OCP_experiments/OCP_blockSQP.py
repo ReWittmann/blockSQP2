@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt=100, parallel = True)
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, parallel = True)
 
 # OCprob = OCProblems.F8_Aircraft(nt = 100, parallel = False)
 # OCprob.set_stage_control(OCprob.start_point, 20, -0.0125)
@@ -51,17 +51,17 @@ opts.hessMemsize = 20
 opts.opttol = 1e-6
 opts.nlinfeastol = 1e-6
 
-opts.autoScaling = False
+opts.autoScaling = True
 
 opts.max_extra_steps = 0
 opts.allow_premature_termination = False
 opts.max_local_lenience = 0
 
-opts.QPsol = 'qpOASES'
+opts.QP_solver = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.terminationTolerance = 1e-10
 QPopts.printLevel = 0
-opts.QPsol_opts = QPopts
+opts.QP_options = QPopts
 ################################
 
 #Create condenser, chose SCQPmethod below to enable condensing
@@ -120,10 +120,10 @@ scale_arr = 1.0;
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing
-optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+# optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 
 #Condensing
-# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
+optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
 t0 = time.time()

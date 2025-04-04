@@ -40,7 +40,7 @@ public:
     int nCon;
     int nHess;
 
-    QPSOLVER_options *Qparam;
+    QPsolver_options *Qparam;
 
     //Store the solution time of the last 10 successful QPs,
     //use it to limit the solution time of future QPs
@@ -64,7 +64,7 @@ public:
 
 
 	//Arguments: Number of QP variables, number of linear constraints, options
-    QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPSOLVER_options *QPopts);
+    QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts);
     virtual ~QPsolver();
 
     void recordTime(double solTime);
@@ -100,34 +100,20 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
         qpOASES::Options opts;
         int sparseQP;
 
-        /*
-        qpOASES::SQProblem*      qp;               ///< qpOASES qp object
-        qpOASES::SQProblem*      qpSave;           ///< qpOASES qp object
-        qpOASES::SQProblem*      qp_check;         ///< for applying solution analysis
-        */
-        
         std::unique_ptr<qpOASES::SQProblem> qp;
         std::unique_ptr<qpOASES::SQProblem> qpSave;
         std::unique_ptr<qpOASES::SQProblem>  qpCheck; 
         
-        /*
-        qpOASES::Matrix* A_qp;                     ///< qpOASES constraint matrix
-        qpOASES::SymmetricMatrix* H_qp;            ///< qpOASES quadratic objective matrix
-        */
         std::unique_ptr<qpOASES::Matrix> A_qp;
         std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
 
-        double* h_qp;                              ///< linear term in objective
+        double* h_qp;                                       // linear term in objective
+        std::unique_ptr<double[]> lb, ub, lbA, ubA;         // bounds for QP variables, bounds for linearized constraints
 
-        std::unique_ptr<double[]> lb, ub, lbA, ubA;
-        //double *lb, *ub, *lbA, *ubA;               ///< bounds for variables, bounds for constraints
-
-        Matrix jacT;                               ///< transpose of the dense constraint jacobian
+        Matrix jacT;                                        // transpose of the dense constraint jacobian
 
         std::unique_ptr<double[]> hess_nz;
         std::unique_ptr<int[]> hess_row, hess_colind, hess_loind;
-        //double *hess_nz;
-        //int *hess_row, *hess_colind, *hess_loind;
 
         bool matrices_changed;
 

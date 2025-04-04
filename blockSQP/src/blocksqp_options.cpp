@@ -29,11 +29,11 @@ namespace blockSQP
 
 SQPoptions::SQPoptions(){
     #ifdef QPSOLVER_QPOASES
-        QPsol = QPSOLVER::qpOASES;
+        QP_solver = QPsolvers::qpOASES;
     #elifdef QPSOLVER_GUROBI
-        QPsol = QPSOLVER::gurobi;
+        QP_solver = QPsolvers::gurobi;
     #elifdef QPSOLVER_QPALM
-        QPSOL = QPSOLVER::qpalm;
+        QP_solver = QPsolvers::qpalm;
     #endif
 }
 
@@ -62,11 +62,11 @@ void SQPoptions::reset(){
     nlinfeastol = 1.0e-6;
 
     #if defined(QPSOLVER_QPOASES)
-        QPsol = QPSOLVER::qpOASES;
+        QP_solver = QPsolvers::qpOASES;
     #elif defined(QPSOLVER_GUROBI)
-        QPsol = QPSOLVER::gurobi;
+        QP_solver = QPsolvers::gurobi;
     #else
-        QPsol = QPSOLVER::unset;
+        QP_solver = QPsolvers::unset;
     #endif
 
 
@@ -188,8 +188,8 @@ void SQPoptions::reset(){
     //For SCQPmethod subclasses
     dep_bound_tolerance = 1e-7;
 
-    QPsol = QPSOLVER::unset;
-    QPsol_opts = nullptr;
+    QP_solver = QPsolvers::unset;
+    QP_options = nullptr;
 
     default_QPsol_opts = nullptr;
 
@@ -197,54 +197,63 @@ void SQPoptions::reset(){
     max_extra_steps = 0;
 }
 
-SQPoptions::~SQPoptions(){
-    //delete default_QPsol_opts;
-}
+SQPoptions::~SQPoptions(){}
 
 
-/**
- * Some options cannot be set together, check for invalid combinations here
- */
-
-void SQPoptions::optionsConsistency(){ 
+void SQPoptions::optionsConsistency(){
+    //Check if selected QP solver was properly linked
     #ifndef QPSOLVER_QPOASES
-        if (QPsol == QPSOLVER::qpOASES)
+        if (QP_solver == QPsolvers::qpOASES)
             throw ParameterError("qpOASES specified as QP solver, but not (properly) linked");
     #endif
     #ifndef QPSOLVER_GUROBI
-        if (QPsol == QPSOLVER::gurobi)
+        if (QP_solver == QPsolvers::gurobi)
             throw ParameterError("gurobi specified as QP solver, but not (properly) linked");
     #endif
     #ifndef QPSOLVER_QPALM
-    if (QPsol == QPSOLVER::qpalm)
+    if (QP_solver == QPsolvers::qpalm)
         throw ParameterError("qpalm specified as QP solver, but not (properly) linked");
     #endif
 
-    if (QPsol == QPSOLVER::qpOASES){
-        if (QPsol_opts != nullptr && QPsol_opts->sol != QPSOLVER::qpOASES)
+    //Check for wrong QP options
+    if (QP_options != nullptr && QP_options->sol != QP_solver)
+        throw ParameterError("Incorrect QP solver options type given for specified QP solver");
+    
+    if (hessUpdate == 1 || hessUpdate == 4 || whichSecondDerv > 0){
+        if (QP_solver == QPsolvers::qpOASES){
+            if (QP_options != nullptr && static_cast<qpOASES_options*>(QP_options)->sparsityLevel != 2)
+                throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (qpOASES_solver::sparsityLevel == 2)");
+        }
+        else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
+    }
+
+    /*
+    if (QP_solver == QPsolvers::qpOASES){
+        if (QP_options != nullptr && QP_options->sol != QPsolvers::qpOASES)
             throw ParameterError("qpOASES specified as QP solver, but options given for different QP solver");
         if (hessUpdate == 1 && sparseQP < 2)
             throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (sparseQP == 2)");
     }
-    if (QPsol == QPSOLVER::gurobi){
-        if (QPsol_opts != nullptr && QPsol_opts->sol != QPSOLVER::gurobi)
+    if (QP_solver == QPsolvers::gurobi){
+        if (QP_options != nullptr && QP_options->sol != QPsolvers::gurobi)
             throw ParameterError("gurobi specified as QP solver, but options given for different QP solver");
         if (hessUpdate == 1 || hessUpdate == 4)
             throw ParameterError("gurobi provides needed lagrange multipliers only for convex QPs, given Hessian options not possible");
     }
-    if (QPsol == QPSOLVER::qpalm){
-        if (QPsol_opts != nullptr && QPsol_opts->sol != QPSOLVER::qpalm)
+    if (QP_solver == QPsolvers::qpalm){
+        if (QP_options != nullptr && QP_options->sol != QPsolver_ID::qpalm)
             throw ParameterError("qpalm specified as QP solver, but options given for different QP solver");
     }
+    */
 
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
     if (whichSecondDerv == 2){
-        std::cout << "Exact hessian is available, hessUpdate and hessScaling are ignored\n";
+        std::cout << "Exact Hessian is available, hessUpdate and hessScaling are ignored\n";
     }
     
     //Ensure a positive definite fallback hessian is available if first hessian approximation is not guaranteed to be positive definite
     if ((hessUpdate == 1 || hessUpdate == 4 || hessUpdate == 6) && maxConvQP < 1 && !(fallbackUpdate == 0 || fallbackUpdate == 2 || fallbackUpdate == 5)) 
-        throw ParameterError("Positive definite fallback hessian is needed when hessian is not positive definite");
+        throw ParameterError("Positive definite fallback hessian is needed when Hessian is not positive definite");
 
 
     if (globalization == 1 && hessUpdate == 1 && maxConvQP < 1){
@@ -266,12 +275,12 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
         throw ParameterError("autoScaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
     if (sparseQP && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
-    
+
     optionsConsistency();
 }
 
 
-QPSOLVER_options::QPSOLVER_options(QPSOLVER SOL): sol(SOL){
+QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
     eps = 1e-16;
     inf = std::numeric_limits<double>::infinity();
     maxTimeQP = 10.;
@@ -280,28 +289,29 @@ QPSOLVER_options::QPSOLVER_options(QPSOLVER SOL): sol(SOL){
 
 void SQPoptions::complete_QPsol_opts(){
     //Create default options if no options have been passed
-    if (QPsol_opts == nullptr){
-        if (QPsol == QPSOLVER::qpOASES) default_QPsol_opts = std::make_unique<qpOASES_options>();
-        else if (QPsol == QPSOLVER::gurobi) default_QPsol_opts = std::make_unique<gurobi_options>();
-        else if (QPsol == QPSOLVER::qpalm) default_QPsol_opts = std::make_unique<qpalm_options>();
+    if (QP_options == nullptr){
+        if (QP_solver == QPsolvers::qpOASES) default_QPsol_opts = std::make_unique<qpOASES_options>();
+        else if (QP_solver == QPsolvers::gurobi) default_QPsol_opts = std::make_unique<gurobi_options>();
+        else if (QP_solver == QPsolvers::qpalm) default_QPsol_opts = std::make_unique<qpalm_options>();
         else throw ParameterError("No valid option for QP solver");
 
-        QPsol_opts = default_QPsol_opts.get();
+        QP_options = default_QPsol_opts.get();
     }
     //Some values can also be set directly in the options, copy them over default QP solver options.
-    if (QPsol_opts->eps == 1e-16) QPsol_opts->eps = eps;
-    if (QPsol_opts->inf == std::numeric_limits<double>::infinity()) QPsol_opts->inf = inf;  
-    if (QPsol_opts->maxTimeQP == 10.) QPsol_opts->maxTimeQP = maxTimeQP;
-    if (QPsol_opts->maxItQP == std::numeric_limits<int>::max()) QPsol_opts->maxItQP = maxItQP;
+    if (QP_options->eps == 1e-16) QP_options->eps = eps;
+    if (QP_options->inf == std::numeric_limits<double>::infinity()) QP_options->inf = inf;  
+    if (QP_options->maxTimeQP == 10.) QP_options->maxTimeQP = maxTimeQP;
+    if (QP_options->maxItQP == std::numeric_limits<int>::max()) QP_options->maxItQP = maxItQP;
     return;
 }
 
-qpOASES_options::qpOASES_options(): QPSOLVER_options(QPSOLVER::qpOASES){
+qpOASES_options::qpOASES_options(): QPsolver_options(QPsolvers::qpOASES){
     printLevel = 0;
     terminationTolerance = 5.0e6*2.221e-16;
+    sparsityLevel = 2;
 }
 
-gurobi_options::gurobi_options(): QPSOLVER_options(QPSOLVER::gurobi){
+gurobi_options::gurobi_options(): QPsolver_options(QPsolvers::gurobi){
         Method = 1;
         NumericFocus = 3;
         OutputFlag = 0;
@@ -315,7 +325,7 @@ gurobi_options::gurobi_options(): QPSOLVER_options(QPSOLVER::gurobi){
         //regularization_factor = 1e-8;
 }
 
-qpalm_options::qpalm_options(): QPSOLVER_options(QPSOLVER::qpalm){}
+qpalm_options::qpalm_options(): QPsolver_options(QPsolvers::qpalm){}
 
 
 } // namespace blockSQP

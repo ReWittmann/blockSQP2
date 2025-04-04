@@ -509,7 +509,7 @@ Matrix Matrix::without_rows(int *starts, int *ends, int n_slices) const{
     return Matrix(M, n, r_array);
 }
 
-/*
+
 const Matrix &Matrix::Print( FILE *f, int DIGITS, int flag ) const
 {    int i, j;
      double x;
@@ -557,7 +557,7 @@ const Matrix &Matrix::Print( FILE *f, int DIGITS, int flag ) const
 
     return *this;
 }
-*/
+
 
 std::ostream& operator<<(std::ostream &os, const Matrix &M){
 	for (int i = 0; i < M.m; i++){
@@ -986,7 +986,7 @@ Matrix SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end) cons
 	return Matrix(M_slc, N_slc, array_slc);
 }
 
-/*
+
 const SymMatrix &SymMatrix::Print( FILE *f, int DIGITS, int flag ) const
 {    int i, j;
      double x;
@@ -1034,7 +1034,7 @@ const SymMatrix &SymMatrix::Print( FILE *f, int DIGITS, int flag ) const
 
     return *this;
 }
-*/
+
 
 
 /* ----------------------------------------------------------------------- */
