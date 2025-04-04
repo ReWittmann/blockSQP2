@@ -37,23 +37,23 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     SQPoptions *rest_param = new SQPoptions();
 
     //General restoration options
-    rest_param->restoreFeas = 0;
-    rest_param->hessLimMem = 1;
-    rest_param->hessUpdate = 2;
-    rest_param->hessScaling = 2;
-    rest_param->hessDampFac = 0.2;
-    //rest_param->hessScaling = 4;
-    //rest_param->hessDampFac = 1./3.;
+    rest_param->enable_feasibility_restoration = 0;
+    rest_param->limited_memory = 1;
+    rest_param->hess_approximation = 2;
+    rest_param->sizing_strategy = 2;
+    rest_param->BFGS_damping_factor = 0.2;
+    //rest_param->sizing_strategy = 4;
+    //rest_param->BFGS_damping_factor = 1./3.;
 
-    rest_param->result_output = false;
+    rest_param->result_print_color = false;
     //Do not print to any file
-    rest_param->debugLevel = 0;
+    rest_param->debug_level = 0;
 
     //Derived from parent method options
-    rest_param->opttol = parent_options->opttol;
-    rest_param->nlinfeastol = parent_options->nlinfeastol;
-    rest_param->QP_solver = parent_options->QP_solver;
-    rest_param->QP_options = parent_options->QP_options;
+    rest_param->optimality_tol = parent_options->optimality_tol;
+    rest_param->feasibility_tol = parent_options->feasibility_tol;
+    rest_param->qpsol = parent_options->qpsol;
+    rest_param->qpsol_options = parent_options->qpsol_options;
 
     return rest_param;
 }   
@@ -66,7 +66,7 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     param->optionsConsistency(problem);
     
     //Create scalable problem wrapper if automatic scaling is enabled.
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
@@ -77,9 +77,9 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, vars->blockIdx.get(), param));
     
     //Setup the feasibility restoration problem
-    if (param->restoreFeas){
+    if (param->enable_feasibility_restoration){
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->restRho, param->restZeta);
+        rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->restoration_rho, param->restoration_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -101,22 +101,22 @@ SCQPmethod::SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *s
     stats = statistics;
     cond = CND;
 
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
     vars = std::make_unique<SCQPiterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparseQP == 0) throw ParameterError("Condensing only works with sparse QPs");
-    if (param->blockHess != 1) throw ParameterError("Condensing requires block diagonal hessian for efficient linear algebra");
+    if (param->sparse_mode == 0) throw ParameterError("Condensing only works with sparse QPs");
+    if (param->block_hess != 1) throw ParameterError("Condensing requires block diagonal hessian for efficient linear algebra");
     
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
 
-    if (param->restoreFeas){
+    if (param->enable_feasibility_restoration){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restRho, param->restZeta);
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restoration_rho, param->restoration_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -142,26 +142,26 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
     param = parameters; param->optionsConsistency();
     stats = statistics;
 
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
     vars = std::make_unique<SCQPiterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparseQP == 0){
+    if (param->sparse_mode == 0){
         throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
     }
-    if (param->blockHess != 1){
+    if (param->block_hess != 1){
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
 
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
 
-    if (param->restoreFeas){
+    if (param->enable_feasibility_restoration){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restRho, param->restZeta);
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restoration_rho, param->restoration_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -181,17 +181,17 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     param = parameters; param->optionsConsistency();
     stats = statistics;
 
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
     vars = std::make_unique<SCQP_correction_iterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparseQP == 0){
+    if (param->sparse_mode == 0){
         throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
     }
-    if (param->blockHess != 1){
+    if (param->block_hess != 1){
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
 
@@ -204,10 +204,10 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         SOC_corrections[tnum].Dimension(cond->targets_data[tnum].n_dep).Initialize(0.);
     }
 
-    if (param->restoreFeas){
+    if (param->enable_feasibility_restoration){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restRho, param->restZeta);
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restoration_rho, param->restoration_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);

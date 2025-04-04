@@ -84,7 +84,7 @@ void SQPmethod::calcLagrangeGradient(const Matrix &lambda, const Matrix &gradObj
 
 void SQPmethod::calcLagrangeGradient( Matrix &gradLagrange, int flag )
 {
-    if( param->sparseQP )
+    if( param->sparse_mode )
         calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), gradLagrange, flag );
     else
         calcLagrangeGradient( vars->lambda, vars->gradObj, vars->constrJac, gradLagrange, flag );
@@ -125,32 +125,32 @@ bool SQPmethod::calcOptTol(){
 
     calcLagrangeGradient( vars->gradLagrange, 0 );
 
-    if (!param->autoScaling){
-    vars->gradNorm = lInfVectorNorm( vars->gradLagrange );
-    vars->tol = vars->gradNorm /( 1.0 + lInfVectorNorm( vars->lambda ) );
+    if (!param->automatic_scaling){
+        vars->gradNorm = lInfVectorNorm( vars->gradLagrange );
+        vars->tol = vars->gradNorm /( 1.0 + lInfVectorNorm( vars->lambda ) );
     }
     else{
-    vars->gradNorm = 0;
-    for (int i = 0; i < prob->nVar; i++){
-    if (vars->gradNorm < std::abs(vars->gradLagrange(i)*scaled_prob->scaling_factors[i])) vars->gradNorm = std::abs(vars->gradLagrange(i)*scaled_prob->scaling_factors[i]);
-    }
-    vars->tol = vars->gradNorm /( 1.0 + lInfVectorNorm( vars->lambda ) );
+        vars->gradNorm = 0;
+        for (int i = 0; i < prob->nVar; i++){
+            if (vars->gradNorm < std::abs(vars->gradLagrange(i)*scaled_prob->scaling_factors[i])) vars->gradNorm = std::abs(vars->gradLagrange(i)*scaled_prob->scaling_factors[i]);
+        }
+        vars->tol = vars->gradNorm /( 1.0 + lInfVectorNorm( vars->lambda ) );
     }
 
     // norm of constraint violation
     vars->cNorm  = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     vars->cNormS = vars->cNorm /( 1.0 + lInfVectorNorm( vars->xi ) );
 
-    if( vars->tol <= param->opttol && vars->cNormS <= param->nlinfeastol )
-    return true;
+    if (vars->tol <= param->optimality_tol && vars->cNormS <= param->feasibility_tol)
+        return true;
     else
-    return false;
+        return false;
 }
 
 
 void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHessian){
     vars->xi = xi;
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         for (int i = 0; i < prob->nVar; i++){
             vars->xi(i) *= scaled_prob->scaling_factors[i];
         }
@@ -159,12 +159,12 @@ void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHe
     int infoEval;
     if (resetHessian) resetHessians();
 
-    if (param->sparseQP)
+    if (param->sparse_mode)
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+param->whichSecondDerv, &infoEval);
+                        vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+param->exact_hess_usage, &infoEval);
     else
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->constrJac, vars->hess1.get(), 1+param->whichSecondDerv, &infoEval);
+                        vars->constrJac, vars->hess1.get(), 1+param->exact_hess_usage, &infoEval);
 
     //Remove filter entries that dominate the set point
     std::set<std::pair<double,double>>::iterator iter = vars->filter.begin();
@@ -184,7 +184,7 @@ void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHe
 
 Matrix SQPmethod::get_xi(){
     Matrix xi_unscaled(vars->xi);
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         for (int i = 0; i < prob->nVar; i++){
             xi_unscaled(i)/= scaled_prob->scaling_factors[i];
         }
@@ -198,7 +198,7 @@ Matrix SQPmethod::get_lambda(){
 
 
 void SQPmethod::get_xi(Matrix &xi_hold){
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         for (int i = 0; i < prob->nVar; i++){
             xi_hold(i) = vars->xi(i)/scaled_prob->scaling_factors[i];
         }
@@ -237,74 +237,74 @@ void SQPmethod::printInfo( int printLevel )
         return;
 
     /* QP Solver */
-    if( param->sparseQP == 0 )
+    if( param->sparse_mode == 0 )
         strcpy( qpString, "dense, reduced Hessian factorization" );
-    else if( param->sparseQP == 1 )
+    else if( param->sparse_mode == 1 )
         strcpy( qpString, "sparse, reduced Hessian factorization" );
-    else if( param->sparseQP == 2 )
+    else if( param->sparse_mode == 2 )
         strcpy( qpString, "sparse, Schur complement approach" );
 
     /* Globalization */
-    if( param->globalization == 0 )
+    if( param->enable_linesearch == 0 )
         strcpy( globString, "none (full step)" );
-    else if( param->globalization == 1 )
+    else if( param->enable_linesearch == 1 )
         strcpy( globString, "filter line search" );
 
     /* Hessian approximation */
-    if( param->blockHess && (param->hessUpdate == 1 || param->hessUpdate == 2) )
+    if( param->block_hess && (param->hess_approximation == 1 || param->hess_approximation == 2) )
         strcpy( hessString1, "block " );
     else
         strcpy( hessString1, "" );
 
-    if( param->hessLimMem && (param->hessUpdate == 1 || param->hessUpdate == 2) )
+    if( param->limited_memory && (param->hess_approximation == 1 || param->hess_approximation == 2) )
         strcat( hessString1, "L-" );
 
     /* Fallback Hessian */
-    if( param->hessUpdate == 1 || param->hessUpdate == 4 || (param->hessUpdate == 6) )
+    if( param->hess_approximation == 1 || param->hess_approximation == 4 || (param->hess_approximation == 6) )
     {
         strcpy( hessString2, hessString1 );
 
         /* Fallback Hessian update type */
-        if( param->fallbackUpdate == 0 )
+        if( param->fallback_approximation == 0 )
             strcat( hessString2, "Id" );
-        else if( param->fallbackUpdate == 1 )
+        else if( param->fallback_approximation == 1 )
             strcat( hessString2, "SR1" );
-        else if( param->fallbackUpdate == 2 )
+        else if( param->fallback_approximation == 2 )
             strcat( hessString2, "BFGS" );
-        else if( param->fallbackUpdate == 4 )
+        else if( param->fallback_approximation == 4 )
             strcat( hessString2, "Finite differences" );
 
         /* Fallback Hessian scaling */
-        if( param->fallbackScaling == 1 )
+        if( param->fallback_sizing_strategy == 1 )
             strcat( hessString2, ", SP" );
-        else if( param->fallbackScaling == 2 )
+        else if( param->fallback_sizing_strategy == 2 )
             strcat( hessString2, ", OL" );
-        else if( param->fallbackScaling == 3 )
+        else if( param->fallback_sizing_strategy == 3 )
             strcat( hessString2, ", mean" );
-        else if( param->fallbackScaling == 4 )
+        else if( param->fallback_sizing_strategy == 4 )
             strcat( hessString2, ", selective sizing" );
     }
     else
         strcpy( hessString2, "-" );
 
     /* First Hessian update type */
-    if( param->hessUpdate == 0 )
+    if( param->hess_approximation == 0 )
         strcat( hessString1, "Id" );
-    else if( param->hessUpdate == 1 )
+    else if( param->hess_approximation == 1 )
         strcat( hessString1, "SR1" );
-    else if( param->hessUpdate == 2 )
+    else if( param->hess_approximation == 2 )
         strcat( hessString1, "BFGS" );
-    else if( param->hessUpdate == 4 )
+    else if( param->hess_approximation == 4 )
         strcat( hessString1, "Finite differences" );
 
     /* First Hessian scaling */
-    if( param->hessScaling == 1 )
+    if( param->sizing_strategy == 1 )
         strcat( hessString1, ", SP" );
-    else if( param->hessScaling == 2 )
+    else if( param->sizing_strategy == 2 )
         strcat( hessString1, ", OL" );
-    else if( param->hessScaling == 3 )
+    else if( param->sizing_strategy == 3 )
         strcat( hessString1, ", mean" );
-    else if( param->hessScaling == 4 )
+    else if( param->sizing_strategy == 4 )
         strcat( hessString1, ", selective sizing" );
 
     printf( "\n+---------------------------------------------------------------+\n");

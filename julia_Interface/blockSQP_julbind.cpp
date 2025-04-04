@@ -5,10 +5,14 @@
  *
  * CxxWrap based julia interface for the blockSQP nonlinear programming solver
  */
-
+/*
 #include "jlcxx/jlcxx.hpp"
 #include "jlcxx/array.hpp"
 #include "jlcxx/functions.hpp"
+*/
+#include <jlcxx/jlcxx.hpp>
+#include <jlcxx/array.hpp>
+#include <jlcxx/functions.hpp>
 #include "blocksqp_method.hpp"
 #include "blocksqp_condensing.hpp"
 #include "blocksqp_options.hpp"
@@ -297,62 +301,59 @@ mod.add_type<blockSQP::gurobi_options>("gurobi_options", jlcxx::julia_base_type<
 
 mod.add_type<blockSQP::SQPoptions>("SQPoptions")
     .constructor<>()
-    .method("get_maxItQP", [](blockSQP::SQPoptions &opts){return opts.maxItQP;})
-    .method("set_printLevel", [](blockSQP::SQPoptions &opts, int val){opts.printLevel = val;})
-    .method("set_printColor", [](blockSQP::SQPoptions &opts, int val){opts.printColor = val;})
-    .method("set_debugLevel", [](blockSQP::SQPoptions &opts, int val){opts.debugLevel = val;})
+    .method("get_maxItQP", [](blockSQP::SQPoptions &opts){return opts.max_QP_iter;})
+    .method("set_print_level", [](blockSQP::SQPoptions &opts, int val){opts.print_level = val;})
+    .method("set_printColor", [](blockSQP::SQPoptions &opts, int val){opts.result_print_color = val;})
+    .method("set_debugLevel", [](blockSQP::SQPoptions &opts, int val){opts.debug_level = val;})
     .method("set_eps", [](blockSQP::SQPoptions &opts, double val){opts.eps = val;})
     .method("set_inf", [](blockSQP::SQPoptions &opts, double val){opts.inf = val;})
-    .method("set_opttol", [](blockSQP::SQPoptions &opts, double val){opts.opttol = val;})
-    .method("set_nlinfeastol", [](blockSQP::SQPoptions &opts, double val){opts.nlinfeastol = val;})
-    .method("set_sparseQP", [](blockSQP::SQPoptions &opts, int val){opts.sparseQP = val;})
-    .method("set_globalization", [](blockSQP::SQPoptions &opts, int val){opts.globalization = val;})
-    .method("set_restoreFeas", [](blockSQP::SQPoptions &opts, int val){opts.restoreFeas = val;})
-    .method("set_maxLineSearch", [](blockSQP::SQPoptions &opts, int val){opts.maxLineSearch = val;})
-    .method("set_maxConsecReducedSteps", [](blockSQP::SQPoptions &opts, int val){opts.maxConsecReducedSteps = val;})
-    .method("set_maxConsecSkippedUpdates", [](blockSQP::SQPoptions &opts, int val){opts.maxConsecSkippedUpdates = val;})
-    .method("set_maxItQP", [](blockSQP::SQPoptions &opts, int val){opts.maxItQP = val;})
-    .method("set_blockHess", [](blockSQP::SQPoptions &opts, int val){opts.blockHess = val;})
-    .method("set_hessScaling", [](blockSQP::SQPoptions &opts, int val){opts.hessScaling = val;})
-    .method("set_fallbackScaling", [](blockSQP::SQPoptions &opts, int val){opts.fallbackScaling = val;})
-    .method("set_maxTimeQP", [](blockSQP::SQPoptions &opts, double val){opts.maxTimeQP = val;})
-    .method("set_iniHessDiag", [](blockSQP::SQPoptions &opts, double val){opts.iniHessDiag = val;})
-    .method("set_colEps", [](blockSQP::SQPoptions &opts, double val){opts.colEps = val;})
-    .method("set_olEps", [](blockSQP::SQPoptions &opts, double val){opts.olEps = val;})
-    .method("set_colTau1", [](blockSQP::SQPoptions &opts, double val){opts.colTau1 = val;})
-    .method("set_colTau2", [](blockSQP::SQPoptions &opts, double val){opts.colTau2 = val;})
-    .method("set_hessDampFac", [](blockSQP::SQPoptions &opts, double val){opts.hessDampFac = val;})
-    .method("set_minDampQuot", [](blockSQP::SQPoptions &opts, double val){opts.minDampQuot = val;})
-    .method("set_hessUpdate", [](blockSQP::SQPoptions &opts, int val){opts.hessUpdate = val;})
-    .method("set_fallbackUpdate", [](blockSQP::SQPoptions &opts, int val){opts.fallbackUpdate = val;})
+    .method("set_opttol", [](blockSQP::SQPoptions &opts, double val){opts.optimality_tol = val;})
+    .method("set_nlinfeastol", [](blockSQP::SQPoptions &opts, double val){opts.feasibility_tol = val;})
+    .method("set_sparseQP", [](blockSQP::SQPoptions &opts, int val){opts.sparse_mode = val;})
+    .method("set_globalization", [](blockSQP::SQPoptions &opts, int val){opts.enable_linesearch = val;})
+    .method("set_restoreFeas", [](blockSQP::SQPoptions &opts, int val){opts.enable_feasibility_restoration = val;})
+    .method("set_maxLineSearch", [](blockSQP::SQPoptions &opts, int val){opts.max_linesearch_steps = val;})
+    .method("set_maxConsecReducedSteps", [](blockSQP::SQPoptions &opts, int val){opts.max_consec_reduced_steps = val;})
+    .method("set_maxConsecSkippedUpdates", [](blockSQP::SQPoptions &opts, int val){opts.max_consec_skipped_updates = val;})
+    .method("set_maxItQP", [](blockSQP::SQPoptions &opts, int val){opts.max_QP_iter = val;})
+    .method("set_blockHess", [](blockSQP::SQPoptions &opts, int val){opts.block_hess = val;})
+    .method("set_hessScaling", [](blockSQP::SQPoptions &opts, int val){opts.sizing_strategy = val;})
+    .method("set_fallbackScaling", [](blockSQP::SQPoptions &opts, int val){opts.fallback_sizing_strategy = val;})
+    .method("set_maxTimeQP", [](blockSQP::SQPoptions &opts, double val){opts.max_QP_seconds = val;})
+    .method("set_iniHessDiag", [](blockSQP::SQPoptions &opts, double val){opts.initial_hess_scale = val;})
+    .method("set_colEps", [](blockSQP::SQPoptions &opts, double val){opts.COL_eps = val;})
+    .method("set_olEps", [](blockSQP::SQPoptions &opts, double val){opts.OL_eps = val;})
+    .method("set_colTau1", [](blockSQP::SQPoptions &opts, double val){opts.COL_tau_1 = val;})
+    .method("set_colTau2", [](blockSQP::SQPoptions &opts, double val){opts.COL_tau_2 = val;})
+    .method("set_hessDampFac", [](blockSQP::SQPoptions &opts, double val){opts.BFGS_damping_factor = val;})
+    .method("set_minDampQuot", [](blockSQP::SQPoptions &opts, double val){opts.min_damping_quotient = val;})
+    .method("set_hessUpdate", [](blockSQP::SQPoptions &opts, int val){opts.hess_approximation = val;})
+    .method("set_fallbackUpdate", [](blockSQP::SQPoptions &opts, int val){opts.fallback_approximation = val;})
     .method("set_indef_local_only", [](blockSQP::SQPoptions &opts, bool val){opts.indef_local_only = val;})
-    .method("set_hessLimMem", [](blockSQP::SQPoptions &opts, int val){opts.hessLimMem = val;})
-    .method("set_hessMemsize", [](blockSQP::SQPoptions &opts, int val){opts.hessMemsize = val;})
-    .method("set_whichSecondDerv", [](blockSQP::SQPoptions &opts, int val){opts.whichSecondDerv = val;})
-    .method("set_skipFirstGlobalization", [](blockSQP::SQPoptions &opts, int val){opts.skipFirstGlobalization = val;})
-    .method("set_convStrategy", [](blockSQP::SQPoptions &opts, int val){opts.convStrategy = val;})
-    .method("set_maxConvQP", [](blockSQP::SQPoptions &opts, int val){opts.maxConvQP = val;})
-    .method("set_hess_regularizationFactor", [](blockSQP::SQPoptions &opts, double val){opts.hess_regularizationFactor = val;})
-    .method("set_maxSOCiter", [](blockSQP::SQPoptions &opts, int val){opts.maxSOCiter = val;})
+    .method("set_hessLimMem", [](blockSQP::SQPoptions &opts, int val){opts.limited_memory = val;})
+    .method("set_hessMemsize", [](blockSQP::SQPoptions &opts, int val){opts.memory_size = val;})
+    .method("set_whichSecondDerv", [](blockSQP::SQPoptions &opts, int val){opts.exact_hess_usage = val;})
+    .method("set_skipFirstGlobalization", [](blockSQP::SQPoptions &opts, int val){opts.skip_first_linesearch = val;})
+    .method("set_convStrategy", [](blockSQP::SQPoptions &opts, int val){opts.conv_strategy = val;})
+    .method("set_maxConvQP", [](blockSQP::SQPoptions &opts, int val){opts.max_conv_QPs = val;})
+    .method("set_hess_regularizationFactor", [](blockSQP::SQPoptions &opts, double val){opts.hess_regularization_factor = val;})
+    .method("set_maxSOCiter", [](blockSQP::SQPoptions &opts, int val){opts.max_SOC = val;})
     .method("set_max_bound_refines", [](blockSQP::SQPoptions &opts, int val){opts.max_bound_refines = val;})
     .method("set_max_correction_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_correction_steps = val;})
     .method("set_dep_bound_tolerance", [](blockSQP::SQPoptions &opts, double val){opts.dep_bound_tolerance = val;})
-    .method("set_QPsol", [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
-        if (QPsolver_name == "qpOASES") opts.QP_solver = blockSQP::QPsolvers::qpOASES;
-        else if (QPsolver_name == "gurobi") opts.QP_solver = blockSQP::QPsolvers::gurobi;
+    .method("set_QP_solver", [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
+        if (QPsolver_name == "qpOASES") opts.qpsol = blockSQP::QPsolvers::qpOASES;
+        else if (QPsolver_name == "gurobi") opts.qpsol = blockSQP::QPsolvers::gurobi;
         else throw blockSQP::ParameterError("Unknown QP solver options, known are blockSQP::qpOASES_options, blockSQP::gurobi_options");
     })
-    .method("get_QPsol", [](blockSQP::SQPoptions &opts){
-        if (opts.QP_solver == blockSQP::QPsolvers::qpOASES) return std::string("qpOASES");
-        else if (opts.QP_solver == blockSQP::QPsolvers::gurobi) return std::string("gurobi");
+    .method("get_QP_solver", [](blockSQP::SQPoptions &opts){
+        if (opts.qpsol == blockSQP::QPsolvers::qpOASES) return std::string("qpOASES");
+        else if (opts.qpsol == blockSQP::QPsolvers::gurobi) return std::string("gurobi");
         else throw blockSQP::ParameterError("Unknown QP solver name, known (no neccessarily linked) are qpOASES, gurobi");
     })
-    
-    //.method("get_QPsol", [](blockSQP::SQPoptions &opts){return 1;})
-    //.method("set_QPsol_opts", [](blockSQP::SQPoptions &opts, blockSQP::qpOASES_options QPopts){opts.QP_options = &QPopts;})
-    .method("set_QPsol_opts", [](blockSQP::SQPoptions &opts, blockSQP::QPsolver_options *QPopts){opts.QP_options = QPopts;})
-    .method("set_autoScaling", [](blockSQP::SQPoptions &opts, bool val){opts.autoScaling = val;})
-	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_local_lenience = val;})
+    .method("set_QP_options", [](blockSQP::SQPoptions &opts, blockSQP::QPsolver_options *QPopts){opts.qpsol_options = QPopts;})
+    .method("set_autoScaling", [](blockSQP::SQPoptions &opts, bool val){opts.automatic_scaling = val;})
+	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_filter_overrides = val;})
     .method("set_max_extra_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_extra_steps = val;})
     ;
     
@@ -402,7 +403,7 @@ mod.add_type<blockSQP::SQPmethod>("SQPmethod")
     .method("cpp_finish", &blockSQP::SQPmethod::finish)
     .method("get_primal", [](blockSQP::SQPmethod &optimizer){
             double *ret_xi = new double[optimizer.prob->nVar];
-            if (optimizer.param->autoScaling){
+            if (optimizer.param->automatic_scaling){
                 for (int i = 0; i < optimizer.prob->nVar; i++){
                     ret_xi[i] = optimizer.vars->xi(i) / optimizer.scaled_prob->scaling_factors[i];
                 }

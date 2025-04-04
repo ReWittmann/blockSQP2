@@ -613,79 +613,80 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)()>(&blockSQP::SQPoptions::optionsConsistency))
     .def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)(blockSQP::Problemspec*)>(&blockSQP::SQPoptions::optionsConsistency))
     .def("reset", &blockSQP::SQPoptions::reset)
-	.def_readwrite("printLevel",&blockSQP::SQPoptions::printLevel)
-	.def_readwrite("printColor",&blockSQP::SQPoptions::printColor)
-	.def_readwrite("debugLevel",&blockSQP::SQPoptions::debugLevel)
+	.def_readwrite("print_level",&blockSQP::SQPoptions::print_level)
+	.def_readwrite("result_print_color",&blockSQP::SQPoptions::result_print_color)
+	.def_readwrite("debug_level",&blockSQP::SQPoptions::debug_level)
 	.def_readwrite("eps",&blockSQP::SQPoptions::eps)
 	.def_readwrite("inf",&blockSQP::SQPoptions::inf)
-	.def_readwrite("opttol",&blockSQP::SQPoptions::opttol)
-	.def_readwrite("nlinfeastol",&blockSQP::SQPoptions::nlinfeastol)
-	.def_readwrite("sparseQP",&blockSQP::SQPoptions::sparseQP)
-	.def_readwrite("globalization",&blockSQP::SQPoptions::globalization)
-	.def_readwrite("restoreFeas",&blockSQP::SQPoptions::restoreFeas)
-	.def_readwrite("maxLineSearch",&blockSQP::SQPoptions::maxLineSearch)
-	.def_readwrite("maxConsecReducedSteps",&blockSQP::SQPoptions::maxConsecReducedSteps)
-	.def_readwrite("maxConsecSkippedUpdates",&blockSQP::SQPoptions::maxConsecSkippedUpdates)
-	.def_readwrite("maxItQP",&blockSQP::SQPoptions::maxItQP)
-	.def_readwrite("blockHess",&blockSQP::SQPoptions::blockHess)
-	.def_readwrite("hessScaling",&blockSQP::SQPoptions::hessScaling)
-	.def_readwrite("fallbackScaling",&blockSQP::SQPoptions::fallbackScaling)
-	.def_readwrite("maxTimeQP",&blockSQP::SQPoptions::maxTimeQP)
-	.def_readwrite("iniHessDiag",&blockSQP::SQPoptions::iniHessDiag)
-	.def_readwrite("colEps",&blockSQP::SQPoptions::colEps)
-	.def_readwrite("olEps", &blockSQP::SQPoptions::olEps)
-	.def_readwrite("colTau1",&blockSQP::SQPoptions::colTau1)
-	.def_readwrite("colTau2",&blockSQP::SQPoptions::colTau2)
-	.def_readwrite("minDampQuot",&blockSQP::SQPoptions::minDampQuot)
+	.def_readwrite("optimality_tol",&blockSQP::SQPoptions::optimality_tol)
+	.def_readwrite("feasibility_tol",&blockSQP::SQPoptions::feasibility_tol)
+	.def_readwrite("sparse_mode",&blockSQP::SQPoptions::sparse_mode)
+	.def_readwrite("enable_linesearch",&blockSQP::SQPoptions::enable_linesearch)
+	.def_readwrite("enable_feasibility_restoration",&blockSQP::SQPoptions::enable_feasibility_restoration)
+	.def_readwrite("max_linesearch_steps",&blockSQP::SQPoptions::max_linesearch_steps)
+	.def_readwrite("max_consec_reduced_steps",&blockSQP::SQPoptions::max_consec_reduced_steps)
+	.def_readwrite("max_consec_skipped_updates",&blockSQP::SQPoptions::max_consec_skipped_updates)
+	.def_readwrite("max_QP_iter",&blockSQP::SQPoptions::max_QP_iter)
+	.def_readwrite("block_hess",&blockSQP::SQPoptions::block_hess)
+	.def_readwrite("sizing_strategy",&blockSQP::SQPoptions::sizing_strategy)
+	.def_readwrite("fallback_sizing_strategy",&blockSQP::SQPoptions::fallback_sizing_strategy)
+	.def_readwrite("max_QP_seconds",&blockSQP::SQPoptions::max_QP_seconds)
+	.def_readwrite("initial_hess_scale",&blockSQP::SQPoptions::initial_hess_scale)
+	.def_readwrite("COL_eps",&blockSQP::SQPoptions::COL_eps)
+	.def_readwrite("OL_eps", &blockSQP::SQPoptions::OL_eps)
+	.def_readwrite("COL_tau_1",&blockSQP::SQPoptions::COL_tau_1)
+	.def_readwrite("COL_tau_2",&blockSQP::SQPoptions::COL_tau_2)
+	.def_readwrite("min_damping_quotient",&blockSQP::SQPoptions::min_damping_quotient)
 	.def_readwrite("SR1_abstol",&blockSQP::SQPoptions::SR1_abstol)
 	.def_readwrite("SR1_reltol",&blockSQP::SQPoptions::SR1_reltol)
-	.def_readwrite("hessDampFac",&blockSQP::SQPoptions::hessDampFac)
-	.def_readwrite("hessUpdate",&blockSQP::SQPoptions::hessUpdate)
-	.def_readwrite("fallbackUpdate",&blockSQP::SQPoptions::fallbackUpdate)
+	.def_readwrite("BFGS_damping_factor",&blockSQP::SQPoptions::BFGS_damping_factor)
+	.def_readwrite("hess_approximation",&blockSQP::SQPoptions::hess_approximation)
+	.def_readwrite("fallback_approximation",&blockSQP::SQPoptions::fallback_approximation)
 	.def_readwrite("indef_local_only", &blockSQP::SQPoptions::indef_local_only)
-	.def_readwrite("hessLimMem",&blockSQP::SQPoptions::hessLimMem)
-	.def_readwrite("hessMemsize",&blockSQP::SQPoptions::hessMemsize)
-	.def_readwrite("whichSecondDerv",&blockSQP::SQPoptions::whichSecondDerv)
-	.def_readwrite("skipFirstGlobalization",&blockSQP::SQPoptions::skipFirstGlobalization)
-	.def_readwrite("convStrategy",&blockSQP::SQPoptions::convStrategy)
-	.def_readwrite("maxConvQP",&blockSQP::SQPoptions::maxConvQP)
-	.def_readwrite("hess_regularizationFactor", &blockSQP::SQPoptions::hess_regularizationFactor)
-	.def_readwrite("maxSOCiter",&blockSQP::SQPoptions::maxSOCiter)
+	.def_readwrite("limited_memory",&blockSQP::SQPoptions::limited_memory)
+	.def_readwrite("memory_size",&blockSQP::SQPoptions::memory_size)
+	.def_readwrite("exact_hess_usage",&blockSQP::SQPoptions::exact_hess_usage)
+	.def_readwrite("skip_first_linesearch",&blockSQP::SQPoptions::skip_first_linesearch)
+	.def_readwrite("conv_strategy",&blockSQP::SQPoptions::conv_strategy)
+	.def_readwrite("max_conv_QPs",&blockSQP::SQPoptions::max_conv_QPs)
+	.def_readwrite("hess_regularization_factor", &blockSQP::SQPoptions::hess_regularization_factor)
+	.def_readwrite("max_SOC",&blockSQP::SQPoptions::max_SOC)
 	.def_readwrite("max_bound_refines", &blockSQP::SQPoptions::max_bound_refines)
 	.def_readwrite("max_correction_steps", &blockSQP::SQPoptions::max_correction_steps)
 	.def_readwrite("dep_bound_tolerance", &blockSQP::SQPoptions::dep_bound_tolerance)
-	.def_readwrite("max_local_lenience", &blockSQP::SQPoptions::max_local_lenience)
-	.def_readwrite("tau_H", &blockSQP::SQPoptions::tau_H)
-	.def_readwrite("convKappa0", &blockSQP::SQPoptions::convKappa0)
-    .def_readwrite("convKappaMax", &blockSQP::SQPoptions::convKappaMax)
-	.def_readwrite("restZeta", &blockSQP::SQPoptions::restZeta)
-	.def_readwrite("restRho", &blockSQP::SQPoptions::restRho)
-    .def_readwrite("autoScaling", &blockSQP::SQPoptions::autoScaling)
+	.def_readwrite("max_filter_overrides", &blockSQP::SQPoptions::max_filter_overrides)
+	.def_readwrite("conv_tau_H", &blockSQP::SQPoptions::conv_tau_H)
+	.def_readwrite("conv_kappa_0", &blockSQP::SQPoptions::conv_kappa_0)
+    .def_readwrite("conv_kappa_max", &blockSQP::SQPoptions::conv_kappa_max)
+	.def_readwrite("restoration_zeta", &blockSQP::SQPoptions::restoration_zeta)
+	.def_readwrite("restoration_rho", &blockSQP::SQPoptions::restoration_rho)
+    .def_readwrite("automatic_scaling", &blockSQP::SQPoptions::automatic_scaling)
 
     .def_readwrite("kappaF", &blockSQP::SQPoptions::kappaF)
     .def_readwrite("max_extra_steps", &blockSQP::SQPoptions::max_extra_steps)
-    .def_readwrite("allow_premature_termination", &blockSQP::SQPoptions::allow_premature_termination)
-	.def_property("QP_solver", [](blockSQP::SQPoptions &opts)->std::string{
-        if (opts.QP_solver == blockSQP::QPsolvers::qpOASES) return "qpOASES";
-        else if (opts.QP_solver == blockSQP::QPsolvers::gurobi) return "gurobi";
-        else if (opts.QP_solver == blockSQP::QPsolvers::qpalm) return "qpalm";
+    .def_readwrite("enable_premature_termination", &blockSQP::SQPoptions::enable_premature_termination)
+	.def_property("qpsol", [](blockSQP::SQPoptions &opts)->std::string{
+        if (opts.qpsol == blockSQP::QPsolvers::qpOASES) return "qpOASES";
+        else if (opts.qpsol == blockSQP::QPsolvers::gurobi) return "gurobi";
+        else if (opts.qpsol == blockSQP::QPsolvers::qpalm) return "qpalm";
         return "unset";
         },
     [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
-        if (QPsolver_name == "qpOASES") opts.QP_solver = blockSQP::QPsolvers::qpOASES;
-        else if (QPsolver_name == "gurobi") opts.QP_solver = blockSQP::QPsolvers::gurobi;
-        else if (QPsolver_name  == "qpalm") opts.QP_solver = blockSQP::QPsolvers::qpalm;
+        if (QPsolver_name == "qpOASES") opts.qpsol = blockSQP::QPsolvers::qpOASES;
+        else if (QPsolver_name == "gurobi") opts.qpsol = blockSQP::QPsolvers::gurobi;
+        else if (QPsolver_name  == "qpalm") opts.qpsol = blockSQP::QPsolvers::qpalm;
         else throw blockSQP::ParameterError("Unknown QP solver, known (no neccessarily linked) are qpOASES, gurobi, qpalm");
         return;
     }
     )
-    .def_readwrite("QP_options", &blockSQP::SQPoptions::QP_options)
+    .def_readwrite("qpsol_options", &blockSQP::SQPoptions::qpsol_options)
 	;
 
 py::class_<blockSQP::QPsolver_options>(m, "QPsolver_options");
 
 py::class_<blockSQP::qpOASES_options, blockSQP::QPsolver_options>(m, "qpOASES_options")
     .def(py::init<>())
+    .def_readwrite("sparsityLevel", &blockSQP::qpOASES_options::sparsityLevel)
     .def_readwrite("printLevel", &blockSQP::qpOASES_options::printLevel)
     .def_readwrite("terminationTolerance", &blockSQP::qpOASES_options::terminationTolerance)
     ;
@@ -864,9 +865,9 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
     .def("set_iterate_", &blockSQP::SQPmethod::set_iterate)
     .def("get_xi", static_cast<blockSQP::Matrix (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::get_xi), py::return_value_policy::take_ownership)
     .def("get_lambda", static_cast<blockSQP::Matrix (blockSQP::SQPmethod::*)()>(&blockSQP::SQPmethod::get_lambda), py::return_value_policy::take_ownership)
-    .def("get_scaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.scaled_prob->scaling_factors.get(), M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
-    .def("get_rescaleFactors", [](blockSQP::SQPmethod &M){if (M.param->autoScaling) return double_pointer_interface(M.vars->rescaleFactors.get(), M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
-    .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->autoScaling){M.apply_rescaling(arr->ptr);} return;})
+    .def("get_scaleFactors", [](blockSQP::SQPmethod &M){if (M.param->automatic_scaling) return double_pointer_interface(M.scaled_prob->scaling_factors.get(), M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
+    .def("get_rescaleFactors", [](blockSQP::SQPmethod &M){if (M.param->automatic_scaling) return double_pointer_interface(M.vars->rescaleFactors.get(), M.scaled_prob->nVar); else return double_pointer_interface();}, py::return_value_policy::take_ownership)
+    .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->automatic_scaling){M.apply_rescaling(arr->ptr);} return;})
     .def("dec_nquasi", [](blockSQP::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
 

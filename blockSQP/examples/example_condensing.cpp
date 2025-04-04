@@ -236,7 +236,7 @@ int main(){
 
 
     //Condense the QP
-    blockSQP::SymMatrix *condensed_hess = nullptr;
+    blockSQP::SymMatrix *condensed_hess = new blockSQP::SymMatrix[C->condensed_num_hessblocks];
     blockSQP::Sparse_Matrix condensed_Jacobian;
     blockSQP::Matrix condensed_h;
     blockSQP::Matrix condensed_lb_var;

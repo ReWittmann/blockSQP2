@@ -102,7 +102,7 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_sqputils.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
-#target_compile_options(blockSQP PUBLIC -fPIC)
+target_compile_options(blockSQP PUBLIC -g -O0)
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpos_SOURCE_DIR}/include ${qpos_SOURCE_DIR}/include/qpOASES)

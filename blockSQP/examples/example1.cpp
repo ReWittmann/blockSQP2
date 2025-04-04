@@ -48,9 +48,9 @@ class MyProblem : public Problemspec{
         /// Set initial values for xi (and possibly lambda) and parts of the Jacobian that correspond to linear constraints (sparse version).
         virtual void initialize( Matrix &xi,            ///< optimization variables
                                  Matrix &lambda,        ///< Lagrange multipliers
-                                 double *&jacNz,        ///< nonzero elements of constraint Jacobian
-                                 int *&jacIndRow,       ///< row indices of nonzero elements
-                                 int *&jacIndCol        ///< starting indices of columns
+                                 double *jacNz,        ///< nonzero elements of constraint Jacobian
+                                 int *jacIndRow,       ///< row indices of nonzero elements
+                                 int *jacIndCol        ///< starting indices of columns
                                  );
 
         /// Evaluate objective, constraints, and derivatives (dense version).
@@ -60,7 +60,7 @@ class MyProblem : public Problemspec{
                                Matrix &constr,          ///< constraint function values
                                Matrix &gradObj,         ///< gradient of objective
                                Matrix &constrJac,       ///< constraint Jacobian (dense)
-                               SymMatrix *&hess,        ///< Hessian of the Lagrangian (blockwise)
+                               SymMatrix *hess,        ///< Hessian of the Lagrangian (blockwise)
                                int dmode,               ///< derivative mode
                                int *info                ///< error flag
                                );
@@ -71,19 +71,19 @@ class MyProblem : public Problemspec{
                                double *objval,          ///< objective function value
                                Matrix &constr,          ///< constraint function values
                                Matrix &gradObj,         ///< gradient of objective
-                               double *&jacNz,          ///< nonzero elements of constraint Jacobian
-                               int *&jacIndRow,         ///< row indices of nonzero elements
-                               int *&jacIndCol,         ///< starting indices of columns
-                               SymMatrix *&hess,        ///< Hessian of the Lagrangian (blockwise)
+                               double *jacNz,          ///< nonzero elements of constraint Jacobian
+                               int *jacIndRow,         ///< row indices of nonzero elements
+                               int *jacIndCol,         ///< starting indices of columns
+                               SymMatrix *hess,        ///< Hessian of the Lagrangian (blockwise)
                                int dmode,               ///< derivative mode
                                int *info                ///< error flag
                                );
 
         /// Generic method to convert dense constraint Jacobian to a sparse matrix in Harwell--Boeing (column compressed) format.
         virtual void convertJacobian( const Matrix &constrJac,  ///< constraint Jacobian (dense)
-                                      double *&jacNz,           ///< nonzero elements of constraint Jacobian
-                                      int *&jacIndRow,          ///< row indices of nonzero elements
-                                      int *&jacIndCol,          ///< starting indices of columns
+                                      double *jacNz,           ///< nonzero elements of constraint Jacobian
+                                      int *jacIndRow,          ///< row indices of nonzero elements
+                                      int *jacIndCol,          ///< starting indices of columns
                                       bool firstCall = 0        ///< indicates if this method is called for the first time
                                       );
 };
@@ -125,7 +125,7 @@ MyProblem::~MyProblem(){
 }
 
 
-void MyProblem::convertJacobian( const Matrix &constrJac, double *&jacNz, int *&jacIndRow, int *&jacIndCol, bool firstCall ){
+void MyProblem::convertJacobian( const Matrix &constrJac, double *jacNz, int *jacIndRow, int *jacIndCol, bool firstCall ){
     int nnz, count, i, j;
 
     if( firstCall )
@@ -172,6 +172,7 @@ void MyProblem::convertJacobian( const Matrix &constrJac, double *&jacNz, int *&
 
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
 {
+    std::cout << "Initialize called\n";
     // set initial values for xi and lambda
     lambda.Initialize( 0.0 );
     for( int i=0; i<nVar; i++ )
@@ -179,8 +180,8 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
 }
 
 
-void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol )
-{
+void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol )
+{    std::cout << "Initialize called\n";
     Matrix constrDummy, gradObjDummy, constrJac;
     SymMatrix *hessDummy;
     double objvalDummy;
@@ -206,11 +207,10 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *&jacNz, int *&ja
  */
 
 void MyProblem::evaluate( const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr,
-                          Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                          SymMatrix *&hess, int dmode, int *info )
+                          Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
+                          SymMatrix *hess, int dmode, int *info )
 {
     Matrix constrJac;
-
     constrJac.Dimension( nCon, nVar ).Initialize( myInf );
     evaluate( xi, lambda, objval, constr, gradObj, constrJac, hess, dmode, info );
 
@@ -221,7 +221,7 @@ void MyProblem::evaluate( const Matrix &xi, const Matrix &lambda, double *objval
 
 
 void MyProblem::evaluate( const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr,
-                          Matrix &gradObj, Matrix &constrJac, SymMatrix *&hess,
+                          Matrix &gradObj, Matrix &constrJac, SymMatrix *hess,
                           int dmode, int *info )
 {
     *info = 0;
@@ -297,47 +297,49 @@ int main( int argc, const char* argv[] )
     /* Options for SQP solver */
     /*------------------------*/
     opts = new SQPoptions();
-    //opts->opttol = 1.0e-12;
-    //opts->nlinfeastol = 1.0e-12;
-    opts->opttol = 1.0e-8;
-    opts->nlinfeastol = 1.0e-8;
+    //opts->optimality_tol = 1.0e-12;
+    //opts->feasibility_tol = 1.0e-12;
+    opts->optimality_tol = 1.0e-12;
+    opts->feasibility_tol = 1.0e-12;
 
-    opts->autoScaling = false;
-    // 0: no globalization, 1: filter line search
-    opts->globalization = 0;
+    opts->automatic_scaling = false;
+    // 0: no enable_linesearch, 1: filter line search
+    opts->enable_linesearch = 0;
     // 0: (scaled) identity, 1: SR1, 2: BFGS
-    opts->hessUpdate = 1;
-    opts->fallbackUpdate = 2;
+    opts->hess_approximation = 2;
+    opts->fallback_approximation = 2;
     opts->indef_local_only = false;
+    opts->max_filter_overrides = 0;
 
-    opts->iniHessDiag = 1.0;
+    opts->initial_hess_scale = 1.0;
     // 0: initial Hessian is diagonal matrix, 1: scale initial Hessian according to Nocedal p.143,
     // 2: scale initial Hessian with Oren-Luenberger factor 3: scale initial Hessian with geometric mean of 1 and 2
     // 4: scale Hessian in every step with centered Oren-Luenberger sizing according to Tapia paper
-    opts->hessScaling = 0;
-    // scaling strategy for fallback BFGS update if SR1 and globalization is used
-    opts->fallbackScaling = 0;
+    opts->sizing_strategy = 0;
+    // scaling strategy for fallback BFGS update if SR1 and enable_linesearch is used
+    opts->fallback_sizing_strategy = 0;
     // Size of limited memory
-    opts->hessLimMem = 1;
-    opts->hessMemsize = 20;
+    opts->limited_memory = 1;
+    opts->memory_size = 20;
     // If too many updates are skipped, reset Hessian
-    opts->maxConsecSkippedUpdates = 200;
+    opts->max_consec_skipped_updates = 200;
     // 0: full space Hessian approximation (ignore block structure), 1: blockwise updates
-    opts->blockHess = 1;
-    opts->whichSecondDerv = 0;
-    opts->sparseQP = 2;
-    opts->printLevel = 2;
-    opts->debugLevel = 1;
+    opts->block_hess = 1;
+    opts->exact_hess_usage = 0;
+    opts->sparse_mode = 0;
+    opts->print_level = 2;
+    opts->debug_level = 0;
 
     
-    opts->QP_solver = QPsolvers::qpOASES;
-    qpOASES_options QPopts;
-    QPopts.printLevel = 1;
-    opts->QP_options = &QPopts;
+    //opts->qpsol = QPsolvers::qpOASES;
+    //qpOASES_options QPopts;
+    //QPopts.printLevel = 1;
+    //QPopts.sparsityLevel = 2;
+    //opts->qpsol_options = &QPopts;
     
-    //opts->QP_solver = QPSOLVER::qpalm;
+    //opts->qpsol = QPSOLVER::qpalm;
     
-    //opts->maxConvQP = 5;
+    //opts->max_conv_QPs = 5;
 
 
     /*-------------------------------------------------*/
@@ -347,6 +349,8 @@ int main( int argc, const char* argv[] )
     meth = new SQPmethod( prob, opts, stats );
 
     meth->init();
+    std::cout << meth->vars->xi;
+
     ret = meth->run( 100 );
 
     meth->finish();

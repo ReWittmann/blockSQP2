@@ -30,7 +30,7 @@ namespace blockSQP{
 
 void SQPmethod::init(){
     // Print header and information about the algorithmic parameters
-    printInfo( param->printLevel );
+    printInfo( param->print_level );
 
     // Open output files
     stats->initStats( param );
@@ -40,7 +40,7 @@ void SQPmethod::init(){
     initializeFilter();
 
     // Set initial values for all xi and set the Jacobian for linear constraints
-    if( param->sparseQP )
+    if( param->sparse_mode )
         prob->initialize(vars->xi, vars->lambda, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
     else
         prob->initialize(vars->xi, vars->lambda, vars->constrJac);
@@ -53,18 +53,18 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     int it = 0, infoQP = 0, infoEval = 0;
     bool skipLineSearch = false;
     bool hasConverged = false;
-    int whichDerv = param->whichSecondDerv;
+    int whichDerv = param->exact_hess_usage;
     int n_convShift;
 
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         //return -1;
-        return print_SQPresult(SQPresult::misc_error, param->result_output);
+        return print_SQPresult(SQPresult::misc_error, param->result_print_color);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
         // SQP iteration 0
-        if (param->sparseQP)
+        if (param->sparse_mode)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         else
@@ -75,7 +75,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars.get(), param, hasConverged );
-        if (hasConverged) return print_SQPresult(SQPresult::success, param->result_output);
+        if (hasConverged) return print_SQPresult(SQPresult::success, param->result_print_color);
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
@@ -117,7 +117,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                         std::cout << "Failed\n";
                 }
 
-                if (qpError && param->restoreFeas && vars->cNorm > 0.01 * param->nlinfeastol){
+                if (qpError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feasibility_tol){
                     std::cout << "Start feasibility restoration phase\n";
                     qpError = feasibilityRestorationPhase();
                     vars->steptype = 3;
@@ -125,7 +125,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
 
                 if (qpError){
                     std::cout << "QP error, stop\n";
-                    return print_SQPresult(SQPresult::qp_failure, param->result_output);
+                    return print_SQPresult(SQPresult::qp_failure, param->result_print_color);
                 }
             }
             else vars->steptype = 1;
@@ -137,7 +137,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
                 printf("InfoQP is %d\n", infoQP);
-                return print_SQPresult(SQPresult::qp_failure, param->result_output);
+                return print_SQPresult(SQPresult::qp_failure, param->result_print_color);
             }
             else vars->steptype = 1;
         }
@@ -158,15 +158,15 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
 
             // Invoke feasibility restoration phase
-            if (feasError && param->restoreFeas && vars->cNorm > 0.01 * param->nlinfeastol){
+            if (feasError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feasibility_tol){
                 printf("***Start feasibility restoration phase.***\n");
                 feasError = feasibilityRestorationPhase();
                 vars->steptype = 3;
             }
             
             // If everything failed, abort.
-            if (feasError == 1 || feasError > 2) return print_SQPresult(SQPresult::restoration_failure, param->result_output);
-            else if (feasError == 2) return print_SQPresult(SQPresult::local_infeasibility, param->result_output);
+            if (feasError == 1 || feasError > 2) return print_SQPresult(SQPresult::restoration_failure, param->result_print_color);
+            else if (feasError == 2) return print_SQPresult(SQPresult::local_infeasibility, param->result_print_color);
         }
 
         /////////////////////////////////////////////////////////////
@@ -174,17 +174,17 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////////////////////
 
         /// Determine steplength alpha
-        if (param->globalization == 0 || (param->skipFirstGlobalization && stats->itCount == 1)){
-            // No globalization strategy, but reduce step if function cannot be evaluated
+        if (param->enable_linesearch == 0 || (param->skip_first_linesearch && stats->itCount == 1)){
+            // No enable_linesearch strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
-                return print_SQPresult(SQPresult::eval_failure, param->result_output);
+                return print_SQPresult(SQPresult::eval_failure, param->result_print_color);
             }
             vars->steptype = 0;
         }
-        else if (param->globalization == 1 && !skipLineSearch){
+        else if (param->enable_linesearch == 1 && !skipLineSearch){
             // Filter line search based on Waechter et al., 2006 (Ipopt paper)
-            if (filterLineSearch() || vars->reducedStepCount > param->maxConsecReducedSteps){
+            if (filterLineSearch() || vars->reducedStepCount > param->max_consec_reduced_steps){
                 // Filter line search did not produce a step. Now there are a few things we can try ...
                 bool lsError = true;
                 
@@ -193,8 +193,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->solution_found){
                     vars->restore_iterate();
-                    if (vars->tol <= 1e-2*param->opttol && vars->cNormS <= 1e-2*param->nlinfeastol) return print_SQPresult(SQPresult::super_success, param->result_output);
-                    else return print_SQPresult(SQPresult::success, param->result_output);
+                    if (vars->tol <= 1e-2*param->optimality_tol && vars->cNormS <= 1e-2*param->feasibility_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
+                    else return print_SQPresult(SQPresult::success, param->result_print_color);
                 }
                 
                 if (vars->KKT_heuristic_enabled){
@@ -216,8 +216,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //Heuristic 3: Ignore acceptance criteria up to a limited number of times if we are close to a solution and feasible
                 //Remove entries from filter that dominate the new point.
 
-                //if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= param->nlinfeastol && vars->remaining_filter_overrides > 0){
-                if (lsError && vars->tol <= std::pow(param->opttol, 2./3.) && vars->cNormS <= param->nlinfeastol && vars->remaining_filter_overrides > 0){
+                //if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= param->feasibility_tol && vars->remaining_filter_overrides > 0){
+                if (lsError && vars->tol <= std::pow(param->optimality_tol, 2./3.) && vars->cNormS <= param->feasibility_tol && vars->remaining_filter_overrides > 0){
                     force_accept(1.0);
                     vars->remaining_filter_overrides--;
                     lsError = false;
@@ -226,11 +226,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
 
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
-                if (param->allow_premature_termination && lsError && vars->cNormS <= param->nlinfeastol && vars->tol <= std::pow(param->opttol, 0.75))
-                    return print_SQPresult(SQPresult::partial_success, param->result_output);
+                if (param->enable_premature_termination && lsError && vars->cNormS <= param->feasibility_tol && vars->tol <= std::pow(param->optimality_tol, 0.75))
+                    return print_SQPresult(SQPresult::partial_success, param->result_print_color);
 
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
-                if (lsError && vars->cNorm > 0.01 * param->nlinfeastol && vars->steptype < 2){
+                if (lsError && vars->cNorm > 0.01 * param->feasibility_tol && vars->steptype < 2){
                     // Don't do this twice in a row!
                     printf("***Warning! Steplength too short. Trying to reduce constraint violation...");
                     // Integration over whole time interval
@@ -250,7 +250,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
 
                 // If this does not yield a successful step, start restoration phase
-                if (lsError && vars->cNorm > 0.01 * param->nlinfeastol && param->restoreFeas){
+                if (lsError && vars->cNorm > 0.01 * param->feasibility_tol && param->enable_feasibility_restoration){
                     printf("***Warning! Steplength too short. Start feasibility restoration phase.***\n");
                     // Solve NLP with minimum norm objective
                     lsError = bool(feasibilityRestorationPhase());
@@ -260,7 +260,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 // If everything failed, abort.
                 if (lsError){
                     printf( "***Line search error. Stop.***\n" );
-                    return print_SQPresult(SQPresult::linesearch_failure, param->result_output);
+                    return print_SQPresult(SQPresult::linesearch_failure, param->result_print_color);
                 }
             }
             else{
@@ -277,7 +277,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         calcLagrangeGradient( vars->gamma, 0 );
 
         /// Evaluate functions and gradients at the new xi
-        if (param->sparseQP){
+        if (param->sparse_mode){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         }
@@ -304,7 +304,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     vars->solution_found = true;
                 }
             }
-            else return print_SQPresult(SQPresult::success, param->result_output);
+            else return print_SQPresult(SQPresult::success, param->result_print_color);
             //return RES::SUCCESS; //Convergence achieved!
         }
 
@@ -312,11 +312,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         if (vars->solution_found && param->max_extra_steps > 0){
             if (vars->n_extra >= param->max_extra_steps){
                 vars->restore_iterate();
-                if (vars->tol < 1e-2*param->opttol && vars->cNormS < 1e-2*param->nlinfeastol) return print_SQPresult(SQPresult::super_success, param->result_output);
-                else return print_SQPresult(SQPresult::success, param->result_output);
+                if (vars->tol < 1e-2*param->optimality_tol && vars->cNormS < 1e-2*param->feasibility_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
+                else return print_SQPresult(SQPresult::success, param->result_print_color);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
-            if (std::max(vars->tol/param->opttol, vars->cNormS/param->nlinfeastol) < std::max(vars->tolOpt_save/param->opttol, vars->cNormSOpt_save/param->nlinfeastol))
+            if (std::max(vars->tol/param->optimality_tol, vars->cNormS/param->feasibility_tol) < std::max(vars->tolOpt_save/param->optimality_tol, vars->cNormSOpt_save/param->feasibility_tol))
                 vars->save_iterate();
             vars->n_extra++;
         }
@@ -357,32 +357,32 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         //Increment memory counter of each block and scaling memory counter unless step is restoration step.
         if (vars->steptype < 3){
             for (int ind = 0; ind < vars->nBlocks; ind++){
-                vars->nquasi[ind] += int(vars->nquasi[ind] < param->hessMemsize);
+                vars->nquasi[ind] += int(vars->nquasi[ind] < param->memory_size);
             }
             vars->n_scaleIt += int(vars->n_scaleIt < vars->dg_nsave);
         }
 
         //Rescale variables if automatic scaling is enabled. This has to be done before limited memory quasi newton updates are applied.
-        if (param->autoScaling) scaling_heuristic();
+        if (param->automatic_scaling) scaling_heuristic();
 
         ///
         ///PHASE 3.5: Update the Hessian 'approximations' and related data///
         ///
 
-        if (param->hessLimMem){
+        if (param->limited_memory){
             //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
-                if (param->fallbackUpdate <= 2)
-                    calcHessianUpdateLimitedMemory(param->fallbackUpdate, param->fallbackScaling, vars->hess2.get());
+                if (param->fallback_approximation <= 2)
+                    calcHessianUpdateLimitedMemory(param->fallback_approximation, param->fallback_sizing_strategy, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
-                if (param->whichSecondDerv < 2){
+                if (param->exact_hess_usage < 2){
                     //Calculate/Update first (pos. indefinite) hessian
-                    if (param->hessUpdate <= 2 || param->hessUpdate > 6)
-                        calcHessianUpdateLimitedMemory(param->hessUpdate, param->hessScaling, vars->hess1.get());
-                    else if (param->hessUpdate == 4)
+                    if (param->hess_approximation <= 2 || param->hess_approximation > 6)
+                        calcHessianUpdateLimitedMemory(param->hess_approximation, param->sizing_strategy, vars->hess1.get());
+                    else if (param->hess_approximation == 4)
                         calcFiniteDiffHessian(vars->hess1.get());
                     vars->hess2_updated = false;
                 }
@@ -391,38 +391,38 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         }
         else{
             //Vectors deltaXi and gamma need not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
-            if (param->whichSecondDerv < 2){
-                if (param->hessUpdate <= 2)
-                    calcHessianUpdate(param->hessUpdate, param->hessScaling, vars->hess1.get());
-                else if (param->hessUpdate == 4)
+            if (param->exact_hess_usage < 2){
+                if (param->hess_approximation <= 2)
+                    calcHessianUpdate(param->hess_approximation, param->sizing_strategy, vars->hess1.get());
+                else if (param->hess_approximation == 4)
                     calcFiniteDiffHessian(vars->hess1.get());
             }
 
             //Also update the fallback hessian as we need to update it in every iteration regardless of whether it is needed
             if (vars->hess2 != nullptr){
-                if (param->fallbackUpdate <= 2)
-                    calcHessianUpdate(param->fallbackUpdate, param->fallbackScaling, vars->hess2.get());
+                if (param->fallback_approximation <= 2)
+                    calcHessianUpdate(param->fallback_approximation, param->fallback_sizing_strategy, vars->hess2.get());
                 vars->hess2_updated = true;
             }
         }
 
         //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
-        if (param->convStrategy >= 1 && param->maxConvQP > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
-            if (param->maxConvQP > 2){
+        if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
+            if (param->max_conv_QPs > 2){
                 //If more than one convexified indefinite QP is tried, shift convexification factor of the successful QP to the last attempted convexified QP.
                 //If more than two convexified indefinite QPs are tried and none were accepted, shift last factor to first factor.
-                n_convShift = vars->hess_num_accepted - param->maxConvQP + 1 + (param->maxConvQP - 3) * int(vars->hess_num_accepted == param->maxConvQP);
+                n_convShift = vars->hess_num_accepted - param->max_conv_QPs + 1 + (param->max_conv_QPs - 3) * int(vars->hess_num_accepted == param->max_conv_QPs);
                 vars->convKappa *= std::pow(2, n_convShift);
             }
             else{
                 //If only one convexified indefinite QP is tried, increase convexification factor if it was rejected, decrease it if it was accepted.
-                if (vars->hess_num_accepted == param->maxConvQP) vars->convKappa *= 2;
+                if (vars->hess_num_accepted == param->max_conv_QPs) vars->convKappa *= 2;
                 else vars->convKappa *= 0.5;
             }
-            if (vars->convKappa > 2.0) vars->convKappa = 2.0;
+            if (vars->convKappa > param->conv_kappa_max) vars->convKappa = param->conv_kappa_max;
         }
         //The scaling factor adjustment in one line of code
-        //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->maxConvQP + 1 + (param->maxConvQP - 3) * (vars->hess_num_accepted == param->maxConvQP))*(param->maxConvQP > 2) + (1 - 2*(vars->hess_num_accepted < param->maxConvQP))*(param->maxConvQP <= 2))) * (param->convStrategy >= 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->convStrategy < 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
+        //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->max_conv_QPs + 1 + (param->max_conv_QPs - 3) * (vars->hess_num_accepted == param->max_conv_QPs))*(param->max_conv_QPs > 2) + (1 - 2*(vars->hess_num_accepted < param->max_conv_QPs))*(param->max_conv_QPs <= 2))) * (param->conv_strategy >= 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->conv_strategy < 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
         vars->hess = vars->hess1.get();
 
         //stats->itCount++;

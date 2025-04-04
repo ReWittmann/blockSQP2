@@ -147,7 +147,7 @@ void SQPmethod::apply_rescaling(const double *resfactors){
         vars->gradLagrange(i) /= resfactors[i];
     }
 
-    if (param->sparseQP){
+    if (param->sparse_mode){
         for (int i = 0; i < prob->nVar; i++){
             for (int k = vars->jacIndCol[i]; k < vars->jacIndCol[i+1]; k++){
                 vars->jacNz[k] /= resfactors[i];
@@ -163,7 +163,7 @@ void SQPmethod::apply_rescaling(const double *resfactors){
     }
 
     //Rescale past iteration data: Hessian(-approximation)s, variable and Lagrange gradient steps, scalar products
-    if (!param->hessLimMem){
+    if (!param->limited_memory){
         //For full memory rescale the current Hessians and the last variable/gradient step delta/gamma pair
         for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++){
             for (int i = 0; i < vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock]; i++){
@@ -182,8 +182,8 @@ void SQPmethod::apply_rescaling(const double *resfactors){
     }
     else{
         //For limited memory, rescale only exact Hessian blocks and all variable/gradient step delta/gamma pairs that are still used for updates
-        if (param->whichSecondDerv > 0){
-            for (int iBlock = (vars->nBlocks - 1)*int(param->whichSecondDerv == 1); iBlock < vars->nBlocks; iBlock++){
+        if (param->exact_hess_usage > 0){
+            for (int iBlock = (vars->nBlocks - 1)*int(param->exact_hess_usage == 1); iBlock < vars->nBlocks; iBlock++){
                 for (int i = 0; i < vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock]; i++){
                     for (int j = 0; j <= i; j++){
                         vars->hess1[iBlock](i,j) /= resfactors[vars->blockIdx[iBlock] + i] * resfactors[vars->blockIdx[iBlock] + j];

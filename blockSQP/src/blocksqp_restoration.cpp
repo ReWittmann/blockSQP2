@@ -73,6 +73,7 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
 }
 
 RestorationProblem::~RestorationProblem(){
+    delete[] blockIdx;
     //delete[] jacNzOrig;
     //delete[] jacIndRowOrig;
     //delete[] jacIndColOrig;

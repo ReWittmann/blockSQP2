@@ -46,7 +46,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
     ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
-    if( !param->sparseQP ){
+    if (!param->sparse_mode){
         constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
         jacNz = nullptr;
         jacIndRow = nullptr;
@@ -57,19 +57,19 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         jacIndRow = std::make_unique<int[]>(prob->nnz);
         jacIndCol = std::make_unique<int[]>(prob->nVar + 1);
     }
-
+    
     //Allocate Hessian data
     int maxblocksize;
     // Set nBlocks structure according to if we use block updates or not
-    if (param->blockHess == 0 || prob->nBlocks == 1){
+    if (param->block_hess == 0 || prob->nBlocks == 1){
         nBlocks = 1;
         blockIdx = std::make_unique<int[]>(2);
         blockIdx[0] = 0;
         blockIdx[1] = prob->nVar;
         maxblocksize = prob->nVar;
-        //param->whichSecondDerv = 0;
+        //param->exact_hess_usage = 0;
     }
-    else if (param->blockHess == 2 && prob->nBlocks > 1){
+    else if (param->block_hess == 2 && prob->nBlocks > 1){
         // hybrid strategy: 1 block for constraints, 1 for objective
         nBlocks = 2;
         blockIdx = std::make_unique<int[]>(3);
@@ -98,7 +98,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     }
 
     // For SR1 or finite differences, maintain two Hessians
-    if (param->hessUpdate == 1 || param->hessUpdate == 4 || param->hessUpdate == 6 || param->hessUpdate > 6){
+    if (param->hess_approximation == 1 || param->hess_approximation == 4 || param->hess_approximation == 6 || param->hess_approximation > 6){
         hess2 = std::make_unique<SymMatrix[]>(nBlocks);
         for (int iBlock = 0; iBlock < nBlocks; iBlock++){
             Bsize = blockIdx[iBlock + 1] - blockIdx[iBlock];
@@ -118,9 +118,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     int nVar = prob->nVar;
     int nCon = prob->nCon;
 
-    //Allocate space for one more delta-gamma pair than hessMemsize so we don't overwrite the oldest pair directly after a successful QP solve.
+    //Allocate space for one more delta-gamma pair than memory_size so we don't overwrite the oldest pair directly after a successful QP solve.
     //The linesearch may still fall back to the convex QP, which may require calculating the limited-memory fallback Hessian, which starts at the oldest step.
-    dg_nsave = std::max(std::max(int(param->hessLimMem)*param->hessMemsize + 1, int(param->autoScaling)*5), 1);
+    dg_nsave = std::max(std::max(int(param->limited_memory)*param->memory_size + 1, int(param->automatic_scaling)*5), 1);
     dg_pos = -1;
 
     deltaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
@@ -156,6 +156,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     noUpdateCounter = std::make_unique<int[]>(nBlocks);
     for (int iBlock = 0; iBlock < nBlocks; iBlock++) noUpdateCounter[iBlock] = -1;
     nRestIt = 0;
+    remaining_filter_overrides = param->max_filter_overrides;
 
     // Flags
     conv_qp_only = param->indef_local_only;
@@ -172,10 +173,10 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
 
     // Convexification strategy
     hess_num_accepted = 0;
-    convKappa = param->convKappa0;
+    convKappa = param->conv_kappa_0;
 
     // Scaling heuristic
-    if (param->autoScaling){
+    if (param->automatic_scaling){
         rescaleFactors = std::make_unique<double[]>(prob->nVar);
         vfreeScale = 1.0;
         scaled_prob = static_cast<scaled_Problemspec*>(prob);
@@ -185,7 +186,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     n_scaleIt = 0;
     
     //Derived from parameters
-    modified_hess_regularizationFactor = param->hess_regularizationFactor;
+    modified_hess_regularizationFactor = param->hess_regularization_factor;
 
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;

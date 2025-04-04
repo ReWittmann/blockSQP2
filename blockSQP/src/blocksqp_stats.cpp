@@ -56,7 +56,7 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
 
     if( itCount == 0 )
     {
-        if( param->printLevel > 0 )
+        if( param->print_level > 0 )
         {
             prob->printInfo();
 
@@ -66,14 +66,14 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
             printf("%-9s","obj" );
             printf("%-11s","feas" );
             printf("%-7s","opt" );
-            if( param->printLevel > 1 )
+            if( param->print_level > 1 )
             {
                 printf("%-11s","|lgrd|" );
                 printf("%-9s","|stp|" );
                 printf("%-10s","|lstp|" );
             }
             printf("%-8s","alpha" );
-            if( param->printLevel > 1 )
+            if( param->print_level > 1 )
             {
                 printf("%-6s","nSOCS" );
                 printf("%-18s","sk, da, sca" );
@@ -90,7 +90,7 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
             printf("\n");
         }
 
-        if( param->debugLevel > 0 )
+        if( param->debug_level > 0 )
         {
             // Print everything in a CSV file as well
             fprintf( progressFile, "%23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %i, %i, %23.16e, %i, %23.16e\n",
@@ -100,21 +100,21 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
     else
     {
         // Every twenty iterations print headline
-        if( itCount % 20 == 0 && param->printLevel > 0 )
+        if( itCount % 20 == 0 && param->print_level > 0 )
         {
             printf("%-8s", "   it" );
             printf("%-21s", " qpIt" );
             printf("%-9s","obj" );
             printf("%-11s","feas" );
             printf("%-7s","opt" );
-            if( param->printLevel > 1 )
+            if( param->print_level > 1 )
             {
                 printf("%-11s","|lgrd|" );
                 printf("%-9s","|stp|" );
                 printf("%-10s","|lstp|" );
             }
             printf("%-8s","alpha" );
-            if( param->printLevel > 1 )
+            if( param->print_level > 1 )
             {
                 printf("%-6s","nSOCS" );
                 printf("%-18s","sk, da, sca" );
@@ -124,28 +124,28 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
         }
 
         // All values
-        if( param->printLevel > 0 )
+        if( param->print_level > 0 )
         {
             printf("%5i  ", itCount );
             printf("%5i+%5i ", qpIterations, qpIterations2 );
             printf("% 10e  ", vars->obj );
             printf("%-10.2e", vars->cNorm );
             printf("%-10.2e", vars->tol );
-            if( param->printLevel > 1 )
+            if( param->print_level > 1 )
             {
                 printf("%-10.2e", vars->gradNorm );
                 printf("%-10.2e", lInfVectorNorm( vars->deltaXi ) );
                 printf("%-10.2e", vars->lambdaStepNorm );
             }
 
-            if( (vars->alpha == 1.0 && vars->steptype != -1) || !param->printColor )
+            if( (vars->alpha == 1.0 && vars->steptype != -1) || !param->result_print_color )
                 printf("%-9.1e", vars->alpha );
             else
                 printf("\033[0;36m%-9.1e\033[0m", vars->alpha );
 
-            if( param->printLevel > 1 )
+            if( param->print_level > 1 )
             {
-                if( vars->nSOCS == 0 || !param->printColor )
+                if( vars->nSOCS == 0 || !param->result_print_color )
                     printf("%5i", vars->nSOCS );
                 else
                     printf("\033[0;36m%5i\033[0m", vars->nSOCS );
@@ -155,7 +155,7 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
             printf("\n");
         }
 
-        if( param->debugLevel > 0 )
+        if( param->debug_level > 0 )
         {
             // Print everything in a CSV file as well
             /*fprintf( progressFile, "%23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %i, %i, %i, %23.16e, %i, %23.16e\n",
@@ -188,11 +188,11 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
     qpResolve = 0;
 
     /*
-    if( param->printLevel > 0 )
+    if( param->print_level > 0 )
     {   
         if( hasConverged && vars->steptype < 2 )
         {
-            if( param->printColor )
+            if( param->result_print_color )
                 printf("\n\033[1;32m***CONVERGENCE ACHIEVED!***\n\033[0m");
             else
                 printf("\n***CONVERGENCE ACHIEVED!***\n");
@@ -207,7 +207,7 @@ void SQPstats::initStats(SQPoptions *param){
     PATHSTR filename;
 
     // Open files
-    if (param->debugLevel > 0){
+    if (param->debug_level > 0){
         // SQP progress
         strcpy( filename, outpath );
         strcat( filename, "sqpits.csv" );
@@ -219,7 +219,7 @@ void SQPstats::initStats(SQPoptions *param){
         updateFile = fopen( filename, "w" );
     }
 
-    if (param->debugLevel > 1){
+    if (param->debug_level > 1){
         // Primal variables
         strcpy( filename, outpath );
         strcat( filename, "pv.csv" );
@@ -351,7 +351,7 @@ void SQPstats::printSparseMatlab( FILE *file, int nRow, int nCol, double *nz, in
 
 void SQPstats::printDebug( SQPiterate *vars, SQPoptions *param )
 {
-    if( param->debugLevel > 1 )
+    if( param->debug_level > 1 )
     {
         printPrimalVars( vars->xi );
         printDualVars( vars->lambda );
@@ -361,7 +361,7 @@ void SQPstats::printDebug( SQPiterate *vars, SQPoptions *param )
 
 void SQPstats::finish( SQPoptions *param )
 {
-    if( param->debugLevel > 0 )
+    if( param->debug_level > 0 )
     {
         fprintf( progressFile, "\n" );
         fclose( progressFile );
@@ -369,7 +369,7 @@ void SQPstats::finish( SQPoptions *param )
         fclose( updateFile );
     }
 
-    if( param->debugLevel > 1 )
+    if( param->debug_level > 1 )
     {
         fclose( primalVarsFile );
         fclose( dualVarsFile );
@@ -417,7 +417,7 @@ void SQPstats::printVectorCpp( FILE *outfile, int *vec, int len, char* varname )
 }
 
 /*
-void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProblem *qp, int sparseQP )
+void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProblem *qp, int sparse_mode )
 {
     int i, j;
     PATHSTR filename;
@@ -433,7 +433,7 @@ void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProble
     fclose( outfile );
 
     // Print Hessian
-    if( sparseQP )
+    if( sparse_mode )
     {
         strcpy( filename, outpath );
         strcat( filename, "qpoases_H_sparse.dat" );
@@ -483,7 +483,7 @@ void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProble
     strcpy( filename, outpath );
     strcat( filename, "qpoases_A.dat" );
     outfile = fopen( filename, "w" );
-    if( sparseQP )
+    if( sparse_mode )
     {
         // Always print dense Jacobian
         Matrix constrJacTemp;
@@ -510,7 +510,7 @@ void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProble
         fclose( outfile );
     }
 
-    if( sparseQP )
+    if( sparse_mode )
     {
         strcpy( filename, outpath );
         strcat( filename, "qpoases_A_sparse.dat" );
@@ -584,7 +584,7 @@ void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProble
 }
 */
 
-void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparseQP )
+void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparse_mode )
 {
     Matrix temp;
     PATHSTR filename;
@@ -623,7 +623,7 @@ void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparseQP )
     fclose( vecFile );
 
     // Print sparse Jacobian and Hessian
-    if( sparseQP )
+    if( sparse_mode )
     {
         printJacobian( prob->nCon, prob->nVar, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
         //printHessian( prob->nVar, vars->hessNz, vars->hessIndRow, vars->hessIndCol );

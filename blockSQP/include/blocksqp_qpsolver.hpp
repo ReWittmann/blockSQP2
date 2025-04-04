@@ -98,7 +98,6 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
     class qpOASES_solver : public QPsolver{
         public:
         qpOASES::Options opts;
-        int sparseQP;
 
         std::unique_ptr<qpOASES::SQProblem> qp;
         std::unique_ptr<qpOASES::SQProblem> qpSave;
@@ -119,7 +118,7 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
 
         int QP_it;
 
-        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, int SPARSE, qpOASES_options *QPopts);
+        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
         ~qpOASES_solver();
 
         void set_lin(const Matrix &grad_obj);

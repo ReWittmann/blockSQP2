@@ -110,7 +110,7 @@ class SQPmethod{
 
 
         // Filter line search, restoration phase and associated heuristics
-        /// No globalization strategy
+        /// No enable_linesearch strategy
         int fullstep();
         /// Set new primal dual iterate
         void acceptStep( const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS );
@@ -168,9 +168,9 @@ class SQPmethod{
         /// Compute current Hessian approximation by finite differences
         int calcFiniteDiffHessian(SymMatrix *hess);
         /// Compute full memory Hessian approximations based on update formulas
-        void calcHessianUpdate(int updateType, int hessScaling, SymMatrix *hess);
+        void calcHessianUpdate(int updateType, int sizing_strategy, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
-        void calcHessianUpdateLimitedMemory(int updateType, int hessScaling, SymMatrix *hess);
+        void calcHessianUpdateLimitedMemory(int updateType, int sizing_strategy, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification

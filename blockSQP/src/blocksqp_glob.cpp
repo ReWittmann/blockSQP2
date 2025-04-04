@@ -12,7 +12,7 @@
  * \date 2012-2015
  *
  *  Implementation of methods of SQPmethod class associated with the
- *  globalization strategy.
+ *  enable_linesearch strategy.
  *
  */
 
@@ -179,7 +179,7 @@ int SQPmethod::filterLineSearch(){
     cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
 
     // Backtracking line search
-    for (k = 0; k<param->maxLineSearch; k++){
+    for (k = 0; k<param->max_linesearch_steps; k++){
         //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
         /*
         if (k > 3 && !vars->conv_qp_solved){
@@ -278,7 +278,7 @@ int SQPmethod::filterLineSearch(){
     }// backtracking steps
 
     // No step could be found by the line search
-    if (k == param->maxLineSearch) return 1;
+    if (k == param->max_linesearch_steps) return 1;
 
     // Augment the filter if switching condition or Armijo condition does not hold
     if (dfTdeltaXi >= 0)
@@ -324,18 +324,18 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
     // Second order correction loop
     cNormOld = cNorm;
-    for (k = 0; k<param->maxSOCiter; k++){
+    for (k = 0; k<param->max_SOC; k++){
         nSOCS++;
 
         //Update AdeltaXi, where we use the original step in the first iteration and the previous SOC step in the following iterations (thats why we don't do it in the solve_SOC_QP method)
         if (k == 0){
-            if (param->sparseQP)
+            if (param->sparse_mode)
                 Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->deltaXi, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, vars->deltaXi, vars->AdeltaXi);
         }
         else{
-            if (param->sparseQP)
+            if (param->sparse_mode)
                 Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), deltaXiSOC, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, deltaXiSOC, vars->AdeltaXi);
@@ -427,7 +427,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
  */
 int SQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if (param->restoreFeas == 0) throw std::logic_error("feasibility restoration called when restoreFeas == 0, this should not happen");
+    if (param->enable_feasibility_restoration == 0) throw std::logic_error("feasibility restoration called when enable_feasibility_restoration == 0, this should not happen");
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
@@ -488,7 +488,7 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
         }
 
         // If minimum norm NLP has converged, declare local infeasibility
-        if (rest_method->vars->tol < param->opttol && rest_method->vars->cNormS < param->nlinfeastol){
+        if (rest_method->vars->tol < param->optimality_tol && rest_method->vars->cNormS < param->feasibility_tol){
             feas_result = 2;
             break;
         }
@@ -508,7 +508,7 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
         rest_prob->recover_lambda(rest_lambda, vars->trialLambda);
         vars->lambdaStepNorm = 0.0;
         for (int i = 0; i < vars->lambda.m; i++){
-            if (lStpNorm  = fabs(vars->trialLambda(i) - vars->lambda(i)) > vars->lambdaStepNorm) vars->lambdaStepNorm = lStpNorm;
+            if ((lStpNorm  = fabs(vars->trialLambda(i) - vars->lambda(i))) > vars->lambdaStepNorm) vars->lambdaStepNorm = lStpNorm;
             vars->lambda(i) = vars->trialLambda(i);
         }
 
@@ -635,7 +635,7 @@ int SQPmethod::kktErrorReduction(){
 
     // scaled norm of Lagrangian gradient
     trialGradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
-    if( param->sparseQP )
+    if( param->sparse_mode )
         calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->jacNz.get(),
                               vars->jacIndRow.get(), vars->jacIndCol.get(), trialGradLagrange, 0 );
     else
@@ -674,7 +674,7 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
      */
 
     for (iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
-        if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->nlinfeastol && iter->first < 0.01 * param->nlinfeastol)) &&
+        if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->feasibility_tol && iter->first < 0.01 * param->feasibility_tol)) &&
              obj >= iter->second - param->gammaF * iter->first)
             return 1;
     }
@@ -732,7 +732,7 @@ void SQPmethod::augmentFilter( double cNorm, double obj )
 
 int SCQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if (param->restoreFeas == 0) throw std::logic_error("feasibility restoration called when restoreFeas == 0, this should not happen");
+    if (param->enable_feasibility_restoration == 0) throw std::logic_error("feasibility restoration called when enable_feasibility_restoration == 0, this should not happen");
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
@@ -772,7 +772,7 @@ int SCQP_correction_method::filterLineSearch(){
     cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
 
     // Backtracking line search
-    for(k = 0; k<param->maxLineSearch; k++){
+    for(k = 0; k<param->max_linesearch_steps; k++){
         //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
         if (k > 3 && !vars->conv_qp_solved){
             if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
@@ -892,7 +892,7 @@ int SCQP_correction_method::filterLineSearch(){
     }// backtracking steps
 
     // No step could be found by the line search
-    if( k == param->maxLineSearch )
+    if( k == param->max_linesearch_steps )
         return 1;
 
     // Augment the filter if switching condition or Armijo condition does not hold
@@ -908,7 +908,7 @@ int SCQP_correction_method::filterLineSearch(){
 
 int SCQP_correction_method::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if (param->restoreFeas == 0) throw std::logic_error("feasibility restoration called when restoreFeas == 0, this should not happen");
+    if (param->enable_feasibility_restoration == 0) throw std::logic_error("feasibility restoration called when enable_feasibility_restoration == 0, this should not happen");
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
