@@ -7,22 +7,24 @@ from blockSQP_pyProblem import blockSQP_pyProblem
 import numpy as np
 import time
 
-opts = blockSQP.SQPoptions();
-opts.opttol = 1.0e-12
-opts.nlinfeastol = 1.0e-12
-opts.globalization = 0
-opts.hessUpdate = 1
-opts.fallbackUpdate = 2
-opts.hessScaling = 0
-opts.fallbackScaling = 0
-opts.hessLimMem = 1
-opts.hessMemsize = 20
-opts.maxConsecSkippedUpdates = 200
-opts.blockHess = 1
-opts.whichSecondDerv = 0
-opts.sparseQP = 2
-opts.printLevel = 2
-opts.QPsol = "qpOASES"
+opts = blockSQP.SQPoptions()
+opts.optimality_tol = 1.0e-12
+opts.feasibility_tol = 1.0e-12
+opts.enable_linesearch = 0
+opts.hess_approximation = 1
+opts.fallback_approximation = 2
+opts.sizing_strategy = 0
+opts.fallback_sizing_strategy = 0
+opts.limited_memory = True
+opts.memory_size = 20
+opts.max_consec_skipped_updates = 200
+opts.block_hess = 1
+opts.exact_hess_usage = 0
+opts.sparse_mode = 1
+opts.print_level = 2
+opts.debug_level = 0
+opts.qpsol = "qpOASES"
+
 
 stats = blockSQP.SQPstats("./")
 

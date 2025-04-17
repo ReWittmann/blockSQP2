@@ -30,14 +30,6 @@ FetchContent_Declare(
 	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
 )
 FetchContent_GetProperties(qpos)
-
-#Deprecated
-#[[
-if(NOT qpos_POPULATED)
-    FetchContent_Populate(qpos)
-endif()
-]]#
-
 if(NOT qpos_POPULATED)
 	FetchContent_MakeAvailable(qpos)
 endif()
@@ -62,7 +54,7 @@ add_library(qpOASES STATIC
 	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
 )
 target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
-#target_compile_options(qpOASES PRIVATE -O3)
+target_compile_options(qpOASES PRIVATE -O3)
 target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
 IF(UNIX)
    target_compile_definitions(qpOASES PRIVATE LINUX)
@@ -102,21 +94,25 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_sqputils.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
-target_compile_options(blockSQP PUBLIC -g -O0)
+#target_compile_options(blockSQP PRIVATE -O3)
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpos_SOURCE_DIR}/include ${qpos_SOURCE_DIR}/include/qpOASES)
 target_link_libraries(blockSQP PUBLIC qpOASES)
 
 add_executable(example1 blockSQP/examples/example1.cpp)
-target_compile_options(example1 PRIVATE -g -O0)
 target_link_libraries(example1 blockSQP)
 set_target_properties(example1
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples")
+	
+add_executable(example1_sparse blockSQP/examples/example1_sparse.cpp)
+target_link_libraries(example1_sparse blockSQP)
+set_target_properties(example1_sparse
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples")
 
 add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
-target_compile_options(example_condensing PRIVATE -g -O0)
 target_link_libraries(example_condensing blockSQP)
 set_target_properties(example_condensing
 	PROPERTIES

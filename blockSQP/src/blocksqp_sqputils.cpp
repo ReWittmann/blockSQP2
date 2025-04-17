@@ -141,7 +141,7 @@ bool SQPmethod::calcOptTol(){
     vars->cNorm  = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     vars->cNormS = vars->cNorm /( 1.0 + lInfVectorNorm( vars->xi ) );
 
-    if (vars->tol <= param->optimality_tol && vars->cNormS <= param->feasibility_tol)
+    if (vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol)
         return true;
     else
         return false;

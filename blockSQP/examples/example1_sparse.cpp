@@ -294,8 +294,10 @@ int main(int argc, const char* argv[]){
     opts->opt_tol = 1.0e-12;         // For this example, set tolerances very low. The default is 1e-6
     opts->feas_tol = 1.0e-12;        
 
+    opts->sparse_mode = true;
+
     opts->enable_linesearch = false;        // Disable filter line search for this example
-    opts->hess_approximation = 2;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
+    opts->hess_approximation = 1;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
     opts->fallback_approximation = 2;       // ' ', not needed if hess_approximation is positive definite
 
     opts->sizing_strategy = 0;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
@@ -306,7 +308,7 @@ int main(int argc, const char* argv[]){
 
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES
-    QPopts.sparsityLevel = 0;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS
+    QPopts.sparsityLevel = 2;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS
                                                // Default -1 (automatically infer and SET from SQPoptions). Internal default options may also be overwritten by SQPoptions
     QPopts.printLevel = 0;                  // QP solver options keep their name. See qpOASES manual for options. Currently only printLevel and terminationTolerance can be passed.
 

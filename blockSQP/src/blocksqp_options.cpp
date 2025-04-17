@@ -58,8 +58,8 @@ void SQPoptions::reset(){
     eps = 1.0e-16;
     //inf = 1.0e20;
     inf = std::numeric_limits<double>::infinity();
-    optimality_tol = 1.0e-6;
-    feasibility_tol = 1.0e-6;
+    opt_tol = 1.0e-6;
+    feas_tol = 1.0e-6;
 
     #if defined(QPSOLVER_QPOASES)
         qpsol = QPsolvers::qpOASES;
@@ -200,6 +200,15 @@ void SQPoptions::reset(){
 SQPoptions::~SQPoptions(){}
 
 
+void SQPoptions::optionsConsistency(Problemspec *problem){
+    if ((automatic_scaling || conv_strategy == 2) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
+        throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
+    if (sparse_mode && problem->nnz < 0)
+        throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
+
+    optionsConsistency();
+}
+
 void SQPoptions::optionsConsistency(){
     //Check if selected QP solver was properly linked
     #ifndef QPSOLVER_QPOASES
@@ -221,7 +230,7 @@ void SQPoptions::optionsConsistency(){
     
     if (hess_approximation == 1 || hess_approximation == 4 || exact_hess_usage > 0){
         if (qpsol == QPsolvers::qpOASES){
-            if (qpsol_options != nullptr && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel != 2)
+            if (qpsol_options != nullptr && !(static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == 2 || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1))
                 throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (qpOASES_solver::sparsityLevel == 2)");
         }
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
@@ -270,24 +279,6 @@ void SQPoptions::optionsConsistency(){
     complete_QP_options();
 }
 
-void SQPoptions::optionsConsistency(Problemspec *problem){
-    if ((automatic_scaling || conv_strategy == 2) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
-        throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
-    if (sparse_mode && problem->nnz < 0)
-        throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
-
-    optionsConsistency();
-}
-
-
-QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
-    eps = 1e-16;
-    inf = std::numeric_limits<double>::infinity();
-    max_QP_seconds = 10.;
-    max_QP_iter = std::numeric_limits<int>::max();
-}
-QPsolver_options::~QPsolver_options(){}
-
 void SQPoptions::complete_QP_options(){
     //Create default options if no options have been passed
     if (qpsol_options == nullptr){
@@ -303,13 +294,31 @@ void SQPoptions::complete_QP_options(){
     if (qpsol_options->inf == std::numeric_limits<double>::infinity()) qpsol_options->inf = inf;  
     if (qpsol_options->max_QP_seconds == 10.) qpsol_options->max_QP_seconds = max_QP_seconds;
     if (qpsol_options->max_QP_iter == std::numeric_limits<int>::max()) qpsol_options->max_QP_iter = max_QP_iter;
+
+    //Infer solver specific options from SQPoptions
+    //  Infer qpOASES sparsityLevel
+    if (qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
+        if (!sparse_mode) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
+        else              static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
+    }
+
     return;
 }
 
+
+QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
+    eps = 1e-16;
+    inf = std::numeric_limits<double>::infinity();
+    max_QP_seconds = 10.;
+    max_QP_iter = std::numeric_limits<int>::max();
+}
+QPsolver_options::~QPsolver_options(){}
+
 qpOASES_options::qpOASES_options(): QPsolver_options(QPsolvers::qpOASES){
+    sparsityLevel = -1;
+
     printLevel = 0;
     terminationTolerance = 5.0e6*2.221e-16;
-    sparsityLevel = 2;
 }
 
 gurobi_options::gurobi_options(): QPsolver_options(QPsolvers::gurobi){

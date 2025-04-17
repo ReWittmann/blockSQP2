@@ -36,14 +36,13 @@
 
 
 #include <qpOASES/SparseSolver.hpp>
-#include <iostream>
 
 #ifndef __MATLAB__
-# include <cstdarg>
-void MyPrintf(const char* pformat, ... );
+	# include <cstdarg>
+	void MyPrintf(const char* pformat, ... );
 #else
-# include <mex.h>
-# define MyPrintf mexPrintf
+	# include <mex.h>
+	# define MyPrintf mexPrintf
 #endif
 
 #if SOLVER_MUMPS
@@ -54,9 +53,9 @@ void MyPrintf(const char* pformat, ... );
 
 
 #if defined USE_MPI_H || defined MUMPS_SEQ
-#include "mpi.h"
+	#include "mpi.h"
 #else
-#include "mumps_mpi.h"
+	#include "mumps_mpi.h"
 #endif /* USE_MPI_H */
 
 #include "dmumps_c.h"
@@ -1331,13 +1330,13 @@ returnValue MumpsSparseSolver::factorize( )
     mumps_data->icntl[12] = 1;   //avoid lapack bug, ensures proper inertia; mentioned to be very expensive in mumps manual
     mumps_data->icntl[13] = mem_percent_; //% memory to allocate over expected
     
-	mumps_data->icntl[24-1] = 1; //enable null pivot detection
-	//mumps_data->icntl[56-1] = 1; //enable rank revealing and returning of indices corresponding to null singular values
-	
-	//TODO good default value. 1e-8 is set above for MA27. MA57 manual suggests 1e-12 as a normal value.
-	mumps_data->cntl[3-1] = 1e-12; //null pivot tolerance
-	
-	mumps_data->cntl[0] = pivtol_;  // Set pivot tolerance
+    mumps_data->icntl[24-1] = 1; //enable null pivot detection
+    //mumps_data->icntl[56-1] = 1; //enable rank revealing and returning of indices corresponding to null singular values
+
+    //TODO good default value. 1e-8 is set above for MA27. MA57 manual suggests 1e-12 as a normal value.
+    mumps_data->cntl[3-1] = 1e-12; //null pivot tolerance
+
+    mumps_data->cntl[0] = pivtol_;  // Set pivot tolerance
 
     // dump_matrix(mumps_data);
 

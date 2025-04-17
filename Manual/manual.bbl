@@ -28,12 +28,6 @@ Dennis Janka, Christian Kirches, Sebastian Sager, and Andreas W\"achter.
   block-diagonal Hessian matrix}.
 \newblock {\em submitted to Mathematical Programming Computation}, 2015.
 
-\bibitem{Koerkel2002}
-S.~K{\"o}rkel.
-\newblock {\em Numerische {M}ethoden f\"ur Optimale {V}ersuchsplanungsprobleme
-  bei nichtlinearen {DAE}-{M}odellen}.
-\newblock PhD thesis, Universit\"at {H}eidelberg, Heidelberg, 2002.
-
 \bibitem{Waechter2005b}
 Andreas W{\"a}chter and Lorenz~T Biegler.
 \newblock Line search filter methods for nonlinear programming: Local
@@ -45,5 +39,11 @@ Andreas W{\"a}chter and Lorenz~T Biegler.
 \newblock Line search filter methods for nonlinear programming: Motivation and
   global convergence.
 \newblock {\em SIAM Journal on Optimization}, 16(1):1--31, 2005.
+
+\bibitem{wachter2006implementation}
+Andreas W{\"a}chter and Lorenz~T Biegler.
+\newblock On the implementation of an interior-point filter line-search
+  algorithm for large-scale nonlinear programming.
+\newblock {\em Mathematical programming}, 106:25--57, 2006.
 
 \end{thebibliography}

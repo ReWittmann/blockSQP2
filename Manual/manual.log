@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2024.12.12)  2 APR 2025 18:00
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2024.12.12)  17 APR 2025 15:19
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1025,16 +1025,16 @@ LaTeX Font Info:    Font shape `T1/txtt/b/n' in size <10.95> not available
 (Font)              Font shape `T1/txtt/bx/n' tried instead on input line 3.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 4.
-)
-\tf@toc=\write4
-\openout4 = `manual.toc'.
-
 
 [1
 
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-di
-st/fonts/enc/dvips/base/8r.enc}]
+st/fonts/enc/dvips/base/8r.enc}])
+\tf@toc=\write4
+\openout4 = `manual.toc'.
+
+ [2]
 LaTeX Font Info:    Font shape `T1/txtt/b/n' in size <14.4> not available
 (Font)              Font shape `T1/txtt/bx/n' tried instead on input line 197.
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 2
@@ -1047,66 +1047,153 @@ Underfull \hbox (badness 10000) in paragraph at lines 205--206
 
  []
 
-[2
+[3
 
 ]
-Underfull \hbox (badness 10000) in paragraph at lines 221--223
+Underfull \hbox (badness 10000) in paragraph at lines 221--224
 
  []
 
-[3] (/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
+
+Underfull \hbox (badness 10000) in paragraph at lines 221--224
+
+ []
+
+
+Overfull \hbox (6.01154pt too wide) in paragraph at lines 225--238
+\T1/ptm/m/n/10.95 (-20) Most QP solvers, as well as the used in-ter-face li-bra
+ries pro-vide CMake project files. A []
+ []
+
+[4]
+Underfull \hbox (badness 10000) in paragraph at lines 264--266
+
+ []
+
+(/usr/share/texlive/texmf-dist/tex/latex/listings/lstlang1.sty
 File: lstlang1.sty 2023/02/27 1.9 listings language file
 )
 (/usr/share/texlive/texmf-dist/tex/latex/listings/lstmisc.sty
 File: lstmisc.sty 2023/02/27 1.9 (Carsten Heinz)
-) [4] [5]
-Underfull \hbox (badness 10000) in paragraph at lines 335--340
+) [5] [6]
+Underfull \hbox (badness 10000) in paragraph at lines 324--326
 
  []
 
-[6]
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 355.
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 355.
-LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
-(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 355.
 
-Underfull \hbox (badness 10000) in paragraph at lines 358--361
+Overfull \hbox (5.68288pt too wide) in paragraph at lines 334--335
+[]\T1/txtt/m/n/10.95 vblock *vblocks \T1/ptm/m/n/10.95 (-20) (op-tional) - an a
+r-ray of \T1/txtt/m/n/10.95 vblock {int size, bool dependent} \T1/ptm/m/n/10.95
+ (-20) ([]3.2.2[])
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 336--343
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 336--343
 
  []
 
 [7]
-Underfull \hbox (badness 10000) in paragraph at lines 385--388
+Underfull \hbox (badness 10000) in paragraph at lines 358--364
 
  []
 
-[8] [9]
-LaTeX Font Info:    Font shape `T1/txtt/m/it' in size <9> not available
-(Font)              Font shape `T1/txtt/m/sl' tried instead on input line 440.
+[8]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 379.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 379.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 379.
 
-Underfull \hbox (badness 10000) in paragraph at lines 466--469
+Underfull \hbox (badness 10000) in paragraph at lines 388--391
+
+ []
+
+[9]
+Overfull \hbox (2.99506pt too wide) in paragraph at lines 400--401
+[]\T1/txtt/m/n/10.95 condensing_target: {int n_stages, int first_free, int vblo
+ck_end, int
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 402--405
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 420--422
 
  []
 
 [10]
-Overfull \hbox (20.28937pt too wide) in alignment at lines 512--570
+Overfull \hbox (11.58043pt too wide) in paragraph at lines 424--425
+[]\T1/txtt/m/n/10.95 Sparse_Matrix& constr_jac \T1/ptm/m/n/10.95 (-20) - the sp
+arse con-straint Ja-co-bian (see \T1/txtt/m/n/10.95 blocksqp_matrix.hpp\T1/ptm/
+m/n/10.95 (-20) ) 
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 441--448
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 441--448
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 441--448
+
+ []
+
+[11]
+LaTeX Font Info:    Font shape `T1/txtt/b/n' in size <9> not available
+(Font)              Font shape `T1/txtt/bx/n' tried instead on input line 475.
+ [12]
+LaTeX Font Info:    Font shape `T1/txtt/m/it' in size <9> not available
+(Font)              Font shape `T1/txtt/m/sl' tried instead on input line 504.
+ [13]
+Underfull \hbox (badness 10000) in paragraph at lines 530--533
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 530--533
+
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 568--571
+
+ []
+
+[14]
+LaTeX Info: Symbol \textrightarrow not provided by
+            font family ptm in TS1 encoding.
+            Default family used instead on input line 617.
+ (/usr/share/texlive/texmf-dist/tex/latex/microtype/mt-cmr.cfg
+File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
+(RS)
+) [15]
+[16{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-ts1.enc}] [17]
+Overfull \hbox (30.67032pt too wide) in alignment at lines 731--739
  [] [] [] 
  []
 
-[11] [12]
-Overfull \hbox (2.35457pt too wide) in alignment at lines 575--627
- [] [] [] 
- []
-
-(./manual.bbl [13]) [14]
-Overfull \hbox (15.86113pt too wide) in paragraph at lines 687--687
+[18] (./manual.bbl [19]) [20]
+Overfull \hbox (15.86113pt too wide) in paragraph at lines 805--805
 []    \T1/txtt/m/n/10.95 Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr
 .uni-heidelberg.de>[] 
  []
 
 No complaints by nag.
-[15
+[21
 
 ] (./manual.aux)
  ***********
@@ -1117,29 +1204,30 @@ Package rerunfilecheck Info: File `manual.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 22669 strings out of 474222
- 382967 string characters out of 5748732
- 1983975 words of memory out of 5000000
- 44185 multiletter control sequences out of 15000+600000
- 638455 words of font info for 304 fonts, out of 8000000 for 9000
+ 22846 strings out of 474222
+ 385877 string characters out of 5748732
+ 2047975 words of memory out of 5000000
+ 44315 multiletter control sequences out of 15000+600000
+ 636764 words of font info for 301 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 108i,14n,107p,10901b,2118s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 108i,14n,107p,10901b,2122s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></us
 r/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/shar
 e/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texli
 ve/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/tex
-mf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texlive/texm
-f-dist/fonts/type1/public/txfonts/t1xbtt.pfb></usr/share/texlive/texmf-dist/fon
-ts/type1/public/txfonts/t1xtt.pfb></usr/share/texlive/texmf-dist/fonts/type1/pu
-blic/txfonts/t1xtt.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/symbol/us
-yr.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr/sha
-re/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texm
-f-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/ty
-pe1/urw/times/utmri8a.pfb>
-Output written on manual.pdf (15 pages, 152927 bytes).
+mf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/share/texmf/fonts/
+type1/public/cm-super/sfrb1095.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
+ublic/txfonts/t1xbtt.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/txfo
+nts/t1xtt.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/txfonts/t1xtt.p
+fb></usr/share/texlive/texmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr/share/t
+exlive/texmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr/share/texlive/texmf-dis
+t/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/u
+rw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8
+a.pfb>
+Output written on manual.pdf (21 pages, 171758 bytes).
 PDF statistics:
- 343 PDF objects out of 1000 (max. 8388607)
- 297 compressed objects within 3 object streams
- 111 named destinations out of 1000 (max. 500000)
- 93313 words of extra memory for PDF output out of 106986 (max. 10000000)
+ 469 PDF objects out of 1000 (max. 8388607)
+ 413 compressed objects within 5 object streams
+ 161 named destinations out of 1000 (max. 500000)
+ 90825 words of extra memory for PDF output out of 106986 (max. 10000000)
 

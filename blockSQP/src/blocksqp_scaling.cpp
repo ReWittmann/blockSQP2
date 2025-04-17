@@ -31,9 +31,9 @@
 
 
 //Algorithm 2 from paper, calculate scaling factor for free variables
-void SQPmethod::calc_free_variables_scaling(double *SF){
+void SQPmethod::calc_free_variables_scaling(double *arg_SF){
     int nIt, pos, nfree = prob->nVar, ind_1, scfree, scdep, count_delta = 0, count_gamma = 0;
-    double bardelta_u, bardelta_x, bargamma_u, bargamma_x, resF, rgamma = 0., rdelta = 0.;
+    double bardelta_u, bardelta_x, bargamma_u, bargamma_x, S_u, rgamma = 0., rdelta = 0.;
 
     if (prob->n_vblocks < 1) return;
     nfree = prob->nVar;
@@ -49,7 +49,7 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
         ind_1 = 0;
         for (int k = 0; k < prob->n_vblocks; k++){
             for (int i = 0; i < prob->vblocks[k].size; i++){
-                if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){ //Maybe set lower, e.g.1e-10
+                if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){
                     if (prob->vblocks[k].dependent){
                         bardelta_x += std::abs(vars->deltaMat(ind_1 + i, pos));
                         bargamma_x += std::abs(vars->gammaMat(ind_1 + i, pos));
@@ -86,27 +86,27 @@ void SQPmethod::calc_free_variables_scaling(double *SF){
     rdelta = (count_delta > 0) ? std::exp(rdelta/count_delta) : 1.0;
     rgamma = (count_gamma > 0) ? std::exp(rgamma/count_gamma) : 1.0;
 
-    resF = -1.0;
+    S_u = -1.0;
     if (rgamma > 2.0){
-        resF = rgamma/2.0;
+        S_u = rgamma/2.0;
     }
     else if (rgamma < 1.0){
         if (rdelta > 1.0){
-            if (rgamma < 0.1) resF = 10.0*rgamma;
-            else resF = std::min(1.0, rdelta*rgamma);
+            if (rgamma < 0.1) S_u = 10.0*rgamma;
+            else S_u = std::min(1.0, rdelta*rgamma);
         }
         else{
-            resF = rgamma;
+            S_u = rgamma;
         }
     }
 
-    if (resF > 0){
-        vars->vfreeScale *= resF;
+    if (S_u > 0){
+        vars->vfreeScale *= S_u;
         ind_1 = 0;
         for (int k = 0; k < prob->n_vblocks; k++){
             if (!prob->vblocks[k].dependent){
                 for (int i = 0; i < prob->vblocks[k].size; i++){
-                    SF[ind_1 + i] *= resF;
+                    arg_SF[ind_1 + i] *= S_u;
                 }
             }
             ind_1 += prob->vblocks[k].size;

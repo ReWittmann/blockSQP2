@@ -95,7 +95,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
 
         /// Solve QP subproblem with qpOASES or QPOPT
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
-
+        
         //if (infoQP == 0) printf("***QP solution successful***");
         if (infoQP == 0);
         else if (infoQP == 1){
@@ -117,7 +117,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                         std::cout << "Failed\n";
                 }
 
-                if (qpError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feasibility_tol){
+                if (qpError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feas_tol){
                     std::cout << "Start feasibility restoration phase\n";
                     qpError = feasibilityRestorationPhase();
                     vars->steptype = 3;
@@ -158,7 +158,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
 
             // Invoke feasibility restoration phase
-            if (feasError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feasibility_tol){
+            if (feasError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feas_tol){
                 printf("***Start feasibility restoration phase.***\n");
                 feasError = feasibilityRestorationPhase();
                 vars->steptype = 3;
@@ -193,7 +193,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->solution_found){
                     vars->restore_iterate();
-                    if (vars->tol <= 1e-2*param->optimality_tol && vars->cNormS <= 1e-2*param->feasibility_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
+                    if (vars->tol <= 1e-2*param->opt_tol && vars->cNormS <= 1e-2*param->feas_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
                     else return print_SQPresult(SQPresult::success, param->result_print_color);
                 }
                 
@@ -216,8 +216,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //Heuristic 3: Ignore acceptance criteria up to a limited number of times if we are close to a solution and feasible
                 //Remove entries from filter that dominate the new point.
 
-                //if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= param->feasibility_tol && vars->remaining_filter_overrides > 0){
-                if (lsError && vars->tol <= std::pow(param->optimality_tol, 2./3.) && vars->cNormS <= param->feasibility_tol && vars->remaining_filter_overrides > 0){
+                //if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= param->feas_tol && vars->remaining_filter_overrides > 0){
+                if (lsError && vars->tol <= std::pow(param->opt_tol, 2./3.) && vars->cNormS <= param->feas_tol && vars->remaining_filter_overrides > 0){
                     force_accept(1.0);
                     vars->remaining_filter_overrides--;
                     lsError = false;
@@ -226,11 +226,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
 
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
-                if (param->enable_premature_termination && lsError && vars->cNormS <= param->feasibility_tol && vars->tol <= std::pow(param->optimality_tol, 0.75))
+                if (param->enable_premature_termination && lsError && vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
                     return print_SQPresult(SQPresult::partial_success, param->result_print_color);
 
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
-                if (lsError && vars->cNorm > 0.01 * param->feasibility_tol && vars->steptype < 2){
+                if (lsError && vars->cNorm > 0.01 * param->feas_tol && vars->steptype < 2){
                     // Don't do this twice in a row!
                     printf("***Warning! Steplength too short. Trying to reduce constraint violation...");
                     // Integration over whole time interval
@@ -250,7 +250,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
 
                 // If this does not yield a successful step, start restoration phase
-                if (lsError && vars->cNorm > 0.01 * param->feasibility_tol && param->enable_feasibility_restoration){
+                if (lsError && vars->cNorm > 0.01 * param->feas_tol && param->enable_feasibility_restoration){
                     printf("***Warning! Steplength too short. Start feasibility restoration phase.***\n");
                     // Solve NLP with minimum norm objective
                     lsError = bool(feasibilityRestorationPhase());
@@ -312,11 +312,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         if (vars->solution_found && param->max_extra_steps > 0){
             if (vars->n_extra >= param->max_extra_steps){
                 vars->restore_iterate();
-                if (vars->tol < 1e-2*param->optimality_tol && vars->cNormS < 1e-2*param->feasibility_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
+                if (vars->tol < 1e-2*param->opt_tol && vars->cNormS < 1e-2*param->feas_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
                 else return print_SQPresult(SQPresult::success, param->result_print_color);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
-            if (std::max(vars->tol/param->optimality_tol, vars->cNormS/param->feasibility_tol) < std::max(vars->tolOpt_save/param->optimality_tol, vars->cNormSOpt_save/param->feasibility_tol))
+            if (std::max(vars->tol/param->opt_tol, vars->cNormS/param->feas_tol) < std::max(vars->tolOpt_save/param->opt_tol, vars->cNormSOpt_save/param->feas_tol))
                 vars->save_iterate();
             vars->n_extra++;
         }

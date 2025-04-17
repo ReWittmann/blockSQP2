@@ -114,19 +114,10 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
 
 qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts):
                     QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
-    //Initialize all qpOASES objects and data formats
-    /*
-    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel < 2){
-        qp = new qpOASES::SQProblem(nVar, nCon);
-        qpSave = new qpOASES::SQProblem(nVar, nCon);
-        qpCheck = new qpOASES::SQProblem(nVar, nCon);
-    }
-    else{
-        qp = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
-        qpSave = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
-        qpCheck = new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50);
-    }
-    */
+    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel < -1)
+        throw ParameterError("qpOASES_solver class cannot choose sparsityLevel automatically, set to 0 - dense, 1 - sparse or 2 - schur");
+    else if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel < 0 || static_cast<qpOASES_options*>(Qparam)->sparsityLevel > 2)
+        throw ParameterError("Invalid value sparsityLevel option for qpOASES_solver");
 
     if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel < 2){
         qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
@@ -148,24 +139,8 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     lbA = std::make_unique<double[]>(nCon);
     ubA = std::make_unique<double[]>(nCon);
 
-    //lb = new double[nVar];
-    //ub = new double[nVar];
-    //lbA = new double[nCon];
-    //ubA = new double[nCon];
-
     h_qp = nullptr;
-
-    //Owned
-    /*
-    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel) hess_nz = nullptr;
-    else hess_nz = new double[nVar*nVar];
-
-    hess_row = nullptr;
-    hess_colind = nullptr;
-    hess_loind = nullptr;
-    */
-
-    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel){
+    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel > 0){
         int hess_nzCount = 0;
         for (int i = 0; i < n_QP_hessblocks; i++){
             hess_nzCount += (blockIdx[i+1] - blockIdx[i])*(blockIdx[i+1] - blockIdx[i]);
@@ -178,7 +153,6 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     }
     else hess_nz = std::make_unique<double[]>(nVar*nVar);
     
-
     //Options
     opts.enableEqualities = qpOASES::BT_TRUE;
     opts.initialStatusBounds = qpOASES::ST_INACTIVE;
@@ -203,7 +177,6 @@ void qpOASES_solver::set_lin(const Matrix &grad_obj){
 
 void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A){
     //by default, qpOASES defines +-inifinity as +-1e20 (see qpOASES Constants.hpp), set bounds accordingly
-
     for (int i = 0; i < nVar; i++){
         if (lb_x(i) > -Qparam->inf)
             lb[i] = lb_x(i);
@@ -231,24 +204,18 @@ void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Ma
 
 
 void qpOASES_solver::set_constr(const Matrix &constr_jac){
-    //delete A_qp;
     Transpose(constr_jac, jacT);
-    //A_qp = new qpOASES::DenseMatrix(nCon, nVar, nVar, jacT.array);
     A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
     return;
 }
 
 void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
-    //delete A_qp;
-    //A_qp = new qpOASES::SparseMatrix(nCon, nVar, jac_row, jac_colind, jac_nz);
     A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, jac_row, jac_colind, jac_nz);
-
     matrices_changed = true;
     return;
 }
 
 void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regularizationFactor){
-
     convex_QP = pos_def;
     double regFactor;
     if (convex_QP)
@@ -256,17 +223,13 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
     else
         regFactor = 0.0;
 
-    //delete H_qp;
-
-    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel){
+    if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel > 0){
         convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
-        //H_qp = new qpOASES::SymSparseMat(nVar, nVar, hess_row, hess_colind, hess_nz);
         H_qp = std::make_unique<qpOASES::SymSparseMat>(nVar, nVar, hess_row.get(), hess_colind.get(), hess_nz.get());
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
     }
     else{
         convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
-        //H_qp = new qpOASES::SymDenseMat(nVar, nVar, nVar, hess_nz);
         H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
     }
     matrices_changed = true;

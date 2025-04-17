@@ -9,10 +9,11 @@ except:
 
 import py_blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
+import matplotlib.pyplot as plt
 
 itMax = 100
 
-step_plots = False
+step_plots = True
 plot_title = True
 
 
@@ -28,10 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Electric_Car(nt = 100, parallel = True)
-
-# OCprob = OCProblems.F8_Aircraft(nt = 100, parallel = False)
-# OCprob.set_stage_control(OCprob.start_point, 20, -0.0125)
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, parallel = False)
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -48,14 +46,14 @@ opts.fallback_sizing_strategy = 4
 
 opts.limited_memory = True
 opts.memory_size = 20
-opts.optimality_tol = 1e-6
-opts.feasibility_tol = 1e-6
+opts.opt_tol = 1e-6
+opts.feas_tol = 1e-6
 
 opts.automatic_scaling = 0
 
-opts.max_extra_steps = 10
+opts.max_extra_steps = 0
 opts.enable_premature_termination = False
-opts.max_filter_overrides = 2
+opts.max_filter_overrides = 0
 
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
@@ -100,7 +98,7 @@ prob.vblocks = vBlocks
 
 # import copy
 # sp = copy.copy(OCprob.start_point)
-# OCprob.set_stage_control(sp, 22, 0.1)
+# OCprob.set_stage_control(sp, 27, 0.9)
 # prob.x_start = sp
 
 prob.x_start = OCprob.start_point
@@ -115,7 +113,7 @@ scale_arr = 1.0;
 # scale_arr = np.array(scale, copy = False)
 # scale_arr[:] = 1.0
 # for i in range(OCprob.ntS):
-#     OCprob.set_stage_control(scale_arr, i, [1.0])
+#     OCprob.set_stage_control(scale_arr, i, [100.0])
 # prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
@@ -128,22 +126,21 @@ optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 optimizer.init()
 #####################
 t0 = time.time()
-
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 200, it = 0, title=plot_title)
     ret = int(optimizer.run(1))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
     i = 1
     OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
+    OCprob.plot(xi, dpi = 200, it = i, title=False)
     while ret == 0 and i < itMax:
         ret = int(optimizer.run(1,1))
         xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
         i += 1
         OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
+        OCprob.plot(xi, dpi = 200, it = i, title=False)
 else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
-    # OCprob.plot(xi, dpi=200, it = stats.itCount - 1, title=plot_title)
-    # print("Solved OCP in ", t1 - t0, "s\n")
 t1 = time.time()
 #####################

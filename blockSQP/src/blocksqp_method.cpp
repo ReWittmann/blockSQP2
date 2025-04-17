@@ -50,8 +50,8 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->debug_level = 0;
 
     //Derived from parent method options
-    rest_param->optimality_tol = parent_options->optimality_tol;
-    rest_param->feasibility_tol = parent_options->feasibility_tol;
+    rest_param->opt_tol = parent_options->opt_tol;
+    rest_param->feas_tol = parent_options->feas_tol;
     rest_param->qpsol = parent_options->qpsol;
     rest_param->qpsol_options = parent_options->qpsol_options;
 

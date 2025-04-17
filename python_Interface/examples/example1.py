@@ -3,7 +3,7 @@ import sys
 sys.path.append(os.path.abspath('') + "/..")
 
 import py_blockSQP as blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
+from blockSQP_pyProblem import blockSQP_pyProblem
 import numpy as np
 import time
 
@@ -28,7 +28,7 @@ opts.qpsol = "qpOASES"
 
 stats = blockSQP.SQPstats("./")
 
-prob = Problemspec()
+prob = blockSQP_pyProblem()
 prob.nVar = 2
 prob.nCon = 1
 prob.set_blockIndex(np.array([0,1,2],dtype = np.int32))

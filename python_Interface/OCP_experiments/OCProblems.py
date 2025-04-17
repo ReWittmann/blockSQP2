@@ -1,7 +1,7 @@
 import numpy as np
 import casadi as cs
-import typing
 import matplotlib.pyplot as plt
+import typing
 import math
 import copy
 plt.rcParams["text.usetex"] = True
@@ -748,7 +748,7 @@ class Lotka_Volterra_Fishing(OCProblem):
         plt.plot(self.time_grid, x1, 'b--', label = '$x_1$')
         
         plt.step(self.time_grid_ref, u, color = 'g', label = r'$u\cdot 10$')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -802,7 +802,7 @@ class Lotka_Volterra_Fishing_NQ(OCProblem):
         plt.plot(self.time_grid, x1, 'b--', label = '$x_1$')
         
         plt.step(self.time_grid_ref, u, color = 'g', label = r'$u\cdot 10$')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -856,7 +856,7 @@ class Lotka_Volterra_multimode(OCProblem):
         plt.step(self.time_grid_ref, w2, color = 'c', label = '$w_2$')
         plt.step(self.time_grid_ref, w3, color = 'y', label = '$w_3$')
         
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -992,7 +992,6 @@ class Goddard_Rocket_MOD(Goddard_Rocket):
         self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs}
         self.multiple_shooting()
         
-        v_eval = self.x_eval[1,:]
         r_eval = self.x_eval[0,:]
         
         # max_drag_expr = A*(v_eval**2) * cs.exp(-k * (r_eval - r0))
@@ -1124,7 +1123,7 @@ class Calcium_Oscillation(OCProblem):
         plt.plot(self.time_grid, x3, 'y-', label = 'x3')
         plt.step(self.time_grid, (w-1.0)*20, 'g', label = '(w-1)*20')
         
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -1179,7 +1178,7 @@ class Batch_Reactor(OCProblem):
         plt.plot(self.time_grid, x2, 'g-', label = r'$x_2$')
         plt.step(self.time_grid_ref, (T-298)*0.1, 'y', label = r'$(u-298)\cdot 0.1$')
         
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -1316,7 +1315,7 @@ class Hanging_Chain(OCProblem):
         plt.figure(dpi = dpi)
         plt.plot(self.time_grid, x, 'r-', label = 'chain')
         # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -1382,7 +1381,7 @@ class Hanging_Chain_NQ(Hanging_Chain):
         plt.figure(dpi = dpi)
         plt.plot(self.time_grid, x, 'r-', label = 'chain')
         # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -1429,9 +1428,9 @@ class Catalyst_Mixing(OCProblem):
             plt.title(title)
         x1,x2 = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
-        plt.plot(self.time_grid, x1, 'r-', label = r'$x_1$')
+        plt.plot(self.time_grid, x1, 'g-', label = r'$x_1$')
         plt.plot(self.time_grid, x2, 'b-', label = r'$x_2$')
-        plt.step(self.time_grid, u, 'g', label = r'$u$')
+        plt.step(self.time_grid, u, 'r', label = r'$u$')
         plt.legend(fontsize = 'large')
         
         ttl = None
@@ -1519,7 +1518,7 @@ class Catalyst_Mixing(OCProblem):
 #         plt.plot(self.time_grid, cB, 'g-', label = 'cB')
 #         plt.plot(self.time_grid, theta, 'b-', label = 'theta')
 #         plt.plot(self.time_grid, thetaK/10, 'c-', label = 'thetaK/10')
-#         plt.legend()
+#         plt.legend(fontsize='large')
 #         plt.show()
         
 
@@ -1697,7 +1696,7 @@ class D_Onofrio_Chemotherapy(OCProblem):
         plt.plot(time_grid, x1/100., 'g-', label = 'x1/100')
         plt.step(time_grid, u0, 'y-', label = 'u0')
         plt.step(time_grid, u1*75, 'c-', label = 'u1*75')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -1791,7 +1790,7 @@ class D_Onofrio_Chemotherapy_VT(OCProblem):
         plt.plot(time_grid, x3, 'c-', label = 'x3')
         plt.step(time_grid, u0, 'r-', label = 'u0')
         plt.step(time_grid, u1*75, 'g-', label = 'u1*75')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2040,10 +2039,10 @@ class Electric_Car(OCProblem):
         plt.figure(dpi = dpi)
         # else:
         #     plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x0, 'r-', label = r'$x_0$')
+        plt.plot(self.time_grid, x0, 'y-', label = r'$x_0$')
         plt.plot(self.time_grid, x1, 'g-', label = r'$x_1$')
         plt.plot(self.time_grid, x2, 'b-', label = r'$x_2$')
-        plt.step(self.time_grid_ref, u*100, 'y-', label = r'$u\cdot 100$')
+        plt.step(self.time_grid_ref, u*100, 'r-', label = r'$u\cdot 100$')
         
         ttl = None
         if isinstance(title,str):
@@ -2057,7 +2056,7 @@ class Electric_Car(OCProblem):
         else:
             plt.title('')
         
-        plt.legend()
+        plt.legend(fontsize='large')
         plt.show()
         
 
@@ -2098,7 +2097,7 @@ class F8_Aircraft(OCProblem):
         plt.plot(time_grid, x1, 'g-', label = r'$x_1$')
         plt.plot(time_grid, x2, 'b-', label = r'$x_2$')
         plt.step(time_grid, w*20, 'y-', label = r'$w\cdot20$')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2184,7 +2183,7 @@ class Gravity_Turn(OCProblem):
         plt.plot(time_grid, beta*20, 'r-', label = 'beta*20')
         plt.plot(time_grid, h, 'y-', label = 'h')
         plt.step(time_grid_ref, u*20, 'c-', label = 'u*20')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2257,7 +2256,7 @@ class Oil_Shale_Pyrolysis(OCProblem):
         plt.plot(time_grid, x4, 'c-', label = 'x4')
         
         plt.step(time_grid_ref, (T - 698.15)/50, 'r', label = '(T-698.15)/50')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2318,7 +2317,7 @@ class Particle_Steering(OCProblem):
         plt.plot(time_grid, y1, 'y-', label = r'$y_1$')
         plt.plot(time_grid, y2, 'c-', label = r'$y_2$')
         plt.step(time_grid_ref, u*10, 'r', label = r'$u\cdot 10$')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2382,7 +2381,7 @@ class Quadrotor_Helicopter(OCProblem):
         plt.step(self.time_grid, w2, 'g', label = 'w2')
         plt.step(self.time_grid, w3, 'b', label = 'w3')
         plt.step(self.time_grid, u*2000, 'c', label = 'u*2000')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2482,7 +2481,7 @@ class Supermarket_Refrigeration(OCProblem):
         plt.step(time_grid_ref, u0, 'r', label = 'u0')
         plt.step(time_grid_ref, u1, 'g', label = 'u1')
         plt.step(time_grid_ref, u2, 'b', label = 'u2')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2596,7 +2595,7 @@ class Time_Optimal_Car(OCProblem):
         plt.plot(time_grid, z1, 'b-', label = 'z1')
         plt.plot(time_grid, z2*5, 'g-', label = 'z2*5')
         plt.step(time_grid_ref, u*20, 'r', label = 'u*20')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2643,7 +2642,7 @@ class Van_der_Pol_Oscillator(OCProblem):
         plt.plot(self.time_grid, x, 'g-', label = 'x')
         plt.plot(self.time_grid, y, 'b-', label = 'y')
         plt.step(self.time_grid_ref, u, 'r', label = 'u')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2691,7 +2690,7 @@ class Van_der_Pol_Oscillator_2(OCProblem):
         plt.plot(self.time_grid, x, 'g-', label = 'x')
         plt.plot(self.time_grid, y, 'b-', label = 'y')
         plt.step(self.time_grid_ref, u, 'r', label = 'u')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2740,7 +2739,7 @@ class Van_der_Pol_Oscillator_3(OCProblem):
         plt.plot(self.time_grid, x, 'g-', label = 'x')
         plt.plot(self.time_grid, y, 'b-', label = 'y')
         plt.step(self.time_grid_ref, u, 'r', label = 'u')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2790,7 +2789,7 @@ class Van_der_Pol_Oscillator_3_NQ(OCProblem):
         plt.plot(self.time_grid, x, 'g-', label = 'x')
         plt.plot(self.time_grid, y, 'b-', label = 'y')
         plt.step(self.time_grid_ref, u, 'r', label = 'u')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -2870,7 +2869,7 @@ class Ocean(OCProblem):
         plt.plot(self.time_grid, R/1000, 'g-', label = 'R/1000')
         plt.step(self.time_grid_ref, u1, 'b', label = 'u1')
         plt.step(self.time_grid_ref, u2, 'c', label = 'u2')
-        plt.legend()
+        plt.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -3023,7 +3022,7 @@ class Fermenter(OCProblem):
         plt.plot(self.time_grid, E, 'y-', label = 'E')
         plt.plot(self.time_grid, V/3, 'c-', label = 'V/3')
         plt.plot(self.time_grid, G, 'm-', label = 'G')
-        plt.legend()
+        plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
             ttl = title
@@ -3150,7 +3149,7 @@ class Batch_Distillation(OCProblem):
         plt.plot(time_grid, MD/100, 'y--', label = 'MD/100')
         
         plt.step(time_grid, R/10 / self.uscale, 'r', label = 'R/10')
-        plt.legend()
+        plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
             ttl = title
@@ -3228,7 +3227,7 @@ class Hang_Glider(OCProblem):
         plt.plot(time_grid, dx/10, 'g:', label = 'dx/10')
         plt.plot(time_grid, (y-900)/100, 'b-', label = '(y-900)/1000')
         plt.plot(time_grid, dy/10, 'b:', label = 'dy/10')
-        plt.legend()
+        plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
             ttl = title
@@ -3268,7 +3267,7 @@ class Tubular_Reactor(OCProblem):
         plt.figure(dpi=dpi)
         plt.step(self.time_grid_ref, u, 'r', label = 'u')
         plt.plot(self.time_grid, x, 'g-', label = 'x')
-        plt.legend()
+        plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
             ttl = title
@@ -3311,7 +3310,7 @@ class Tubular_Reactor_NQ(Tubular_Reactor):
         plt.figure(dpi=dpi)
         plt.step(self.time_grid_ref, u, 'r', label = 'u')
         plt.plot(self.time_grid, x, 'g-', label = 'x')
-        plt.legend()
+        plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
             ttl = title

@@ -488,7 +488,7 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
         }
 
         // If minimum norm NLP has converged, declare local infeasibility
-        if (rest_method->vars->tol < param->optimality_tol && rest_method->vars->cNormS < param->feasibility_tol){
+        if (rest_method->vars->tol < param->opt_tol && rest_method->vars->cNormS < param->feas_tol){
             feas_result = 2;
             break;
         }
@@ -674,7 +674,7 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
      */
 
     for (iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
-        if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->feasibility_tol && iter->first < 0.01 * param->feasibility_tol)) &&
+        if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->feas_tol && iter->first < 0.01 * param->feas_tol)) &&
              obj >= iter->second - param->gammaF * iter->first)
             return 1;
     }
