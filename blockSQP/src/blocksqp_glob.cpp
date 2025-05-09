@@ -329,13 +329,13 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         //Update AdeltaXi, where we use the original step in the first iteration and the previous SOC step in the following iterations (thats why we don't do it in the solve_SOC_QP method)
         if (k == 0){
-            if (param->sparse_mode)
+            if (param->sparse)
                 Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->deltaXi, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, vars->deltaXi, vars->AdeltaXi);
         }
         else{
-            if (param->sparse_mode)
+            if (param->sparse)
                 Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), deltaXiSOC, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, deltaXiSOC, vars->AdeltaXi);
@@ -427,7 +427,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
  */
 int SQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if (param->enable_feasibility_restoration == 0) throw std::logic_error("feasibility restoration called when enable_feasibility_restoration == 0, this should not happen");
+    if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
@@ -635,7 +635,7 @@ int SQPmethod::kktErrorReduction(){
 
     // scaled norm of Lagrangian gradient
     trialGradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
-    if( param->sparse_mode )
+    if( param->sparse )
         calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->jacNz.get(),
                               vars->jacIndRow.get(), vars->jacIndCol.get(), trialGradLagrange, 0 );
     else
@@ -685,7 +685,7 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
 void SQPmethod::initializeFilter()
 {
     std::set< std::pair<double,double> >::iterator iter;
-    std::pair<double,double> initPair (param->thetaMax, prob->objLo);
+    std::pair<double,double> initPair(param->thetaMax, prob->objLo);
 
     // Remove all elements
     iter = vars->filter.begin();
@@ -732,7 +732,7 @@ void SQPmethod::augmentFilter( double cNorm, double obj )
 
 int SCQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if (param->enable_feasibility_restoration == 0) throw std::logic_error("feasibility restoration called when enable_feasibility_restoration == 0, this should not happen");
+    if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
@@ -908,7 +908,7 @@ int SCQP_correction_method::filterLineSearch(){
 
 int SCQP_correction_method::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
-    if (param->enable_feasibility_restoration == 0) throw std::logic_error("feasibility restoration called when enable_feasibility_restoration == 0, this should not happen");
+    if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;

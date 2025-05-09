@@ -46,7 +46,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
     ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
-    if (!param->sparse_mode){
+    if (!param->sparse){
         constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
         jacNz = nullptr;
         jacIndRow = nullptr;
@@ -67,7 +67,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         blockIdx[0] = 0;
         blockIdx[1] = prob->nVar;
         maxblocksize = prob->nVar;
-        //param->exact_hess_usage = 0;
+        //param->exact_hess = 0;
     }
     else if (param->block_hess == 2 && prob->nBlocks > 1){
         // hybrid strategy: 1 block for constraints, 1 for objective
@@ -98,7 +98,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     }
 
     // For SR1 or finite differences, maintain two Hessians
-    if (param->hess_approximation == 1 || param->hess_approximation == 4 || param->hess_approximation == 6 || param->hess_approximation > 6){
+    if (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6){
         hess2 = std::make_unique<SymMatrix[]>(nBlocks);
         for (int iBlock = 0; iBlock < nBlocks; iBlock++){
             Bsize = blockIdx[iBlock + 1] - blockIdx[iBlock];
@@ -118,9 +118,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     int nVar = prob->nVar;
     int nCon = prob->nCon;
 
-    //Allocate space for one more delta-gamma pair than memory_size so we don't overwrite the oldest pair directly after a successful QP solve.
+    //Allocate space for one more delta-gamma pair than mem_size so we don't overwrite the oldest pair directly after a successful QP solve.
     //The linesearch may still fall back to the convex QP, which may require calculating the limited-memory fallback Hessian, which starts at the oldest step.
-    dg_nsave = std::max(std::max(int(param->limited_memory)*param->memory_size + 1, int(param->automatic_scaling)*5), 1);
+    dg_nsave = std::max(std::max(int(param->lim_mem)*param->mem_size + 1, int(param->automatic_scaling)*5), 1);
     dg_pos = -1;
 
     deltaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
@@ -186,7 +186,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     n_scaleIt = 0;
     
     //Derived from parameters
-    modified_hess_regularizationFactor = param->hess_regularization_factor;
+    modified_hess_regularizationFactor = param->reg_factor;
 
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;

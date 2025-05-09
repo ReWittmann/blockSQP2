@@ -203,11 +203,19 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     # cmap = [[ccodemp[v] for v in EXP_type_sol[i]] for i in range(n_EXP)]
 
     ###############################################################################
-    titlesize = 19
-    axtitlesize = 15
-    labelsize = 13
+    # titlesize = 19
+    # axtitlesize = 15
+    # labelsize = 13
 
-    fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP-1)))
+    titlesize = 23
+    axtitlesize = 20
+    labelsize = 19
+    
+    # titlesize = 21
+    # axtitlesize = 19
+    # labelsize = 16
+
+    fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     
     if n_EXP == 1:
@@ -225,7 +233,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_it.tick_params(labelsize = labelsize - 1)
         
         ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs_S[i])#, c = cmap[i])
-        ax_time.set_ylabel("solution time in seconds", size = labelsize)
+        ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
         ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
@@ -271,12 +279,11 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     # cmap = [[ccodemp[v] for v in EXP_type_sol[i]] for i in range(n_EXP)]
     
     ###############################################################################
-    titlesize = 19
-    axtitlesize = 15
-    labelsize = 13
+    titlesize = 23
+    axtitlesize = 19
+    labelsize = 16
 
-
-    fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP-1)))
+    fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     if n_EXP == 1:
         subfigs = (subfigs,)
@@ -294,19 +301,18 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
-        ax_it.legend(fontsize = 'large')
+        ax_it.legend(fontsize = 'x-large')
         
         ax_time.scatter(EXP_grid_sol[i], EXP_N_secs_sol[i], c = 'g', marker = 'o')
         ax_time.scatter(EXP_grid_part[i], EXP_N_secs_part[i], c = 'y', marker = 'v')
         ax_time.scatter(EXP_grid_fail[i], EXP_N_secs_fail[i], c = 'r', marker = 'x')
         
-        ax_time.set_ylabel("solution time in seconds", size = labelsize)
+        ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
         ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
         ax_time.tick_params(labelsize = labelsize - 1)
         ax_time.set_xticks(xticks)
-
     plt.show()
 
 

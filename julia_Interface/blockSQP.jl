@@ -20,7 +20,7 @@ module blockSQP
 		@initcxx
 	end
 	
-	function fnothing()
+	function fnothing(args...)
 	end
 	
 	export setindex!
@@ -52,13 +52,13 @@ module blockSQP
 			constrJac_arr[:,:] = Jprob.jac_g(xi_arr)
 			
 			if dmode == 2
-				hess_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = true)
+				hess_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = false)
 
 				s = Jprob.blockIdx[Jprob.n_hessblocks + 1] - Jprob.blockIdx[Jprob.n_hessblocks]
 				hess_last = unsafe_wrap(Array{Float64,1}, hess_arr[Jprob.n_hessblocks].cpp_object, Int32((s*(s+Int32(1)))//(Int32(2))), own = false)
 				hess_last[:] = Jprob.last_hessBlock(xi_arr, lam_arr[Jprob.nVar + 1 : Jprob.nVar + Jprob.nCon])
 			elseif dmode == 3
-				hessPTR_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = true)
+				hessPTR_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = false)
 				hess_arr = Array{Array{Float64, 1}, 1}(undef, Jprob.n_hessblocks)
 				for i = 1:Jprob.n_hessblocks
 					Bsize = Jprob.blockIdx[i+1] - Jprob.blockIdx[i]
@@ -119,7 +119,7 @@ module blockSQP
 			jac_nz_arr[:] = Jprob.jac_g_nz(xi_arr)
 			
 			if dmode == 2
-				hess_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = true)
+				hess_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = false)
 
 				s_last = Jprob.blockIdx[Jprob.n_hessblocks + 1] - Jprob.blockIdx[Jprob.n_hesslbocks]
 				hess_last = unsafe_wrap(Array{Float64,1}, hess_arr[Jprob.n_hessblocks].cpp_object, Int32((s*(s+Int32(1)))//(Int32(2))), own = false)
@@ -127,7 +127,7 @@ module blockSQP
 			end
 			
 			if dmode == 3
-				hessPTR_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = true)
+				hessPTR_arr = unsafe_wrap(Array{CxxPtr{Float64}, 1}, hess.cpp_object, Jprob.n_hessblocks, own = false)
 				hess_arr = Array{Array{Float64, 1}, 1}(undef, Jprob.n_hessblocks)
 				for i = 1:Jprob.n_hessblocks
 					Bsize = Jprob.blockIdx[i+1] - Jprob.blockIdx[i]
@@ -189,7 +189,7 @@ module blockSQP
 		x_start::Array{Float64, 1}
 		lam_start::Array{Float64, 1}
 		
-		jlProblem(nVar::Int32, nCon::Int32) = new(nVar, nCon, Int32(-1), Int32[0, nVar], vblock[vblock(1, false)], 
+		jlProblem(nVar::Int32, nCon::Int32) = new(nVar, nCon, Int32(-1), Int32[0, nVar], vblock[vblock(nVar, false)], 
 						Float64[], Float64[], Float64[], Float64[], -Inf, Inf,
 						fnothing, fnothing, fnothing, fnothing, fnothing, fnothing, fnothing, fnothing,
 						Int32[], Int32[], Float64[], Float64[]
@@ -200,44 +200,45 @@ module blockSQP
 	struct Solver
 		#C++ side objects
 		BSQP_solver::Cxx_SQPmethod
-		Cxx_Problem::Problemform
-		BSQP_options::SQPoptions
-		QPsol_opts::QPsolver_options
+		BSQP_problem::Problemform
+		BSQP_options::Cxx_SQPoptions
+		QPsol_opts::Cxx_QPsolver_options
 		BSQP_stats::SQPstats
 		
 		#Julia side objects
 		Jul_Problem::jlProblem
 		Options::Dict
-
+		
 		Solver(J_prob::jlProblem, param::Dict, cxx_stats::SQPstats) = begin
 			#Create problem class on the C++ side
-			cxx_prob = Problemform(J_prob.nVar, J_prob.nCon)
-			set_scope(cxx_prob, pointer_from_objref(J_prob))
-			set_dense_init(cxx_prob, @safe_cfunction(initialize_dense, Nothing, (Ptr{Nothing}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64})))
-			set_dense_eval(cxx_prob, @safe_cfunction(evaluate_dense, Nothing, (Ptr{Nothing}, ConstCxxPtr{Float64}, ConstCxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{CxxPtr{Float64}}, Int32, CxxPtr{Int32})))
-			set_simple_eval(cxx_prob, @safe_cfunction(evaluate_simple, Nothing, (Ptr{Nothing}, ConstCxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Int32})))
-			set_sparse_init(cxx_prob, @safe_cfunction(initialize_sparse, Nothing, (Ptr{Nothing}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Int32}, CxxPtr{Int32})))
-			set_sparse_eval(cxx_prob, @safe_cfunction(evaluate_sparse, Nothing, (Ptr{Nothing}, ConstCxxPtr{Float64}, ConstCxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Int32}, CxxPtr{Int32}, CxxPtr{CxxPtr{Float64}}, Int32, CxxPtr{Int32})))
-			set_continuity_restoration(cxx_prob, @safe_cfunction(reduceConstrVio, Nothing, (Ptr{Nothing}, CxxPtr{Float64}, CxxPtr{Int32})))
-			set_blockIdx(cxx_prob, J_prob.blockIdx)
-			set_nnz(cxx_prob, J_prob.nnz)
-			set_bounds(cxx_prob, J_prob.lb_var, J_prob.ub_var, J_prob.lb_con, J_prob.ub_con, J_prob.objLo, J_prob.objUp)
+			BSQP_problem = Problemform(J_prob.nVar, J_prob.nCon)
+			set_scope(BSQP_problem, pointer_from_objref(J_prob))
+			set_dense_init(BSQP_problem, @safe_cfunction(initialize_dense, Nothing, (Ptr{Nothing}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64})))
+			set_dense_eval(BSQP_problem, @safe_cfunction(evaluate_dense, Nothing, (Ptr{Nothing}, ConstCxxPtr{Float64}, ConstCxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{CxxPtr{Float64}}, Int32, CxxPtr{Int32})))
+			set_simple_eval(BSQP_problem, @safe_cfunction(evaluate_simple, Nothing, (Ptr{Nothing}, ConstCxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Int32})))
+			set_sparse_init(BSQP_problem, @safe_cfunction(initialize_sparse, Nothing, (Ptr{Nothing}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Int32}, CxxPtr{Int32})))
+			set_sparse_eval(BSQP_problem, @safe_cfunction(evaluate_sparse, Nothing, (Ptr{Nothing}, ConstCxxPtr{Float64}, ConstCxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Float64}, CxxPtr{Int32}, CxxPtr{Int32}, CxxPtr{CxxPtr{Float64}}, Int32, CxxPtr{Int32})))
+			set_continuity_restoration(BSQP_problem, @safe_cfunction(reduceConstrVio, Nothing, (Ptr{Nothing}, CxxPtr{Float64}, CxxPtr{Int32})))
+			set_blockIdx(BSQP_problem, J_prob.blockIdx)
+			set_nnz(BSQP_problem, J_prob.nnz)
+			set_bounds(BSQP_problem, J_prob.lb_var, J_prob.ub_var, J_prob.lb_con, J_prob.ub_con, J_prob.objLo, J_prob.objUp)
 			
-			VB = vblock_array(length(J_prob.vblocks))
-			for i = 1:length(J_prob.vblocks)
-				array_set(VB, i, J_prob.vblocks[i])
+			if length(J_prob.vblocks) > 0
+				VB = vblock_array(length(J_prob.vblocks))
+				for i = 1:length(J_prob.vblocks)
+					array_set(VB, i, J_prob.vblocks[i])
+				end
+				set_vblocks(BSQP_problem, CxxRef(VB))
 			end
-			set_vblocks(cxx_prob, CxxRef(VB))
-			
 			#OLD: Create options class on the C++ side
 			#cxx_opts = BSQP_options(param)
 			
 			###################################################################################################################
 			#NEW: Create default options class on the C++ side
-			cxx_opts = SQPoptions()
+			cxx_opts = Cxx_SQPoptions()
 			opt_keys = keys(param)
 			
-			cxx_QPsolver_options = NULL_QPsolver_options()
+			cxx_QPopts = Cxx_NULL_QPsolver_options()
 			#Pass the options. TODO: Is there a more elegant way to do this?
 			if "print_level" in opt_keys
 				set_print_level(cxx_opts, Int32(param["print_level"]))
@@ -260,14 +261,20 @@ module blockSQP
 			if "feas_tol" in opt_keys
 				set_feas_tol(cxx_opts, Float64(param["feas_tol"]))
 			end
-			if "sparse_mode" in opt_keys
-				set_sparse_mode(cxx_opts, Int32(param["sparse_mode"]))
+			if "sparse" in opt_keys
+				set_sparse(cxx_opts, Int32(param["sparse"]))
 			end
 			if "enable_linesearch" in opt_keys
 				set_enable_linesearch(cxx_opts, Int32(param["enable_linesearch"]))
 			end
-			if "enable_feasibility_restoration" in opt_keys
-				set_enable_feasibility_restoration(cxx_opts, Int32(param["enable_feasibility_restoration"]))
+			if "enable_rest" in opt_keys
+				set_enable_rest(cxx_opts, Int32(param["enable_rest"]))
+			end
+			if "rest_rho" in opt_keys
+				set_rest_rho(cxx_opts, Float64(param["rest_rho"]))
+			end
+			if "rest_zeta" in opt_keys
+				set_rest_zeta(cxx_opts, Float64(param["rest_zeta"]))
 			end
 			if "max_linesearch_steps" in opt_keys
 				set_max_linesearch_steps(cxx_opts, Int32(param["max_linesearch_steps"]))
@@ -284,11 +291,11 @@ module blockSQP
 			if "block_hess" in opt_keys
 				set_block_hess(cxx_opts, Int32(param["block_hess"]))
 			end
-			if "sizing_strategy" in opt_keys
-				set_sizing_strategy(cxx_opts, Int32(param["sizing_strategy"]))
+			if "sizing" in opt_keys
+				set_sizing(cxx_opts, Int32(param["sizing"]))
 			end
-			if "fallback_sizing_strategy" in opt_keys
-				set_fallback_sizing_strategy(cxx_opts, Int32(param["fallback_sizing_strategy"]))
+			if "fallback_sizing" in opt_keys
+				set_fallback_sizing(cxx_opts, Int32(param["fallback_sizing"]))
 			end
 			if "max_QP_seconds" in opt_keys
 				set_max_QP_seconds(cxx_opts, Int32(param["max_QP_seconds"]))
@@ -314,23 +321,23 @@ module blockSQP
 			if "min_damping_quotient" in opt_keys
 				set_min_damping_quotient(cxx_opts, Float64(param["min_damping_quotient"]))
 			end
-			if "hess_approximation" in opt_keys
-				set_hess_approximation(cxx_opts, Int32(param["hess_approximation"]))
+			if "hess_approx" in opt_keys
+				set_hess_approx(cxx_opts, Int32(param["hess_approx"]))
 			end
-			if "fallback_approximation" in opt_keys
-				set_fallback_approximation(cxx_opts, Int32(param["fallback_approximation"]))
+			if "fallback_approx" in opt_keys
+				set_fallback_approx(cxx_opts, Int32(param["fallback_approx"]))
 			end
 			if "indef_local_only" in opt_keys
 				set_indef_local_only(cxx_opts, Bool(param["indef_local_only"]))
 			end
-			if "limited_memory" in opt_keys
-				set_limited_memory(cxx_opts, Int32(param["limited_memory"]))
+			if "lim_mem" in opt_keys
+				set_lim_mem(cxx_opts, Int32(param["lim_mem"]))
 			end
-			if "memory_size" in opt_keys
-				set_memory_size(cxx_opts, Int32(param["memory_size"]))
+			if "memsize" in opt_keys
+				set_memsize(cxx_opts, Int32(param["memsize"]))
 			end
-			if "exact_hess_usage" in opt_keys
-				set_exact_hess_usage(cxx_opts, Int32(param["exact_hess_usage"]))
+			if "exact_hess" in opt_keys
+				set_exact_hess(cxx_opts, Int32(param["exact_hess"]))
 			end
 			if "skip_first_linesearch" in opt_keys
 				set_skip_first_linesearch(cxx_opts, Int32(param["skip_first_linesearch"]))
@@ -360,47 +367,47 @@ module blockSQP
 				QPsol_param = param["qpsol_options"]
 				QPopt_keys = keys(QPsol_param)
 				if get_qpsol(cxx_opts) == "qpOASES"
-					cxx_QPsolver_options = qpOASES_options()
+					cxx_QPopts = Cxx_qpOASES_options()
 					if "sparsityLevel" in QPopt_keys
-						set_sparsityLevel(cxx_QPsolver_options, Int32(QPsol_param["sparsityLevel"]))
+						set_sparsityLevel(cxx_QPopts, Int32(QPsol_param["sparsityLevel"]))
 					end
 					if "printLevel" in QPopt_keys
-						set_printLevel(cxx_QPsolver_options, Int32(QPsol_param["printLevel"]))
+						set_printLevel(cxx_QPopts, Int32(QPsol_param["printLevel"]))
 					end
 					if "terminationTolerance" in QPopt_keys
-						set_terminationTolerance(cxx_QPsolver_options, Float64(QPsol_param["terminationTolerance"]))
+						set_terminationTolerance(cxx_QPopts, Float64(QPsol_param["terminationTolerance"]))
 					end
 				elseif get_QPsol(cxx_opts) == "gurobi"
-					cxx_QPsolver_options = gurobi_options()
+					cxx_QPopts = Cxx_gurobi_options()
 					if "Method" in QPopt_keys
-						set_Method(cxx_QPsolver_options, Int32(QPsol_param["Method"]))
+						set_Method(cxx_QPopts, Int32(QPsol_param["Method"]))
 					end
 					if "NumericFocus" in QPopt_keys
-						set_NumericFocus(cxx_QPsolver_options, Int32(QPsol_param["NumericFocus"]))
+						set_NumericFocus(cxx_QPopts, Int32(QPsol_param["NumericFocus"]))
 					end
 					if "OutputFlag" in QPopt_keys
-						set_OutputFlag(cxx_QPsolver_options, Int32(QPsol_param["OutputFlag"]))
+						set_OutputFlag(cxx_QPopts, Int32(QPsol_param["OutputFlag"]))
 					end
 					if "Presolve" in QPopt_keys
-						set_Presolve(cxx_QPsolver_options, Int32(QPsol_param["Presolve"]))
+						set_Presolve(cxx_QPopts, Int32(QPsol_param["Presolve"]))
 					end
 					if "Aggregate" in QPopt_keys
-						set_Aggregate(cxx_QPsolver_options, Int32(QPsol_param["Aggregate"]))
+						set_Aggregate(cxx_QPopts, Int32(QPsol_param["Aggregate"]))
 					end
 					if "BarHomogeneous" in QPopt_keys
-						set_BarHomogeneous(cxx_QPsolver_options, Int32(QPsol_param["BarHomogeneous"]))
+						set_BarHomogeneous(cxx_QPopts, Int32(QPsol_param["BarHomogeneous"]))
 					end
 					if "OptimalityTol" in QPopt_keys
-						set_OptimalityTol(cxx_QPsolver_options, Float64(QPsol_param["OptimalityTol"]))
+						set_OptimalityTol(cxx_QPopts, Float64(QPsol_param["OptimalityTol"]))
 					end
 					if ("FeasibilityTol" in QPopt_keys)
-						set_FeasibilityTol(cxx_QPsolver_options, Float64(QPsol_param["FeasibilityTol"]))
+						set_FeasibilityTol(cxx_QPopts, Float64(QPsol_param["FeasibilityTol"]))
 					end
 					if ("PSDTol" in QPopt_keys)
-						set_PSDTol(cxx_QPsolver_options, Float64(QPsol_param["PSDTol"]))
+						set_PSDTol(cxx_QPopts, Float64(QPsol_param["PSDTol"]))
 					end
 				end
-				set_qpsol_options(cxx_opts, CxxPtr(cxx_QPsolver_options))
+				set_qpsol_options(cxx_opts, CxxPtr(cxx_QPopts))
 				#There is no need to throw errors for unknown QP solver specifications here as an error would already have been thrown when setting this option on the C++ side
 			end
 			if "automatic_scaling" in opt_keys
@@ -416,9 +423,9 @@ module blockSQP
 			###################################################################################################################
 
 			#Create method class on the C++ side
-			cxx_method = Cxx_SQPmethod(CxxPtr(cxx_prob), CxxPtr(cxx_opts), CxxPtr(cxx_stats))
+			cxx_method = Cxx_SQPmethod(CxxPtr(BSQP_problem), CxxPtr(cxx_opts), CxxPtr(cxx_stats))
 
-			new(cxx_method, cxx_prob, cxx_opts, cxx_QPsolver_options, cxx_stats, J_prob, param)
+			new(cxx_method, BSQP_problem, cxx_opts, cxx_QPopts, cxx_stats, J_prob, param)
 		end
 	end
 	
@@ -486,7 +493,7 @@ module blockSQP
 
 
 	mutable struct Condenser
-		cxx_Condenser::Cpp_Condenser
+		cxx_Condenser::Cxx_Condenser
 		cxx_vblocks::vblock_array
 		cxx_cblocks::cblock_array
 		cxx_hsizes::int_array
@@ -546,7 +553,7 @@ module blockSQP
 		grad_obj_data = unsafe_wrap(Array{Float64, 1}, show_ptr(M_grad_obj).cpp_object, nVar, own = false)
 		grad_obj_data[:] = grad_obj
 
-		M_constr_jac = alloc_Sparse_Matrix(nCon, nVar, nnz)
+		M_constr_jac = alloc_Cxx_Sparse_Matrix(nCon, nVar, nnz)
 		constr_nz_data = unsafe_wrap(Array{Float64, 1}, show_nz(M_constr_jac).cpp_object, nnz, own = false)
 		constr_row_data = unsafe_wrap(Array{Int32, 1}, show_row(M_constr_jac).cpp_object, nnz, own = false)
 		constr_colind_data = unsafe_wrap(Array{Int32, 1}, show_colind(M_constr_jac).cpp_object, nVar+1, own = false)
@@ -589,7 +596,7 @@ module blockSQP
 		condensed_num_hessblocks = get_condensed_num_hessblocks(cond)
 
 		M_condensed_h = BSQP_Matrix()
-		M_condensed_jacobian = Sparse_Matrix()
+		M_condensed_jacobian = Cxx_Sparse_Matrix()
 		M_condensed_hess = SymMat_array(condensed_num_hessblocks)
 		M_condensed_lb_var = BSQP_Matrix()
 		M_condensed_ub_var = BSQP_Matrix()
@@ -667,7 +674,7 @@ module blockSQP
 	struct condensing_Solver
 		BSQP_solver::SCQPmethod
 		Cxx_Problem::Problemform
-		BSQP_options::SQPoptions
+		BSQP_options::Cxx_SQPoptions
 		BSQP_stats::SQPstats
 		Jul_Problem::jlProblem
 		Options::Dict

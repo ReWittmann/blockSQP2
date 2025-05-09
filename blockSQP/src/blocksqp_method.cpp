@@ -37,12 +37,12 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     SQPoptions *rest_param = new SQPoptions();
 
     //General restoration options
-    rest_param->enable_feasibility_restoration = 0;
-    rest_param->limited_memory = 1;
-    rest_param->hess_approximation = 2;
-    rest_param->sizing_strategy = 2;
+    rest_param->enable_rest = 0;
+    rest_param->lim_mem = 1;
+    rest_param->hess_approx = 2;
+    rest_param->sizing = 2;
     rest_param->BFGS_damping_factor = 0.2;
-    //rest_param->sizing_strategy = 4;
+    //rest_param->sizing = 4;
     //rest_param->BFGS_damping_factor = 1./3.;
 
     rest_param->result_print_color = false;
@@ -69,17 +69,16 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     if (param->automatic_scaling){
         scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
-    }
-
+    }    
     vars = std::make_unique<SQPiterate>(prob, param);
 
     // Create a solver object for quadratic subproblems.
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, vars->blockIdx.get(), param));
     
     //Setup the feasibility restoration problem
-    if (param->enable_feasibility_restoration){
+    if (param->enable_rest){
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->restoration_rho, param->restoration_zeta);
+        rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->rest_rho, param->rest_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -108,15 +107,15 @@ SCQPmethod::SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *s
     vars = std::make_unique<SCQPiterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparse_mode == 0) throw ParameterError("Condensing only works with sparse QPs");
+    if (param->sparse == 0) throw ParameterError("Condensing only works with sparse QPs");
     if (param->block_hess != 1) throw ParameterError("Condensing requires block diagonal hessian for efficient linear algebra");
     
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
 
-    if (param->enable_feasibility_restoration){
+    if (param->enable_rest){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restoration_rho, param->restoration_zeta);
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->rest_rho, param->rest_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -149,7 +148,7 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
     vars = std::make_unique<SCQPiterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparse_mode == 0){
+    if (param->sparse == 0){
         throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
     }
     if (param->block_hess != 1){
@@ -158,10 +157,10 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
 
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
 
-    if (param->enable_feasibility_restoration){
+    if (param->enable_rest){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restoration_rho, param->restoration_zeta);
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->rest_rho, param->rest_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -188,7 +187,7 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     vars = std::make_unique<SCQP_correction_iterate>(prob, param, cond);
 
     // Check if there are options that are infeasible and set defaults accordingly
-    if (param->sparse_mode == 0){
+    if (param->sparse == 0){
         throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
     }
     if (param->block_hess != 1){
@@ -204,10 +203,10 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         SOC_corrections[tnum].Dimension(cond->targets_data[tnum].n_dep).Initialize(0.);
     }
 
-    if (param->enable_feasibility_restoration){
+    if (param->enable_rest){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->restoration_rho, param->restoration_zeta);
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->rest_rho, param->rest_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);

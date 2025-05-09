@@ -278,31 +278,31 @@ int main(int argc, const char* argv[]){
     ub_con.Dimension(nCon);
     lb_con(0) = 0.0;
     ub_con(0) = 0.0;
-
+    
     // Variable partition for block Hessian
     for( int i=0; i<nBlocks+1; i++ )
         blockIdx[i] = i;
-
+    
     // Create problem evaluation object
     prob = new MyProblem( nVar, nCon, nBlocks, blockIdx, lb_var, ub_var, lb_con, ub_con, x0 );
 	prob->nnz = 2;
-
+    
     /*------------------------*/
     /* Options for SQP solver */
     /*------------------------*/
     opts = new SQPoptions();
     opts->opt_tol = 1.0e-12;         // For this example, set tolerances very low. The default is 1e-6
     opts->feas_tol = 1.0e-12;        
-
-    opts->sparse_mode = true;
-
+    
+    opts->sparse = true;
+    
     opts->enable_linesearch = false;        // Disable filter line search for this example
-    opts->hess_approximation = 1;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
-    opts->fallback_approximation = 2;       // ' ', not needed if hess_approximation is positive definite
-
-    opts->sizing_strategy = 0;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
-    opts->fallback_sizing_strategy = 0;     // ' '
-    opts->sparse_mode = 0;                  // Dense matrices for this example
+    opts->hess_approx = 1;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
+    opts->fallback_approx = 2;       // ' ', not needed if hess_approximation is positive definite
+    
+    opts->sizing = 0;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
+    opts->fallback_sizing = 0;     // ' '
+    opts->sparse = true;                  // Dense matrices for this example
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
 

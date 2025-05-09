@@ -40,7 +40,7 @@ void SQPmethod::init(){
     initializeFilter();
 
     // Set initial values for all xi and set the Jacobian for linear constraints
-    if( param->sparse_mode )
+    if( param->sparse )
         prob->initialize(vars->xi, vars->lambda, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
     else
         prob->initialize(vars->xi, vars->lambda, vars->constrJac);
@@ -53,7 +53,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     int it = 0, infoQP = 0, infoEval = 0;
     bool skipLineSearch = false;
     bool hasConverged = false;
-    int whichDerv = param->exact_hess_usage;
+    int whichDerv = param->exact_hess;
     int n_convShift;
 
     if (!initCalled){
@@ -64,7 +64,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     
     if (warmStart == 0 || stats->itCount == 0){
         // SQP iteration 0
-        if (param->sparse_mode)
+        if (param->sparse)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         else
@@ -92,7 +92,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         ///PHASE 1: Solve the quadratic subproblem///
         /////////////////////////////////////////////
-
+        
         /// Solve QP subproblem with qpOASES or QPOPT
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
         
@@ -117,7 +117,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                         std::cout << "Failed\n";
                 }
 
-                if (qpError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feas_tol){
+                if (qpError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                     std::cout << "Start feasibility restoration phase\n";
                     qpError = feasibilityRestorationPhase();
                     vars->steptype = 3;
@@ -158,7 +158,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
 
             // Invoke feasibility restoration phase
-            if (feasError && param->enable_feasibility_restoration && vars->cNorm > 0.01 * param->feas_tol){
+            if (feasError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                 printf("***Start feasibility restoration phase.***\n");
                 feasError = feasibilityRestorationPhase();
                 vars->steptype = 3;
@@ -250,7 +250,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
 
                 // If this does not yield a successful step, start restoration phase
-                if (lsError && vars->cNorm > 0.01 * param->feas_tol && param->enable_feasibility_restoration){
+                if (lsError && vars->cNorm > 0.01 * param->feas_tol && param->enable_rest){
                     printf("***Warning! Steplength too short. Start feasibility restoration phase.***\n");
                     // Solve NLP with minimum norm objective
                     lsError = bool(feasibilityRestorationPhase());
@@ -277,7 +277,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         calcLagrangeGradient( vars->gamma, 0 );
 
         /// Evaluate functions and gradients at the new xi
-        if (param->sparse_mode){
+        if (param->sparse){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         }
@@ -357,7 +357,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         //Increment memory counter of each block and scaling memory counter unless step is restoration step.
         if (vars->steptype < 3){
             for (int ind = 0; ind < vars->nBlocks; ind++){
-                vars->nquasi[ind] += int(vars->nquasi[ind] < param->memory_size);
+                vars->nquasi[ind] += int(vars->nquasi[ind] < param->mem_size);
             }
             vars->n_scaleIt += int(vars->n_scaleIt < vars->dg_nsave);
         }
@@ -369,20 +369,20 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         ///PHASE 3.5: Update the Hessian 'approximations' and related data///
         ///
 
-        if (param->limited_memory){
+        if (param->lim_mem){
             //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
-                if (param->fallback_approximation <= 2)
-                    calcHessianUpdateLimitedMemory(param->fallback_approximation, param->fallback_sizing_strategy, vars->hess2.get());
+                if (param->fallback_approx <= 2)
+                    calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
-                if (param->exact_hess_usage < 2){
+                if (param->exact_hess < 2){
                     //Calculate/Update first (pos. indefinite) hessian
-                    if (param->hess_approximation <= 2 || param->hess_approximation > 6)
-                        calcHessianUpdateLimitedMemory(param->hess_approximation, param->sizing_strategy, vars->hess1.get());
-                    else if (param->hess_approximation == 4)
+                    if (param->hess_approx <= 2 || param->hess_approx > 6)
+                        calcHessianUpdateLimitedMemory(param->hess_approx, param->sizing, vars->hess1.get());
+                    else if (param->hess_approx == 4)
                         calcFiniteDiffHessian(vars->hess1.get());
                     vars->hess2_updated = false;
                 }
@@ -391,17 +391,17 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         }
         else{
             //Vectors deltaXi and gamma need not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
-            if (param->exact_hess_usage < 2){
-                if (param->hess_approximation <= 2)
-                    calcHessianUpdate(param->hess_approximation, param->sizing_strategy, vars->hess1.get());
-                else if (param->hess_approximation == 4)
+            if (param->exact_hess < 2){
+                if (param->hess_approx <= 2)
+                    calcHessianUpdate(param->hess_approx, param->sizing, vars->hess1.get());
+                else if (param->hess_approx == 4)
                     calcFiniteDiffHessian(vars->hess1.get());
             }
 
             //Also update the fallback hessian as we need to update it in every iteration regardless of whether it is needed
             if (vars->hess2 != nullptr){
-                if (param->fallback_approximation <= 2)
-                    calcHessianUpdate(param->fallback_approximation, param->fallback_sizing_strategy, vars->hess2.get());
+                if (param->fallback_approx <= 2)
+                    calcHessianUpdate(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
         }

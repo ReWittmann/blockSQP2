@@ -21,8 +21,8 @@ namespace blockSQP{
 //QPsolver base class implemented methods
 QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts): nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks), Qparam(QPopts){
     //For managing QP solution times
-    default_time_limit = Qparam->max_QP_seconds;
-    custom_time_limit = Qparam->max_QP_seconds;
+    default_time_limit = Qparam->max_QP_secs;
+    custom_time_limit = Qparam->max_QP_secs;
     time_limit_type = 0;
     skip_timeRecord = false;
 
@@ -256,7 +256,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         QPtime = default_time_limit;
 
     //std::cout << "QPtime = " << QPtime << "\n";
-    QP_it = Qparam->max_QP_iter;
+    QP_it = Qparam->max_QP_it;
     qpOASES::SolutionAnalysis solAna;
     qpOASES::returnValue ret;
 

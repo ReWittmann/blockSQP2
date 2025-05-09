@@ -98,7 +98,6 @@ public:
         }
 
         (*evaluate_dense)(Julia_Scope, xi.array, lambda.array, objval, constr.array, gradObj.array, constrJac.array, hessNz, dmode, info);
-
         delete[] hessNz;
     }
 
@@ -116,7 +115,7 @@ public:
         }
 
         (*evaluate_sparse)(Julia_Scope, xi.array, lambda.array, objval, constr.array, gradObj.array, jacNz, jacIndRow, jacIndCol, hessNz, dmode, info);
-
+        
         delete[] hessNz;
     }
 
@@ -273,20 +272,23 @@ mod.add_type<vblock_array>("vblock_array")
     .method("array_get", [](vblock_array &ARR, int index){return ARR.ptr[index - 1];})
     ;
 
-mod.add_type<blockSQP::QPsolver_options>("QPsolver_options")
+//mod.add_type<blockSQP::QPsolver_options>("QPsolver_options")
+//    ;
+mod.add_type<blockSQP::QPsolver_options>("Cxx_QPsolver_options")
     ;
 
-mod.add_type<NULL_QPsolver_options>("NULL_QPsolver_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
+mod.add_type<NULL_QPsolver_options>("Cxx_NULL_QPsolver_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
     .constructor<>()
     ;
 
-mod.add_type<blockSQP::qpOASES_options>("qpOASES_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
+mod.add_type<blockSQP::qpOASES_options>("Cxx_qpOASES_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
     .constructor<>()
     .method("set_printLevel", [](blockSQP::qpOASES_options &QPopts, int val){QPopts.printLevel = val;})
     .method("set_terminationTolerance", [](blockSQP::qpOASES_options &QPopts, double val){QPopts.terminationTolerance = val;})
+    .method("set_sparsityLevel", [](blockSQP::qpOASES_options &QPopts, int val){QPopts.sparsityLevel = val;})
     ;
 
-mod.add_type<blockSQP::gurobi_options>("gurobi_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
+mod.add_type<blockSQP::gurobi_options>("Cxx_gurobi_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
     .constructor<>()
     .method("set_Method", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.Method = val;})
     .method("set_NumericFocus", [](blockSQP::gurobi_options &GRBopts, int val){std::cout << "Set NumericFocus to " << val << "\n"; GRBopts.NumericFocus = val;})
@@ -299,9 +301,9 @@ mod.add_type<blockSQP::gurobi_options>("gurobi_options", jlcxx::julia_base_type<
     .method("set_PSDTol", [](blockSQP::gurobi_options &GRBopts, double val){GRBopts.PSDTol = val;})
     ;
 
-mod.add_type<blockSQP::SQPoptions>("SQPoptions")
+mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
     .constructor<>()
-    .method("get_max_QP_iter", [](blockSQP::SQPoptions &opts){return opts.max_QP_iter;})
+    .method("get_max_QP_it", [](blockSQP::SQPoptions &opts){return opts.max_QP_it;})
     .method("set_print_level", [](blockSQP::SQPoptions &opts, int val){opts.print_level = val;})
     .method("set_result_print_color", [](blockSQP::SQPoptions &opts, int val){opts.result_print_color = val;})
     .method("set_debug_level", [](blockSQP::SQPoptions &opts, int val){opts.debug_level = val;})
@@ -309,17 +311,19 @@ mod.add_type<blockSQP::SQPoptions>("SQPoptions")
     .method("set_inf", [](blockSQP::SQPoptions &opts, double val){opts.inf = val;})
     .method("set_opt_tol", [](blockSQP::SQPoptions &opts, double val){opts.opt_tol = val;})
     .method("set_feas_tol", [](blockSQP::SQPoptions &opts, double val){opts.feas_tol = val;})
-    .method("set_sparse_mode", [](blockSQP::SQPoptions &opts, int val){opts.sparse_mode = val;})
+    .method("set_sparse", [](blockSQP::SQPoptions &opts, int val){opts.sparse = val;})
     .method("set_enable_linesearch", [](blockSQP::SQPoptions &opts, int val){opts.enable_linesearch = val;})
-    .method("set_enable_feasibility_restoration", [](blockSQP::SQPoptions &opts, int val){opts.enable_feasibility_restoration = val;})
+    .method("set_enable_rest", [](blockSQP::SQPoptions &opts, int val){opts.enable_rest = val;})
+    .method("set_rest_rho", [](blockSQP::SQPoptions &opts, double val){opts.rest_rho = val;})
+    .method("set_rest_zeta", [](blockSQP::SQPoptions &opts, double val){opts.rest_zeta = val;})
     .method("set_max_linesearch_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_linesearch_steps = val;})
     .method("set_max_consec_reduced_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_consec_reduced_steps = val;})
     .method("set_max_consec_skipped_updates", [](blockSQP::SQPoptions &opts, int val){opts.max_consec_skipped_updates = val;})
-    .method("set_max_QP_iter", [](blockSQP::SQPoptions &opts, int val){opts.max_QP_iter = val;})
+    .method("set_max_QP_it", [](blockSQP::SQPoptions &opts, int val){opts.max_QP_it = val;})
     .method("set_block_hess", [](blockSQP::SQPoptions &opts, int val){opts.block_hess = val;})
-    .method("set_sizing_strategy", [](blockSQP::SQPoptions &opts, int val){opts.sizing_strategy = val;})
-    .method("set_fallback_sizing_strategy", [](blockSQP::SQPoptions &opts, int val){opts.fallback_sizing_strategy = val;})
-    .method("set_max_QP_seconds", [](blockSQP::SQPoptions &opts, double val){opts.max_QP_seconds = val;})
+    .method("set_sizing", [](blockSQP::SQPoptions &opts, int val){opts.sizing = val;})
+    .method("set_fallback_sizing", [](blockSQP::SQPoptions &opts, int val){opts.fallback_sizing = val;})
+    .method("set_max_QP_secs", [](blockSQP::SQPoptions &opts, double val){opts.max_QP_secs = val;})
     .method("set_initial_hess_scale", [](blockSQP::SQPoptions &opts, double val){opts.initial_hess_scale = val;})
     .method("set_COL_eps", [](blockSQP::SQPoptions &opts, double val){opts.COL_eps = val;})
     .method("set_OL_eps", [](blockSQP::SQPoptions &opts, double val){opts.OL_eps = val;})
@@ -327,16 +331,16 @@ mod.add_type<blockSQP::SQPoptions>("SQPoptions")
     .method("set_COL_tau_2", [](blockSQP::SQPoptions &opts, double val){opts.COL_tau_2 = val;})
     .method("set_BFGS_damping_factor", [](blockSQP::SQPoptions &opts, double val){opts.BFGS_damping_factor = val;})
     .method("set_min_damping_quotient", [](blockSQP::SQPoptions &opts, double val){opts.min_damping_quotient = val;})
-    .method("set_hess_approximation", [](blockSQP::SQPoptions &opts, int val){opts.hess_approximation = val;})
-    .method("set_fallback_approximation", [](blockSQP::SQPoptions &opts, int val){opts.fallback_approximation = val;})
+    .method("set_hess_approx", [](blockSQP::SQPoptions &opts, int val){opts.hess_approx = val;})
+    .method("set_fallback_approx", [](blockSQP::SQPoptions &opts, int val){opts.fallback_approx = val;})
     .method("set_indef_local_only", [](blockSQP::SQPoptions &opts, bool val){opts.indef_local_only = val;})
-    .method("set_limited_memory", [](blockSQP::SQPoptions &opts, int val){opts.limited_memory = val;})
-    .method("set_memory_size", [](blockSQP::SQPoptions &opts, int val){opts.memory_size = val;})
-    .method("set_exact_hess_usage", [](blockSQP::SQPoptions &opts, int val){opts.exact_hess_usage = val;})
+    .method("set_lim_mem", [](blockSQP::SQPoptions &opts, int val){opts.lim_mem = val;})
+    .method("set_mem_size", [](blockSQP::SQPoptions &opts, int val){opts.mem_size = val;})
+    .method("set_exact_hess", [](blockSQP::SQPoptions &opts, int val){opts.exact_hess = val;})
     .method("set_skip_first_linesearch", [](blockSQP::SQPoptions &opts, int val){opts.skip_first_linesearch = val;})
     .method("set_conv_strategy", [](blockSQP::SQPoptions &opts, int val){opts.conv_strategy = val;})
     .method("set_max_conv_QPs", [](blockSQP::SQPoptions &opts, int val){opts.max_conv_QPs = val;})
-    .method("set_hess_regularization_factor", [](blockSQP::SQPoptions &opts, double val){opts.hess_regularization_factor = val;})
+    .method("set_hess_regularization_factor", [](blockSQP::SQPoptions &opts, double val){opts.reg_factor = val;})
     .method("set_max_SOC", [](blockSQP::SQPoptions &opts, int val){opts.max_SOC = val;})
     .method("set_max_bound_refines", [](blockSQP::SQPoptions &opts, int val){opts.max_bound_refines = val;})
     .method("set_max_correction_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_correction_steps = val;})
@@ -495,7 +499,7 @@ mod.method("size_1", [](blockSQP::SymMatrix *M){return M->m;});
 
 
 
-mod.add_type<blockSQP::Sparse_Matrix>("Sparse_Matrix")
+mod.add_type<blockSQP::Sparse_Matrix>("Cxx_Sparse_Matrix")
     .constructor<>()
     .method("disown!", [](blockSQP::Sparse_Matrix &M){
         M.m = 0;
@@ -511,7 +515,7 @@ mod.add_type<blockSQP::Sparse_Matrix>("Sparse_Matrix")
     .method("show_colind", [](blockSQP::Sparse_Matrix &M){return M.colind;})
     ;
 
-mod.method("alloc_Sparse_Matrix", [](int m, int n, int nnz){
+mod.method("alloc_Cxx_Sparse_Matrix", [](int m, int n, int nnz){
     return blockSQP::Sparse_Matrix(m, n, nnz, new double[nnz], new int[nnz], new int[n+1]);
 });
 
@@ -524,7 +528,7 @@ mod.add_type<SymMat_array>("SymMat_array")
     .method("array_get_ptr", [](SymMat_array &ARR, int index){return ARR.ptr + index - 1;})
     ;
 
-mod.add_type<blockSQP::Condenser>("Cpp_Condenser")
+mod.add_type<blockSQP::Condenser>("Cxx_Condenser")
     .method("print_debug", &blockSQP::Condenser::print_debug)
     .method("get_num_vars", [](blockSQP::Condenser &C){return C.num_vars;})
     .method("get_num_cons", [](blockSQP::Condenser &C){return C.num_cons;})
@@ -536,7 +540,6 @@ mod.add_type<blockSQP::Condenser>("Cpp_Condenser")
     .method("get_hess_block_sizes", [](blockSQP::Condenser &C){return C.hess_block_sizes;})
     .method("Cxx_full_condense!", [](blockSQP::Condenser &C, const blockSQP::Matrix &grad_obj, const blockSQP::Sparse_Matrix &con_jac, const SymMat_array &hess, const blockSQP::Matrix &lb_var, const blockSQP::Matrix &ub_var, const blockSQP::Matrix &lb_con, const blockSQP::Matrix &ub_con,
                 blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_jacobian, SymMat_array &condensed_hess, blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con){
-                //std::cout << "grad_obj\n" << grad_obj << "\nlb_var\n" << lb_var << "\nub_var\n" << ub_var << "\nlb_con\n" << lb_con << "\nub_con\n" << ub_con << "\n";
                 C.full_condense(grad_obj, con_jac, hess.ptr, lb_var, ub_var, lb_con, ub_con, condensed_h, condensed_jacobian, condensed_hess.ptr, condensed_lb_var, condensed_ub_var, condensed_lb_con, condensed_ub_con);
             }
         )
@@ -553,15 +556,15 @@ mod.method("construct_Condenser", [](vblock_array *VBLOCKS, cblock_array &CBLOCK
 
 
 //SCQP (sequential condensed quadratic programming) classes jlcxx::julia_base_type<blockSQP::Problemspec>()
-mod.add_type<blockSQP::SCQPmethod>("SCQPmethod", jlcxx::julia_base_type<blockSQP::SQPmethod>())
+mod.add_type<blockSQP::SCQPmethod>("Cxx_SCQPmethod", jlcxx::julia_base_type<blockSQP::SQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
 
-mod.add_type<blockSQP::SCQP_bound_method>("SCQP_bound_method", jlcxx::julia_base_type<blockSQP::SCQPmethod>())
+mod.add_type<blockSQP::SCQP_bound_method>("Cxx_SCQP_bound_method", jlcxx::julia_base_type<blockSQP::SCQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
 
-mod.add_type<blockSQP::SCQP_correction_method>("SCQP_correction_method", jlcxx::julia_base_type<blockSQP::SCQPmethod>())
+mod.add_type<blockSQP::SCQP_correction_method>("Cxx_SCQP_correction_method", jlcxx::julia_base_type<blockSQP::SCQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
 

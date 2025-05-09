@@ -36,7 +36,7 @@ class SQPmethod{
         Problemspec*             prob;        ///< Pointer to used problem, may be original problem or scalable problem wrapper
         SQPoptions*              param;       ///< Set of algorithmic options and parameters for this method
         SQPstats*                stats;       ///< Statistics object for current SQP run
-
+        
         std::unique_ptr<SQPiterate> vars;     ///< All SQP variables for this method
         std::unique_ptr<QPsolver>   sub_QP;   ///< Class wrapping an external QP solver
 
@@ -168,9 +168,9 @@ class SQPmethod{
         /// Compute current Hessian approximation by finite differences
         int calcFiniteDiffHessian(SymMatrix *hess);
         /// Compute full memory Hessian approximations based on update formulas
-        void calcHessianUpdate(int updateType, int sizing_strategy, SymMatrix *hess);
+        void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
-        void calcHessianUpdateLimitedMemory(int updateType, int sizing_strategy, SymMatrix *hess);
+        void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification

@@ -84,7 +84,7 @@ void SQPmethod::calcLagrangeGradient(const Matrix &lambda, const Matrix &gradObj
 
 void SQPmethod::calcLagrangeGradient( Matrix &gradLagrange, int flag )
 {
-    if( param->sparse_mode )
+    if( param->sparse )
         calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), gradLagrange, flag );
     else
         calcLagrangeGradient( vars->lambda, vars->gradObj, vars->constrJac, gradLagrange, flag );
@@ -159,12 +159,12 @@ void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHe
     int infoEval;
     if (resetHessian) resetHessians();
 
-    if (param->sparse_mode)
+    if (param->sparse)
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+param->exact_hess_usage, &infoEval);
+                        vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+param->exact_hess, &infoEval);
     else
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->constrJac, vars->hess1.get(), 1+param->exact_hess_usage, &infoEval);
+                        vars->constrJac, vars->hess1.get(), 1+param->exact_hess, &infoEval);
 
     //Remove filter entries that dominate the set point
     std::set<std::pair<double,double>>::iterator iter = vars->filter.begin();
@@ -237,11 +237,11 @@ void SQPmethod::printInfo( int printLevel )
         return;
 
     /* QP Solver */
-    if( param->sparse_mode == 0 )
+    if( param->sparse == 0 )
         strcpy( qpString, "dense, reduced Hessian factorization" );
-    else if( param->sparse_mode == 1 )
+    else if( param->sparse == 1 )
         strcpy( qpString, "sparse, reduced Hessian factorization" );
-    else if( param->sparse_mode == 2 )
+    else if( param->sparse == 2 )
         strcpy( qpString, "sparse, Schur complement approach" );
 
     /* Globalization */
@@ -251,60 +251,60 @@ void SQPmethod::printInfo( int printLevel )
         strcpy( globString, "filter line search" );
 
     /* Hessian approximation */
-    if( param->block_hess && (param->hess_approximation == 1 || param->hess_approximation == 2) )
+    if( param->block_hess && (param->hess_approx == 1 || param->hess_approx == 2) )
         strcpy( hessString1, "block " );
     else
         strcpy( hessString1, "" );
 
-    if( param->limited_memory && (param->hess_approximation == 1 || param->hess_approximation == 2) )
+    if( param->lim_mem && (param->hess_approx == 1 || param->hess_approx == 2) )
         strcat( hessString1, "L-" );
 
     /* Fallback Hessian */
-    if( param->hess_approximation == 1 || param->hess_approximation == 4 || (param->hess_approximation == 6) )
+    if( param->hess_approx == 1 || param->hess_approx == 4 || (param->hess_approx == 6) )
     {
         strcpy( hessString2, hessString1 );
 
         /* Fallback Hessian update type */
-        if( param->fallback_approximation == 0 )
+        if( param->fallback_approx == 0 )
             strcat( hessString2, "Id" );
-        else if( param->fallback_approximation == 1 )
+        else if( param->fallback_approx == 1 )
             strcat( hessString2, "SR1" );
-        else if( param->fallback_approximation == 2 )
+        else if( param->fallback_approx == 2 )
             strcat( hessString2, "BFGS" );
-        else if( param->fallback_approximation == 4 )
+        else if( param->fallback_approx == 4 )
             strcat( hessString2, "Finite differences" );
 
         /* Fallback Hessian scaling */
-        if( param->fallback_sizing_strategy == 1 )
+        if( param->fallback_sizing == 1 )
             strcat( hessString2, ", SP" );
-        else if( param->fallback_sizing_strategy == 2 )
+        else if( param->fallback_sizing == 2 )
             strcat( hessString2, ", OL" );
-        else if( param->fallback_sizing_strategy == 3 )
+        else if( param->fallback_sizing == 3 )
             strcat( hessString2, ", mean" );
-        else if( param->fallback_sizing_strategy == 4 )
+        else if( param->fallback_sizing == 4 )
             strcat( hessString2, ", selective sizing" );
     }
     else
         strcpy( hessString2, "-" );
 
     /* First Hessian update type */
-    if( param->hess_approximation == 0 )
+    if( param->hess_approx == 0 )
         strcat( hessString1, "Id" );
-    else if( param->hess_approximation == 1 )
+    else if( param->hess_approx == 1 )
         strcat( hessString1, "SR1" );
-    else if( param->hess_approximation == 2 )
+    else if( param->hess_approx == 2 )
         strcat( hessString1, "BFGS" );
-    else if( param->hess_approximation == 4 )
+    else if( param->hess_approx == 4 )
         strcat( hessString1, "Finite differences" );
 
     /* First Hessian scaling */
-    if( param->sizing_strategy == 1 )
+    if( param->sizing == 1 )
         strcat( hessString1, ", SP" );
-    else if( param->sizing_strategy == 2 )
+    else if( param->sizing == 2 )
         strcat( hessString1, ", OL" );
-    else if( param->sizing_strategy == 3 )
+    else if( param->sizing == 3 )
         strcat( hessString1, ", mean" );
-    else if( param->sizing_strategy == 4 )
+    else if( param->sizing == 4 )
         strcat( hessString1, ", selective sizing" );
 
     printf( "\n+---------------------------------------------------------------+\n");

@@ -54,42 +54,44 @@ class SQPoptions{
     double opt_tol = 1.0e-6;         
     double feas_tol = 1.0e-6;
     bool enable_premature_termination = false;  // Allow terminating with partial success if opt error is below opt_tol**0.75, we are feasible and the linesearch fails
-    int max_extra_steps = 0;                    // Maximum number of steps after tolerances were reached for improved accuracy.
+    int max_extra_steps = 0;                    // Maximum number of steps after opt_tol and feas_tol were reached for improved accuracy.
 
     //Line search heuristics
     int max_filter_overrides = 2;
 
     //Derivative evaluation
-    bool sparse_mode = true;                    // Decide wether dense or sparse problem functions should be used
+    bool sparse = true;                    // Decide wether dense or sparse problem functions should be used
 
     //Restoration phase
-    bool enable_feasibility_restoration = true; 
-    double restoration_rho = 1.0;                     // Restoration objective: Rho * ||s||^2 + zeta * ||xi - xi_ref||^2, s - slack variables, xi_ref - iterate at which restoration was invoked
-    double restoration_zeta = 1.0e-6;
+    bool enable_rest = true; 
+    double rest_rho = 1.0;                     // Restoration objective: Rho * ||s||^2 + zeta * ||xi - xi_ref||^2, s - slack variables, xi_ref - iterate at which restoration was invoked
+    double rest_zeta = 1.0e-6;
 
     //Full/limited memory quasi newton
-    bool limited_memory = true;                       // Enable limited memory quasi newton
-    int memory_size = 20;                             // Limited memory size
+    bool lim_mem = true;                       // Enable limited memory quasi newton
+    int mem_size = 20;                             // Limited memory size
 
     //Hessian approximation
     int block_hess = 1;                             //0: Full space updates, 1: partitioned updates, 2: 2 blocks: 1 full space update block, 1 objective Hessian block
-    int exact_hess_usage = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
-    int hess_approximation = 1;                     //0: (Scaled) identity, 1: SR1, 2: damped BFGS, 3: None, 4: finite differences, 5: pos. def user provided (Gauss-Newton etc.), 6: undamped BFGS
-    int fallback_approximation = 2;                 //As hess_approximation, must be positive definite
+    int exact_hess = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
+    int hess_approx = 1;                     //0: (Scaled) identity, 1: SR1, 2: damped BFGS, 3: None, 4: finite differences, 5: pos. def user provided (Gauss-Newton etc.), 6: undamped BFGS
+    int fallback_approx = 2;                 //As hess_approx, must be positive definite
     
-    double hess_regularization_factor = 0.0;        //Enable further regularization of pos.def. fallback Hessians by adding a scaled identity. Beneficial for some QP solvers
+    double reg_factor = 0.0;        //Enable further regularization of pos.def. fallback Hessians by adding a scaled identity. Beneficial for some QP solvers
     
     //Hessian sizing
     double initial_hess_scale = 1.0;
-    int sizing_strategy = 2;                        // Scaling strategy for Hessian approximation (off = 0, 1 = Shanno-Phua, 2 = Oren-Luenberger, 3 = geometric mean of 1 and 2, 4 = centered Oren-Luenberger)
-    int fallback_sizing_strategy = 4;               // ' '                 fallback ' '
+    int sizing = 2;                        // Scaling strategy for Hessian approximation (off = 0, 1 = Shanno-Phua, 2 = Oren-Luenberger, 3 = geometric mean of 1 and 2, 4 = centered Oren-Luenberger)
+    int fallback_sizing = 4;               // ' '                 fallback ' '
     double COL_eps = 0.1;                           // Centered Oren-Luenberger sizing parameters (see Contreras Tapia paper)
     double COL_tau_1 = 0.5;
     double COL_tau_2 = 1.0e4;
-    double OL_eps = 1.0e-4;                         // Oren-Luneberger sizing epsilon
+    double OL_eps = 1.0e-4;                         // COL sizing epsilon for first sizing ( = Oren-Luenberger sizing)
 
-    //Quasi newton numerical tolerances
+    //Quasi Newton
     double BFGS_damping_factor = 1./3.;
+
+    //Numerical tolerances for for quasi Newton
     double min_damping_quotient = 1e-12;            //Minimum quotient in damping strategy
     double SR1_abstol = 1e-18;
     double SR1_reltol = 1e-5;
@@ -109,7 +111,7 @@ class SQPoptions{
 
 
     //Filter line search options
-    bool enable_linesearch = true;
+    bool enable_linesearch = true;                      
     int max_linesearch_steps = 10;
     int max_consec_reduced_steps = 8;                 // Reset Hessian if stepsize was reduced consecutively too often
     int max_consec_skipped_updates = 100;             // Reset Hessian if too many quasi Newton updates were skipped consecutively
@@ -131,8 +133,8 @@ class SQPoptions{
     //QP solver options
     QPsolvers qpsol = QPsolvers::unset;             ///< which linked QP solver (qpOASES, gurobi, ...) should be used
     QPsolver_options *qpsol_options = nullptr;      ///< options to be passed to the specific qp solver
-    int max_QP_iter = 5000;                         ///< Maximum number of QP iterations per SQP iteration
-    double max_QP_seconds = 3600.0;                 ///< Maximum number of seconds per QP solve per SQP iteration
+    int max_QP_it = 5000;                         ///< Maximum number of QP iterations per SQP iteration
+    double max_QP_secs = 3600.0;                 ///< Maximum number of seconds per QP solve per SQP iteration
 
 
     //SQPmethod subclass options, outsource into SQPoptions subclass if they become too many
@@ -159,11 +161,12 @@ class SQPoptions{
 
 class QPsolver_options{
     public:
+    //Mirrored from SQPoptions, default QPsolver_options may be overwritten from SQPoptions
     const QPsolvers sol;
     double eps;
     double inf;
-    double max_QP_seconds;
-    int max_QP_iter;
+    double max_QP_secs;
+    int max_QP_it;
 
     protected:
     QPsolver_options(QPsolvers SOL);

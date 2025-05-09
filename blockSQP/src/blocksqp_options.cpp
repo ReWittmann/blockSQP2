@@ -43,7 +43,7 @@ void SQPoptions::reset(){
      * 0: dense Hessian and Jacobian, dense factorization of reduced Hessian
      * 1: sparse Hessian and Jacobian, dense factorization of reduced Hessian
      * 2: sparse Hessian and Jacobian, Schur complement approach (recommended) */
-    sparse_mode = 2;
+    sparse = 2;
 
     // 0: no output, 1: normal output, 2: verbose output
     print_level = 2;
@@ -74,10 +74,10 @@ void SQPoptions::reset(){
     enable_linesearch = 1;
 
     // 0: no feasibility restoration phase 1: if line search fails, start feasibility restoration phase
-    enable_feasibility_restoration = 1;
+    enable_rest = 1;
 
-    restoration_zeta = 1e-6;
-    restoration_rho = 1.0;
+    rest_zeta = 1e-6;
+    rest_rho = 1.0;
 
     // 0: enable_linesearch is always active, 1: take a full step at first SQP iteration, no matter what
     skip_first_linesearch = false;
@@ -90,13 +90,13 @@ void SQPoptions::reset(){
 
     // for which blocks should second derivatives be provided by the user:
     // 0: none, 1: for the last block, 2: for all blocks
-    exact_hess_usage = 0;
+    exact_hess = 0;
 
     // 0: initial Hessian is diagonal matrix, 1: scale initial Hessian according to Nocedal p.143,
     // 2: scale initial Hessian with Oren-Luenberger factor 3: geometric mean of 1 and 2
     // 4: centered Oren-Luenberger sizing according to Tapia paper
-    sizing_strategy = 2;
-    fallback_sizing_strategy = 4;
+    sizing = 2;
+    fallback_sizing = 4;
     initial_hess_scale = 1.0;
     //HessDiag2 = 1.0;
 
@@ -115,8 +115,8 @@ void SQPoptions::reset(){
     SR1_reltol = 1e-5;
 
     // 0: (sized) identity, 1: SR1, 2: BFGS (damped), 3: [not used] , 4: finiteDiff, 5: Gauss-Newton, 6: BFGS (undamped), ...
-    hess_approximation = 1;
-    fallback_approximation = 2;
+    hess_approx = 1;
+    fallback_approx = 2;
 
     indef_local_only = false;
 
@@ -135,7 +135,7 @@ void SQPoptions::reset(){
 
     //The identity scaled with this factor is added to convex hessian approximations.
     //Useful if the selected qp solver requires/performs better with convex hessians with eigenvalues uniformly > m_H for some m_H > 0
-    hess_regularization_factor = 0.0;
+    reg_factor = 0.0;
 
     //Options for solving additional QPs to enforce bounds on dependent variables
     max_bound_refines = 3;
@@ -143,10 +143,10 @@ void SQPoptions::reset(){
 
 
     // 0: full memory updates 1: limited memory
-    limited_memory = 1;
+    lim_mem = 1;
 
     // memory size for L-BFGS/L-SR1 updates
-    memory_size = 20;
+    mem_size = 20;
 
     // maximum number of line search iterations
     max_linesearch_steps = 10;
@@ -158,9 +158,9 @@ void SQPoptions::reset(){
     max_SOC = 3;
 
     // maximum number of QP iterations per QP solve
-    max_QP_iter = 5000;
+    max_QP_it = 5000;
     // maximum time (in seconds) for one QP solve
-    max_QP_seconds = 10000.0;
+    max_QP_secs = 10000.0;
 
     // Oren-Luenberger scaling parameters
     COL_eps = 0.1;
@@ -201,9 +201,9 @@ SQPoptions::~SQPoptions(){}
 
 
 void SQPoptions::optionsConsistency(Problemspec *problem){
-    if ((automatic_scaling || conv_strategy == 2) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
+    if ((automatic_scaling || (conv_strategy == 2 && max_conv_QPs > 1)) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
         throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
-    if (sparse_mode && problem->nnz < 0)
+    if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
 
     optionsConsistency();
@@ -228,7 +228,7 @@ void SQPoptions::optionsConsistency(){
     if (qpsol_options != nullptr && qpsol_options->sol != qpsol)
         throw ParameterError("Incorrect QP solver options type given for specified QP solver");
     
-    if (hess_approximation == 1 || hess_approximation == 4 || exact_hess_usage > 0){
+    if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
         if (qpsol == QPsolvers::qpOASES){
             if (qpsol_options != nullptr && !(static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == 2 || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1))
                 throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (qpOASES_solver::sparsityLevel == 2)");
@@ -240,8 +240,8 @@ void SQPoptions::optionsConsistency(){
     if (qpsol == QPsolvers::qpOASES){
         if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::qpOASES)
             throw ParameterError("qpOASES specified as QP solver, but options given for different QP solver");
-        if (hessUpdate == 1 && sparse_mode < 2)
-            throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (sparse_mode == 2)");
+        if (hessUpdate == 1 && sparse < 2)
+            throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (sparse == 2)");
     }
     if (qpsol == QPsolvers::gurobi){
         if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::gurobi)
@@ -256,24 +256,24 @@ void SQPoptions::optionsConsistency(){
     */
 
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
-    if (exact_hess_usage == 2){
-        std::cout << "Exact Hessian is available, hessUpdate and sizing_strategy are ignored\n";
+    if (exact_hess == 2){
+        std::cout << "Exact Hessian is available, hessUpdate and sizing are ignored\n";
     }
     
     //Ensure a positive definite fallback hessian is available if first hessian approximation is not guaranteed to be positive definite
-    if ((hess_approximation == 1 || hess_approximation == 4 || hess_approximation == 6) && max_conv_QPs < 1 && !(fallback_approximation == 0 || fallback_approximation == 2 || fallback_approximation == 5)) 
+    if ((exact_hess > 0 || hess_approx == 1 || hess_approx == 4 || hess_approx == 6) && max_conv_QPs < 1 && !(fallback_approx == 0 || fallback_approx == 2 || fallback_approx == 5)) 
         throw ParameterError("Positive definite fallback hessian is needed when Hessian is not positive definite");
 
 
-    if (enable_linesearch == 1 && hess_approximation == 1 && max_conv_QPs < 1){
+    if (enable_linesearch == 1 && hess_approx == 1 && max_conv_QPs < 1){
         throw ParameterError("Fallback Hessian QP attempts (max_conv_QPs > 1) are required when using SR1.");
     }
 
-    if (limited_memory && memory_size == 0) 
+    if (lim_mem && mem_size == 0) 
         throw ParameterError("hessMemsize must be greater zero for limited memory quasi newton");
 
-    if (limited_memory && memory_size > 200){
-        std::cout << "WARNING: Large value of memory_size (> 200). Performance may be impeded\n";
+    if (lim_mem && mem_size > 200){
+        std::cout << "WARNING: Large value of mem_size (> 200). Performance may be impeded\n";
     }
 
     complete_QP_options();
@@ -292,13 +292,13 @@ void SQPoptions::complete_QP_options(){
     //Some values can also be set directly in the options, copy them over default QP solver options.
     if (qpsol_options->eps == 1e-16) qpsol_options->eps = eps;
     if (qpsol_options->inf == std::numeric_limits<double>::infinity()) qpsol_options->inf = inf;  
-    if (qpsol_options->max_QP_seconds == 10.) qpsol_options->max_QP_seconds = max_QP_seconds;
-    if (qpsol_options->max_QP_iter == std::numeric_limits<int>::max()) qpsol_options->max_QP_iter = max_QP_iter;
+    if (qpsol_options->max_QP_secs == 10.) qpsol_options->max_QP_secs = max_QP_secs;
+    if (qpsol_options->max_QP_it == std::numeric_limits<int>::max()) qpsol_options->max_QP_it = max_QP_it;
 
     //Infer solver specific options from SQPoptions
     //  Infer qpOASES sparsityLevel
     if (qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
-        if (!sparse_mode) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
+        if (!sparse) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
         else              static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
     }
 
@@ -309,8 +309,8 @@ void SQPoptions::complete_QP_options(){
 QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
     eps = 1e-16;
     inf = std::numeric_limits<double>::infinity();
-    max_QP_seconds = 10.;
-    max_QP_iter = std::numeric_limits<int>::max();
+    max_QP_secs = 10.;
+    max_QP_it = std::numeric_limits<int>::max();
 }
 QPsolver_options::~QPsolver_options(){}
 

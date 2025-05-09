@@ -295,15 +295,15 @@ int main(int argc, const char* argv[]){
     opts->feas_tol = 1.0e-12;        
 
     opts->enable_linesearch = false;        // Disable filter line search for this example
-    opts->hess_approximation = 2;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
-    opts->fallback_approximation = 2;       // ' ', not needed if hess_approximation is positive definite
+    opts->hess_approx = 2;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
+    opts->fallback_approx = 2;       // ' ', not needed if hess_approximation is positive definite
 
-    opts->sizing_strategy = 0;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
-    opts->fallback_sizing_strategy = 0;     // ' '
-    opts->sparse_mode = 0;                  // Dense matrices for this example
+    opts->sizing = 0;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
+    opts->fallback_sizing = 0;     // ' '
+    opts->sparse = 0;                  // Dense matrices for this example
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
-
+    
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES
     QPopts.sparsityLevel = 0;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS

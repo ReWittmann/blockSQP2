@@ -94,7 +94,7 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_sqputils.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
-#target_compile_options(blockSQP PRIVATE -O3)
+target_compile_options(blockSQP PRIVATE -O3)
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpos_SOURCE_DIR}/include ${qpos_SOURCE_DIR}/include/qpOASES)
@@ -154,7 +154,7 @@ if(JULIA_INTERFACE)
 	get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
 
 	message(STATUS "Found JlCxx at ${JlCxx_location}")
-	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_julbind.cpp)
+	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl.cpp)
 
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP JlCxx::cxxwrap_julia)

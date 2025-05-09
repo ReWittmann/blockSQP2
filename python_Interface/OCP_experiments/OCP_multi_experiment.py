@@ -28,39 +28,39 @@ import OCProblems
 #  'Tubular_Reactor]
 
 ###############################################################################
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, parallel = False, integrator = 'rk4')
+OCprob = OCProblems.Cushioned_Oscillation_TSCALE(nt = 100, parallel = False)
 
 nPert0 = 0
-nPertF = 5
-EXP = (1,2,3)
+nPertF = 40
+EXP = (1,)
 
 titles = [
-    "SR1-BFGS",
-    "convexification strategy 1",
-    "convexification strategy 2",
+    # "SR1-BFGS",
+    # "Convexification strategy 1",
+    # "Convexification strategy 2",
     # "Convexification strategy 2",
     # "Convexification strategy 2, automatic scaling"
-    # ""
+    ""
     ]
 itMax = 400
 ###############################################################################
 
 opts = py_blockSQP.SQPoptions();
-opts.max_QP_iter = 100000000
+opts.max_QP_iter = 10000
 opts.max_conv_QPs = 1
 opts.conv_strategy = 0
-opts.enable_feasibility_restoration = 1
+opts.enable_rest = True
 opts.max_QP_seconds = 5.0
 opts.initial_hess_scale = 1.0
-opts.hess_approximation = 1
+opts.hess_approx = 1
 opts.sizing_strategy = 2
-opts.fallback_approximation = 2
+opts.fallback_approx = 2
 opts.fallback_sizing_strategy = 4
 opts.BFGS_damping_factor = 1/3
 
-opts.exact_hess_usage = 0
-opts.limited_memory = True
-opts.memory_size = 20
+opts.exact_hess = 0
+opts.lim_mem = True
+opts.memsize = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
 
@@ -71,7 +71,6 @@ QPOPTS.terminationTolerance = 1e-10
 opts.qpsol_options = QPOPTS
 
 opts.automatic_scaling = False
-
 opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 opts.max_extra_steps = 0
@@ -81,10 +80,11 @@ EXP_N_secs = []
 EXP_type_sol = []
 n_EXP = 0
 if 1 in EXP:
-    opts.max_conv_QPs = 1
-    opts.conv_strategy = 1
-    opts.automatic_scaling = False
+    opts.max_conv_QPs = 4
+    opts.conv_strategy = 2
+    opts.automatic_scaling = True
     opts.enable_premature_termination = False
+    # opts.BFGS_damping_factor = 1/3
     
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax, COND = False)
     EXP_N_SQP.append(ret_N_SQP)
@@ -93,8 +93,9 @@ if 1 in EXP:
     n_EXP += 1
 if 2 in EXP:
     opts.max_conv_QPs = 4
-    opts.conv_strategy = 1
-    opts.automatic_scaling = False
+    opts.conv_strategy = 2
+    opts.automatic_scaling = True
+    # opts.BFGS_damping_factor = 1/3
     
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax, COND = False)
     EXP_N_SQP.append(ret_N_SQP)
@@ -104,7 +105,7 @@ if 2 in EXP:
 if 3 in EXP:
     opts.max_conv_QPs = 4
     opts.conv_strategy = 2
-    opts.automatic_scaling = False
+    # opts.BFGS_damping_factor = 1/3
     
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax)
     EXP_N_SQP.append(ret_N_SQP)
