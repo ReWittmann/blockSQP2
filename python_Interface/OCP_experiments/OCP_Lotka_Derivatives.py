@@ -108,9 +108,9 @@ A = OCprob.jac_g(xi)
 u = OCprob.get_control_arrays(xi)
 x1,x2 = OCprob.get_state_arrays(xi)
 
-print("\n\n\nThe control values are\n", u)
+print("\n\n\nu=", u)
 print("\nx1 = ", x1, ", x2 = ", x2)
-print("\nConstraint jacobian is\n", A)
+print("\nConstraint Jacobian is\n", A)
 
 
 
