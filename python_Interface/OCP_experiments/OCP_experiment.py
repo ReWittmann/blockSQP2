@@ -12,6 +12,48 @@ import numpy as np
 import copy
 import time
 import matplotlib.pyplot as plt
+import casadi as cs
+
+
+class CountCallback(cs.Callback):
+    def __init__(self, name, nx, ng, np):
+        cs.Callback.__init__(self)
+        self.it = -1
+        self.prim_vars = cs.DM([])
+        self.nx = nx
+        self.ng = ng
+        self.np = np
+        self.construct(name, {})
+
+    
+    def get_n_in(self):
+        return cs.nlpsol_n_out()
+
+    def get_n_out(self):
+        return 1
+
+    def get_name_in(self, i):
+        return cs.nlpsol_out(i)
+
+    def get_name_out(self, i):
+        return "ret"
+
+    def get_sparsity_in(self, i):
+        n = cs.nlpsol_out(i)
+        if n == 'f':
+            return cs.Sparsity.scalar()
+        elif n in ('x', 'lam_x'):
+            return cs.Sparsity.dense(self.nx)
+        elif n in ('g', 'lam_g'):
+            return cs.Sparsity.dense(self.ng)
+        else:
+            return cs.Sparsity(0, 0)
+    
+    def eval(self, arg):
+        self.it += 1
+        return [0] 
+    
+    
 
 def perturbStartPoint(OCP : OCProblems.OCProblem, IND : int, SP : np.array):
     if (isinstance(OCP, (OCProblems.Goddard_Rocket, OCProblems.Electric_Car, OCProblems.Hang_Glider, OCProblems.Fullers, OCProblems.Tubular_Reactor))):
@@ -120,6 +162,27 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
     
     return N_SQP, N_secs, type_sol
 
+def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 100):
+    NLP = OCprob.NLP
+    counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
+    opts = {'iteration_callback': counter}
+    opts.update({'ipopt': ipopts})
+    S = cs.nlpsol('S', 'ipopt', NLP, opts)
+    N_SQP = []
+    N_secs = []
+    type_sol = []
+    for j in range(nPert0, nPertF):
+        counter.it = -1
+        start_it = copy.copy(OCprob.start_point)
+        perturbStartPoint(OCprob, j, start_it)
+        t0 = time.time()
+        out = S(x0=start_it, lbx=OCprob.lb_var,ubx=OCprob.ub_var, lbg=OCprob.lb_con, ubg=OCprob.ub_con)
+        t1 = time.time()
+        N_SQP.append(counter.it)
+        N_secs.append(t1 - t0)
+        type_sol.append(1)
+    
+    return N_SQP, N_secs, type_sol
 
 def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
     n_xticks = 10

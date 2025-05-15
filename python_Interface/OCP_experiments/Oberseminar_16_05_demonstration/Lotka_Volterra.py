@@ -3,44 +3,49 @@ import os
 import sys
 import time
 try:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    sys.path += [os.path.dirname(os.path.abspath(__file__)) + "/..", os.path.dirname(os.path.abspath(__file__)) + "/../.."]
 except:
-    sys.path.append(os.getcwd() + "/..")
+    sys.path += [os.getcwd() + "/../..", os.getcwd() + "/../.."]
 
 import py_blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 
-itMax = 8
+itMax = 100
 
-step_plots = False
+step_plots = True
 plot_title = True
 
 
 import OCProblems
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 3, refine=8, parallel = False, integrator = 'rk4')
+
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+
+
+freeScale = 100.0
 
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 4
-opts.conv_strategy = 2
+opts.max_conv_QPs = 1
+opts.conv_strategy = 1
+opts.automatic_scaling = False
+
 opts.exact_hess = 0
 opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
-opts.BFGS_damping_factor = 0.2
+opts.BFGS_damping_factor = 1/3
 
 opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
-opts.conv_kappa_max = 100.0
+opts.conv_kappa_max = 2.0
 
-opts.automatic_scaling = False
 
 opts.max_extra_steps = 0
 opts.enable_premature_termination = False
@@ -53,6 +58,8 @@ QPopts.terminationTolerance = 1e-10
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
+
+# opts.qpsol = 'qpalm'
 
 ################################
 
@@ -94,27 +101,41 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 prob.complete()
 
 scale_arr = 1.0;
-#####################
+prob_unscaled = prob
+prob = py_blockSQP.scaled_Problemspec(prob)
+scale = py_blockSQP.double_array(OCprob.nVar)
+scale_arr = np.array(scale, copy = False)
+scale_arr[:] = 1.0
+for i in range(OCprob.ntS):
+    OCprob.set_stage_control(scale_arr, i, [freeScale])
+prob.arr_set_scale(scale)
+
+
+
 stats = py_blockSQP.SQPstats("./solver_outputs")
+
+#No condensing
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+
+#Condensing
+# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
-ret = int(optimizer.run(itMax))
-xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+t0 = time.time()
+if (step_plots):
+    OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
+    ret = int(optimizer.run(1))
+    xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+    i = 1
+    OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
+    while ret == 0 and i < itMax:
+        ret = int(optimizer.run(1,1))
+        xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+        i += 1
+        OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
+else:
+    ret = int(optimizer.run(itMax))
+    xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+t1 = time.time()
+OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 #####################
-
-time.sleep(0.2)
-A_RK4 = OCprob.jac_g(xi)
-u = OCprob.get_control_arrays(xi)
-x1,x2 = OCprob.get_state_arrays(xi)
-
-print("\n\n\nu=", u)
-print("\nx1 = ", x1, ", x2 = ", x2)
-print("\nConstraint Jacobian is\n", A_RK4)
-
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 3, refine=8, parallel = False, integrator = 'cvodes')
-
-A_cvodes = OCprob.jac_g(xi)
-
-
-

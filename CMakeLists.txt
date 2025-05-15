@@ -137,6 +137,7 @@ if(PYTHON_INTERFACE)
 	
 	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)
+	target_compile_options(py_blockSQP PRIVATE -O3)
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface)
 endif()

@@ -11,7 +11,7 @@ import py_blockSQP
 from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 
-itMax = 200
+itMax = 100
 
 step_plots = True
 plot_title = True
@@ -29,8 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False)
-                                         # , fishing = True,integrator = 'explicit_euler', S_u = 1000.0)
+OCprob = OCProblems.Electric_Car(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -38,9 +37,9 @@ opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
 opts.max_conv_QPs = 1
-opts.conv_strategy = 2
-opts.exact_hess = 2
-opts.hess_approx = 2
+opts.conv_strategy = 1
+opts.exact_hess = 0
+opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
@@ -50,6 +49,7 @@ opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
+opts.conv_kappa_max = 2.0
 
 opts.automatic_scaling = False
 
@@ -119,7 +119,7 @@ scale_arr = 1.0;
 # scale_arr = np.array(scale, copy = False)
 # scale_arr[:] = 1.0
 # for i in range(OCprob.ntS):
-#     OCprob.set_stage_control(scale_arr, i, [100.0])
+#     OCprob.set_stage_control(scale_arr, i, [0.001, 10.0,10.0])
 # prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
@@ -149,4 +149,5 @@ else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.time()
+OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 #####################
