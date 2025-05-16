@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 itMax = 100
 
-step_plots = False
+step_plots = True
 plot_title = True
 
 
