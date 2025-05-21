@@ -484,7 +484,7 @@ public:
         }
     }
 
-    void reduceConstrVio(blockSQP::Matrix &xi, int *info){
+    void reduceConstrVio(blockSQP::Matrix &xi, int *info) override {
         Cpp_Data.xi.ptr = xi.array;
         update_xi();
         restore_continuity();

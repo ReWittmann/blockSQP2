@@ -206,39 +206,34 @@ public:
 };
 
 class JL_Condenser{
-    blockSQP::Condenser *Cxx_Condenser;
-    blockSQP::vblock *vblocks;
-    blockSQP::cblock *cblocks;
-    int *hsizes;
-    blockSQP::condensing_target *targets;
+    std::unique_ptr<blockSQP::Condenser> Cxx_Condenser;
+    std::unique_ptr<blockSQP::vblock[]> vblocks;
+    std::unique_ptr<blockSQP::cblock[]> cblocks;
+    std::unique_ptr<int[]> hsizes;
+    std::unique_ptr<blockSQP::condensing_target[]> targets;
 
     JL_Condenser(jlcxx::ArrayRef<blockSQP::vblock, 1> &VBLOCKS, jlcxx::ArrayRef<blockSQP::cblock, 1> &CBLOCKS, jlcxx::ArrayRef<int, 1> &HSIZES, jlcxx::ArrayRef<blockSQP::condensing_target, 1> &TARGETS, int DEP_BOUNDS){
-        vblocks = new blockSQP::vblock[VBLOCKS.size()];
+        vblocks = std::make_unique<blockSQP::vblock[]>(VBLOCKS.size());
         for (int i = 0; i < VBLOCKS.size(); i++){
             vblocks[i] = VBLOCKS[i];
         }
 
-        cblocks = new blockSQP::cblock[CBLOCKS.size()];
+        cblocks = std::make_unique<blockSQP::cblock[]>(CBLOCKS.size());
         for (int i = 0; i < CBLOCKS.size(); i++){
             cblocks[i] = CBLOCKS[i];
         }
         
-        hsizes = new int[HSIZES.size()];
+        hsizes = std::make_unique<int[]>(HSIZES.size());
         for (int i = 0; i < HSIZES.size(); i++){
             hsizes[i] = HSIZES[i];
         }
 
-        targets = new blockSQP::condensing_target[TARGETS.size()];
+        targets = std::make_unique<blockSQP::condensing_target[]>(TARGETS.size());
         for (int i = 0; i < TARGETS.size(); i++){
             targets[i] = TARGETS[i];
         }
 
-        Cxx_Condenser = new blockSQP::Condenser(vblocks, VBLOCKS.size(), cblocks, CBLOCKS.size(), hsizes, HSIZES.size(), targets, TARGETS.size(), DEP_BOUNDS);
-    }
-
-    ~JL_Condenser(){
-        delete Cxx_Condenser;
-        delete[] vblocks, cblocks, hsizes, targets;
+        Cxx_Condenser = std::make_unique<blockSQP::Condenser>(vblocks.get(), VBLOCKS.size(), cblocks.get(), CBLOCKS.size(), hsizes.get(), HSIZES.size(), targets.get(), TARGETS.size(), DEP_BOUNDS);
     }
 };
 

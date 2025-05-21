@@ -11,7 +11,9 @@ from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import numpy as np
 import copy
 import time
+import datetime
 import matplotlib.pyplot as plt
+plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 
@@ -130,13 +132,15 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
         prob.complete()
 
         stats = py_blockSQP.SQPstats("./solver_outputs")
+        
+        t0 = time.time()
         if not COND:
             optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
         else:
             optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
         optimizer.init()
-        t0 = time.time()
         ret = optimizer.run(itMax)
+        optimizer.finish()
         t1 = time.time()
         
         N_SQP.append(stats.itCount)
@@ -146,20 +150,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
         elif int(ret) > 1:
             type_sol.append(1)
         else:
-            type_sol.append(-1)
-        
-        # if int(ret) > 0:
-        #     N_SQP.append(stats.itCount)
-        #     N_secs.append(t1 - t0)
-        #     if int(ret) == 1:
-        #         type_sol.append(0)
-        #     else:
-        #         type_sol.append(1)
-        # else:
-        #     N_SQP.append(0.00001)
-        #     N_secs.append(0.00001)
-        #     type_sol.append(-1)
-    
+            type_sol.append(-1)    
     return N_SQP, N_secs, type_sol
 
 def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 100):
@@ -179,12 +170,15 @@ def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0,
         out = S(x0=start_it, lbx=OCprob.lb_var,ubx=OCprob.ub_var, lbg=OCprob.lb_con, ubg=OCprob.ub_con)
         t1 = time.time()
         N_SQP.append(counter.it)
+        if counter.it == itMax:
+            type_sol.append(0)
+        else:
+            type_sol.append(1)
         N_secs.append(t1 - t0)
-        type_sol.append(1)
     
     return N_SQP, N_secs, type_sol
 
-def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None):
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -209,8 +203,9 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
     titlesize = 19
     axtitlesize = 15
     labelsize = 13
-
+    
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP-1)))
+    fig.suptitle(suptitle, fontsize = 'x-large')
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     if n_EXP == 1:
         subfigs = (subfigs,)
@@ -235,7 +230,7 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 
     plt.show()
     
-def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -277,8 +272,11 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     # titlesize = 21
     # axtitlesize = 19
     # labelsize = 16
-
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
+    
+    if isinstance(suptitle, str):
+        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+    
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     
     if n_EXP == 1:
@@ -304,8 +302,16 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_time.tick_params(labelsize = labelsize - 1)
         
         subfigs[i].suptitle(titles[i], size = titlesize)
-    plt.show()
-
+    if not isinstance(dirPath, str):
+        plt.show()
+    else:
+        date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
+        name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
+        sep = "" if dirPath[-1] == "/" else "/"
+        pref = "" if savePrefix is None else savePrefix
+        
+        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + date_app)
+        
 
 def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
     n_xticks = 10
@@ -336,11 +342,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs_clean[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs_clean[i]))**(0.5) for i in range(n_EXP)]
 
     #Care, doen't work for numbers smaller than 0.0001, representation becomes *e-***
-    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
-
-    # ccodemp = {-1: 'r', 0:'y', 1:'g'}
-    # cmap = [[ccodemp[v] for v in EXP_type_sol[i]] for i in range(n_EXP)]
-    
+    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]    
     ###############################################################################
     titlesize = 23
     axtitlesize = 19
@@ -379,4 +381,50 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     plt.show()
 
 
-    
+
+
+
+def run_ipopt_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40):
+    for OCclass, OCname in Examples:        
+        OCprob = OCclass(nt=100, integrator='RK4')
+        itMax = 200
+        ipopts_base = {'max_iter':itMax, 'tol':1e-5}
+        titles = []
+        EXP_N_SQP = []
+        EXP_N_secs = []
+        EXP_type_sol = []
+        n_EXP = 0
+        for EXP_opts, EXP_name in Experiments:
+            ipopts = dict(ipopts_base)
+            ipopts.update(EXP_opts)
+            ret_N_SQP, ret_N_secs, ret_type_sol = ipopt_perturbed_starts(OCprob, ipopts, nPert0, nPertF, itMax = itMax)
+            EXP_N_SQP.append(ret_N_SQP)
+            EXP_N_secs.append(ret_N_secs)
+            EXP_type_sol.append(ret_type_sol)
+            titles.append(EXP_name)
+            n_EXP += 1
+        ###############################################################################
+        plot_successful(n_EXP, nPert0, nPertF,\
+            titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
+            suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
+
+def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], saveDir : str, nPert0 = 0, nPertF = 40):
+    for OCclass, OCname in Examples:        
+        OCprob = OCclass(nt=100, integrator='RK4')
+        itMax = 200
+        titles = []
+        EXP_N_SQP = []
+        EXP_N_secs = []
+        EXP_type_sol = []
+        n_EXP = 0
+        for EXP_opts, EXP_name in Experiments:
+            ret_N_SQP, ret_N_secs, ret_type_sol = perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
+            EXP_N_SQP.append(ret_N_SQP)
+            EXP_N_secs.append(ret_N_secs)
+            EXP_type_sol.append(ret_type_sol)
+            titles.append(EXP_name)
+            n_EXP += 1
+        ###############################################################################
+        plot_successful(n_EXP, nPert0, nPertF,\
+            titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
+            suptitle = OCname, saveDir = saveDir, savePrefix = "blockSQP")
