@@ -45,7 +45,8 @@ class Problemspec{
         Matrix      ub_var;                                             ///< upper bounds of variables and constraints
         Matrix      lb_con;             
         Matrix      ub_con;             
-
+        
+        //Metadata
         int         nBlocks = -1;                                       ///< number of separable blocks of Lagrangian
         int*        blockIdx = nullptr;                                 ///< [blockwise] index in the variable vector where a block starts
 

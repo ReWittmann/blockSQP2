@@ -768,7 +768,6 @@ int SCQP_correction_method::filterLineSearch(){
     double max_dep_bound_violation, xi_s;
 
     // Compute ||constr(xi)|| at old point
-    //cNorm = l1ConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
     cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
 
     // Backtracking line search
@@ -785,7 +784,7 @@ int SCQP_correction_method::filterLineSearch(){
             dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
 
         //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
-        //work with a different variable (CSQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
+        //work with a different variable (SCQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
         if (k == 0){
             static_cast<SCQP_correction_iterate*>(vars.get())->deltaXi_save = vars->deltaXi;
             static_cast<SCQP_correction_iterate*>(vars.get())->lambdaQP_save = vars->lambdaQP;

@@ -39,11 +39,14 @@ class SQPmethod{
         
         std::unique_ptr<SQPiterate> vars;     ///< All SQP variables for this method
         std::unique_ptr<QPsolver>   sub_QP;   ///< Class wrapping an external QP solver
-
-        //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is acitvated
+        
+        //std::unique_ptr<std::unique_ptr<QPsolver>> sub_QPs;   //QPsolver objects for parallelizing the QP solving loop
+        
+        
+        //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated
         std::unique_ptr<scaled_Problemspec> scaled_prob;
-
-
+        
+        
         // Objects for feasibility restoration
         //Feasibility restoration problem
         std::unique_ptr<abstractRestorationProblem> rest_prob;
@@ -101,6 +104,10 @@ class SQPmethod{
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        
+        // ??? QP_loop()
+        // 
+        
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         virtual void computeNextHessian( int idx, int maxQP );
         /// Compute a convexified hessian and store it in vars->hess2, set hess to hess2

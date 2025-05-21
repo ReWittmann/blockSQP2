@@ -438,6 +438,12 @@ void Condenser::calc_ranges(){
 	return;
 }
 */
+
+
+Condenser *Condenser::layout_copy(const Condenser *cond){
+    return new Condenser(cond->vblocks, cond->num_vblocks, cond->cblocks, cond->num_cblocks, cond->hess_block_sizes, cond->num_hessblocks, cond->targets, cond->num_targets, cond->add_dep_bounds);
+}
+
 void Condenser::print_debug(){
     std::cout<< "num_targets: " << num_targets << "\n";
     std::cout<< "num_vars: " << num_vars << "\n";
@@ -1914,6 +1920,8 @@ holding_Condenser::holding_Condenser(
                         auto_vblocks(std::move(VBLOCKS)), auto_cblocks(std::move(CBLOCKS)), auto_hess_block_sizes(std::move(HSIZES)), auto_targets(std::move(TARGETS))
                         {}
 
+
+//Moved to restoration.cpp
 /*
 holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
     int N_vblocks = parent->num_vblocks + parent->num_true_cons;

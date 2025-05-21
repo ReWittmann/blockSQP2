@@ -5,6 +5,7 @@
 #include "blocksqp_matrix.hpp"
 #include "blocksqp_options.hpp"
 #include "blocksqp_problemspec.hpp"
+#include "blocksqp_condensing.hpp"
 #include <memory>
 
 #ifdef QPSOLVER_QPOASES
@@ -25,30 +26,50 @@ namespace blockSQP{
 
 
 
+class QPsolverBase{
+    public:
+    virtual void set_lin(const Matrix &grad_obj) = 0;
+    virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A) = 0;
+    virtual void set_constr(const Matrix &constr_jac) = 0;
+    virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind) = 0;
+    //Set hessian and pass on whether hessian is supposedly positive definite
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
+
+    //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
+    //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
+    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
+    
+    //Statistics
+    virtual int get_QP_it() = 0;
+    virtual double get_solutionTime() = 0;
+};
+
+
 //Solver class for quadratic programs of the form
 
-/////////////////////////////
-// min_x 0.5x^T H x + x^T h//
-// s.t.					   //
-//	   lb_A <= A*x <= ub_A //
-//	   lb_x <=  x  <= ub_x //
-/////////////////////////////
+//////////////////////////////
+// min_x 0.5x^T H x + x^T h //
+// s.t.					    //
+//	   lb_A <= A*x <= ub_A  //
+//	   lb_x <=  x  <= ub_x  //
+//////////////////////////////
 
-class QPsolver{
-public:
+class QPsolver : public QPsolverBase{
+    public:
     int nVar;
     int nCon;
     int nHess;
 
     QPsolver_options *Qparam;
-
+    
     //Store the solution time of the last 10 successful QPs,
     //use it to limit the solution time of future QPs
     double solution_durations[10];
     int dur_pos, dur_count;
     double QPtime_avg;
-
-
+    
+    
     //Solution time options
     double default_time_limit, custom_time_limit;
     //0: 2.5*average of past 10, 1: default_time_limit, 2: custom_time_limit
@@ -66,27 +87,80 @@ public:
 	//Arguments: Number of QP variables, number of linear constraints, options
     QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts);
     virtual ~QPsolver();
-
+    
+    //Time recording utility shared by all QP solvers
     void recordTime(double solTime);
     void reset_timeRecord();
-    void custom_timeLimit(double CTlim); //This equivalent to setting custom_time_limit to CTlim and time_limit_type to 2
+    //void custom_timeLimit(double CTlim); //This equivalent to setting custom_time_limit to CTlim and time_limit_type to 2
 
     //Setters for QP data. Only one of the setters for the constraint matrix (dense or sparse) is required
     virtual void set_lin(const Matrix &grad_obj) = 0;
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A) = 0;
-    virtual void set_constr(const Matrix &constr_jac) = 0;
-    virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind) = 0;
+    
+    //Either a sparse or a dense setter for the constraint Jacobian is required, can only (?) throw exception if an unimplemented setter is called.
+    virtual void set_constr(const Matrix &constr_jac);
+    virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
+    
     //Set hessian and pass on whether hessian is supposedly positive definite
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
 
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
     virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
-
+    
+    virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
+    
     //Statistics
     virtual int get_QP_it();
     virtual double get_solutionTime();
 };
+
+//Condensed QP solver. Condenses QPs before solving
+class CQPsolver : public QPsolverBase{
+    public:
+    QPsolverBase *inner_QP;
+    std::unique_ptr<Condenser> cond;
+    
+    SymMatrix *hess_qp;
+    bool convex_QP;
+    double regF;
+    
+    Matrix h_qp, A_qp, lb_x, ub_x, lb_A, ub_A;
+    Sparse_Matrix sparse_A_qp;
+    
+    std::unique_ptr<SymMatrix> hess_cond;
+    Matrix h_cond, lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond;
+    Sparse_Matrix sparse_A_cond;
+    
+    Matrix xi_cond, lambda_cond;
+    
+    //Flags indicating which data was updates, may avoid unnecessary work
+    bool h_updated, A_updated, bounds_updated, hess_updated;
+    
+    CQPsolver(QPsolverBase *arg_CQPsol, Condenser *arg_cond);
+    
+    virtual void set_lin(const Matrix &grad_obj);
+    virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
+    
+    // TODO implement once condensing supports dense constraint Jacobians    
+    //virtual void set_constr(const Matrix &constr_jac);
+    virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
+    
+    //Set hessian and pass on whether hessian is supposedly positive definite
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
+
+    //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
+    //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
+    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    
+    virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
+    
+    //Statistics
+    virtual int get_QP_it();
+    virtual double get_solutionTime();
+    
+};
+
 
 
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
@@ -98,26 +172,26 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
     class qpOASES_solver : public QPsolver{
         public:
         qpOASES::Options opts;
-
+        
         std::unique_ptr<qpOASES::SQProblem> qp;
         std::unique_ptr<qpOASES::SQProblem> qpSave;
         std::unique_ptr<qpOASES::SQProblem>  qpCheck; 
         
         std::unique_ptr<qpOASES::Matrix> A_qp;
         std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
-
+        
         double* h_qp;                                       // linear term in objective
         std::unique_ptr<double[]> lb, ub, lbA, ubA;         // bounds for QP variables, bounds for linearized constraints
-
+        
         Matrix jacT;                                        // transpose of the dense constraint jacobian
-
+        
         std::unique_ptr<double[]> hess_nz;
         std::unique_ptr<int[]> hess_row, hess_colind, hess_loind;
-
+        
         bool matrices_changed;
-
+        
         int QP_it;
-
+        
         qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
         ~qpOASES_solver();
 

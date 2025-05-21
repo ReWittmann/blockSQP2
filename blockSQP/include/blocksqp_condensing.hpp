@@ -80,7 +80,7 @@ struct condensing_target{
 
 
 struct condensing_data{
-
+    
     //Ranges of variables in the slice of variables of the condensing target, alternating between independent and dependent variables
 	std::vector<int> alt_vranges;
 	//Ranges of stage-continuity-conditions
@@ -92,23 +92,23 @@ struct condensing_data{
 	//Number of free and dependent variables.
     int n_free;
     int n_dep;
-
+    
     //Blocks of the structured constraint-jacobian and hessian, together with linear terms and bounds
 	std::vector<blockSQP::Matrix> A_k; //A_1, ..., A_{n_stages - 1}
 	std::vector<blockSQP::Matrix> B_k; //B_0, ..., B_{n_stages - 1}
 	std::vector<blockSQP::Matrix> c_k; //c_0, ..., c_{n_stages - 1}
 	std::vector<blockSQP::Matrix> r_k; //r_0, ..., r_{n_stages}
 	std::vector<blockSQP::Matrix> q_k; //q_1, ..., q_{n_stages}
-
+    
 	std::vector<blockSQP::Matrix> R_k; //R_0, ..., R_{n_stages}
 	std::vector<blockSQP::Matrix> Q_k; //Q_1, ..., Q_{n_stages}
 	std::vector<blockSQP::Matrix> S_k; //S_1, ..., S_{n_stages}
-
+    
 	std::vector<blockSQP::Matrix> g_k; //g_0, ..., g_{n_stages - 1}
 	blockSQP::LT_Block_Matrix G;       //n_stages x (n_stages + 1)
 	std::vector<blockSQP::Matrix> h_k; //h_0, ..., h_{n_stages}
 	blockSQP::LT_Block_Matrix H;       //(n_stages + 1) x (n_stages + 1)
-
+    
 	//Horizontal slices of (horizontal jacobian slice corresponding to target variables), separated in free- and dependent-variable-slices,
 	//without continuity conditions
     std::vector<blockSQP::Sparse_Matrix> J_free_k; //J_f_0, ..., J_f_{n_stages}
@@ -116,8 +116,8 @@ struct condensing_data{
 
     std::vector<blockSQP::CSR_Matrix> J_d_CSR_k; //J_d_CSR_1, ..., J_d_CSR_{n_stages}
     std::vector<blockSQP::Sparse_Matrix> J_reduced_k; //J_reduced_0, ..., J_reduced_{n_stages}
-
-    //See condensing paper (Andersson 2017)
+    
+    //See condensing paper (Andersson 2013)
     blockSQP::Matrix g;
     blockSQP::Matrix h;
     //blockSQP::Matrix G_dense;
@@ -172,7 +172,7 @@ class Condenser{
 	vblock* vblocks;
 	int* hess_block_sizes;
 	condensing_target* targets;
-
+    
     //Layout data calculated from constructor arguments
 	int num_vars;
 	int num_cons;
@@ -226,7 +226,9 @@ class Condenser{
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
 	Condenser(Condenser &&C);
 	virtual ~Condenser();
-
+    
+    //Construct a new Condenser sharing the layout data of an existing condenser.
+    static Condenser *layout_copy(const Condenser *CND);
 
     void print_debug();
 

@@ -1079,124 +1079,112 @@ Matrix &Transpose( const Matrix &A, Matrix &T )
 //###########################
 //###Sparse_Matrix methods###
 //###########################
+Sparse_Matrix::Sparse_Matrix(int M, int N, int NNZ): m(M), n(N), 
+                                nz(std::make_unique<double[]>(NNZ)), row(std::make_unique<int[]>(NNZ)), colind(std::make_unique<int[]>(n+1)){
+    colind[n] = NNZ;                                 
+}
 
-Sparse_Matrix::Sparse_Matrix(int M, int N, int NNZ, double *NZ, int *ROW, int *COLIND, bool memOwn):
-	m(M), n(N), nnz(NNZ), nz(NZ), row(ROW), colind(COLIND), memoryOwned(memOwn)
+Sparse_Matrix::Sparse_Matrix(int M, int N, std::unique_ptr<double[]> NZ, std::unique_ptr<int[]> ROW, std::unique_ptr<int[]> COLIND):
+	m(M), n(N), nz(std::move(NZ)), row(std::move(ROW)), colind(std::move(COLIND))
 	{}
 
 Sparse_Matrix::Sparse_Matrix(const Sparse_Matrix &M){
-	m = M.m;
+	int nnz = M.colind[M.n];
+    m = M.m;
 	n = M.n;
-	nnz = M.nnz;
-	nz = new double[nnz];
-	row = new int[nnz];
-	colind = new int[n+1];
-
-	for (int k = 0; k<nnz; k++){
-		nz[k] = M.nz[k];
-		row[k] = M.row[k];
-	}
-	for (int k = 0; k<=n;k++){
-		colind[k] = M.colind[k];
-	}
-    memoryOwned = true;
+    nz = std::make_unique<double[]>(nnz);
+    row = std::make_unique<int[]>(nnz);
+    colind = std::make_unique<int[]>(n+1);
+    std::copy(M.nz.get(), M.nz.get() + nnz, nz.get());
+    std::copy(M.row.get(), M.row.get() + nnz, row.get());
+    std::copy(M.colind.get(), M.colind.get() + M.n + 1, colind.get());
 }
 
 Sparse_Matrix::Sparse_Matrix(Sparse_Matrix &&M){
     m = M.m;
     n = M.n;
-    nnz = M.nnz;
-    nz = M.nz;
-    row = M.row;
-    colind = M.colind;
+
+    nz = std::move(M.nz);
+    row = std::move(M.row);
+    colind = std::move(M.colind);
 
     M.m = 0;
     M.n = 0;
-    M.nnz = 0;
-    M.nz = nullptr;
-    M.row = nullptr;
-    M.colind = nullptr;
-
-    memoryOwned = M.memoryOwned;
 }
 
 Sparse_Matrix::Sparse_Matrix(const CSR_Matrix &M){
 
     m = M.m;
     n = M.n;
-    nnz = M.rowind[M.m];
-    nz = new double[nnz];
-    row = new int[nnz];
-    colind = new int[M.n + 1];
-    CSC_CSR(n, m, M.nz, M.col, M.rowind, nz, row, colind);
-    memoryOwned = true;
+    int nnz = M.rowind[M.m];
+    nz = std::make_unique<double[]>(nnz);
+    row = std::make_unique<int[]>(nnz);
+    colind = std::make_unique<int[]>(n + 1);
+    CSC_CSR(n, m, M.nz, M.col, M.rowind, nz.get(), row.get(), colind.get());
 }
 
 
 Sparse_Matrix::Sparse_Matrix(){
 	m = 0;
 	n = 0;
-	nnz = 0;
 
 	nz = nullptr;
 	row = nullptr;
-	colind = nullptr;
-    memoryOwned = false;
+	colind = std::unique_ptr<int[]>(new int[1]{0});
 };
 
 
 
-Sparse_Matrix::~Sparse_Matrix(){
-    if (memoryOwned){
-        delete[] nz;
-        delete[] row;
-        delete[] colind;
-    }
+
+Sparse_Matrix &Sparse_Matrix::Dimension(int M, int N, int NNZ){
+
+    m = M;
+    n = N;
+    
+    nz = std::make_unique<double[]>(NNZ);
+    row = std::make_unique<int[]>(NNZ);
+    colind = std::make_unique<int[]>(n+1);
+    return *this;
 }
 
+
+
 void Sparse_Matrix::operator=(const Sparse_Matrix& M){
-	m = M.m;
-	n = M.n;
-	nnz = M.nnz;
-
-	delete[] nz;
-	delete[] row;
-	delete[] colind;
-	nz = new double[nnz];
-	row = new int[nnz];
-	colind = new int[n+1];
-
-	for (int k = 0; k<nnz;k++){
-		nz[k] = M.nz[k];
-		row[k] = M.row[k];
-	}
-	for (int k = 0; k<=n;k++){
-		colind[k] = M.colind[k];
-	}
-    memoryOwned = true;
-
-	return;
+	//Set Matrix default-constructed if M is default constructed
+    if (M.nz == nullptr || M.row == nullptr){
+        m = 0;
+        n = 0;
+        nz = nullptr;
+        row = nullptr;
+        colind = std::unique_ptr<int[]>(new int[1]{0});
+        return;
+    }
+    
+    int nnz = M.colind[M.n];
+    if (colind[n] != nnz){
+        nz = std::make_unique<double[]>(nnz);
+        row = std::make_unique<int[]>(nnz);
+    }
+    std::copy(M.nz.get(), M.nz.get() + nnz, nz.get());
+    std::copy(M.row.get(), M.row.get() + nnz, row.get());
+    
+    
+    m = M.m;
+    if (n != M.n){
+        n = M.n;
+        colind = std::make_unique<int[]>(n+1);
+    }
+    std::copy(M.colind.get(), M.colind.get() + M.n + 1, colind.get());
 }
 
 void Sparse_Matrix::operator=(Sparse_Matrix &&M){
     m = M.m;
     n = M.n;
-    nnz = M.nnz;
-    delete[] nz;
-    delete[] row;
-    delete[] colind;
-
-    nz = M.nz;
-    row = M.row;
-    colind = M.colind;
-
-    M.m = 0;
+    nz = std::move(M.nz);
+    row = std::move(M.row);
+    colind = std::move(M.colind);
+    M.m = 0; 
     M.n = 0;
-    M.nnz = 0;
-    M.nz = nullptr;
-    M.row = nullptr;
-    M.colind = nullptr;
-    memoryOwned = M.memoryOwned;
 }
 
 Sparse_Matrix Sparse_Matrix::operator+(const Sparse_Matrix &M2) const{
@@ -1206,9 +1194,9 @@ Sparse_Matrix Sparse_Matrix::operator+(const Sparse_Matrix &M2) const{
 	}
 	#endif
 
-	int *colind = new int[(*this).n + 1];
-	int *row;
-	double *nz;
+	std::unique_ptr<int[]> colind = std::make_unique<int[]>(n + 1);
+	std::unique_ptr<int[]> row;
+	std::unique_ptr<double[]> nz;
 
 	std::vector<double> NZ;
 	std::vector<int> ROW;
@@ -1263,14 +1251,12 @@ Sparse_Matrix Sparse_Matrix::operator+(const Sparse_Matrix &M2) const{
 		colind[j+1] = ind;
 	}
 
-	nz = new double[ind];
-	row = new int[ind];
-
-	for (int i = 0; i<ind; i++){
-		nz[i] = NZ[i];
-		row[i] = ROW[i];
-	}
-	return Sparse_Matrix(M2.m, M2.n, ind, nz, row, colind);
+	nz = std::make_unique<double[]>(ind);
+	row = std::make_unique<int[]>(ind);
+    std::copy(NZ.begin(), NZ.end(), nz.get());
+    std::copy(ROW.begin(), ROW.end(), row.get());
+    
+	return Sparse_Matrix(M2.m, M2.n, std::move(nz), std::move(row), std::move(colind));
 }
 
 
@@ -1300,20 +1286,14 @@ Sparse_Matrix Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int 
 		col_v.push_back(nnz);
 	}
 
-	double *NZ = new double[nnz];
-	int *ROW = new int[nnz];
-	int *COLIND = new int[n_end - n_start + 1];
+	std::unique_ptr<double[]> NZ = std::make_unique<double[]>(nnz);
+	std::unique_ptr<int[]> ROW = std::make_unique<int[]>(nnz);
+	std::unique_ptr<int[]> COLIND = std::make_unique<int[]>(n_end - n_start + 1);
+    std::copy(nz_v.begin(), nz_v.end(), NZ.get());
+    std::copy(row_v.begin(), row_v.end(), ROW.get());
+    std::copy(col_v.begin(), col_v.end(), COLIND.get());
 
-	for (int i = 0; i < nnz; i++){
-		NZ[i] = nz_v[i];
-		ROW[i] = row_v[i];
-	}
-
-	for (int i = 0; i <= n_end - n_start; i++){
-		COLIND[i] = col_v[i];
-	}
-
-	return Sparse_Matrix(m_end - m_start, n_end - n_start, nnz, NZ, ROW, COLIND);
+	return Sparse_Matrix(m_end - m_start, n_end - n_start, std::move(NZ), std::move(ROW), std::move(COLIND));
 }
 
 
@@ -1387,10 +1367,7 @@ Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2){
 	std::vector<double> nz_m = {};
 	std::vector<int> row_m = {};
 	std::vector<int> colind_m = {0};
-	double *NZ;
-	int *ROW;
-	int *COLIND;
-
+    
 	for (int j2 = 0; j2 < M2.n; j2++){
 		for (int k = 0; k<M1.n; k++){
 			index_offsets[k] = 0;
@@ -1436,19 +1413,16 @@ Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2){
 		colind_m.push_back(c_ind);
 	}
 
-	NZ = new double[c_ind];
-	ROW = new int[c_ind];
-	COLIND = new int[M2.n+1];
-	for (int k = 0; k<c_ind;k++){
-		NZ[k] = nz_m[k];
-		ROW[k] = row_m[k];
-	}
-	for (int k = 0; k<=M2.n; k++){
-		COLIND[k] = colind_m[k];
-	}
+	std::unique_ptr<double[]> NZ = std::make_unique<double[]>(c_ind);
+	std::unique_ptr<int[]> ROW = std::make_unique<int[]>(c_ind);
+	std::unique_ptr<int[]> COLIND = std::make_unique<int[]>(M2.n + 1);
+    std::copy(nz_m.begin(), nz_m.end(), NZ.get());
+    std::copy(row_m.begin(), row_m.end(), ROW.get());
+    std::copy(colind_m.begin(), colind_m.end(), COLIND.get());
 
     delete[] index_offsets; delete[] first_rows; delete[] min_inds;
-	return Sparse_Matrix(M1.m, M2.n, c_ind, NZ, ROW, COLIND);
+    
+	return Sparse_Matrix(M1.m, M2.n, std::move(NZ), std::move(ROW), std::move(COLIND));
 }
 
 
@@ -1539,26 +1513,17 @@ void Sparse_Matrix::remove_rows(int *starts, int *ends, int nblocks){
 		}
 		COLIND_v.push_back(c_ind);
 	}
-	delete[] nz;
-	delete[] row;
 
-	nz = new double[c_ind];
-	row = new int[c_ind];
-	nnz = c_ind;
+	nz = std::make_unique<double[]>(c_ind);
+	row = std::make_unique<int[]>(c_ind);
 
-	for (int k = 0; k<nnz; k++){
-		nz[k] = NZ_v[k];
-		row[k] = ROW_v[k];
-	}
-	for (int k = 0; k<=n; k++){
-		colind[k] = COLIND_v[k];
-	}
-
+    std::copy(NZ_v.begin(), NZ_v.end(), nz.get());
+    std::copy(ROW_v.begin(), ROW_v.end(), row.get());
+    std::copy(COLIND_v.begin(), COLIND_v.end(), colind.get());
+    
 	for (int k = 0; k<nblocks; k++){
 		m -= ends[k] - starts[k];
 	}
-
-	return;
 }
 
 Sparse_Matrix Sparse_Matrix::without_nz_rows(int *starts, int *ends, int nblocks) const{
@@ -1598,20 +1563,15 @@ Sparse_Matrix Sparse_Matrix::without_nz_rows(int *starts, int *ends, int nblocks
 		COLIND_v.push_back(c_ind);
 	}
 
-	double *M_nz = new double[c_ind];
-	int *M_row = new int[c_ind];
-	int *M_colind = new int[n+1];
-	int M_nnz = c_ind;
+	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(c_ind);
+	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(c_ind);
+	std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(n+1);
 
-	for (int k = 0; k<M_nnz; k++){
-		M_nz[k] = NZ_v[k];
-		M_row[k] = ROW_v[k];
-	}
-	for (int k = 0; k<=n; k++){
-		M_colind[k] = COLIND_v[k];
-	}
-
-	return Sparse_Matrix(m, n, M_nnz, M_nz, M_row, M_colind);
+    std::copy(NZ_v.begin(), NZ_v.end(), M_nz.get());
+    std::copy(ROW_v.begin(), ROW_v.end(), M_row.get());
+    std::copy(COLIND_v.begin(), COLIND_v.end(), M_colind.get());
+    
+	return Sparse_Matrix(m, n, std::move(M_nz), std::move(M_row), std::move(M_colind));
 }
 
 
@@ -1619,9 +1579,6 @@ Sparse_Matrix horzcat(Sparse_Matrix *mats, int n_mat){
 	int nnz = 0;
 	int m = mats[0].m;
 	int n = 0;
-	double *nz;
-	int *row;
-	int *colind;
 
 	for (int k = 0; k<n_mat; k++){
         #ifdef MATRIX_DEBUG
@@ -1630,12 +1587,12 @@ Sparse_Matrix horzcat(Sparse_Matrix *mats, int n_mat){
         }
         #endif
 
-		nnz += mats[k].nnz;
+		nnz += mats[k].colind[mats[k].n];
 		n += mats[k].n;
 	}
-	nz = new double[nnz];
-	row = new int[nnz];
-	colind = new int[n+1];
+	std::unique_ptr<double[]> nz = std::make_unique<double[]>(nnz);
+	std::unique_ptr<int[]> row = std::make_unique<int[]>(nnz);
+	std::unique_ptr<int[]> colind = std::make_unique<int[]>(n+1);
 
 	int row_offset = 0;
 	int col_offset = 0;
@@ -1646,24 +1603,21 @@ Sparse_Matrix horzcat(Sparse_Matrix *mats, int n_mat){
 		}
 		col_offset += mats[k].n;
 
-		for (int l = 0; l<mats[k].nnz; l++){
+		for (int l = 0; l<mats[k].colind[mats[k].n]; l++){
 			nz[row_offset + l] = mats[k].nz[l];
 			row[row_offset + l] = mats[k].row[l];
 		}
-		row_offset += mats[k].nnz;
+		row_offset += mats[k].colind[mats[k].n];
 	}
 	colind[n] = nnz;
 
-	return Sparse_Matrix(m, n, nnz, nz, row, colind);
+	return Sparse_Matrix(m, n, std::move(nz), std::move(row), std::move(colind));
 }
 
 Sparse_Matrix horzcat(std::vector<Sparse_Matrix> &mats){
     int nnz = 0;
     int m = mats[0].m;
     int n = 0;
-	double *nz;
-	int *row;
-	int *colind;
 
 	for (std::vector<Matrix>::size_type k = 0; k<mats.size(); k++){
         #ifdef MATRIX_DEBUG
@@ -1672,12 +1626,12 @@ Sparse_Matrix horzcat(std::vector<Sparse_Matrix> &mats){
         }
         #endif
 
-		nnz += mats[k].nnz;
+		nnz += mats[k].colind[mats[k].n];
 		n += mats[k].n;
 	}
-	nz = new double[nnz];
-	row = new int[nnz];
-	colind = new int[n+1];
+	std::unique_ptr<double[]> nz = std::make_unique<double[]>(nnz);
+	std::unique_ptr<int[]> row = std::make_unique<int[]>(nnz);
+	std::unique_ptr<int[]> colind = std::make_unique<int[]>(n+1);
 
 	int row_offset = 0;
 	int col_offset = 0;
@@ -1688,24 +1642,21 @@ Sparse_Matrix horzcat(std::vector<Sparse_Matrix> &mats){
 		}
 		col_offset += mats[k].n;
 
-		for (int l = 0; l<mats[k].nnz; l++){
+		for (int l = 0; l<mats[k].colind[mats[k].n]; l++){
 			nz[row_offset + l] = mats[k].nz[l];
 			row[row_offset + l] = mats[k].row[l];
 		}
-		row_offset += mats[k].nnz;
+		row_offset += mats[k].colind[mats[k].n];
 	}
 	colind[n] = nnz;
 
-	return Sparse_Matrix(m, n, nnz, nz, row, colind);
+	return Sparse_Matrix(m, n, std::move(nz), std::move(row), std::move(colind));
 }
 
 Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
     int nnz = 0;
     int m = 0;
     int n = mats[0].n;
-    double* nz;
-    int* row;
-    int* colind;
 
     for (std::vector<Matrix>::size_type k = 0; k < mats.size(); k++){
         #ifdef MATRIX_DEBUG
@@ -1714,12 +1665,12 @@ Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
         }
         #endif
 
-        nnz += mats[k].nnz;
+        nnz += mats[k].colind[mats[k].n];
         m += mats[k].m;
     }
-    nz = new double[nnz];
-    row = new int[nnz];
-    colind = new int[n+1];
+	std::unique_ptr<double[]> nz = std::make_unique<double[]>(nnz);
+	std::unique_ptr<int[]> row = std::make_unique<int[]>(nnz);
+	std::unique_ptr<int[]> colind = std::make_unique<int[]>(n+1);
     colind[0] = 0;
 
     int row_offset;
@@ -1736,8 +1687,9 @@ Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
         }
         colind[j+1] = ind;
     }
-    return Sparse_Matrix(m, n, nnz, nz, row, colind);
+    return Sparse_Matrix(m, n, std::move(nz), std::move(row), std::move(colind));
 }
+
 
 Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start){
     #ifdef MATRIX_DEBUG
@@ -1745,10 +1697,10 @@ Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start){
         throw std::invalid_argument("lr_zero_pad: Matrix not in given bounds at given position");
     }
     #endif
-
-    double *nz = new double[M1.nnz];
-    int *row = new int[M1.nnz];
-    int *colind = new int[N+1];
+    
+	std::unique_ptr<double[]> nz = std::make_unique<double[]>(M1.colind[M1.n]);
+	std::unique_ptr<int[]> row = std::make_unique<int[]>(M1.colind[M1.n]);
+	std::unique_ptr<int[]> colind = std::make_unique<int[]>(N+1);
 
     colind[0] = 0;
     for (int j = 0; j < start; j++){
@@ -1759,17 +1711,13 @@ Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start){
     }
 
     for (int j = start + M1.n; j < N; j++){
-        colind[j+1] = M1.nnz;
+        colind[j+1] = M1.colind[M1.n];
     }
 
-    std::copy(M1.nz, M1.nz + M1.nnz, nz);
-    std::copy(M1.row, M1.row + M1.nnz, row);
-    /*for (int i = 0; i < M1.nnz; i++){
-        nz[i] = M1.nz[i];
-        row[i] = M1.row[i];
-    }*/
+    std::copy(M1.nz.get(), M1.nz.get() + M1.colind[M1.n], nz.get());
+    std::copy(M1.row.get(), M1.row.get() + M1.colind[M1.n], row.get());
 
-    return Sparse_Matrix(M1.m, N, M1.nnz, nz, row, colind);
+    return Sparse_Matrix(M1.m, N, std::move(nz), std::move(row), std::move(colind));
 }
 
 
@@ -1780,9 +1728,9 @@ Sparse_Matrix lr_zero_pad(int N, const Matrix &M1, int start){
     }
     #endif
 
-    double *nz = new double[M1.m * M1.n];
-    int *row = new int[M1.m * M1.n];
-    int *colind = new int[N+1];
+    std::unique_ptr<double[]> nz = std::make_unique<double[]>(M1.m * M1.n);
+    std::unique_ptr<int[]> row = std::make_unique<int[]>(M1.m * M1.n);
+    std::unique_ptr<int[]> colind = std::make_unique<int[]>(N+1);
 
     colind[0] = 0;
     for (int j = 0; j < start; j++){
@@ -1804,7 +1752,7 @@ Sparse_Matrix lr_zero_pad(int N, const Matrix &M1, int start){
         }
     }
 
-    return Sparse_Matrix(M1.m, N, M1.m*M1.n, nz, row, colind);
+    return Sparse_Matrix(M1.m, N, std::move(nz), std::move(row), std::move(colind));
 }
 
 
@@ -1865,7 +1813,7 @@ CSR_Matrix::CSR_Matrix(const Sparse_Matrix &M1){
     col = new int[M1.colind[M1.n]];
     rowind = new int[M1.m + 1];
 
-    CSC_CSR(m, n, M1.nz, M1.row, M1.colind, nz, col, rowind);
+    CSC_CSR(m, n, M1.nz.get(), M1.row.get(), M1.colind.get(), nz, col, rowind);
     free_data = true;
 }
 
@@ -2155,9 +2103,9 @@ void LT_Block_Matrix::to_sparse(Sparse_Matrix &M) const{
         Lsize -= m_block_sizes[i];
 	}
 
-	double *M_nz = new double[M_nnz];
-	int *M_row = new int[M_nnz];
-    int *M_colind = new int[M_n + 1];
+	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(M_nnz);
+	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(M_nnz);
+    std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(M_n + 1);
     M_colind[0] = 0;
 
     int L_start = 0, I_start, J_start = 0;
@@ -2188,7 +2136,7 @@ void LT_Block_Matrix::to_sparse(Sparse_Matrix &M) const{
         J_start += n_block_sizes[J];
     }
 
-    M = Sparse_Matrix(M_m, M_n, M_nnz, M_nz, M_row, M_colind);
+    M = Sparse_Matrix(M_m, M_n, std::move(M_nz), std::move(M_row), std::move(M_colind));
     return;
 }
 
@@ -2229,7 +2177,7 @@ CSR_Matrix sparse_dense_multiply_2(const Sparse_Matrix &M1, const Matrix &M2){
     int *col = new int[M1.colind[M1.n]];
     int *rowind = new int[M1.m + 1];
 
-    CSC_CSR(M1.m, M1.n, M1.nz, M1.row, M1.colind, nz_, col, rowind);
+    CSC_CSR(M1.m, M1.n, M1.nz.get(), M1.row.get(), M1.colind.get(), nz_, col, rowind);
 
     int n_nzrow = 0;
     for (int i = 0; i < M1.m; i++){

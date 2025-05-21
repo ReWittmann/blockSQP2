@@ -174,6 +174,10 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     // Convexification strategy
     hess_num_accepted = 0;
     convKappa = param->conv_kappa_0;
+    if (param->max_conv_QPs > 1){
+        deltaXi_conv.Dimension(prob->nVar);
+        lambdaQP_conv.Dimension(prob->nVar + prob->nCon);
+    }
 
     // Scaling heuristic
     if (param->automatic_scaling){
@@ -283,8 +287,8 @@ void SQPiterate::restore_iterate(){
 SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond):
         SQPiterate(prob, param){
     //Wrap sparse jacobian array
-    Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
-
+    //Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
+    
     //Allocate solution of condensed QP
     deltaXi_cond.Dimension(cond->condensed_num_vars);
     lambdaQP_cond.Dimension(cond->condensed_num_vars + cond->condensed_num_cons);

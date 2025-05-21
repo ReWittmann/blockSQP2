@@ -56,7 +56,7 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->qpsol_options = parent_options->qpsol_options;
 
     return rest_param;
-}   
+}
 
 
 
@@ -175,17 +175,17 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     if (cond->add_dep_bounds > 0){
         std::cout << "Warning: Condenser adds dependent variable bounds to constraint matrix, performance may be impeded\n";
     }
-
+    
     prob = problem;
     param = parameters; param->optionsConsistency();
     stats = statistics;
-
+    
     if (param->automatic_scaling){
         scaled_prob = std::make_unique<scaled_Problemspec>(prob);
         prob = scaled_prob.get();
     }
     vars = std::make_unique<SCQP_correction_iterate>(prob, param, cond);
-
+    
     // Check if there are options that are infeasible and set defaults accordingly
     if (param->sparse == 0){
         throw std::invalid_argument("SCQPmethod: Error, condensing only works with sparse QPs");
@@ -193,22 +193,22 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
     if (param->block_hess != 1){
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
-
+    
     sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
-
+    
     corrections = new Matrix[cond->num_targets];
     SOC_corrections = new Matrix[cond->num_targets];
     for (int tnum = 0; tnum < cond->num_targets; tnum++){
         corrections[tnum].Dimension(cond->targets_data[tnum].n_dep).Initialize(0.);
         SOC_corrections[tnum].Dimension(cond->targets_data[tnum].n_dep).Initialize(0.);
     }
-
+    
     if (param->enable_rest){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
         rest_prob = std::make_unique<TC_restoration_Problem>(prob, cond, Matrix(), param->rest_rho, param->rest_zeta);
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
-
+        
         rest_xi.Dimension(rest_prob->nVar);
         rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
         rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);

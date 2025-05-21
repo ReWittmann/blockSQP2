@@ -94,7 +94,7 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_sqputils.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
-target_compile_options(blockSQP PRIVATE -O3)
+target_compile_options(blockSQP PRIVATE -g -O0)
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpos_SOURCE_DIR}/include ${qpos_SOURCE_DIR}/include/qpOASES)
@@ -114,6 +114,7 @@ set_target_properties(example1_sparse
 
 add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP)
+target_compile_options(example_condensing PRIVATE -g -O0)
 set_target_properties(example_condensing
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
@@ -137,7 +138,7 @@ if(PYTHON_INTERFACE)
 	
 	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)
-	target_compile_options(py_blockSQP PRIVATE -O3)
+	target_compile_options(py_blockSQP PRIVATE -O3 -fvisibility=hidden)
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface)
 endif()
