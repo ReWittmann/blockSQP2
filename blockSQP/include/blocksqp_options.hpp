@@ -105,7 +105,7 @@ class SQPoptions{
 
     //Scaling
     int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance 2: FUTURE
-
+    
     //Advanced options for numerical experiments
     bool indef_local_only = false;              //Only use fallback as long as KKT error is "large"
 

@@ -7,6 +7,8 @@ except:
 import OCP_experiment
 import OCProblems
 
+plot_folder = "/home/reinhold/PLOT"
+
 
 Examples = [(OCProblems.Batch_Reactor, "Batch reactor"),
             (OCProblems.Goddard_Rocket, "Goddard's rocket"),
@@ -20,15 +22,13 @@ Examples = [(OCProblems.Batch_Reactor, "Batch reactor"),
             (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
             (OCProblems.Lotka_OED, "Lotka_OED")
             ]
-
 Experiments = [({'hessian_approximation': "limited-memory", 'limited_memory_max_history':12}, "Ipopt, limited-memory BFGS"),
                ({'hessian_approximation': "exact"}, "Ipopt, exact Hessian")
                ]
-
 Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
              (OCProblems.Goddard_Rocket, "Goddard's rocket")
              ]
-OCP_experiment.run_ipopt_experiments(Examples_, Experiments, "/home/reinhold/PLOT", nPert0 = 0, nPertF = 5)
+OCP_experiment.run_ipopt_experiments(Examples_, Experiments, plot_folder, nPert0 = 0, nPertF = 5)
 
 
 
