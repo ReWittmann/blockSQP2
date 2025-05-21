@@ -330,13 +330,13 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
         //Update AdeltaXi, where we use the original step in the first iteration and the previous SOC step in the following iterations (thats why we don't do it in the solve_SOC_QP method)
         if (k == 0){
             if (param->sparse)
-                Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->deltaXi, vars->AdeltaXi);
+                Atimesb(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->deltaXi, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, vars->deltaXi, vars->AdeltaXi);
         }
         else{
             if (param->sparse)
-                Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), deltaXiSOC, vars->AdeltaXi);
+                Atimesb(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), deltaXiSOC, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, deltaXiSOC, vars->AdeltaXi);
         }
@@ -636,8 +636,8 @@ int SQPmethod::kktErrorReduction(){
     // scaled norm of Lagrangian gradient
     trialGradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
     if( param->sparse )
-        calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->jacNz.get(),
-                              vars->jacIndRow.get(), vars->jacIndCol.get(), trialGradLagrange, 0 );
+        calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->sparse_constrJac.nz.get(),
+                              vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), trialGradLagrange, 0 );
     else
         calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->constrJac,
                               trialGradLagrange, 0 );

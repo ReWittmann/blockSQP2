@@ -41,7 +41,7 @@ void SQPmethod::init(){
 
     // Set initial values for all xi and set the Jacobian for linear constraints
     if( param->sparse )
-        prob->initialize(vars->xi, vars->lambda, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
+        prob->initialize(vars->xi, vars->lambda, vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
     else
         prob->initialize(vars->xi, vars->lambda, vars->constrJac);
 
@@ -66,7 +66,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         // SQP iteration 0
         if (param->sparse)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
+                            vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
@@ -279,7 +279,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Evaluate functions and gradients at the new xi
         if (param->sparse){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
+                            vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         }
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,

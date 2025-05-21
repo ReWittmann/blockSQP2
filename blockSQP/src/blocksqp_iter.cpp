@@ -46,6 +46,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
     ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
+    /*
     if (!param->sparse){
         constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
         jacNz = nullptr;
@@ -56,7 +57,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         jacNz = std::make_unique<double[]>(prob->nnz);
         jacIndRow = std::make_unique<int[]>(prob->nnz);
         jacIndCol = std::make_unique<int[]>(prob->nVar + 1);
-    }
+    }*/
+    if (!param->sparse) constrJac.Dimension(prob->nCon, prob->nVar).Initialize(0.0);
+    else sparse_constrJac.Dimension(prob->nCon, prob->nVar, prob->nnz);
     
     //Allocate Hessian data
     int maxblocksize;

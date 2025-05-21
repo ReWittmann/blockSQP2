@@ -159,7 +159,7 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
     vars->conv_qp_solved = false;
 
     if (param->sparse)
-        sub_QP->set_constr(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
+        sub_QP->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
     else
         sub_QP->set_constr(vars->constrJac);
     

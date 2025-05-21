@@ -52,11 +52,13 @@ class SQPiterate{
         
         //Constraint jacobian
         Matrix constrJac;                             // full constraint Jacobian (not used in sparse mode)
-        //Sparse_Matrix sparse_constrJac;               // sparse constraint Jacobian (not used in dense mode)
+        Sparse_Matrix sparse_constrJac;               // sparse constraint Jacobian (not used in dense mode)
         
+        /*
         std::unique_ptr<double[]> jacNz;              // Constraint Jacobian in CCS form (only used in sparse mode)
         std::unique_ptr<int[]> jacIndRow;
         std::unique_ptr<int[]> jacIndCol;
+        */
         
         //Hessian(s), including layout
         int nBlocks;                                   ///< number of diagonal blocks in Hessian

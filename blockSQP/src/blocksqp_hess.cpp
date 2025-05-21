@@ -125,7 +125,7 @@ int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess){
             maxBlock = vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock];
 
     // Compute original Lagrange gradient
-    calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->gradLagrange, 0 );
+    calcLagrangeGradient( vars->lambda, vars->gradObj, vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->gradLagrange, 0 );
 
     for( iVar = 0; iVar<maxBlock; iVar++ )
     {
@@ -168,15 +168,13 @@ int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess){
             vars->xi( k ) += pert( k );
 
         // Compute perturbed Lagrange gradient
-        if( param->sparse )
-        {
+        if (param->sparse){
             prob->evaluate( vars->xi, vars->lambda, &dummy, varsP.constr, varsP.gradObj,
-                            varsP.jacNz.get(), varsP.jacIndRow.get(), varsP.jacIndCol.get(), hess, 1, &info );
-            calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.jacNz.get(), varsP.jacIndRow.get(),
-                                  varsP.jacIndCol.get(), varsP.gradLagrange, 0 );
+                            varsP.sparse_constrJac.nz.get(), varsP.sparse_constrJac.row.get(), varsP.sparse_constrJac.colind.get(), hess, 1, &info );
+            calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.sparse_constrJac.nz.get(), varsP.sparse_constrJac.row.get(),
+                                  varsP.sparse_constrJac.colind.get(), varsP.gradLagrange, 0 );
         }
-        else
-        {
+        else{
             prob->evaluate( vars->xi, vars->lambda, &dummy, varsP.constr, varsP.gradObj, varsP.constrJac, hess, 1, &info );
             calcLagrangeGradient( vars->lambda, varsP.gradObj, varsP.constrJac, varsP.gradLagrange, 0 );
         }
