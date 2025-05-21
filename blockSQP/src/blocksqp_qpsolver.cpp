@@ -86,7 +86,7 @@ void QPsolver::reset_timeRecord(){
 
 
 CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, Condenser *arg_cond):
-    inner_QP(arg_CQPsol), cond(Condenser::layout_copy(arg_cond)), hess_cond(new SymMatrix[cond->condensed_num_hessblocks]),
+    inner_QPsol(arg_CQPsol), cond(Condenser::layout_copy(arg_cond)), hess_cond(new SymMatrix[cond->condensed_num_hessblocks]),
         xi_cond(cond->condensed_num_vars), lambda_cond(cond->condensed_num_vars + cond->condensed_num_cons),
             h_updated(false), A_updated(false), bounds_updated(false), hess_updated(false){
     for (int k = 0; k < cond->num_hessblocks; k++){
@@ -132,19 +132,19 @@ void CQPsolver::set_hess(SymMatrix *const hess, bool pos_def, double regularizat
 int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     cond->full_condense(h_qp, sparse_A_qp, hess_qp, lb_x, ub_x, lb_A, ub_A, 
         h_cond, sparse_A_cond, hess_cond.get(), lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
-    inner_QP->set_lin(h_cond);
-    inner_QP->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
-    inner_QP->set_hess(hess_cond.get(), convex_QP, regF);
-    inner_QP->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
-    int QPret = inner_QP->solve(xi_cond, lambda_cond);
+    inner_QPsol->set_lin(h_cond);
+    inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
+    inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
+    inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    int QPret = inner_QPsol->solve(xi_cond, lambda_cond);
     if (QPret > 0) return QPret;
     cond->recover_var_mult(xi_cond, lambda_cond, deltaXi, lambdaQP);
     return QPret;
 }
 
-void CQPsolver::set_timeLimit(int limit_type, double custom_limit_secs){inner_QP->set_timeLimit(limit_type, custom_limit_secs);}
-int CQPsolver::get_QP_it(){return inner_QP->get_QP_it();}
-double CQPsolver::get_solutionTime(){return inner_QP->get_solutionTime();}
+void CQPsolver::set_timeLimit(int limit_type, double custom_limit_secs){inner_QPsol->set_timeLimit(limit_type, custom_limit_secs);}
+int CQPsolver::get_QP_it(){return inner_QPsol->get_QP_it();}
+double CQPsolver::get_solutionTime(){return inner_QPsol->get_solutionTime();}
 
 
 

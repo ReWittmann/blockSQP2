@@ -172,7 +172,7 @@ public:
 
     void solve_QPs(){
         double a = 0;
-        for (int i = 0; i < condensed_Jacobian.nnz; i++){
+        for (int i = 0; i < condensed_Jacobian.colind[condensed_Jacobian.n]; i++){
             a += condensed_Jacobian.nz[i];
         }
         std::cout << "Sum on nonzeros in condensed_Jacobian is " << a << "\n";
@@ -207,9 +207,9 @@ public:
         qp_cond = new qpOASES::SQProblemSchur( red_con_jac.n, red_con_jac.m, qpOASES::HST_UNKNOWN, 50 );
 
         A_qp = new qpOASES::SparseMatrix(con_jac.m, con_jac.n,
-                    con_jac.row, con_jac.colind, con_jac.nz);
+                    con_jac.row.get(), con_jac.colind.get(), con_jac.nz.get());
         A_qp_cond = new qpOASES::SparseMatrix(red_con_jac.m, red_con_jac.n,
-                    red_con_jac.row, red_con_jac.colind, red_con_jac.nz);
+                    red_con_jac.row.get(), red_con_jac.colind.get(), red_con_jac.nz.get());
 
 
         convertHessian(1.0e-15, hess.ptr, hess.size, con_jac.n, hess_nz, hess_row, hess_colind, hess_loind);
@@ -594,18 +594,17 @@ py::class_<blockSQP::SymMatrix>(m, "SymMatrix")
 
 py::class_<blockSQP::Sparse_Matrix>(m, "Sparse_Matrix")
     .def(py::init<>())
-    .def(py::init([](int M, int N, int nnz, double_array &nz, int_array &row, int_array &colind) -> blockSQP::Sparse_Matrix*{
-        double *NZ = nz.ptr; int *ROW = row.ptr; int *COLIND = colind.ptr;
+    .def(py::init([](int M, int N, double_array &nz, int_array &row, int_array &colind) -> blockSQP::Sparse_Matrix*{
+        std::unique_ptr<double[]> NZ = std::unique_ptr<double[]>(nz.ptr); std::unique_ptr<int[]> ROW = std::unique_ptr<int[]>(row.ptr); std::unique_ptr<int[]> COLIND = std::unique_ptr<int[]>(colind.ptr);
         nz.size = 0; nz.ptr = nullptr; row.size = 0; row.ptr = nullptr; colind.size = 0; colind.ptr = nullptr;
-        return new blockSQP::Sparse_Matrix(M, N, nnz, NZ, ROW, COLIND);
+        return new blockSQP::Sparse_Matrix(M, N, std::move(NZ), std::move(ROW), std::move(COLIND));
     }), py::return_value_policy::take_ownership)
     .def_readonly("m", &blockSQP::Sparse_Matrix::m)
     .def_readonly("n", &blockSQP::Sparse_Matrix::n)
-    .def_readonly("nnz", &blockSQP::Sparse_Matrix::nnz)
     .def("dense", &blockSQP::Sparse_Matrix::dense)
-    .def_property("NZ", [](blockSQP::Sparse_Matrix &M)->double_pointer_interface{double_pointer_interface nonzeros; nonzeros.size = M.nnz; nonzeros.ptr = M.nz; return nonzeros;}, nullptr)
-    .def_property("ROW", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface row; row.size = M.nnz; row.ptr = M.row; return row;}, nullptr)
-    .def_property("COLIND", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface colind; colind.size = M.n + 1; colind.ptr = M.colind; return colind;}, nullptr)
+    .def_property("NZ", [](blockSQP::Sparse_Matrix &M)->double_pointer_interface{double_pointer_interface nonzeros; nonzeros.size = M.colind[M.n]; nonzeros.ptr = M.nz.get(); return nonzeros;}, nullptr)
+    .def_property("ROW", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface row; row.size = M.colind[M.n]; row.ptr = M.row.get(); return row;}, nullptr)
+    .def_property("COLIND", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface colind; colind.size = M.n + 1; colind.ptr = M.colind.get(); return colind;}, nullptr)
     ;
 
 py::class_<blockSQP::SQPoptions>(m, "SQPoptions")

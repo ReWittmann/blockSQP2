@@ -504,19 +504,18 @@ mod.add_type<blockSQP::Sparse_Matrix>("Cxx_Sparse_Matrix")
     .method("disown!", [](blockSQP::Sparse_Matrix &M){
         M.m = 0;
         M.n = 0;
-        M.nnz = 0;
-        M.nz = nullptr;
-        M.row = nullptr;
-        M.colind = nullptr;
+        M.nz.release();
+        M.row.release();
+        M.colind.release();
     })
-    .method("get_nnz", [](blockSQP::Sparse_Matrix &M){return M.nnz;})
-    .method("show_nz", [](blockSQP::Sparse_Matrix &M){return M.nz;})
-    .method("show_row", [](blockSQP::Sparse_Matrix &M){return M.row;})
-    .method("show_colind", [](blockSQP::Sparse_Matrix &M){return M.colind;})
+    .method("get_nnz", [](blockSQP::Sparse_Matrix &M){return M.colind[M.n];})
+    .method("show_nz", [](blockSQP::Sparse_Matrix &M){return M.nz.get();})
+    .method("show_row", [](blockSQP::Sparse_Matrix &M){return M.row.get();})
+    .method("show_colind", [](blockSQP::Sparse_Matrix &M){return M.colind.get();})
     ;
 
 mod.method("alloc_Cxx_Sparse_Matrix", [](int m, int n, int nnz){
-    return blockSQP::Sparse_Matrix(m, n, nnz, new double[nnz], new int[nnz], new int[n+1]);
+    return blockSQP::Sparse_Matrix(m, n, std::make_unique<double[]>(nnz), std::make_unique<int[]>(nnz), std::make_unique<int[]>(n+1));
 });
 
 

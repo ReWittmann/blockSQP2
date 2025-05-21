@@ -115,10 +115,10 @@ class QPsolver : public QPsolverBase{
     virtual double get_solutionTime();
 };
 
-//Condensed QP solver. Condenses QPs before solving
+//QP solver with condensing step.
 class CQPsolver : public QPsolverBase{
     public:
-    QPsolverBase *inner_QP;
+    QPsolverBase *inner_QPsol;
     std::unique_ptr<Condenser> cond;
     
     SymMatrix *hess_qp;

@@ -1144,6 +1144,7 @@ Sparse_Matrix &Sparse_Matrix::Dimension(int M, int N, int NNZ){
     nz = std::make_unique<double[]>(NNZ);
     row = std::make_unique<int[]>(NNZ);
     colind = std::make_unique<int[]>(n+1);
+    colind[n] = NNZ;
     return *this;
 }
 
