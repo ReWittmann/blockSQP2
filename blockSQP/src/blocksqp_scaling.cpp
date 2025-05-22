@@ -149,8 +149,8 @@ void SQPmethod::apply_rescaling(const double *resfactors){
 
     if (param->sparse){
         for (int i = 0; i < prob->nVar; i++){
-            for (int k = vars->jacIndCol[i]; k < vars->jacIndCol[i+1]; k++){
-                vars->jacNz[k] /= resfactors[i];
+            for (int k = vars->sparse_constrJac.colind[i]; k < vars->sparse_constrJac.colind[i+1]; k++){
+                vars->sparse_constrJac.nz[k] /= resfactors[i];
             }
         }
     }

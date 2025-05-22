@@ -737,7 +737,7 @@ int SymMatrix::malloc(void){
 }
 
 
-int SymMatrix::free( void ){
+int SymMatrix::free(){
     if (array != NULL){
         delete[] array;
         array = nullptr;
@@ -793,9 +793,9 @@ double &SymMatrix::operator()( int i ) const
 
 
 SymMatrix::SymMatrix(){
+    array = nullptr;
     m = 0;
     ldim = 0;
-    array = nullptr;
     tflag = 0;
 }
 
@@ -820,7 +820,6 @@ SymMatrix::SymMatrix(int M, int N, int LDIM){
     m = M;
     ldim = M;
     tflag = 0;
-
     malloc();
 }
 
@@ -864,6 +863,7 @@ SymMatrix &SymMatrix::Dimension(int M){
     free();
     m = M;
     ldim = M;
+    //tflag = 0;
 
     malloc();
     return *this;

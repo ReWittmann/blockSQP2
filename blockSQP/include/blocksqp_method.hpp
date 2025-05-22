@@ -77,8 +77,7 @@ class SQPmethod{
         SQPresult run( int maxIt, int warmStart = 0 );
         /// Call after the last call of run, to close output files etc.
         void finish();
-
-
+        
         // Utility methods
         /// Print information about the SQP method
         void printInfo( int printLevel );

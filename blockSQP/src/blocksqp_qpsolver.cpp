@@ -17,6 +17,8 @@
 
 namespace blockSQP{
 
+QPsolverBase::~QPsolverBase(){}
+
 //QPsolver base class implemented methods
 QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts): nVar(n_QP_var), nCon(n_QP_con), nHess(n_QP_hessblocks), Qparam(QPopts){
     //For managing QP solution times
@@ -85,12 +87,27 @@ void QPsolver::reset_timeRecord(){
 
 
 
-CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, Condenser *arg_cond):
-    inner_QPsol(arg_CQPsol), cond(Condenser::layout_copy(arg_cond)), hess_cond(new SymMatrix[cond->condensed_num_hessblocks]),
-        xi_cond(cond->condensed_num_vars), lambda_cond(cond->condensed_num_vars + cond->condensed_num_cons),
-            h_updated(false), A_updated(false), bounds_updated(false), hess_updated(false){
+CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond):
+    inner_QPsol(arg_CQPsol), cond(Condenser::layout_copy(arg_cond)), 
+    hess_qp(new SymMatrix[cond->num_hessblocks]), convex_QP(false), regF(0.0), h_qp(cond->num_vars),
+    lb_x(cond->num_vars), ub_x(cond->num_vars), lb_A(cond->num_cons), ub_A(cond->num_cons),
+    //TODO: Pass sparsity pattern of Jacobian to condenser and precompute sparsity pattern of condensed Jacobian
+    hess_cond(new SymMatrix[cond->condensed_num_hessblocks]), h_cond(cond->condensed_num_hessblocks),
+    lb_x_cond(cond->condensed_num_vars), ub_x_cond(cond->condensed_num_vars), 
+    lb_A_cond(cond->condensed_num_cons), ub_A_cond(cond->condensed_num_cons),
+    //TODO: ' '   ' '
+    xi_cond(cond->condensed_num_vars), lambda_cond(cond->condensed_num_vars + cond->condensed_num_cons),
+    h_updated(false), A_updated(false), bounds_updated(false), hess_updated(false){
+    
+    bool convex_QP;
+    double regF;
+    
     for (int k = 0; k < cond->num_hessblocks; k++){
         hess_qp[k].Dimension(cond->hess_block_sizes[k]);
+    }
+    
+    for (int k = 0; k < cond->condensed_num_hessblocks; k++){
+        hess_cond[k].Dimension(cond->condensed_hess_block_sizes[k]);
     }
 }
 
@@ -106,15 +123,17 @@ void CQPsolver::set_bounds(const Matrix &arg_lb_x, const Matrix &arg_ub_x, const
     bounds_updated = true;
 }
 
+void CQPsolver::set_constr(const Matrix &constr_jac){
+    throw NotImplementedError("CQPsolver::set_constr(const Matrix &constr_jac)");
+}
+
 void CQPsolver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
-    int m = cond->num_cons, n = cond->num_vars;
     if (sparse_A_qp.m == 0){
-        sparse_A_qp.Dimension(m,n, jac_colind[n]);
+        sparse_A_qp.Dimension(cond->num_cons, cond->num_vars, jac_colind[cond->num_vars]);
     }
     std::copy(jac_nz, jac_nz + sparse_A_qp.colind[sparse_A_qp.n], sparse_A_qp.nz.get());
     std::copy(jac_row, jac_row + sparse_A_qp.colind[sparse_A_qp.n], sparse_A_qp.row.get());
     std::copy(jac_colind, jac_colind + sparse_A_qp.n + 1, sparse_A_qp.colind.get());
-    
     A_updated = true;
 }
 
@@ -126,11 +145,10 @@ void CQPsolver::set_hess(SymMatrix *const hess, bool pos_def, double regularizat
         hess_qp[k] = hess[k];
     }
     hess_updated = true;
-    return;
 }
 
 int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
-    cond->full_condense(h_qp, sparse_A_qp, hess_qp, lb_x, ub_x, lb_A, ub_A, 
+    cond->full_condense(h_qp, sparse_A_qp, hess_qp.get(), lb_x, ub_x, lb_A, ub_A, 
         h_cond, sparse_A_cond, hess_cond.get(), lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
     inner_QPsol->set_lin(h_cond);
     inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
@@ -177,6 +195,42 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
     throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
 }
 
+/*
+//Helper method to create an QP solver class for an SQPmethod
+QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param){
+    int n_QP, m_QP, n_hess_QP;
+    QPsolverBase *QPsol = nullptr;
+    if (prob->cond == nullptr){
+        m_QP = prob->nCon;
+        n_QP = prob->nVar;
+        n_hess_QP = prob->nBlocks;
+    }
+    else{
+        m_QP = prob->cond->condensed_num_cons;
+        n_QP = prob->cond->condensed_num_vars;
+        n_hess_QP = prob->cond->condensed_num_hessblocks;
+    }
+    
+    #ifdef QPSOLVER_QPOASES
+    if (param->qpsol == QPsolvers::qpOASES)
+        QPsol = qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, blockIdx, static_cast<qpOASES_options*>(param->qpsol_options));
+    #endif
+    #ifdef QPSOLVER_GUROBI
+    if (param->qpsol == QPsolvers::gurobi)
+        QPsol = gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<gurobi_options*>(param->qpsol_options));
+    #endif
+    #ifdef QPSOLVER_QPALM
+    if (param->qpsol == QPsolvers::qpalm)
+        QPsol = new qpalm_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<qpalm_options*>(param->qpsol_options));
+    #endif
+    if (QPsol == nullptr) throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
+    
+    //Wrap condensing step over external QP solver
+    if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond);
+    
+    return QPsol;
+}
+*/
 
 ////////////////////////////////////////////////////////////////
 /////////////Interfaces to (third party) QP solvers/////////////

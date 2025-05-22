@@ -625,7 +625,7 @@ void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparse_mod
     // Print sparse Jacobian and Hessian
     if( sparse_mode )
     {
-        printJacobian( prob->nCon, prob->nVar, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
+        printJacobian( prob->nCon, prob->nVar, vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
         //printHessian( prob->nVar, vars->hessNz, vars->hessIndRow, vars->hessIndCol );
     }
 

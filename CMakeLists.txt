@@ -120,6 +120,14 @@ set_target_properties(example_condensing
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
 )
 
+add_executable(example_CQPsolver blockSQP/examples/example_CQPsolver.cpp)
+target_link_libraries(example_CQPsolver blockSQP)
+target_compile_options(example_CQPsolver PRIVATE -g -O0)
+set_target_properties(example_CQPsolver
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
+)
+
 option(PYTHON_INTERFACE "build python interface" OFF)
 set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")
 

@@ -25,9 +25,11 @@
 namespace blockSQP{
 
 
-
+//QP solver interface
 class QPsolverBase{
     public:
+    virtual ~QPsolverBase();
+    
     virtual void set_lin(const Matrix &grad_obj) = 0;
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A) = 0;
     virtual void set_constr(const Matrix &constr_jac) = 0;
@@ -35,14 +37,15 @@ class QPsolverBase{
     //Set hessian and pass on whether hessian is supposedly positive definite
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
 
-    //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
-    //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
     
     //Statistics
     virtual int get_QP_it() = 0;
     virtual double get_solutionTime() = 0;
+    
+    //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
+    //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
+    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
 };
 
 
@@ -121,14 +124,14 @@ class CQPsolver : public QPsolverBase{
     QPsolverBase *inner_QPsol;
     std::unique_ptr<Condenser> cond;
     
-    SymMatrix *hess_qp;
+    std::unique_ptr<SymMatrix[]> hess_qp;
     bool convex_QP;
     double regF;
     
-    Matrix h_qp, A_qp, lb_x, ub_x, lb_A, ub_A;
+    Matrix h_qp, lb_x, ub_x, lb_A, ub_A;
     Sparse_Matrix sparse_A_qp;
     
-    std::unique_ptr<SymMatrix> hess_cond;
+    std::unique_ptr<SymMatrix[]> hess_cond;
     Matrix h_cond, lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond;
     Sparse_Matrix sparse_A_cond;
     
@@ -137,21 +140,21 @@ class CQPsolver : public QPsolverBase{
     //Flags indicating which data was updates, may avoid unnecessary work
     bool h_updated, A_updated, bounds_updated, hess_updated;
     
-    CQPsolver(QPsolverBase *arg_CQPsol, Condenser *arg_cond);
+    CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond);
     
     virtual void set_lin(const Matrix &grad_obj);
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
     
     // TODO implement once condensing supports dense constraint Jacobians    
-    //virtual void set_constr(const Matrix &constr_jac);
+    virtual void set_constr(const Matrix &constr_jac);
     virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
     
     //Set hessian and pass on whether hessian is supposedly positive definite
-    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP);
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
     

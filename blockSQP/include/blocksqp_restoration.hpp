@@ -194,6 +194,7 @@ class TC_restoration_Problem: public abstractRestorationProblem{
     double rho;
 
     Matrix constr_orig;
+    
     double *jac_orig_nz = nullptr;
     int *jac_orig_row = nullptr;
     int *jac_orig_colind = nullptr;

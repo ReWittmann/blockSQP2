@@ -215,6 +215,9 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
     gradLagrange = iter.gradLagrange;
 
     constrJac = iter.constrJac;
+    sparse_constrJac = iter.sparse_constrJac;
+    
+    /*
     if (iter.jacNz != nullptr){
         int nVar = xi.M();
         int nnz = iter.jacIndCol[nVar];
@@ -231,7 +234,8 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
         for (int i = 0; i <= nVar; i++)
             jacIndCol[i] = iter.jacIndCol[i];
     }
-
+    */
+    
     hess = nullptr;
 }
 
