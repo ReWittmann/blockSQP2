@@ -50,10 +50,10 @@ Experiments = [(EXP_1_opts, "SR1-BFGS"),
                (EXP_2_opts, "Convexification strategy 1"),
                (EXP_3_opts, "Convexification strategy 2")
                ]
-Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-              (OCProblems.Goddard_Rocket, "Goddard's rocket")
-              ]
-# Examples_ = [(OCProblems.Goddard_Rocket, "Goddard's rocket")]
+# Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
+#               (OCProblems.Goddard_Rocket, "Goddard's rocket")
+#               ]
+Examples_ = [(OCProblems.Hanging_Chain, "Hanging chain")]
 
 OCP_experiment.run_blockSQP_experiments(Examples_, Experiments,\
                                         plot_folder,\

@@ -237,7 +237,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     xticks = np.arange(nPert0, nPertF + tdist, tdist)
     ###############################################################################
     def F(x,r):
-        if r >= 0:
+        if r > 0:
             return x
         else:
             return 0.00001
@@ -408,7 +408,7 @@ def run_ipopt_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Exp
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
             suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
 
-def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], saveDir : str, nPert0 = 0, nPertF = 40):
+def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40):
     for OCclass, OCname in Examples:        
         OCprob = OCclass(nt=100, integrator='RK4')
         itMax = 200
@@ -427,4 +427,4 @@ def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], 
         ###############################################################################
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-            suptitle = OCname, saveDir = saveDir, savePrefix = "blockSQP")
+            suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP")

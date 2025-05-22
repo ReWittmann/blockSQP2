@@ -101,7 +101,7 @@ class SQPoptions{
     int max_conv_QPs = 4;                       //Maximum number of convexified QPs in each SQP iteration.
     double conv_tau_H = 2./3.;                  //See paper/manual
     double conv_kappa_0 = 1./16.;
-    double conv_kappa_max = 2.;
+    double conv_kappa_max = 8.0;
 
     //Scaling
     int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance 2: FUTURE

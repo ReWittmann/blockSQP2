@@ -28,7 +28,7 @@ Experiments = [({'hessian_approximation': "limited-memory", 'limited_memory_max_
 Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
              (OCProblems.Goddard_Rocket, "Goddard's rocket")
              ]
-OCP_experiment.run_ipopt_experiments(Examples_, Experiments, plot_folder, nPert0 = 0, nPertF = 5)
+OCP_experiment.run_ipopt_experiments(Examples, Experiments, plot_folder, nPert0 = 0, nPertF = 40)
 
 
 

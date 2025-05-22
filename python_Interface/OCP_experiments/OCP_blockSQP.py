@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 itMax = 100
 
-step_plots = True
+step_plots = False
 plot_title = True
 
 
@@ -29,21 +29,21 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Electric_Car(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Goddard_Rocket(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 1
-opts.conv_strategy = 1
+opts.max_conv_QPs = 4
+opts.conv_strategy = 2
 opts.exact_hess = 0
 opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
-opts.BFGS_damping_factor = 0.2
+opts.BFGS_damping_factor = 1/3
 
 opts.lim_mem = True
 opts.mem_size = 20
