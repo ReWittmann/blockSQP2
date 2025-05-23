@@ -40,7 +40,7 @@ class SQPmethod{
         std::unique_ptr<SQPiterate> vars;     ///< All SQP variables for this method
         std::unique_ptr<QPsolver>   sub_QP;   ///< Class wrapping an external QP solver
         
-        //std::unique_ptr<std::unique_ptr<QPsolver>> sub_QPs;   //QPsolver objects for parallelizing the QP solving loop
+        std::unique_ptr<std::unique_ptr<QPsolver>> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
         
         
         //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated

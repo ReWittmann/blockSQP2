@@ -77,16 +77,16 @@ class QPsolver : public QPsolverBase{
     double default_time_limit, custom_time_limit;
     //0: 2.5*average of past 10, 1: default_time_limit, 2: custom_time_limit
     int time_limit_type;
-
+    
     //Set by set_hess
     bool convex_QP;
-
+    
     //One time QP solving options (reset if a QP solve is successful)
     //bool record_time;
     bool skip_timeRecord;
     bool use_hotstart;
-
-
+    
+    
 	//Arguments: Number of QP variables, number of linear constraints, options
     QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts);
     virtual ~QPsolver();
@@ -95,7 +95,7 @@ class QPsolver : public QPsolverBase{
     void recordTime(double solTime);
     void reset_timeRecord();
     //void custom_timeLimit(double CTlim); //This equivalent to setting custom_time_limit to CTlim and time_limit_type to 2
-
+    
     //Setters for QP data. Only one of the setters for the constraint matrix (dense or sparse) is required
     virtual void set_lin(const Matrix &grad_obj) = 0;
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A) = 0;
@@ -106,7 +106,7 @@ class QPsolver : public QPsolverBase{
     
     //Set hessian and pass on whether hessian is supposedly positive definite
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
-
+    
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
     virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
@@ -119,9 +119,11 @@ class QPsolver : public QPsolverBase{
 };
 
 //QP solver with condensing step.
+//Requires QPsolverBase instantiated for the condensed QPs of size cond->num_cons, cond->num_vars, ...
 class CQPsolver : public QPsolverBase{
     public:
     QPsolverBase *inner_QPsol;
+    bool QPsol_own;
     std::unique_ptr<Condenser> cond;
     
     std::unique_ptr<SymMatrix[]> hess_qp;
@@ -140,7 +142,9 @@ class CQPsolver : public QPsolverBase{
     //Flags indicating which data was updates, may avoid unnecessary work
     bool h_updated, A_updated, bounds_updated, hess_updated;
     
-    CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond);
+    CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own = false);
+    CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond);
+    ~CQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj);
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
@@ -168,7 +172,12 @@ class CQPsolver : public QPsolverBase{
 
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
-QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
+
+//QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
+
+QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param);
+QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param);
+
 
 //QP solver implementations
 #ifdef QPSOLVER_QPOASES

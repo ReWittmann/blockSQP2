@@ -85,20 +85,17 @@ void QPsolver::reset_timeRecord(){
     QPtime_avg = default_time_limit/2.5;
 }
 
-
-
-CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond):
-    inner_QPsol(arg_CQPsol), cond(Condenser::layout_copy(arg_cond)), 
-    hess_qp(new SymMatrix[cond->num_hessblocks]), convex_QP(false), regF(0.0), h_qp(cond->num_vars),
-    lb_x(cond->num_vars), ub_x(cond->num_vars), lb_A(cond->num_cons), ub_A(cond->num_cons),
-    //TODO: Pass sparsity pattern of Jacobian to condenser and precompute sparsity pattern of condensed Jacobian
-    hess_cond(new SymMatrix[cond->condensed_num_hessblocks]), h_cond(cond->condensed_num_hessblocks),
-    lb_x_cond(cond->condensed_num_vars), ub_x_cond(cond->condensed_num_vars), 
-    lb_A_cond(cond->condensed_num_cons), ub_A_cond(cond->condensed_num_cons),
-    //TODO: ' '   ' '
-    xi_cond(cond->condensed_num_vars), lambda_cond(cond->condensed_num_vars + cond->condensed_num_cons),
-    h_updated(false), A_updated(false), bounds_updated(false), hess_updated(false){
-    
+CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own):
+        inner_QPsol(arg_CQPsol), QPsol_own(arg_QPsol_own), cond(Condenser::layout_copy(arg_cond)), 
+        hess_qp(new SymMatrix[cond->num_hessblocks]), convex_QP(false), regF(0.0), h_qp(cond->num_vars),
+        lb_x(cond->num_vars), ub_x(cond->num_vars), lb_A(cond->num_cons), ub_A(cond->num_cons),
+        //TODO: Pass sparsity pattern of Jacobian to condenser and precompute sparsity pattern of condensed Jacobian
+        hess_cond(new SymMatrix[cond->condensed_num_hessblocks]), h_cond(cond->condensed_num_hessblocks),
+        lb_x_cond(cond->condensed_num_vars), ub_x_cond(cond->condensed_num_vars), 
+        lb_A_cond(cond->condensed_num_cons), ub_A_cond(cond->condensed_num_cons),
+        //TODO: ' '   ' '
+        xi_cond(cond->condensed_num_vars), lambda_cond(cond->condensed_num_vars + cond->condensed_num_cons),
+        h_updated(false), A_updated(false), bounds_updated(false), hess_updated(false){
     bool convex_QP;
     double regF;
     
@@ -110,7 +107,10 @@ CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond):
         hess_cond[k].Dimension(cond->condensed_hess_block_sizes[k]);
     }
 }
+CQPsolver::CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond):
+    CQPsolver(arg_CQPsol.release(), arg_cond, true){}
 
+CQPsolver::~CQPsolver(){if (QPsol_own) delete inner_QPsol;}
 
 void CQPsolver::set_lin(const Matrix &grad_obj){
     h_qp = grad_obj;
@@ -174,6 +174,7 @@ double CQPsolver::get_solutionTime(){return inner_QPsol->get_solutionTime();}
 
 
 //QPsolver factory, handle checks for linked QP solvers
+/*
 QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *param){
 
     if (param->qpsol != param->qpsol_options->sol) throw ParameterError("qpsol_options for wrong qpsol, should have been caught by SQPoptions::optionsConsistency");
@@ -194,10 +195,15 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
 
     throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
 }
+*/
 
-/*
+
 //Helper method to create an QP solver class for an SQPmethod
 QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param){
+    return create_QPsolver(prob, param->qpsol_options);
+}
+
+QPsolverBase *create_QPsolver(Problemspec *prob, QPsolver_options *Qparam){
     int n_QP, m_QP, n_hess_QP;
     QPsolverBase *QPsol = nullptr;
     if (prob->cond == nullptr){
@@ -212,25 +218,24 @@ QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param){
     }
     
     #ifdef QPSOLVER_QPOASES
-    if (param->qpsol == QPsolvers::qpOASES)
-        QPsol = qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, blockIdx, static_cast<qpOASES_options*>(param->qpsol_options));
+    if (Qparam->sol == QPsolvers::qpOASES)
+        QPsol = new qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, blockIdx, static_cast<qpOASES_options*>(Qparam));
     #endif
     #ifdef QPSOLVER_GUROBI
-    if (param->qpsol == QPsolvers::gurobi)
-        QPsol = gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<gurobi_options*>(param->qpsol_options));
+    if (Qparam->sol == QPsolvers::gurobi)
+        QPsol = new gurobi_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<gurobi_options*>(Qparam));
     #endif
     #ifdef QPSOLVER_QPALM
-    if (param->qpsol == QPsolvers::qpalm)
-        QPsol = new qpalm_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<qpalm_options*>(param->qpsol_options));
+    if (Qparam->sol == QPsolvers::qpalm)
+        QPsol = new qpalm_solver(n_QP_var, n_QP_con, n_QP_hessblocks, static_cast<qpalm_options*>(Qparam));
     #endif
     if (QPsol == nullptr) throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
     
     //Wrap condensing step over external QP solver
-    if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond);
-    
+    if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
     return QPsol;
 }
-*/
+
 
 ////////////////////////////////////////////////////////////////
 /////////////Interfaces to (third party) QP solvers/////////////
@@ -354,7 +359,7 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
         regFactor = regularizationFactor;
     else
         regFactor = 0.0;
-
+    
     if (static_cast<qpOASES_options*>(Qparam)->sparsityLevel > 0){
         convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
         H_qp = std::make_unique<qpOASES::SymSparseMat>(nVar, nVar, hess_row.get(), hess_colind.get(), hess_nz.get());
@@ -575,7 +580,7 @@ void gurobi_solver::set_hess(SymMatrix *const hess, bool pos_def, double regular
         }
         offset += hess[k].m;
     }
-
+    
     //Unnecessary right now as gurobi only supplies lagrange multipliers for convex QPs
     //model->set(GRB_IntParam_NonConvex, int(!pos_def));
     return;
