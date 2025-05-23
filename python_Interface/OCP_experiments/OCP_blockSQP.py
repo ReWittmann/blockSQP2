@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Lotka_OED(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -51,7 +51,7 @@ opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
 opts.conv_kappa_max = 2.0
 
-opts.automatic_scaling = False
+opts.automatic_scaling = True
 
 opts.max_extra_steps = 0
 opts.enable_premature_termination = False
@@ -125,10 +125,10 @@ scale_arr = 1.0;
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing
-optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+# optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 
 #Condensing
-# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
+optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
 t0 = time.time()
