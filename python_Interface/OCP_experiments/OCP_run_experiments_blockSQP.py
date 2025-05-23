@@ -26,36 +26,56 @@ Examples = [(OCProblems.Batch_Reactor, "Batch reactor"),
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.terminationTolerance = 1e-10
 
+# EXP_1_opts = py_blockSQP.SQPoptions()
+# EXP_1_opts.max_conv_QPs = 1
+# EXP_1_opts.qpsol_options = QPopts
+# EXP_1_opts.max_filter_overrides = 0
+# EXP_1_opts.conv_kappa_max = 8.0
+
+# EXP_2_opts = py_blockSQP.SQPoptions()
+# EXP_2_opts.conv_strategy = 1
+# EXP_2_opts.max_conv_QPs = 4
+# EXP_2_opts.qpsol_options = QPopts
+# EXP_2_opts.max_filter_overrides = 0
+# EXP_2_opts.conv_kappa_max = 8.0
+
+# EXP_3_opts = py_blockSQP.SQPoptions()
+# EXP_3_opts.conv_strategy = 2
+# EXP_3_opts.max_conv_QPs = 4
+# EXP_3_opts.qpsol_options = QPopts
+# EXP_3_opts.max_filter_overrides = 0
+# EXP_3_opts.conv_kappa_max = 8.0
+
+
 EXP_1_opts = py_blockSQP.SQPoptions()
-EXP_1_opts.max_conv_QPs = 1
+EXP_1_opts.max_conv_QPs = 4
+EXP_1_opts.conv_strategy = 2
 EXP_1_opts.qpsol_options = QPopts
 EXP_1_opts.max_filter_overrides = 0
 EXP_1_opts.conv_kappa_max = 8.0
 
 EXP_2_opts = py_blockSQP.SQPoptions()
-EXP_2_opts.conv_strategy = 1
+EXP_2_opts.conv_strategy = 2
 EXP_2_opts.max_conv_QPs = 4
 EXP_2_opts.qpsol_options = QPopts
 EXP_2_opts.max_filter_overrides = 0
 EXP_2_opts.conv_kappa_max = 8.0
+EXP_2_opts.automatic_scaling = True
 
-EXP_3_opts = py_blockSQP.SQPoptions()
-EXP_3_opts.conv_strategy = 2
-EXP_3_opts.max_conv_QPs = 4
-EXP_3_opts.qpsol_options = QPopts
-EXP_3_opts.max_filter_overrides = 0
-EXP_3_opts.conv_kappa_max = 8.0
 
-Experiments = [(EXP_1_opts, "SR1-BFGS"),
-               (EXP_2_opts, "Convexification strategy 1"),
-               (EXP_3_opts, "Convexification strategy 2")
+# Experiments = [(EXP_1_opts, "SR1-BFGS"),
+#                (EXP_2_opts, "Convexification strategy 1"),
+#                (EXP_3_opts, "Convexification strategy 2")
+#                ]
+Experiments = [(EXP_1_opts, "Convexification strategy 2"),
+               (EXP_2_opts, "Convexification strategy 2, automatic scaling")
                ]
 # Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
 #               (OCProblems.Goddard_Rocket, "Goddard's rocket")
 #               ]
-Examples_ = [(OCProblems.Hanging_Chain, "Hanging chain")]
+# Examples_ = [(OCProblems.Hanging_Chain, "Hanging chain")]
 
-OCP_experiment.run_blockSQP_experiments(Examples_, Experiments,\
+OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
                                         nPert0 = 0, nPertF = 40)
 
