@@ -22,7 +22,7 @@ FetchContent_Declare(
 set(MUMPS_parallel no)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 
-#[[
+
 FetchContent_Declare(
 	qpos
 	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
@@ -35,25 +35,25 @@ if(NOT qpos_POPULATED)
 endif()
 
 add_library(qpOASES STATIC
-	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
+	${qpos_SOURCE_DIR}/src/Matrices.cpp          
 	#${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/modded_external/SparseSolver.cpp
-	${qpOASES_MODDED_DIR}/src/Bounds.cpp             
-	${qpOASES_MODDED_DIR}/src/MessageHandling.cpp   
-	${qpOASES_MODDED_DIR}/src/SQProblem.cpp
-	${qpOASES_MODDED_DIR}/src/Constraints.cpp        
-	${qpOASES_MODDED_DIR}/src/Options.cpp           
-	${qpOASES_MODDED_DIR}/src/SQProblemSchur.cpp
-	${qpOASES_MODDED_DIR}/src/Flipper.cpp            
-	${qpOASES_MODDED_DIR}/src/OQPinterface.cpp      
-	${qpOASES_MODDED_DIR}/src/SubjectTo.cpp
-	${qpOASES_MODDED_DIR}/src/Indexlist.cpp          
-	${qpOASES_MODDED_DIR}/src/QProblemB.cpp      
+	${CMAKE_CURRENT_SOURCE_DIR}/modded_external/modded_files/SparseSolver.cpp
+	${qpos_SOURCE_DIR}/src/Bounds.cpp             
+	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
+	${qpos_SOURCE_DIR}/src/SQProblem.cpp
+	${qpos_SOURCE_DIR}/src/Constraints.cpp        
+	${qpos_SOURCE_DIR}/src/Options.cpp           
+	${qpos_SOURCE_DIR}/src/SQProblemSchur.cpp
+	${qpos_SOURCE_DIR}/src/Flipper.cpp            
+	${qpos_SOURCE_DIR}/src/OQPinterface.cpp      
+	${qpos_SOURCE_DIR}/src/SubjectTo.cpp
+	${qpos_SOURCE_DIR}/src/Indexlist.cpp          
+	${qpos_SOURCE_DIR}/src/QProblemB.cpp      
 	#${CMAKE_CURRENT_SOURCE_DIR}/modded_external/QProblemB.cpp         
-	${qpOASES_MODDED_DIR}/src/Utils.cpp
-	${qpOASES_MODDED_DIR}/src/QProblem.cpp     
+	${qpos_SOURCE_DIR}/src/Utils.cpp
+	${qpos_SOURCE_DIR}/src/QProblem.cpp     
 	#${CMAKE_CURRENT_SOURCE_DIR}/modded_external/QProblem.cpp           
-	${qpOASES_MODDED_DIR}/src/SolutionAnalysis.cpp
+	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
 )
 target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
 target_compile_options(qpOASES PRIVATE -O3)
@@ -74,10 +74,10 @@ target_link_libraries(qpOASES PUBLIC ${MUMPS_BIN} dl)
 if (UNIX)
 	target_compile_options(qpOASES PUBLIC -fPIC)
 endif()
-]]
+
 
 set (qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES)
-
+#[[
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
@@ -96,16 +96,16 @@ add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/QProblem.cpp            
 	${qpOASES_MODDED_DIR}/src/SolutionAnalysis.cpp
 	)
-#[[
-target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3)
-target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
-IF(UNIX AND NOT APPLE)
-   target_compile_definitions(qpOASES PRIVATE LINUX)
-ELSEIF(WINDOWS)
-    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
-ENDIF()
-]]
+
+#target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
+#target_compile_options(qpOASES PRIVATE -O3)
+#target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
+#IF(UNIX AND NOT APPLE)
+#   target_compile_definitions(qpOASES PRIVATE LINUX)
+#ELSEIF(WINDOWS)
+#    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
+#ENDIF()
+
 
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -124,7 +124,7 @@ target_link_libraries(qpOASES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libcoinhsl.so /
 if (UNIX)
 	target_compile_options(qpOASES PUBLIC -fPIC)
 endif()
-
+]]
 
 
 add_library(blockSQP SHARED
