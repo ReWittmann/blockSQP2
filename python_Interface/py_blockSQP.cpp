@@ -679,6 +679,7 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     }
     )
     .def_readwrite("qpsol_options", &blockSQP::SQPoptions::qpsol_options)
+    .def_readwrite("test_opt_1", &blockSQP::SQPoptions::test_opt_1)
 	;
 
 py::class_<blockSQP::QPsolver_options>(m, "QPsolver_options");
@@ -830,6 +831,7 @@ py::class_<Problemform, blockSQP::Problemspec, Py_Problemform>(m,"Problemform")
 	.def_readonly("nBlocks", &Problemform::nBlocks)
 	.def_property("blockIdx", nullptr, &Problemform::set_blockIdx)
     .def_property("vblocks", nullptr, &Problemform::set_vblocks)
+    .def_property("cond", nullptr, [](Problemform &prob, blockSQP::Condenser *cond){prob.cond = cond;})
     //.def_property("vblocks", nullptr, [](Problemform &P, vblock_array &v_arr){P.vblocks = v_arr.ptr; P.n_vblocks = v_arr.size;})
 	;
 
@@ -869,7 +871,7 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
     .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->automatic_scaling){M.apply_rescaling(arr->ptr);} return;})
     .def("dec_nquasi", [](blockSQP::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
-
+/*
 py::class_<blockSQP::SCQPmethod, blockSQP::SQPmethod>(m, "SCQPmethod")
     .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
     ;
@@ -881,6 +883,7 @@ py::class_<blockSQP::SCQP_bound_method, blockSQP::SCQPmethod>(m, "SCQP_bound_met
 py::class_<blockSQP::SCQP_correction_method, blockSQP::SCQPmethod>(m, "SCQP_correction_method")
     .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
     ;
+*/
 
 py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def_readonly("obj", &blockSQP::SQPiterate::obj)

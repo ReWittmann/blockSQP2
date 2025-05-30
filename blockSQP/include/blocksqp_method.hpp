@@ -38,14 +38,12 @@ class SQPmethod{
         SQPstats*                stats;       ///< Statistics object for current SQP run
         
         std::unique_ptr<SQPiterate> vars;     ///< All SQP variables for this method
-        std::unique_ptr<QPsolver>   sub_QP;   ///< Class wrapping an external QP solver
+        std::unique_ptr<QPsolverBase>   sub_QP;   ///< Class wrapping an external QP solver
         
-        std::unique_ptr<std::unique_ptr<QPsolver>> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
-        
+        std::unique_ptr<std::unique_ptr<QPsolverBase>[]> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
         
         //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated
         std::unique_ptr<scaled_Problemspec> scaled_prob;
-        
         
         // Objects for feasibility restoration
         //Feasibility restoration problem
@@ -61,9 +59,6 @@ class SQPmethod{
     protected:
         bool                     initCalled = false;  ///< indicates if init() has been called (necessary for run())
 
-    /*
-     * Methods
-     */
     public:
         /// Construct a method for a given problem and set of algorithmic options
         SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics );
@@ -100,7 +95,12 @@ class SQPmethod{
         void updateStepBoundsSOC();
         /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
         //If hess_type is 0, solution is tried with increasingly convexified hessian approximations. If hess_type is 1, only convex hessian approximations are used. If hess_type is 2, only the (scaled) identity is used as hessian
+        virtual int solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP);
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        
+        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        //virtual int solveQP_par_conv_str_2(Matrix &deltaXi, Matrix &lambdaQP);
+        
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
@@ -197,6 +197,8 @@ class SQPmethod{
 ////////////////////////////////////////////////////////////
 
 //Sequential Condensed Quadratic Programming method
+
+/*
 class SCQPmethod : public SQPmethod{
     public:
     Condenser *cond;
@@ -249,7 +251,7 @@ class SCQP_correction_method : public SCQPmethod{
     virtual int feasibilityRestorationPhase();
 };
 
-
+*/
 
 } // namespace blockSQP
 

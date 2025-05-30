@@ -94,13 +94,25 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         
         /// Solve QP subproblem with qpOASES or QPOPT
-        infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+        //if (stats->itCount == 1)    infoQP = solve_initial_QP(vars->deltaXi, vars->lambdaQP);
+        //else                        infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+        
+        //DEFAULT
+        if (!param->test_opt_1){
+            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+        }
+        else{
+            //EXPERIMENTAL
+            if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
+            else infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+            std::cout << "infoQP is" << infoQP << "\n";
+        }
         
         //if (infoQP == 0) printf("***QP solution successful***");
         if (infoQP == 0);
         else if (infoQP == 1){
             bool qpError = true;
-
+            
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
             if (infoQP){

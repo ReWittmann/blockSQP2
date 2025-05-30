@@ -31,9 +31,6 @@ namespace blockSQP{
  * \date 2012-2015
  */
 class Problemspec{
-    /*
-     * VARIABLES
-     */
     public:
         int         nVar = -1;                                          // number of variables
         int         nCon = -1;                                          // number of constraints
@@ -55,9 +52,6 @@ class Problemspec{
         
         Condenser   *cond = nullptr;                                      //Condenser for the QPs for this problem
         
-    /*
-     * METHODS
-     */
     public:
         Problemspec();
         virtual ~Problemspec();

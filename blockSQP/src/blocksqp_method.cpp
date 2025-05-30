@@ -73,12 +73,20 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     vars = std::make_unique<SQPiterate>(prob, param);
 
     // Create a solver object for quadratic subproblems.
-    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(prob->nVar, prob->nCon, vars->nBlocks, vars->blockIdx.get(), param));
+    sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
+    
+    // Create multiple solver objects for parallel QP solution
+    sub_QPs_par = std::make_unique<std::unique_ptr<QPsolverBase>[]>(param->max_conv_QPs + 1);
+    for (int i = 0; i < param->max_conv_QPs + 1; i++){
+        sub_QPs_par[i] = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
+    }
     
     //Setup the feasibility restoration problem
     if (param->enable_rest){
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
         rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->rest_rho, param->rest_zeta);
+        
+        
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);
@@ -92,6 +100,9 @@ SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(null
 
 SQPmethod::~SQPmethod(){}
 
+
+
+/*
 
 SCQPmethod::SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND){
 
@@ -110,8 +121,8 @@ SCQPmethod::SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *s
     if (param->sparse == 0) throw ParameterError("Condensing only works with sparse QPs");
     if (param->block_hess != 1) throw ParameterError("Condensing requires block diagonal hessian for efficient linear algebra");
     
-    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
-
+    sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
+    
     if (param->enable_rest){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
@@ -155,8 +166,10 @@ SCQP_bound_method::SCQP_bound_method(Problemspec *problem, SQPoptions *parameter
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
 
-    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
+    //sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
+    sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param));
 
+    
     if (param->enable_rest){
         rest_cond = std::unique_ptr<Condenser>(create_restoration_Condenser(cond, 0));
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
@@ -194,7 +207,7 @@ SCQP_correction_method::SCQP_correction_method(Problemspec *problem, SQPoptions 
         throw std::invalid_argument("SCQPmethod: Error, condensing requires block diagonal hessian for efficient linear algebra");
     }
     
-    sub_QP = std::unique_ptr<QPsolver>(create_QPsolver(cond->condensed_num_vars, cond->condensed_num_cons, cond->condensed_num_hessblocks, cond->condensed_blockIdx, param));
+    sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     
     corrections = new Matrix[cond->num_targets];
     SOC_corrections = new Matrix[cond->num_targets];
@@ -221,11 +234,7 @@ SCQP_correction_method::~SCQP_correction_method(){
     delete[] SOC_corrections;
 }
 
-
-
-
-
-
+*/
 
 
 

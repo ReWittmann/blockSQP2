@@ -251,10 +251,12 @@ class NULL_QPsolver_options : public blockSQP::QPsolver_options{
 
 namespace jlcxx{
     template<> struct SuperType<Problemform>{typedef blockSQP::Problemspec type;};
+    /*
     template<> struct SuperType<blockSQP::SCQPmethod>{typedef blockSQP::SQPmethod type;};
     template<> struct SuperType<blockSQP::SCQP_bound_method>{typedef blockSQP::SCQPmethod type;};
     template<> struct SuperType<blockSQP::SCQP_correction_method>{typedef blockSQP::SCQPmethod type;};
-
+    */
+    
     template<> struct SuperType<NULL_QPsolver_options>{typedef blockSQP::QPsolver_options type;};
     template<> struct SuperType<blockSQP::qpOASES_options>{typedef blockSQP::QPsolver_options type;};
     template<> struct SuperType<blockSQP::gurobi_options>{typedef blockSQP::QPsolver_options type;};
@@ -555,6 +557,8 @@ mod.method("construct_Condenser", [](vblock_array *VBLOCKS, cblock_array &CBLOCK
 
 
 //SCQP (sequential condensed quadratic programming) classes jlcxx::julia_base_type<blockSQP::Problemspec>()
+
+/*
 mod.add_type<blockSQP::SCQPmethod>("Cxx_SCQPmethod", jlcxx::julia_base_type<blockSQP::SQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
@@ -566,7 +570,7 @@ mod.add_type<blockSQP::SCQP_bound_method>("Cxx_SCQP_bound_method", jlcxx::julia_
 mod.add_type<blockSQP::SCQP_correction_method>("Cxx_SCQP_correction_method", jlcxx::julia_base_type<blockSQP::SCQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
-
+*/
 
 
 

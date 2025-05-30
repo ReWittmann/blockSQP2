@@ -141,7 +141,12 @@ class SQPoptions{
     int max_bound_refines = 3;              ///< Options for condensed QPs
     int max_correction_steps = 5;           ///< How many additional QPs with bound correction added to dependent variables should be solved
     double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
-
+    
+    
+    //For experimental purposes
+    bool test_opt_1 = false;
+    
+    
     private:
     //Holder if no qpsol_options were provided
     std::unique_ptr<QPsolver_options> default_qpsol_options;

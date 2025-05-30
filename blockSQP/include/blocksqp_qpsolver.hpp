@@ -6,7 +6,10 @@
 #include "blocksqp_options.hpp"
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_condensing.hpp"
+#include "blocksqp_iterate.hpp"
 #include <memory>
+#include <thread>
+#include <future>
 
 #ifdef QPSOLVER_QPOASES
     #include "qpOASES.hpp"
@@ -38,6 +41,7 @@ class QPsolverBase{
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
 
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
+    virtual void set_use_hotstart(bool use_hom) = 0;
     
     //Statistics
     virtual int get_QP_it() = 0;
@@ -46,6 +50,9 @@ class QPsolverBase{
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
     virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    //Overload for calling with a jthread.
+    //virtual int solve(std::stop_token stopRequest, bool *hasFinished, Matrix &deltaXi, Matrix &lambdaQP);
+    virtual void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
 };
 
 
@@ -94,7 +101,6 @@ class QPsolver : public QPsolverBase{
     //Time recording utility shared by all QP solvers
     void recordTime(double solTime);
     void reset_timeRecord();
-    //void custom_timeLimit(double CTlim); //This equivalent to setting custom_time_limit to CTlim and time_limit_type to 2
     
     //Setters for QP data. Only one of the setters for the constraint matrix (dense or sparse) is required
     virtual void set_lin(const Matrix &grad_obj) = 0;
@@ -112,6 +118,7 @@ class QPsolver : public QPsolverBase{
     virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
+    virtual void set_use_hotstart(bool use_hom);
     
     //Statistics
     virtual int get_QP_it();
@@ -159,8 +166,10 @@ class CQPsolver : public QPsolverBase{
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
     virtual int solve(Matrix &deltaXi, Matrix &lambdaQP);
+    virtual void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
+    void set_use_hotstart(bool use_hom);
     
     //Statistics
     virtual int get_QP_it();
@@ -175,8 +184,8 @@ class CQPsolver : public QPsolverBase{
 
 //QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
 
-QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param);
-QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param);
+QPsolverBase *create_QPsolver(Problemspec *prob, SQPiterate *vars, SQPoptions *param);
+QPsolverBase *create_QPsolver(Problemspec *prob, SQPiterate *vars, QPsolver_options *Qparam);
 
 
 //QP solver implementations
@@ -192,13 +201,17 @@ QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param);
         std::unique_ptr<qpOASES::Matrix> A_qp;
         std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
         
-        double* h_qp;                                       // linear term in objective
+        std::unique_ptr<double[]> h_qp;                                       // linear term in objective
+        std::unique_ptr<double[]> A_qp_nz;
+        std::unique_ptr<int[]> A_qp_row;
+        std::unique_ptr<int[]> A_qp_colind; 
+        
         std::unique_ptr<double[]> lb, ub, lbA, ubA;         // bounds for QP variables, bounds for linearized constraints
         
         Matrix jacT;                                        // transpose of the dense constraint jacobian
         
         std::unique_ptr<double[]> hess_nz;
-        std::unique_ptr<int[]> hess_row, hess_colind, hess_loind;
+        std::unique_ptr<int[]> hess_row, hess_colind, hess_loind; //Copy of sparse constraint Jacobian
         
         bool matrices_changed;
         
@@ -215,7 +228,8 @@ QPsolverBase *create_QPsolver(Problemspec *prob, SQPoptions *param);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
         int solve(Matrix &deltaXi, Matrix &lambdaQP);
-
+        //int solve(std::stop_token stopRequest, bool *hasFinished, int *result, Matrix &deltaXi, Matrix &lambdaQP);
+        void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
         int get_QP_it();
     };
 #endif

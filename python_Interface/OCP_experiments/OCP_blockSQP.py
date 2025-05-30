@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_OED(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Electric_Car(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -44,12 +44,13 @@ opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
 opts.BFGS_damping_factor = 1/3
+opts.test_opt_1 = True
 
 opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
-opts.conv_kappa_max = 2.0
+opts.conv_kappa_max = 8.0
 
 opts.automatic_scaling = True
 
@@ -101,6 +102,7 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
+# prob.cond = cond
 
 # import copy
 # sp = copy.copy(OCprob.start_point)
@@ -125,10 +127,10 @@ scale_arr = 1.0;
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing
-# optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 
 #Condensing
-optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
+# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
 t0 = time.time()
@@ -150,4 +152,4 @@ else:
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.time()
 OCprob.plot(xi, dpi=150, it = i, title=plot_title)
-#####################
+# #####################

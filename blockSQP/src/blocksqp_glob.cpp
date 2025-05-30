@@ -729,7 +729,7 @@ void SQPmethod::augmentFilter( double cNorm, double obj )
     return;
 }
 
-
+/*
 int SCQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
     if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
@@ -929,7 +929,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
     //Invoke the restoration phase with setup problem and method
     return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
-
+*/
 
 
 } // namespace blockSQP
