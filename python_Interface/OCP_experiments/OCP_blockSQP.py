@@ -49,7 +49,7 @@ opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
-opts.conv_kappa_max = 2.0
+opts.conv_kappa_max = 8.0
 
 opts.automatic_scaling = True
 
