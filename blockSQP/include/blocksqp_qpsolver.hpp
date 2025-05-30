@@ -232,6 +232,50 @@ QPsolverBase *create_QPsolver(Problemspec *prob, SQPiterate *vars, QPsolver_opti
         void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
         int get_QP_it();
     };
+    
+    
+    
+    class qpOASES_solver_ : public QPsolver{
+        public:
+        qpOASES::Options opts;
+
+        std::unique_ptr<qpOASES::SQProblem> qp;
+        std::unique_ptr<qpOASES::SQProblem> qpSave;
+        std::unique_ptr<qpOASES::SQProblem>  qpCheck; 
+        
+        std::unique_ptr<qpOASES::Matrix> A_qp;
+        std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
+
+        double* h_qp;                                       // linear term in objective
+        std::unique_ptr<double[]> lb, ub, lbA, ubA;         // bounds for QP variables, bounds for linearized constraints
+
+        Matrix jacT;                                        // transpose of the dense constraint jacobian
+
+        std::unique_ptr<double[]> hess_nz;
+        std::unique_ptr<int[]> hess_row, hess_colind, hess_loind;
+
+        bool matrices_changed;
+
+        int QP_it;
+
+        qpOASES_solver_(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
+        ~qpOASES_solver_();
+
+        void set_lin(const Matrix &grad_obj);
+        void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
+
+        void set_constr(const Matrix &constr_jac);
+        void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
+        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
+
+        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+
+        int get_QP_it();
+    };
+
+    
+    
+    
 #endif
 
 

@@ -44,7 +44,7 @@ opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
 opts.BFGS_damping_factor = 1/3
-opts.test_opt_1 = True
+opts.test_opt_1 = False
 
 opts.lim_mem = True
 opts.mem_size = 20
