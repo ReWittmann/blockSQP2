@@ -98,11 +98,13 @@ class SQPmethod{
         virtual int solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP);
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         
+        virtual int solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
         virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         //virtual int solveQP_par_conv_str_2(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        virtual int solve_SOC_QP_par( Matrix &deltaXi, Matrix &lambdaQP);
         
         // ??? QP_loop()
         // 
@@ -177,6 +179,10 @@ class SQPmethod{
         void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
         void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
+        void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
+        void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
+        
+        void calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification

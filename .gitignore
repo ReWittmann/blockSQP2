@@ -14,4 +14,6 @@ updatesequence.txt
 .vscode
 .VSCodeCounter
 
-/build/*
+
+build/
+install/

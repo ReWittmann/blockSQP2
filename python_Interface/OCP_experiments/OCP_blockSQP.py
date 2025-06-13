@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_OED(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, parallel = False, integrator = 'rk4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -45,6 +45,8 @@ opts.fallback_approx = 2
 opts.fallback_sizing = 4
 opts.BFGS_damping_factor = 1/3
 opts.test_opt_1 = False
+opts.test_opt_2 = True
+opts.test_qp_hotstart = 0
 
 opts.lim_mem = True
 opts.mem_size = 20
@@ -55,7 +57,7 @@ opts.conv_kappa_max = 8.0
 opts.automatic_scaling = True
 
 opts.max_extra_steps = 0
-opts.enable_premature_termination = False
+opts.enable_premature_termination = True
 opts.max_filter_overrides = 0
 
 
@@ -153,3 +155,5 @@ else:
 t1 = time.time()
 OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 # #####################
+
+print(t1-t0, "s")

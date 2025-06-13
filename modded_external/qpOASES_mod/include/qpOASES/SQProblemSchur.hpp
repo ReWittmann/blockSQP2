@@ -77,7 +77,8 @@ class SQProblemSchur : public SQProblem
 		SQProblemSchur(	int_t _nV,	  							/**< Number of variables. */
 						int_t _nC,		  						/**< Number of constraints. */
 						HessianType _hessianType = HST_UNKNOWN,	/**< Type of Hessian matrix. */
-						int_t maxSchurUpdates = 75				/**< Maximal number of Schur updates */
+						int_t maxSchurUpdates = 75,				/**< Maximal number of Schur updates */
+						void *arg_fptr_dmumps_c = nullptr
 						);
 
 		/** Copy constructor (deep copy). */

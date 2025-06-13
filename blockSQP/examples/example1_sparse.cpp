@@ -305,6 +305,8 @@ int main(int argc, const char* argv[]){
     opts->sparse = true;                  // Dense matrices for this example
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
+    
+    //opts->test_opt_1 = true;
 
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES

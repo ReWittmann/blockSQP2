@@ -352,14 +352,14 @@ class Ma57SparseSolver: public SparseSolver
 
 
 #ifdef SOLVER_MUMPS
-
 /**
  *	\brief Implementation of the linear solver interface using MUMPS.
  *
  *	\author Andrea Zanelli
  *	\version 3.2
  *	\date 2022
- */
+ */ 
+
 class MumpsSparseSolver: public SparseSolver
 {
 	/*
@@ -493,6 +493,148 @@ class MumpsSparseSolver: public SparseSolver
         /** Flag indicating if symbolic factorization has already been called */
         bool have_symbolic_factorization_;
 };
+
+
+class MumpsSparseSolver_2: public SparseSolver{
+	/*
+	 *	PUBLIC MEMBER FUNCTIONS
+	 */
+	public:
+		/** Default constructor. */
+		MumpsSparseSolver_2(void *arg_fptr_dmumps_c);
+
+		/** Copy constructor (deep copy). */
+		MumpsSparseSolver_2(	const MumpsSparseSolver_2& rhs		/**< Rhs object. */
+							);
+
+		/** Destructor. */
+		virtual ~MumpsSparseSolver_2( );
+
+		/** Assignment operator (deep copy). */
+		virtual MumpsSparseSolver_2& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+												);
+
+		/** Set new matrix data.  The matrix is to be provided
+			in the Harwell-Boeing format.  Only the lower
+			triangular part should be set. */
+		virtual returnValue setMatrixData( int_t dim,					/**< Dimension of the linear system. */
+										   int_t numNonzeros,			/**< Number of nonzeros in the matrix. */
+										   const int_t* const airn,		/**< Row indices for each matrix entry. */
+										   const int_t* const acjn,		/**< Column indices for each matrix entry. */
+										   const real_t* const avals	/**< Values for each matrix entry. */
+										   );
+
+		/** Compute factorization of current matrix.  This method must be called before solve.*/
+		virtual returnValue factorize( );
+
+		/** Solve linear system with most recently set matrix data. */
+		virtual returnValue solve(	int_t dim,					/**< Dimension of the linear system. */
+									const real_t* const rhs,	/**< Values for the right hand side. */
+									real_t* const sol			/**< Solution of the linear system. */
+									);
+
+		/** Clears all data structures. */
+		virtual returnValue reset( );
+
+		/** Return the number of negative eigenvalues. */
+		virtual int_t getNegativeEigenvalues( );
+
+		/** Return the rank after a factorization */
+		virtual int_t getRank( );
+
+		/** Returns the zero pivots in case the matrix is rank deficient */
+		virtual returnValue getZeroPivots(  int_t* &zeroPivots  /**< ... */
+											);
+	/*
+	 *	PROTECTED MEMBER FUNCTIONS
+	 */
+	protected:
+		/** Frees all allocated memory.
+		 *  \return SUCCESSFUL_RETURN */
+		returnValue clear( );
+
+		/** Copies all members from given rhs object.
+		 *  \return SUCCESSFUL_RETURN */
+		returnValue copy(	const MumpsSparseSolver_2& rhs	/**< Rhs object. */
+							);
+
+	/*
+	 *	PRIVATE MEMBER FUNCTIONS
+	 */
+	private:
+	/*
+	 *	PRIVATE MEMBER VARIABLES
+	 */
+	private:
+							
+		void *mumps_handle;
+		
+        void* mumps_ptr_;           /** Primary MUMPS data structure */
+		
+		void *fptr_dmumps_c;		/** MUMPS function pointers*/
+		
+		
+		int dim;				    /**< Dimension of the current linear system. */
+
+		int numNonzeros;		    /**< Number of nonzeros in the current linear system. */
+
+		double* a_mumps;		    /**< matrix for MUMPS (A in MUMPS) */
+
+		int* irn_mumps;		    /**< Row entries of matrix (IRN in MUMPS) */
+
+		int* jcn_mumps;		    /**< Column entries of matrix (JCN in MUMPS) */
+
+		bool have_factorization;    /**< flag indicating whether factorization for current matrix has already been computed */
+
+		int negevals_;		    /**< number of negative eigenvalues */
+
+        int mumps_pivot_order_;  /* pivot order*/
+
+        bool initialized_;
+        /** Flag indicating if the matrix has to be refactorized because
+        *  the pivot tolerance has been changed.
+        */
+        bool pivtol_changed_;
+        /** Flag that is true if we just requested the values of the
+        *  matrix again (SYMSOLVER_CALL_AGAIN) and have to factorize
+        *  again.
+        */
+        bool refactorize_;
+        ///@}
+
+        /** @name Solver specific data/options */
+        ///@{
+        /** Pivot tolerance */
+        double pivtol_;
+
+        /** Maximal pivot tolerance */
+        double pivtolmax_;
+
+        /** Percent increase in memory */
+        int mem_percent_;
+
+        /** Permutation and scaling method in MUMPS */
+        int mumps_permuting_scaling_;
+
+        /** Scaling in MUMPS */
+        int mumps_scaling_;
+
+        /** Threshold in MUMPS to state that a constraint is linearly dependent */
+        double mumps_dep_tol_;
+
+        /** Flag indicating whether the TNLP with identical structure has
+        *  already been solved before.
+        */
+        bool warm_start_same_structure_;
+        ///@}
+
+        /** Flag indicating if symbolic factorization has already been called */
+        bool have_symbolic_factorization_;
+};
+
+
+
+
 
 template<typename T>
 inline void ComputeMemIncrease(

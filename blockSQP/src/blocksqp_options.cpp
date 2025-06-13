@@ -238,7 +238,12 @@ void SQPoptions::optionsConsistency(){
         }
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
     }
-
+    
+    #ifdef N_LINSOL_LIBS
+        if (max_conv_QPs + 1 > N_LINSOL_LIBS)
+            throw ParameterError("Not enough linear solver binaries for options max_conv_QPs = " + std::to_string(max_conv_QPs) + ". Rebuild with N_LINSOl_LIBS = " + std::to_string(max_conv_QPs + 1));
+    #endif
+        
     /*
     if (qpsol == QPsolvers::qpOASES){
         if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::qpOASES)

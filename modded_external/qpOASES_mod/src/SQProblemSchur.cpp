@@ -99,7 +99,7 @@ SQProblemSchur::SQProblemSchur( ) : SQProblem( )
 /*
  *	Q P r o b l e m
  */
-SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, int_t maxSchurUpdates ) 
+SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, int_t maxSchurUpdates, void *arg_fptr_dmumps_c) 
 	: SQProblem( _nV,_nC,_hessianType, BT_FALSE )
 {
 	/* The interface to the sparse linear solver.  In the long run,
@@ -109,7 +109,10 @@ SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, 
 #elif defined SOLVER_MA27
 	sparseSolver = new Ma27SparseSolver();
 #elif defined SOLVER_MUMPS
-	sparseSolver = new MumpsSparseSolver();
+	if (arg_fptr_dmumps_c == nullptr)
+		sparseSolver = new MumpsSparseSolver();
+	else
+		sparseSolver = new MumpsSparseSolver_2(arg_fptr_dmumps_c);
 #elif defined SOLVER_NONE
 	sparseSolver = new DummySparseSolver();
 #endif

@@ -43,6 +43,9 @@ class QPsolverBase{
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
     virtual void set_use_hotstart(bool use_hom) = 0;
     
+    //Set QP/active set of which to hotstart from. QP solver dependent, no effect by default, very important for qpOASES
+    virtual void set_hotstart_point(QPsolverBase *hot_QP);
+    
     //Statistics
     virtual int get_QP_it() = 0;
     virtual double get_solutionTime() = 0;
@@ -71,7 +74,7 @@ class QPsolver : public QPsolverBase{
     int nCon;
     int nHess;
 
-    QPsolver_options *Qparam;
+    const QPsolver_options *Qparam;
     
     //Store the solution time of the last 10 successful QPs,
     //use it to limit the solution time of future QPs
@@ -95,7 +98,7 @@ class QPsolver : public QPsolverBase{
     
     
 	//Arguments: Number of QP variables, number of linear constraints, options
-    QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts);
+    QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, const QPsolver_options *QPopts);
     virtual ~QPsolver();
     
     //Time recording utility shared by all QP solvers
@@ -179,13 +182,18 @@ class CQPsolver : public QPsolverBase{
 
 
 
+
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
 
 //QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
 
-QPsolverBase *create_QPsolver(Problemspec *prob, SQPiterate *vars, SQPoptions *param);
-QPsolverBase *create_QPsolver(Problemspec *prob, SQPiterate *vars, QPsolver_options *Qparam);
+QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param);
+QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
+
+//QPsolverBase **create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QPs);
+std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
+ 
 
 
 //QP solver implementations
@@ -217,63 +225,37 @@ QPsolverBase *create_QPsolver(Problemspec *prob, SQPiterate *vars, QPsolver_opti
         
         int QP_it;
         
-        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
+        //qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
+        
+        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts);
+        
+        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, const QPsolver_options *QPopts);
+        void init_QP_common(int *blockIdx); //Initialize data that is independent of QP type (dense/sparse/schur)
         ~qpOASES_solver();
-
+        
         void set_lin(const Matrix &grad_obj);
         void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
 
         void set_constr(const Matrix &constr_jac);
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
-
+        
+        void set_hotstart_point(QPsolverBase *hot_QP);
+        void set_hotstart_point(qpOASES_solver *hot_QP);
+        
         int solve(Matrix &deltaXi, Matrix &lambdaQP);
         //int solve(std::stop_token stopRequest, bool *hasFinished, int *result, Matrix &deltaXi, Matrix &lambdaQP);
         void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
         int get_QP_it();
     };
     
-    
-    
-    class qpOASES_solver_ : public QPsolver{
+    class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
         public:
-        qpOASES::Options opts;
-
-        std::unique_ptr<qpOASES::SQProblem> qp;
-        std::unique_ptr<qpOASES::SQProblem> qpSave;
-        std::unique_ptr<qpOASES::SQProblem>  qpCheck; 
+        void *linsol_handle;
+        threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, int linsol_ID);
+        ~threadsafe_qpOASES_MUMPS_solver();
         
-        std::unique_ptr<qpOASES::Matrix> A_qp;
-        std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
-
-        double* h_qp;                                       // linear term in objective
-        std::unique_ptr<double[]> lb, ub, lbA, ubA;         // bounds for QP variables, bounds for linearized constraints
-
-        Matrix jacT;                                        // transpose of the dense constraint jacobian
-
-        std::unique_ptr<double[]> hess_nz;
-        std::unique_ptr<int[]> hess_row, hess_colind, hess_loind;
-
-        bool matrices_changed;
-
-        int QP_it;
-
-        qpOASES_solver_(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
-        ~qpOASES_solver_();
-
-        void set_lin(const Matrix &grad_obj);
-        void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
-
-        void set_constr(const Matrix &constr_jac);
-        void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
-
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
-
-        int get_QP_it();
     };
-
-    
     
     
 #endif

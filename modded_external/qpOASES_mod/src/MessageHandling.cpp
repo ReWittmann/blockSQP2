@@ -124,6 +124,7 @@ MessageHandling::ReturnValueList returnValueList[] =
 { RET_HOTSTART_STOPPED_UNBOUNDEDNESS, "Premature homotopy termination because QP is unbounded", VS_VISIBLE },
 { RET_WORKINGSET_UPDATE_FAILED, "Unable to update working sets according to initial guesses", VS_VISIBLE },
 { RET_MAX_NWSR_REACHED, "Maximum number of working set recalculations performed", VS_VISIBLE },
+{ RET_STOP_REQUESTED, "Received stop request", VS_VISIBLE },
 { RET_CONSTRAINTS_NOT_SPECIFIED, "Problem does comprise constraints! You have to specify new constraints' bounds", VS_VISIBLE },
 { RET_INVALID_FACTORISATION_FLAG, "Invalid factorisation flag", VS_VISIBLE },
 { RET_UNABLE_TO_SAVE_QPDATA, "Unable to save QP data", VS_VISIBLE },
