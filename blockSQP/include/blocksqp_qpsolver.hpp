@@ -249,7 +249,6 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         int get_QP_it();
     };
     
-<<<<<<< HEAD
     class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
         public:
         void *linsol_handle;
@@ -259,8 +258,6 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
     };
     
     
-=======
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 #endif
 
 

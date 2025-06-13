@@ -269,16 +269,11 @@ QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, c
     }
     
     #ifdef QPSOLVER_QPOASES
-<<<<<<< HEAD
     if (Qparam->sol == QPsolvers::qpOASES){
         //QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(Qparam));
         std::cout << "create_QPsolver: Creating qpOASES_MUMPS_solver\n" << std::flush;
         QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(Qparam), 0);
     }
-=======
-    if (Qparam->sol == QPsolvers::qpOASES)
-        QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<qpOASES_options*>(Qparam));
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
     #endif
     #ifdef QPSOLVER_GUROBI
     if (Qparam->sol == QPsolvers::gurobi)

@@ -47,10 +47,7 @@ FetchContent_MakeAvailable(CMAKEMUMPS)
 message(STATUS "MUMPS BINARY DIR:" ${MUMPS_BINARY_DIR})
 
 
-<<<<<<< HEAD
 
-=======
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 #[[
 FetchContent_Declare(
 	qpos
@@ -105,16 +102,11 @@ if (UNIX)
 endif()
 ]]
 
-<<<<<<< HEAD
 #[[
 set(A 3)
 set(B_${A} 4)
 message(STATUS "B_${A} = " ${B_3})
 ]]
-=======
-
-
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 
 set (qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
