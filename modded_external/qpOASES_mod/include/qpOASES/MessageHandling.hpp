@@ -454,7 +454,8 @@ class MessageHandling
 
 
 /** Short version of throwError with default values, only returnValue is needed */
-#define THROWERROR(retval) ( getGlobalMessageHandler( )->throwError((retval),0,__FUNC__,__FILE__,__LINE__,VS_VISIBLE) )
+//#define THROWERROR(retval) ( getGlobalMessageHandler( )->throwError((retval),0,__FUNC__,__FILE__,__LINE__,VS_VISIBLE) )
+#define THROWERROR(retval) ( getGlobalMessageHandler( )->throwError((retval),0,__FUNC__,__FILE__,__LINE__,VS_HIDDEN) )
 
 /** Short version of throwWarning with default values, only returnValue is needed */
 #define THROWWARNING(retval) ( getGlobalMessageHandler( )->throwWarning((retval),0,__FUNC__,__FILE__,__LINE__,VS_VISIBLE) )

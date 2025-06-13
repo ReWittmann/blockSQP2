@@ -237,13 +237,24 @@ void SQPmethod::printInfo( int printLevel )
         return;
 
     /* QP Solver */
+    /*
     if( param->sparse == 0 )
         strcpy( qpString, "dense, reduced Hessian factorization" );
     else if( param->sparse == 1 )
         strcpy( qpString, "sparse, reduced Hessian factorization" );
     else if( param->sparse == 2 )
         strcpy( qpString, "sparse, Schur complement approach" );
-
+    */
+    
+    if (param->sparse == 0)
+        strcpy( qpString, "dense, reduced Hessian factorization" );
+    else if (param->sparse == 1){
+        if (param->qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(param->qpsol_options)->sparsityLevel == 2)
+            strcpy( qpString, "sparse, Schur complement approach" );
+        else
+            strcpy( qpString, "sparse, reduced Hessian factorization" );
+    }
+        
     /* Globalization */
     if( param->enable_linesearch == 0 )
         strcpy( globString, "none (full step)" );

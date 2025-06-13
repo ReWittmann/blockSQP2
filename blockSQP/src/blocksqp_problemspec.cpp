@@ -22,12 +22,12 @@ Problemspec::~Problemspec(){}
 
 void Problemspec::evaluate( const Matrix &xi, double *objval, Matrix &constr, int *info ){
     Matrix lambdaDummy, gradObjDummy;
-    SymMatrix *hessDummy;
+    SymMatrix *hessDummy(nullptr);
     int dmode = 0;
 
     Matrix constrJacDummy;
-    double *jacNzDummy;
-    int *jacIndRowDummy, *jacIndColDummy;
+    double *jacNzDummy(nullptr);
+    int *jacIndRowDummy(nullptr), *jacIndColDummy(nullptr);
     *info = 0;
 
     // Try sparse version first

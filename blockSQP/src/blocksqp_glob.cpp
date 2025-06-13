@@ -170,7 +170,7 @@ int SQPmethod::fullstep(){
  */
 int SQPmethod::filterLineSearch(){
     double alpha = 1.0;
-    double cNorm, cNormTrial, objTrial, dfTdeltaXi;
+    double cNorm, cNormTrial(0), objTrial, dfTdeltaXi(0);   //cNormTrial and dfTdeltaXi are initialized to prevent compiler warnings
 
     int k, info;
     int nVar = prob->nVar;
@@ -343,9 +343,12 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
-        info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
-
-        if( info != 0 )
+        if (!param->test_opt_1)
+            info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
+        else
+            info = solve_SOC_QP_par(deltaXiSOC, lambdaQPSOC);
+            
+        if (info != 0)
             return false; // Could not solve QP, abort SOC
 
         // Set new SOC trial point
@@ -601,7 +604,7 @@ int SQPmethod::feasibilityRestorationHeuristic(){
  * If the line search fails, check if the full step reduces the KKT error by a factor kappaF.
  */
 int SQPmethod::kktErrorReduction(){
-    int i, info = 0;
+    int info = 0;
     double objTrial, cNormTrial, trialGradNorm, trialTol;
     Matrix trialConstr, trialGradLagrange;
 

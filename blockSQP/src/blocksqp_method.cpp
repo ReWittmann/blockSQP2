@@ -76,10 +76,12 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     
     // Create multiple solver objects for parallel QP solution
+    /*
     sub_QPs_par = std::make_unique<std::unique_ptr<QPsolverBase>[]>(param->max_conv_QPs + 1);
     for (int i = 0; i < param->max_conv_QPs + 1; i++){
         sub_QPs_par[i] = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
-    }
+    }*/
+    sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
     
     //Setup the feasibility restoration problem
     if (param->enable_rest){
@@ -95,8 +97,8 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
    }
 }
 
-SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), sub_QP(nullptr),
-    rest_prob(nullptr), rest_param(nullptr), rest_stats(nullptr), rest_method(nullptr), scaled_prob(nullptr), initCalled(false){}
+SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), sub_QP(nullptr), sub_QPs_par(nullptr), scaled_prob(nullptr),
+    rest_prob(nullptr), rest_param(nullptr), rest_stats(nullptr), rest_method(nullptr), initCalled(false){}
 
 SQPmethod::~SQPmethod(){}
 

@@ -45,7 +45,11 @@ titles = [
 itMax = 400
 ###############################################################################
 
-ipopts = {'hessian_approximation': 'exact', 'limited_memory_max_history':20, 'constr_viol_tol':1e-6, 'tol':1e-6, 'max_iter':itMax}
+ipopts = {'hessian_approximation': 'limited-memory', 
+          'limited_memory_max_history': 20, 
+          'constr_viol_tol': 1e-6, 
+          'tol': 1e-6, 
+          'max_iter': itMax}
 EXP_N_SQP = []
 EXP_N_secs = []
 EXP_type_sol = []

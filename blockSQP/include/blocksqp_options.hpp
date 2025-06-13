@@ -145,7 +145,12 @@ class SQPoptions{
     
     //For experimental purposes
     bool test_opt_1 = false;
-    
+    bool test_opt_2 = true;
+<<<<<<< HEAD
+    bool test_join_all = false;
+    int test_qp_hotstart = 0;
+=======
+>>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
     
     private:
     //Holder if no qpsol_options were provided

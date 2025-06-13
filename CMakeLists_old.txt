@@ -13,27 +13,6 @@ project(BlockSQP
 )
 set(CMAKE_CXX_STANDARD 20)
 
-
-set(N_LINSOL_BIN -1 CACHE STRING "The number of created MUMPS binaries for calling in different threads (MUMPS is not thread safe)")
-
-include(ExternalProject)
-
-foreach(i RANGE 0 7)
-	ExternalProject_Add(
-	SUB_MUMPS_${i}
-	SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/${i}
-	BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/${i}/build
-	CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/${i}/install
-	INSTALL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/${i}/install
-	BUILD_ALWAYS 1
-	)
-	set(MUMPS_PATH_${i} ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/${i}/install/lib/libdmumps.so)
-	message(STATUS MUMPS_PATH_${i} " " is " " ${MUMPS_PATH_${i}})
-endforeach()
-
-
-
-
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
@@ -45,12 +24,6 @@ set(BUILD_SHARED_LIBS yes)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 
 message(STATUS "MUMPS BINARY DIR:" ${MUMPS_BINARY_DIR})
-
-
-<<<<<<< HEAD
-
-=======
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 #[[
 FetchContent_Declare(
 	qpos
@@ -105,16 +78,11 @@ if (UNIX)
 endif()
 ]]
 
-<<<<<<< HEAD
 #[[
 set(A 3)
 set(B_${A} 4)
 message(STATUS "B_${A} = " ${B_3})
 ]]
-=======
-
-
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 
 set (qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
@@ -183,10 +151,10 @@ endif()
 
 add_library(blockSQP SHARED
 	blockSQP/src/blocksqp_condensing.cpp
-	blockSQP/src/blocksqp_matrix.cpp
-	blockSQP/src/blocksqp_problemspec.cpp
-	blockSQP/src/blocksqp_general_purpose.cpp
-	blockSQP/src/blocksqp_glob.cpp
+    	blockSQP/src/blocksqp_matrix.cpp
+    	blockSQP/src/blocksqp_problemspec.cpp
+    	blockSQP/src/blocksqp_general_purpose.cpp
+    	blockSQP/src/blocksqp_glob.cpp
    	blockSQP/src/blocksqp_hess.cpp
    	blockSQP/src/blocksqp_iter.cpp
    	blockSQP/src/blocksqp_method.cpp
@@ -200,12 +168,9 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_scaling.cpp
    	blockSQP/src/blocksqp_sqputils.cpp
    	)
-target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINSOL_MUMPS LINUX)
+target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINUX)
 #target_compile_options(blockSQP PRIVATE -g -O0)
-target_compile_options(blockSQP PRIVATE -O3 -Wall -Wextra -Wno-unused-parameter -DLINUX -DN_LINSOL_BIN=8)
-foreach(i RANGE 0 7)
-	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
-endforeach()
+target_compile_options(blockSQP PRIVATE -O3 -Wall -Wextra -Wno-unused-parameter)
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES)

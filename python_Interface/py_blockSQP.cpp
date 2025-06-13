@@ -30,8 +30,8 @@ class int_pointer_interface{
     int *ptr;
 
     public:
-    int_pointer_interface(): ptr(nullptr), size(0){}
-    int_pointer_interface(int *ptr_, int size_): size(size_), ptr(ptr_){}
+    int_pointer_interface(): size(0), ptr(nullptr){}
+    int_pointer_interface(int *ptr_, int size_): size(size_), ptr(ptr_){} //Causes linker warning -Walloc-size-larger-than=
     ~int_pointer_interface(){}
 };
 
@@ -41,8 +41,8 @@ class double_pointer_interface{
     double *ptr;
 
     public:
-    double_pointer_interface(): ptr(nullptr), size(0){}
-    double_pointer_interface(double *ptr_, int size_): size(size_), ptr(ptr_){}
+    double_pointer_interface(): size(0), ptr(nullptr){}
+    double_pointer_interface(double *ptr_, int size_): size(size_), ptr(ptr_){} //Causes linker warning -Walloc-size-larger-than=
     ~double_pointer_interface(){}
 };
 
@@ -54,7 +54,7 @@ template <typename T> class T_array{
 
     public:
     T_array(): size(0), ptr(nullptr){}
-    T_array(int size_): size(size_), ptr(new T[size_]){}
+    T_array(int size_): size(size_), ptr(new T[size_]){} //Causes linker warning -Walloc-size-larger-than=
 
     ~T_array(){
         delete[] ptr;
@@ -680,6 +680,12 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     )
     .def_readwrite("qpsol_options", &blockSQP::SQPoptions::qpsol_options)
     .def_readwrite("test_opt_1", &blockSQP::SQPoptions::test_opt_1)
+    .def_readwrite("test_opt_2", &blockSQP::SQPoptions::test_opt_2)
+<<<<<<< HEAD
+    .def_readwrite("test_join_all", &blockSQP::SQPoptions::test_join_all)
+    .def_readwrite("test_qp_hotstart", &blockSQP::SQPoptions::test_qp_hotstart)
+=======
+>>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 	;
 
 py::class_<blockSQP::QPsolver_options>(m, "QPsolver_options");

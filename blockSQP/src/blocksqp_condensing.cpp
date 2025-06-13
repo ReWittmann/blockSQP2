@@ -588,7 +588,7 @@ int Condenser::get_hessblock_index(int v_ind){
 void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::Sparse_Matrix &con_jac, const blockSQP::SymMatrix *const hess, const blockSQP::Matrix &lb_var, const blockSQP::Matrix &ub_var, const blockSQP::Matrix &lb_con, const blockSQP::Matrix &ub_con,
     blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *condensed_hess, blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con
 ){
-    std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
 
 	T_Slices.resize(0);
 	O_Slices.resize(0);
@@ -630,7 +630,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     O_ub_var.push_back(ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
     O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
 
-    std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
     //std::cout << "Sliced linear term, bounds and jacobian in " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 
@@ -644,12 +644,12 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
         }
     }
 
-    std::chrono::steady_clock::time_point T_start, T_end;
+    //std::chrono::steady_clock::time_point T_start, T_end;
 
     for (int i = 0; i < num_targets; i++){
-        T_start = std::chrono::steady_clock::now();
+        //T_start = std::chrono::steady_clock::now();
         single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
-        T_end = std::chrono::steady_clock::now();
+        //T_end = std::chrono::steady_clock::now();
         //std::cout << "Condensing target " << i << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(T_end - T_start).count() << "ms\n";
 
         O_Slices[i].remove_rows(c_starts, c_ends, num_targets);
@@ -660,7 +660,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
 
 
 //Assemble reduced constraint-jacobian (condensed jacobian without dependent-variable bounds)
-    T0 = std::chrono::steady_clock::now();
+    //T0 = std::chrono::steady_clock::now();
 
     std::vector<blockSQP::Sparse_Matrix> reduced_Slices(2*num_targets + 1);
     for (int i = 0; i<num_targets; i++){
@@ -670,13 +670,13 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     reduced_Slices[2*num_targets] = O_Slices[num_targets];
     blockSQP::Sparse_Matrix reduced_Jacobian = blockSQP::horzcat(reduced_Slices);
 
-    T1 = std::chrono::steady_clock::now();
+    //T1 = std::chrono::steady_clock::now();
     //std::cout << "Assembling the reduced jacobian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 //Assemble condensed block-hessian
     //if (condensed_hess == nullptr) condensed_hess = new blockSQP::SymMatrix[condensed_num_hessblocks];
 
-    T0 = std::chrono::steady_clock::now();
+    //T0 = std::chrono::steady_clock::now();
 
     int ind_1 = 0;
     int ind_2 = 0;
@@ -693,7 +693,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
         condensed_hess[ind_1 + i] = hess[ind_2 + i];
     }
 
-    T1 = std::chrono::steady_clock::now();
+    //T1 = std::chrono::steady_clock::now();
     //std::cout << "Assembling the condensed block hessian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
@@ -781,7 +781,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     condensed_h_k[2*num_targets] = O_grad_obj[num_targets];
     condensed_h = blockSQP::vertcat(condensed_h_k);
 
-    std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
     //std::cout << "Rest of condensing took " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << "ms\n";
     //std::cout << "Assembled complete condensed system from smaller condensed systems in " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << " ms.\n";
 
@@ -1030,7 +1030,7 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
     std::vector<blockSQP::Matrix> mu_lambda_k(2*n_stages + 1);
 
     int s_ind = 0;
-    int dep_size;
+    //int dep_size;
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
@@ -1292,7 +1292,7 @@ void Condenser::single_convex_combination_recover(int tnum, const blockSQP::Matr
     std::vector<blockSQP::Matrix> mu_lambda_k(2*n_stages + 1);
 
     int s_ind = 0;
-    int dep_size;
+    //int dep_size;
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
@@ -1528,7 +1528,7 @@ void Condenser::SOC_condense(const blockSQP::Matrix &grad_obj, const blockSQP::M
     condensed_h_k[2*num_targets] = O_grad_obj[num_targets];
     condensed_h = blockSQP::vertcat(condensed_h_k);
 
-    std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
 
     return;
 
@@ -1550,7 +1550,7 @@ void Condenser::single_SOC_condense(int tnum, const blockSQP::Matrix &lb_con){
 
 	std::vector<blockSQP::Matrix> w_k(n_stages);
 
-    std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
 
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
@@ -1660,7 +1660,7 @@ void Condenser::correction_condense(const blockSQP::Matrix &grad_obj, const bloc
     condensed_h_k[2*num_targets] = O_grad_obj[num_targets];
     condensed_h = blockSQP::vertcat(condensed_h_k);
 
-    std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
 
     return;
 
@@ -1688,7 +1688,7 @@ void Condenser::single_correction_condense(int tnum, const blockSQP::Matrix &lb_
 
 	std::vector<blockSQP::Matrix> w_k(n_stages);
 
-    std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
+    //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
 
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
@@ -1830,7 +1830,7 @@ void Condenser::single_correction_recover(int tnum, const blockSQP::Matrix &xi_f
     std::vector<blockSQP::Matrix> mu_lambda_k(2*n_stages + 1);
 
     int s_ind = 0;
-    int dep_size;
+    //int dep_size;
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
