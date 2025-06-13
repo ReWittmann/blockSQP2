@@ -681,11 +681,8 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     .def_readwrite("qpsol_options", &blockSQP::SQPoptions::qpsol_options)
     .def_readwrite("test_opt_1", &blockSQP::SQPoptions::test_opt_1)
     .def_readwrite("test_opt_2", &blockSQP::SQPoptions::test_opt_2)
-<<<<<<< HEAD
     .def_readwrite("test_join_all", &blockSQP::SQPoptions::test_join_all)
     .def_readwrite("test_qp_hotstart", &blockSQP::SQPoptions::test_qp_hotstart)
-=======
->>>>>>> c8c058613bc0706bac6970558c599c4836ad8bac
 	;
 
 py::class_<blockSQP::QPsolver_options>(m, "QPsolver_options");
