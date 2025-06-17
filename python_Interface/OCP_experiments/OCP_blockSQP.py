@@ -1,7 +1,7 @@
 import numpy as np
-import os
 import sys
 import time
+import os
 try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 except:
@@ -44,7 +44,7 @@ opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
 opts.BFGS_damping_factor = 1/3
-opts.test_opt_1 = False
+opts.test_opt_1 = True
 opts.test_opt_2 = True
 opts.test_qp_hotstart = 0
 
@@ -61,12 +61,12 @@ opts.enable_premature_termination = True
 opts.max_filter_overrides = 0
 
 
-opts.qpsol = 'qpOASES'
-QPopts = py_blockSQP.qpOASES_options()
-QPopts.terminationTolerance = 1e-10
-QPopts.printLevel = 0
-QPopts.sparsityLevel = 2
-opts.qpsol_options = QPopts
+# opts.qpsol = 'qpOASES'
+# QPopts = py_blockSQP.qpOASES_options()
+# QPopts.terminationTolerance = 1e-10
+# QPopts.printLevel = 0
+# QPopts.sparsityLevel = 2
+# opts.qpsol_options = QPopts
 
 # opts.qpsol = 'qpalm'
 
@@ -130,6 +130,9 @@ stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+
+# optimizer_2 = py_blockSQP.SQPmethod(prob, opts, stats)
+# optimizer_3 = py_blockSQP.SQPmethod(prob, opts, stats)
 
 #Condensing
 # optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)

@@ -99,6 +99,7 @@ class blockSQP_pyProblem(py_blockSQP.Problemform):
     ##IMPORTANT: Must be called before passing to SQPmethod##
     #Finalize the the problem specification
     def complete(self):
+        assert(len(self.x_start) == self.nVar)
         self.init_Cpp_Data(self.Sparse_QP, self.nnz)
     
     

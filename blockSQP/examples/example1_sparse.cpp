@@ -306,7 +306,8 @@ int main(int argc, const char* argv[]){
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
     
-    //opts->test_opt_1 = true;
+    opts->test_opt_1 = false;
+    opts->max_conv_QPs = 4;
 
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES

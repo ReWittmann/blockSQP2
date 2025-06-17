@@ -338,6 +338,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
 }
 
 
+
 ////////////////////////////////////////////////////////////////
 /////////////Interfaces to (third party) QP solvers/////////////
 ////////////////////////////////////////////////////////////////
@@ -518,6 +519,7 @@ const char* get_linsol_path(int linsol_ID){
         #ifdef LINSOL_PATH_7
             case 7: return linsol_path_glob_7;
         #endif
+        //  default: return nullptr;
     }
     throw std::runtime_error("No linsol path available for ID " + std::to_string(linsol_ID) + ". Please recompile with -DLINSOL_PATH_0=* ... -DLINSOL_PATH_${N_LINSOL_BIN}=*");
 }
@@ -535,9 +537,12 @@ threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, i
     void *fptr_dmumps_c;
     #ifdef N_LINSOL_BIN
         #if LINUX
-            std::cout << "Loading MUMPS library at " << get_linsol_path(linsol_ID) << "\n";
+            //std::cout << "Loading MUMPS library at " << get_linsol_path(linsol_ID) << "\n";
+            std::cout << "Loading MUMPS library at " << get_linsol_path(0) << "\n";
+            
             //linsol_handle = dlopen(get_linsol_path(linsol_ID), RTLD_LAZY | RTLD_LOCAL);
-            linsol_handle = dlmopen(LM_ID_NEWLM, get_linsol_path(linsol_ID), RTLD_LAZY | RTLD_LOCAL);
+            linsol_handle = dlmopen(LM_ID_NEWLM, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
+            //linsol_handle = dlmopen(LM_ID_BASE, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
             if (linsol_handle == nullptr) throw std::runtime_error(std::string("Error, failed to load MUMPS library at ") + get_linsol_path(linsol_ID) + ". dlerror(): " + std::string(dlerror()));
             fptr_dmumps_c = dlsym(linsol_handle, "dmumps_c");
             if (fptr_dmumps_c == nullptr) throw std::runtime_error(std::string("Error, could not find symbol dmumps_c in binary ") + get_linsol_path(linsol_ID));
@@ -563,12 +568,90 @@ threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, i
     init_QP_common(blockIdx);    
 }
 
+
+threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
+                                                                 int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
+                                        qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
+    if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel != 2)
+        throw ParameterError("Invalid value sparsityLevel option for qpOASES_MUMPS_solver");
+    qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
+    qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
+    qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
+    
+    init_QP_common(blockIdx);    
+}
+
+
 threadsafe_qpOASES_MUMPS_solver::~threadsafe_qpOASES_MUMPS_solver(){
+    //
+    qp = nullptr;
+    qpSave = nullptr;
+    qpCheck = nullptr;
+    
     if (linsol_handle != nullptr){
         dlclose(linsol_handle);
         linsol_handle = nullptr;
     }
 }
+
+
+
+
+std::mutex load_linsol_mutex;
+std::condition_variable load_linsol_cv;
+
+void LINUX_load_linsol_plugins(std::promise<bool> linsols_loaded, int N_linsols, void **linsol_handles);
+
+void load_linsol_plugins(int N_linsols, void **ret_linsol_handles, std::jthread &linsol_load_TLS_hold){
+    bool linsols_loaded = false;
+    std::promise<bool> linsols_loaded_p;
+    std::future<bool> linsols_loaded_f = linsols_loaded_p.get_future();
+    linsol_load_TLS_hold = std::jthread(LINUX_load_linsol_plugins, std::move(linsols_loaded_p), N_linsols, ret_linsol_handles);
+    linsols_loaded = linsols_loaded_f.get();
+    if (!linsols_loaded) throw std::runtime_error("Error when trying to load linear solver libraries");
+}
+
+void LINUX_load_linsol_plugins(std::promise<bool> linsols_loaded, int N_linsols, void **linsol_handles){
+    bool linsol_load_error = false;
+    int i = 0;
+    std::string dlerror_str;
+    void *linsol_handle;
+    for (; i < N_linsols; i++){
+        std::cout << "Loading MUMPS library at " << get_linsol_path(i) << "\n";
+        linsol_handle = dlmopen(LM_ID_NEWLM, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
+        if (linsol_handle == nullptr){
+            linsol_load_error = true;
+            break;
+        }
+        linsol_handles[i] = linsol_handle;
+    }
+    
+    if (linsol_load_error){
+        std::cout << "Error occurred when trying to load sparse linear solver library: " << dlerror_str << "\n";
+        for (i -= 1; i >= 0; i--){
+            dlclose(linsol_handles[i]);
+        }
+        linsols_loaded.set_value(false);
+        return;
+    }
+    else linsols_loaded.set_value(true);
+    
+    std::unique_lock<std::mutex> load_linsol_lock(load_linsol_mutex);
+    load_linsol_cv.wait(load_linsol_lock);
+    for (i = N_linsols - 1; i >= 0; i--){
+        dlclose(linsol_handles[i]);
+    }
+}
+
+void unload_linsol_plugins(void **linsol_handles, std::jthread linsol_load_TLS_hold){
+    {
+        std::lock_guard<std::mutex> load_linsol_lock(load_linsol_mutex);
+        load_linsol_cv.notify_all();
+    }
+}
+
+
+
 
 
 qpOASES_solver::~qpOASES_solver(){}

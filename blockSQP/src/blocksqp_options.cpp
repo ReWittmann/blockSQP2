@@ -231,6 +231,7 @@ void SQPoptions::optionsConsistency(){
     if (qpsol_options != nullptr && qpsol_options->sol != qpsol)
         throw ParameterError("Incorrect QP solver options type given for specified QP solver");
     
+    /*
     if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
         if (qpsol == QPsolvers::qpOASES){
             if (qpsol_options != nullptr && !(static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == 2 || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1))
@@ -238,6 +239,20 @@ void SQPoptions::optionsConsistency(){
         }
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
     }
+    */
+    
+    //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
+    if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
+        if (qpsol == QPsolvers::qpOASES){
+            if (qpsol_options == nullptr || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
+                if (!sparse) throw ParameterError("Indefinite Hessians not supported for dense qpOASES (derived from SQPoptions::sparse = 0, as no or default qpOASES_options::sparsityLevel was given)");
+            }
+            else if (static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel != 2)
+                throw ParameterError("Indefinite Hessians only supported for qpOASES with Schur-complement approach (qpOASES_options::sparsityLevel = 2)");
+        }
+        else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
+    }
+    
     
     #ifdef N_LINSOL_LIBS
         if (max_conv_QPs + 1 > N_LINSOL_LIBS)

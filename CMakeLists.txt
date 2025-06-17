@@ -191,10 +191,11 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_defs.cpp
    	blockSQP/src/blocksqp_scaling.cpp
    	blockSQP/src/blocksqp_sqputils.cpp
+	blockSQP/src/blocksqp_plugin_loader.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINSOL_MUMPS LINUX)
 #target_compile_options(blockSQP PRIVATE -g -O0)
-target_compile_options(blockSQP PRIVATE -O3 -Wall -Wextra -Wno-unused-parameter -DLINUX -DN_LINSOL_BIN=8)
+target_compile_options(blockSQP PRIVATE -g -O0 -Wall -Wextra -Wno-unused-parameter -DLINUX -DN_LINSOL_BIN=8)
 foreach(i RANGE 0 7)
 	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
 endforeach()
@@ -230,6 +231,15 @@ set_target_properties(example_CQPsolver
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
 )
+
+add_executable(example_plugin_loader blockSQP/examples/example_plugin_loader.cpp)
+target_link_libraries(example_plugin_loader blockSQP)
+target_compile_options(example_plugin_loader PRIVATE -g -O0)
+set_target_properties(example_plugin_loader
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
+)
+
 
 option(PYTHON_INTERFACE "build python interface" OFF)
 set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")

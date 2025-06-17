@@ -42,6 +42,7 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->hess_approx = 2;
     rest_param->sizing = 2;
     rest_param->BFGS_damping_factor = 0.2;
+    rest_param->sparse = parent_options->sparse;
     //rest_param->sizing = 4;
     //rest_param->BFGS_damping_factor = 1./3.;
 
@@ -81,6 +82,11 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     for (int i = 0; i < param->max_conv_QPs + 1; i++){
         sub_QPs_par[i] = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     }*/
+    
+    linsol_loader = std::make_unique<plugin_loader>(param->max_conv_QPs + 1);
+    //TODO
+    // use linsol loader to create QPsolver instances
+    
     sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
     
     //Setup the feasibility restoration problem
@@ -101,8 +107,6 @@ SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(null
     rest_prob(nullptr), rest_param(nullptr), rest_stats(nullptr), rest_method(nullptr), initCalled(false){}
 
 SQPmethod::~SQPmethod(){}
-
-
 
 /*
 

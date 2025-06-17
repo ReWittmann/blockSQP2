@@ -193,7 +193,7 @@ QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, c
 
 //QPsolverBase **create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QPs);
 std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
- 
+
 
 
 //QP solver implementations
@@ -253,11 +253,14 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         public:
         void *linsol_handle;
         threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, int linsol_ID);
+        
+        threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
         ~threadsafe_qpOASES_MUMPS_solver();
         
     };
     
-    
+    void load_linsol_plugins(int N_linsols, void** linsol_handles, std::jthread &linsol_load_TLS_hold);
+    void unload_linsol_plugins(std::jthread linsol_load_TLS_hold);
 #endif
 
 
