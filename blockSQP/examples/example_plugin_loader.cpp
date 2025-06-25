@@ -16,6 +16,7 @@ int main(){
     } 
     
     
+    std::cout << "fptr_dmumps_c_ = " << fptr_dmumps_c << ", fptr_dmumps_c_2 = " << fptr_dmumps_c << "\n";
     
     std::unique_ptr<blockSQP::plugin_loader> L2 = std::make_unique<blockSQP::plugin_loader>(8);
     std::this_thread::sleep_for(std::chrono::seconds(2));

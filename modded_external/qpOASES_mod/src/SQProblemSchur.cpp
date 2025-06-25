@@ -74,6 +74,8 @@ SQProblemSchur::SQProblemSchur( ) : SQProblem( )
 	sparseSolver = new Ma27SparseSolver();
 #elif defined SOLVER_MUMPS
 	sparseSolver = new MumpsSparseSolver();
+#elif defined SOLVER_SPRAL
+	sparseSolver = new SpralSparseSolver();
 #elif defined SOLVER_NONE
     sparseSolver = new DummySparseSolver();
 #endif
@@ -113,6 +115,8 @@ SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, 
 		sparseSolver = new MumpsSparseSolver();
 	else
 		sparseSolver = new MumpsSparseSolver_2(arg_fptr_dmumps_c);
+#elif defined SOLVER_SPRAL
+	sparseSolver = new SpralSparseSolver();
 #elif defined SOLVER_NONE
 	sparseSolver = new DummySparseSolver();
 #endif

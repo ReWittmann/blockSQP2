@@ -16,6 +16,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(N_LINSOL_BIN -1 CACHE STRING "The number of created MUMPS binaries for calling in different threads (MUMPS is not thread safe)")
 
+#[[
 include(ExternalProject)
 
 foreach(i RANGE 0 7)
@@ -30,9 +31,11 @@ foreach(i RANGE 0 7)
 	set(MUMPS_PATH_${i} ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/${i}/install/lib/libdmumps.so)
 	message(STATUS MUMPS_PATH_${i} " " is " " ${MUMPS_PATH_${i}})
 endforeach()
+]]
 
-
-
+#set(MUMPS_PATH_0 ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/0/install/lib/0_libdmumps.so.5.7.3.1)
+#set(MUMPS_PATH_1 ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/1/install/lib/1_libdmumps.so.5.7.3.1)
+#message(STATUS MUMPS_PATH_1 " " is " " ${MUMPS_PATH_1})
 
 include(FetchContent)
 FetchContent_Declare(
@@ -129,9 +132,12 @@ add_library(qpOASES STATIC
 	)
 
 
-target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
+#MUMPS LINEAR SOLVER
+
+target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
 target_compile_options(qpOASES PRIVATE -O3 -DQPOASES_MUMPS_NOMUTEX INTERFACE -Wno-overloaded-virtual)
 target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
+#target_link_libraries(qpOASES PUBLIC LAPACK::LAPACK BLAS::BLAS)
 IF(UNIX AND NOT APPLE)
    target_compile_definitions(qpOASES PRIVATE LINUX)
    target_compile_options(qpOASES PRIVATE -DMUMPS_LIB_PATH=\"${MUMPS_BINARY_DIR}/libdmumps.so\")
@@ -149,6 +155,7 @@ target_include_directories(qpOASES
 )
 
 
+#MA57 LINEAR SOLVER
 #[[
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -166,10 +173,30 @@ target_include_directories(qpOASES
 target_link_libraries(qpOASES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libcoinhsl.so /home/reinhold/LIB/install/lib/libmetis.a /home/reinhold/LIB/install/lib/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
 ]]
 
+#SPRAL LINEAR SOLVER
+#[[
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+target_compile_definitions(qpOASES PRIVATE SOLVER_SPRAL __NO_COPYRIGHT__)
+target_compile_options(qpOASES PRIVATE -O3)
+IF(UNIX AND NOT APPLE)
+   target_compile_definitions(qpOASES PRIVATE LINUX)
+ELSEIF(WINDOWS)
+    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
+ENDIF()
+
+target_include_directories(qpOASES
+	PUBLIC	${qpOASES_MODDED_DIR}/include /home/reinhold/LIB/spral/include
+)
+target_link_libraries(qpOASES PUBLIC /home/reinhold/LIB/spral/builddir/libspral.so dl)
+]]
+
+
 
 if (UNIX)
 	target_compile_options(qpOASES PUBLIC -fPIC)
 endif()
+
 
 
 
@@ -193,16 +220,21 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_sqputils.cpp
 	blockSQP/src/blocksqp_plugin_loader.cpp
    	)
-target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINSOL_MUMPS LINUX)
+target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINUX)
 #target_compile_options(blockSQP PRIVATE -g -O0)
-target_compile_options(blockSQP PRIVATE -g -O0 -Wall -Wextra -Wno-unused-parameter -DLINUX -DN_LINSOL_BIN=8)
-foreach(i RANGE 0 7)
-	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
-endforeach()
+#target_compile_options(blockSQP PRIVATE -fvisibility=hidden)
+
+target_compile_options(blockSQP PRIVATE -O3 -Wall -Wextra -Wno-unused-parameter -DLINUX)
+#foreach(i RANGE 0 7)
+#	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
+#endforeach()
+target_compile_options(blockSQP PRIVATE -DLINSOL_PATH=${MUMPS_BINARY_DIR}/libdmumps.so)
+
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES)
 target_link_libraries(blockSQP PUBLIC qpOASES)
+#target_link_libraries(blockSQP PUBLIC blockSQP_plugin_loader)
 
 add_executable(example1 blockSQP/examples/example1.cpp)
 target_link_libraries(example1 blockSQP)
@@ -232,6 +264,7 @@ set_target_properties(example_CQPsolver
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
 )
 
+#[[
 add_executable(example_plugin_loader blockSQP/examples/example_plugin_loader.cpp)
 target_link_libraries(example_plugin_loader blockSQP)
 target_compile_options(example_plugin_loader PRIVATE -g -O0)
@@ -239,7 +272,7 @@ set_target_properties(example_plugin_loader
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
 )
-
+]]
 
 option(PYTHON_INTERFACE "build python interface" OFF)
 set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")

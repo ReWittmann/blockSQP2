@@ -7,6 +7,7 @@
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_condensing.hpp"
 #include "blocksqp_iterate.hpp"
+#include "blocksqp_plugin_loader.hpp"
 #include <memory>
 #include <thread>
 #include <future>

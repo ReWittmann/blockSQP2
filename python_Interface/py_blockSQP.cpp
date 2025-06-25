@@ -913,6 +913,13 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
     .def_readonly("dg_pos", &blockSQP::SQPiterate::dg_pos)
 	;
 
+py::class_<blockSQP::RestorationProblem, blockSQP::Problemspec>(m, "RestorationProblem")
+        .def(py::init<blockSQP::Problemspec*, blockSQP::Matrix&, double, double>())
+        //.def("__init__", [](Problemform* P, blockSQP::Matrix& M, double d1, double d2){return new RestorationProblem(P, M, d1, d2);})
+        ;
+    
+    
+    
 py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
 	.def_readonly("condensed_Jacobian", &blockSQP::SCQPiterate::condensed_Jacobian)
 	.def_readonly("condensed_lb_var", &blockSQP::SCQPiterate::condensed_lb_var)

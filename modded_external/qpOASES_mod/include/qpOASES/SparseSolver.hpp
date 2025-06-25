@@ -39,6 +39,9 @@
 
 #include <qpOASES/Utils.hpp>
 
+#ifdef SOLVER_SPRAL
+	#include "spral.h"
+#endif
 
 BEGIN_NAMESPACE_QPOASES
 
@@ -665,6 +668,82 @@ inline void ComputeMemIncrease(
 }
 
 #endif /* SOLVER_MUMPS */
+
+#ifdef SOLVER_SPRAL
+
+class SpralSparseSolver : public SparseSolver
+{
+	public:
+		SpralSparseSolver();
+		SpralSparseSolver(const SpralSparseSolver& rhs);
+		virtual ~SpralSparseSolver( );
+		virtual SpralSparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+											);
+
+		/** Set new matrix data.  The matrix is to be provided
+			in the Harwell-Boeing format.  Only the lower
+			triangular part should be set. */
+		virtual returnValue setMatrixData( int_t dim_,					/**< Dimension of the linear system. */
+										   int_t numNonzeros_,			/**< Number of nonzeros in the matrix. */
+										   const int_t* const airn,		/**< Row indices for each matrix entry. */
+										   const int_t* const acjn,		/**< Column indices for each matrix entry. */
+										   const real_t* const avals	/**< Values for each matrix entry. */
+										   );
+
+		/** Compute factorization of current matrix.  This method must be called before solve.*/
+		virtual returnValue factorize( );
+
+		/** Solve linear system with most recently set matrix data. */
+		virtual returnValue solve( int_t dim_, /**< Dimension of the linear system. */
+					   const real_t* const rhs, /**< Values for the right hand side. */
+					   real_t* const sol /**< Solution of the linear system. */
+					   );
+
+		/** Clears all data structures. */
+		virtual returnValue reset( );
+
+		/** Return the number of negative eigenvalues. */
+		virtual int_t getNegativeEigenvalues( );
+
+		/** Return the rank after a factorization */
+		virtual int_t getRank( );
+
+		/** Returns the zero pivots in case the matrix is rank deficient */
+		//virtual returnValue getZeroPivots( int_t *&zeroPivots );
+
+	/*
+	 *	PROTECTED MEMBER FUNCTIONS
+	 */
+	protected:
+		/** Frees all allocated memory.
+		 *  \return SUCCESSFUL_RETURN */
+		returnValue clear( );
+
+		/** Copies all members from given rhs object.
+		 *  \return SUCCESSFUL_RETURN */
+		returnValue copy(	const SpralSparseSolver& rhs	/**< Rhs object. */
+							);
+
+	/*
+	 *	PROTECTED MEMBER VARIABLES
+	 */
+	protected:
+	int dim;
+	int numNonzeros;
+	double *spral_nz;
+	int *spral_row;
+	int *spral_col;
+	
+	void *spral_akeep;
+	void *spral_fkeep;						
+    struct spral_ssids_options spral_options;
+    struct spral_ssids_inform spral_inform;
+	
+	bool have_factorization;
+};
+
+#endif
+
 
 
 

@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, parallel = False, integrator = 'rk4')
+OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False, integrator = 'rk4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -44,7 +44,7 @@ opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
 opts.BFGS_damping_factor = 1/3
-opts.test_opt_1 = True
+opts.test_opt_1 = False
 opts.test_opt_2 = True
 opts.test_qp_hotstart = 0
 
@@ -60,7 +60,7 @@ opts.max_extra_steps = 0
 opts.enable_premature_termination = True
 opts.max_filter_overrides = 0
 
-
+opts.max_QP_secs = 5.0
 # opts.qpsol = 'qpOASES'
 # QPopts = py_blockSQP.qpOASES_options()
 # QPopts.terminationTolerance = 1e-10
@@ -126,6 +126,12 @@ scale_arr = 1.0;
 #     OCprob.set_stage_control(scale_arr, i, [0.001, 10.0,10.0])
 # prob.arr_set_scale(scale)
 #####################
+# prob_ = prob
+# M = py_blockSQP.Matrix()
+# M.Dimension(OCprob.nVar)
+# prob = py_blockSQP.RestorationProblem(prob, M, 1.0, 0.)
+
+
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing

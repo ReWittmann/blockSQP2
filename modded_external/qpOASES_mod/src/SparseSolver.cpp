@@ -64,9 +64,11 @@
 	#define MUMPS_STRUC_C DMUMPS_STRUC_C
 
 	#define mumps_c dmumps_c
-
+	
+	//void fnothing(void*){return;}
 	#ifdef QPOASES_MUMPS_NOMUTEX
 		#define MUMPS_C(m_struc_c) mumps_c(m_struc_c);
+		//#define MUMPS_C(m_struc_c) fnothing(m_struc_c);
 	#else
 		#include <mutex>
 		std::mutex qpOASES_MUMPS_mutex;
@@ -77,6 +79,10 @@
 			}
 	#endif
 #endif /* SOLVER_MUMPS */
+
+#ifdef SOLVER_SPRAL
+	#include "spral.h"
+#endif
 
 BEGIN_NAMESPACE_QPOASES
 
@@ -2093,14 +2099,173 @@ returnValue MumpsSparseSolver_2::copy( 	const MumpsSparseSolver_2& rhs
 }
 
 
-
-
-
-
-
-
-
 #endif /* SOLVER_MUMPS */
+
+
+#ifdef SOLVER_SPRAL
+SpralSparseSolver::SpralSparseSolver(): dim(0), numNonzeros(0), 
+				spral_nz(nullptr), spral_row(nullptr), spral_col(nullptr), 
+				spral_akeep(nullptr), spral_fkeep(nullptr), have_factorization(false){
+	    spral_ssids_default_options(&spral_options);
+		spral_options.action = false;
+    	spral_options.small = 1e-14;
+    	spral_options.array_base = 1;
+}
+
+SpralSparseSolver::SpralSparseSolver(const SpralSparseSolver& rhs){
+	copy(rhs);
+}
+
+returnValue SpralSparseSolver::copy(const SpralSparseSolver& rhs){
+	dim = rhs.dim;
+	numNonzeros = rhs.numNonzeros;
+	spral_nz = new double[numNonzeros];
+	spral_row = new int[numNonzeros];
+	spral_col = new int[numNonzeros];
+	memcpy(spral_nz, rhs.spral_nz, numNonzeros*sizeof(double));
+	memcpy(spral_row, rhs.spral_row, numNonzeros*sizeof(int));
+	memcpy(spral_col, rhs.spral_col, numNonzeros*sizeof(int));
+	memcpy(&spral_options, &rhs.spral_options, sizeof(struct spral_ssids_options));
+	memcpy(&spral_inform, &rhs.spral_inform, sizeof(struct spral_ssids_inform));
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SpralSparseSolver::clear(){
+	dim = -1;
+	numNonzeros = -1;
+	delete[] spral_nz; spral_nz = nullptr;
+	delete[] spral_row; spral_row = nullptr;
+	delete[] spral_col; spral_col = nullptr;
+	
+	if (spral_fkeep != nullptr){spral_ssids_free_fkeep(&spral_fkeep);}	
+	if (spral_akeep != nullptr){spral_ssids_free_akeep(&spral_akeep);}
+	
+	have_factorization = false;
+	
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SpralSparseSolver::reset(){
+	if (SparseSolver::reset() != SUCCESSFUL_RETURN)
+		return THROWERROR(RET_RESET_FAILED);
+
+	clear();
+	return SUCCESSFUL_RETURN;
+}
+
+
+SpralSparseSolver::~SpralSparseSolver(){
+	clear();
+}
+
+SpralSparseSolver &SpralSparseSolver::operator=(const SparseSolver& rhs){
+	const SpralSparseSolver *spral_rhs = dynamic_cast<const SpralSparseSolver*>(&rhs);
+	if (spral_rhs == nullptr){
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )\n");
+		throw;
+	}
+	
+	if (this != spral_rhs){
+		clear();
+		SparseSolver::operator=(rhs);
+		copy(*spral_rhs);
+	}
+	return *this;
+}
+
+
+returnValue SpralSparseSolver::setMatrixData(int_t dim_, int_t numNonzeros_, const int_t* const irn, 
+							const int_t* const jcn, const real_t* const avals){
+	reset();
+	dim = dim_;
+	numNonzeros = numNonzeros_;
+	
+	if (numNonzeros_ > 0){
+		spral_nz = new double[numNonzeros_];
+		spral_row = new int[numNonzeros_];
+		spral_col = new int[numNonzeros_];
+		
+		numNonzeros = 0;
+		for (int_t i = 0; i < numNonzeros_; ++i){
+			if (isZero(avals[i]) == BT_FALSE){       
+				spral_nz[numNonzeros] = avals[i];
+				spral_row[numNonzeros] = irn[i];
+				spral_col[numNonzeros] = jcn[i];
+				numNonzeros++;
+			}
+		}
+	}
+	else{
+		numNonzeros = 0;
+		spral_nz = nullptr;
+		spral_row = nullptr;
+	    spral_col = nullptr;
+	}
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SpralSparseSolver::factorize(){
+	spral_ssids_analyse_coord(dim, nullptr, numNonzeros, spral_col, spral_row, nullptr, &spral_akeep, &spral_options, &spral_inform);
+    if (spral_inform.flag < 0){
+		clear();
+		myPrintf("SPRAL symbolic factorization failed\n");
+		return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
+	}
+	
+	spral_ssids_factor(false, nullptr, nullptr, spral_nz, nullptr, spral_akeep, &spral_fkeep, &spral_options, &spral_inform);
+	
+	if(spral_inform.flag == -5) {
+		return RET_KKT_MATRIX_SINGULAR;
+	}
+	else if (spral_inform.flag < 0){
+		clear();
+		return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
+	}
+	have_factorization = true;
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SpralSparseSolver::solve(int_t dim_, const real_t* const rhs, real_t* const sol){
+	if (dim_ != dim)
+		return THROWERROR(RET_INVALID_ARGUMENTS);
+
+	if (!have_factorization){
+	  MyPrintf("Factorization not called before solve in SpralSparseSolver::solve.\n");
+	  return THROWERROR(RET_INVALID_ARGUMENTS);
+	}
+
+	if (dim == 0)
+		return SUCCESSFUL_RETURN;
+	
+
+    for (int_t i = 0; i < dim; ++i){sol[i] = rhs[i];}
+	
+	spral_ssids_solve1(0, sol, spral_akeep, spral_fkeep, &spral_options, &spral_inform);
+    if(spral_inform.flag < 0) {
+		clear();
+        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
+    }
+	
+	return SUCCESSFUL_RETURN;
+}
+
+int_t SpralSparseSolver::getNegativeEigenvalues(){
+	if (!have_factorization)
+		return -1;
+	return spral_inform.num_neg;
+}
+
+int_t SpralSparseSolver::getRank(){
+	return spral_inform.matrix_rank;
+}
+
+
+#endif
+
+
+
+
+
 
 #ifdef SOLVER_NONE
 

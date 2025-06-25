@@ -83,10 +83,11 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
         sub_QPs_par[i] = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     }*/
     
-    linsol_loader = std::make_unique<plugin_loader>(param->max_conv_QPs + 1);
+    //linsol_loader = std::make_unique<plugin_loader>(param->max_conv_QPs + 1);
     //TODO
     // use linsol loader to create QPsolver instances
     
+    //sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param, linsol_loader.get());
     sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
     
     //Setup the feasibility restoration problem

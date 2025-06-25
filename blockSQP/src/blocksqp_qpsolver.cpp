@@ -270,9 +270,7 @@ QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, c
     
     #ifdef QPSOLVER_QPOASES
     if (Qparam->sol == QPsolvers::qpOASES){
-        //QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(Qparam));
-        std::cout << "create_QPsolver: Creating qpOASES_MUMPS_solver\n" << std::flush;
-        QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(Qparam), 0);
+        QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(Qparam));
     }
     #endif
     #ifdef QPSOLVER_GUROBI
@@ -303,8 +301,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         return QPsols_par;
     }
     
-    #if defined(QPSOLVER_QPOASES) && defined(LINSOL_MUMPS)
-        std::cout << "In MUMPS specific part\n";
+    #if defined(QPSOLVER_QPOASES) && defined(SOLVER_MUMPS)
         if (param->qpsol == QPsolvers::qpOASES){
             int n_QP, m_QP, n_hess_QP, *blockIdx;
             QPsolverBase *QPsol = nullptr;
@@ -321,9 +318,20 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
                 blockIdx = prob->cond->condensed_blockIdx;
             }
             
+            load_plugins(N_QP);
             for (int i = 0; i < N_QP; i++){
-                std::cout << "Created qpOASES solver with ID " << i << "\n";
-                QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), i);
+                std::cout << "Creating qpOASES solver with ID " << i << "\n";
+                //QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), i);
+                //if (i > 1)
+                    QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), i);
+                //else if (i == 0)
+                //    QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), linsol_loader->load_symbol("dmumps_c_mod", i));
+                //else 
+                //    QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), linsol_loader->load_symbol("dmumps_c", i));
+
+                //QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), linsol_loader->load_symbol("dmumps_c", i));
+                
+                    
                 if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
                 QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
             }
@@ -534,31 +542,26 @@ threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, i
     if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel != 2)
         throw ParameterError("Invalid value sparsityLevel option for qpOASES_MUMPS_solver");
     
+    void *linsol_handle;
     void *fptr_dmumps_c;
-    #ifdef N_LINSOL_BIN
-        #if LINUX
-            //std::cout << "Loading MUMPS library at " << get_linsol_path(linsol_ID) << "\n";
-            std::cout << "Loading MUMPS library at " << get_linsol_path(0) << "\n";
-            
-            //linsol_handle = dlopen(get_linsol_path(linsol_ID), RTLD_LAZY | RTLD_LOCAL);
-            linsol_handle = dlmopen(LM_ID_NEWLM, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
-            //linsol_handle = dlmopen(LM_ID_BASE, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
-            if (linsol_handle == nullptr) throw std::runtime_error(std::string("Error, failed to load MUMPS library at ") + get_linsol_path(linsol_ID) + ". dlerror(): " + std::string(dlerror()));
-            fptr_dmumps_c = dlsym(linsol_handle, "dmumps_c");
-            if (fptr_dmumps_c == nullptr) throw std::runtime_error(std::string("Error, could not find symbol dmumps_c in binary ") + get_linsol_path(linsol_ID));
-            /*
-            #ifdef USE_MPI_H
-                int (*ptr_MPI_Init)(int*, char***) = (int (*)(int*, char***)) dlsym(mumps_handle, "MPI_Init");
-                int (*ptr_MPI_Finalize)() = (int (*)()) dlsym(mumps_handle, "MPI_Finalize");
-            #endif
-            */
-        #elif defined(WINDOWS)
-        
-        #else
-            #error "Mission operating system flag in compile options, required for multithreaded QPs with qpOASES with MUMPS solver"
+    #if LINUX
+        //std::cout << "Loading MUMPS library at " << get_linsol_path(0) << "\n";
+        linsol_handle = get_plugin_handle(linsol_ID);
+        //linsol_handle = dlopen(get_linsol_path(linsol_ID), RTLD_LAZY | RTLD_LOCAL);
+        //linsol_handle = dlmopen(LM_ID_NEWLM, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
+        //linsol_handle = dlmopen(LM_ID_BASE, get_linsol_path(0), RTLD_LAZY | RTLD_LOCAL);
+        fptr_dmumps_c = dlsym(linsol_handle, "dmumps_c");
+        if (fptr_dmumps_c == nullptr) throw std::runtime_error(std::string("Error, could not find symbol dmumps_c in binary ") + get_linsol_path(linsol_ID));
+        /*
+        #ifdef USE_MPI_H
+            int (*ptr_MPI_Init)(int*, char***) = (int (*)(int*, char***)) dlsym(mumps_handle, "MPI_Init");
+            int (*ptr_MPI_Finalize)() = (int (*)()) dlsym(mumps_handle, "MPI_Finalize");
         #endif
+        */
+    #elif defined(WINDOWS)
+    
     #else
-        throw std::runtime_error("threadsafe_qpOASES_MUMPS_solver constructor invoked, but N_LINSOL_BIN not provided as compile definition. Recompile with e.g. -DN_LINSOL_BIN=5");
+        #error "Mission operating system flag in compile options, required for multithreaded QPs with qpOASES with MUMPS solver"
     #endif
     
     qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
@@ -571,9 +574,11 @@ threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, i
 
 threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
                                                                  int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
-                                        qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
+                                        qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts), linsol_handle(nullptr){
     if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel != 2)
         throw ParameterError("Invalid value sparsityLevel option for qpOASES_MUMPS_solver");
+    
+    std::cout << "fptr_dmumps_c = " << fptr_dmumps_c << "\n";
     qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
     qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
     qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, fptr_dmumps_c));
@@ -596,7 +601,7 @@ threadsafe_qpOASES_MUMPS_solver::~threadsafe_qpOASES_MUMPS_solver(){
 
 
 
-
+/*
 std::mutex load_linsol_mutex;
 std::condition_variable load_linsol_cv;
 
@@ -649,7 +654,7 @@ void unload_linsol_plugins(void **linsol_handles, std::jthread linsol_load_TLS_h
         load_linsol_cv.notify_all();
     }
 }
-
+*/
 
 
 
@@ -657,8 +662,6 @@ void unload_linsol_plugins(void **linsol_handles, std::jthread linsol_load_TLS_h
 qpOASES_solver::~qpOASES_solver(){}
 
 void qpOASES_solver::set_lin(const Matrix &grad_obj){
-    std::cout << "Path is " << linsol_path_glob_0 << "\n";
-    //h_qp = grad_obj.array;
     std::copy(grad_obj.array, grad_obj.array + grad_obj.m, h_qp.get());
     return;
 }

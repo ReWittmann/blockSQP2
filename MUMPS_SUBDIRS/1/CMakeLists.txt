@@ -32,5 +32,8 @@ set(MUMPS_parallel no)
 set(BUILD_SHARED_LIBS yes)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 
+target_compile_options(dmumps PRIVATE -fvisibility=hidden)
+target_compile_options(dmumps_C PRIVATE -fvisibility=hidden)
+
 #set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}")
 
