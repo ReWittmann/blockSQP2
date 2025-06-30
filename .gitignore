@@ -13,5 +13,5 @@ sqpits.csv
 updatesequence.txt
 .vscode
 .VSCodeCounter
-
+MUMPS_SUBDIRS
 /build/*

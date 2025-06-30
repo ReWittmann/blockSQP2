@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_OED(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -125,10 +125,10 @@ scale_arr = 1.0;
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing
-# optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 
 #Condensing
-optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
+# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
 t0 = time.time()
@@ -151,3 +151,4 @@ else:
 t1 = time.time()
 OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 #####################
+print(t1 - t0, "s")
