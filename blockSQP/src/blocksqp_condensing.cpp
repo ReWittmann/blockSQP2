@@ -1082,11 +1082,12 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
     }
 
     //If there are no free variables in the final stage N, S_N and xi_free_N have second and first dimension zero respectively and cannot be multiplied. We have to manually omit the term
+    
     if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0)
         nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
     else
         nu_k[n_stages - 1] = Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
- 
+    
     for (int i = n_stages - 2; i>= 0; i--){
         if (num_true_cons == 0){
             J_T_sigma.Dimension(Data.cond_sizes[i]);
@@ -1098,7 +1099,7 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
 
         nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + blockSQP::Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
     }
-
+    
     nu = blockSQP::vertcat(nu_k);
     xi_full = blockSQP::vertcat(xi_full_k);
     mu_lambda = blockSQP::vertcat(mu_lambda_k);
@@ -1462,16 +1463,15 @@ void Condenser::SOC_condense(const blockSQP::Matrix &grad_obj, const blockSQP::M
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-14 || ub_con(i) - lb_con(i) >= 1e-14){
-                std::cout << "lb_con(i) = " << lb_con(i) << ", ub_con(i) = " << ub_con(i) << "\n";
                 throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }
     }
-
+    
     for (int i = 0; i < num_targets; i++){
         single_SOC_condense(i, lb_con);
     }
-
+    
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
     blockSQP::Matrix reduced_lb_con = lb_con.without_rows(c_starts, c_ends, num_targets);
     blockSQP::Matrix reduced_ub_con = ub_con.without_rows(c_starts, c_ends, num_targets);
@@ -1551,13 +1551,12 @@ void Condenser::single_SOC_condense(int tnum, const blockSQP::Matrix &lb_con){
 	std::vector<blockSQP::Matrix> w_k(n_stages);
 
     //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
-
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
 	for (int i = 1; i < n_stages; i++){
 		Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
 	}
-
+    
 	//calculate h
 	Data.h_k[n_stages] = Data.r_k[n_stages] + blockSQP::Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
 	w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
@@ -1567,14 +1566,14 @@ void Condenser::single_SOC_condense(int tnum, const blockSQP::Matrix &lb_con){
 		w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + blockSQP::Transpose(Data.A_k[k-1]) * w_k[k];
 	}
 	Data.h_k[0] = Data.r_k[0] + blockSQP::Transpose(Data.B_k[0])*w_k[0];
-
+    
 
     Data.g = blockSQP::vertcat(Data.g_k);
     Data.h = blockSQP::vertcat(Data.h_k);
 
     blockSQP::Sparse_Matrix J_d(blockSQP::horzcat(Data.J_dep_k));
     Data.Jtimes_g = blockSQP::sparse_dense_multiply(J_d, Data.g).dense();
-
+    
     return;
 }
 

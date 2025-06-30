@@ -47,8 +47,6 @@
 #endif
 
 #if SOLVER_MUMPS
-	#include <dlfcn.h>
-
 	#define USE_COMM_WORLD -987654
 
 	#include "mumps_compat.h"
@@ -1625,7 +1623,7 @@ returnValue MumpsSparseSolver::copy( 	const MumpsSparseSolver& rhs
 }
 
 
-
+/*
 int dload_MUMPS(const char* MUMPS_libdir,
 	void (*&ptr_dmumps_c)(MUMPS_STRUC_C*)
 ){
@@ -1649,7 +1647,7 @@ int dload_MUMPS_MPI(const char* MUMPS_libdir,
 	if (ptr_dmumps_c == nullptr || ptr_MPI_Init == nullptr || ptr_MPI_Finalize == nullptr) return 2;
 	return 0;
 }
-
+*/
 
 
 
@@ -1821,7 +1819,7 @@ returnValue MumpsSparseSolver_2::factorize( )
 	//     const std::lock_guard<std::mutex> lock(mumps_call_mutex);
 	// #endif
 
-
+	
     mumps_data->icntl[5] = mumps_permuting_scaling_;
     mumps_data->icntl[6] = mumps_pivot_order_;
     mumps_data->icntl[7] = mumps_scaling_;

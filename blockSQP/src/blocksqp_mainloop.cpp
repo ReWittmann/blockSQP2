@@ -98,21 +98,19 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         //if (stats->itCount == 1)    infoQP = solve_initial_QP(vars->deltaXi, vars->lambdaQP);
         //else                        infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
         
-        //DEFAULT
+        //TODO solve_initial_QP()
         if (!param->test_opt_1){
-            steady_clock::time_point t0 = steady_clock::now();
+            //steady_clock::time_point t0 = steady_clock::now();
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
-            steady_clock::time_point t1 = steady_clock::now();
-            std::cout << "Prev solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
+            //steady_clock::time_point t1 = steady_clock::now();
+            //std::cout << "Prev solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
         }
         else{
-            //EXPERIMENTAL
-            steady_clock::time_point t0 = steady_clock::now();
+            //steady_clock::time_point t0 = steady_clock::now();
             if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
-            else infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
-            steady_clock::time_point t1 = steady_clock::now();
-            std::cout << "Par solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
-
+            else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
+            //steady_clock::time_point t1 = steady_clock::now();
+            //std::cout << "Par solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
         }
         
         //if (infoQP == 0) printf("***QP solution successful***");
@@ -393,14 +391,14 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
                 if (param->fallback_approx <= 2)
-                    calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
+                    calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
                 if (param->exact_hess < 2){
                     //Calculate/Update first (pos. indefinite) hessian
                     if (param->hess_approx <= 2 || param->hess_approx > 6)
-                        calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
+                        calcHessianUpdateLimitedMemory(param->hess_approx, param->sizing, vars->hess1.get());
                     else if (param->hess_approx == 4)
                         calcFiniteDiffHessian(vars->hess1.get());
                     vars->hess2_updated = false;

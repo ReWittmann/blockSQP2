@@ -37,16 +37,22 @@ endforeach()
 #set(MUMPS_PATH_1 ${CMAKE_CURRENT_SOURCE_DIR}/MUMPS_SUBDIRS/1/install/lib/1_libdmumps.so.5.7.3.1)
 #message(STATUS MUMPS_PATH_1 " " is " " ${MUMPS_PATH_1})
 
+
+list(APPEND CMAKE_PREFIX_PATH "/etc/alternatives")
+
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
 	GIT_TAG b9ddf60306de7979ff42e5015b5eff70e28cdbed# refs/tags/v5.7.3.1
 )
-set(MUMPS_parallel no)
-set(BUILD_SHARED_LIBS yes)
-FetchContent_MakeAvailable(CMAKEMUMPS)
+set(MUMPS_parallel OFF)
+set(BUILD_SHARED_LIBS ON)
+#set(scalapack OFF)
+set(BUILD_SINGLE OFF)
+set(MUMPS_find_static ON)
 
+FetchContent_MakeAvailable(CMAKEMUMPS)
 message(STATUS "MUMPS BINARY DIR:" ${MUMPS_BINARY_DIR})
 
 
@@ -224,7 +230,11 @@ target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINUX)
 #target_compile_options(blockSQP PRIVATE -g -O0)
 #target_compile_options(blockSQP PRIVATE -fvisibility=hidden)
 
-target_compile_options(blockSQP PRIVATE -O3 -Wall -Wextra -Wno-unused-parameter -DLINUX)
+target_compile_options(blockSQP PRIVATE 
+	-O3 
+	#-g -O0
+	-DLINUX
+	-Wall -Wextra -Wno-unused-parameter)
 #foreach(i RANGE 0 7)
 #	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
 #endforeach()
@@ -292,8 +302,12 @@ if(PYTHON_INTERFACE)
 	
 	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)
-	target_compile_options(py_blockSQP PRIVATE -O3 -fvisibility=hidden
-				-Wall -Wextra -Wno-unused-parameter)
+	target_compile_options(py_blockSQP PRIVATE 
+				-fvisibility=hidden
+				-Wall -Wextra -Wno-unused-parameter
+				-O3
+				#-g -O0
+				)
 	
 	#Prevent warnings for *_pointer_interface and T_array constructors 
 	#that occur after compiling with -O3.

@@ -231,16 +231,6 @@ void SQPoptions::optionsConsistency(){
     if (qpsol_options != nullptr && qpsol_options->sol != qpsol)
         throw ParameterError("Incorrect QP solver options type given for specified QP solver");
     
-    /*
-    if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
-        if (qpsol == QPsolvers::qpOASES){
-            if (qpsol_options != nullptr && !(static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == 2 || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1))
-                throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (qpOASES_solver::sparsityLevel == 2)");
-        }
-        else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
-    }
-    */
-    
     //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
     if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
         if (qpsol == QPsolvers::qpOASES){
@@ -253,31 +243,10 @@ void SQPoptions::optionsConsistency(){
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
     }
     
-    
-    #ifdef N_LINSOL_LIBS
-        if (max_conv_QPs + 1 > N_LINSOL_LIBS)
-            throw ParameterError("Not enough linear solver binaries for options max_conv_QPs = " + std::to_string(max_conv_QPs) + ". Rebuild with N_LINSOl_LIBS = " + std::to_string(max_conv_QPs + 1));
+    #ifndef ENABLE_PAR_QPS
+        if (par_QPs) throw ParameterError("Parallel solution of QPs activated, but solver not built for parallel QPs");
     #endif
-        
-    /*
-    if (qpsol == QPsolvers::qpOASES){
-        if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::qpOASES)
-            throw ParameterError("qpOASES specified as QP solver, but options given for different QP solver");
-        if (hessUpdate == 1 && sparse < 2)
-            throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (sparse == 2)");
-    }
-    if (qpsol == QPsolvers::gurobi){
-        if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::gurobi)
-            throw ParameterError("gurobi specified as QP solver, but options given for different QP solver");
-        if (hessUpdate == 1 || hessUpdate == 4)
-            throw ParameterError("gurobi provides needed lagrange multipliers only for convex QPs, given Hessian options not possible");
-    }
-    if (qpsol == QPsolvers::qpalm){
-        if (qpsol_options != nullptr && qpsol_options->sol != QPsolver_ID::qpalm)
-            throw ParameterError("qpalm specified as QP solver, but options given for different QP solver");
-    }
-    */
-
+    
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
     if (exact_hess == 2){
         std::cout << "Exact Hessian is available, hessUpdate and sizing are ignored\n";

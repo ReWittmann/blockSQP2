@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False, integrator = 'rk4')
+OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -142,9 +142,10 @@ optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 
 #Condensing
 # optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
-optimizer.init()
-#####################
+
 t0 = time.time()
+#####################
+optimizer.init()
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
     ret = int(optimizer.run(1))

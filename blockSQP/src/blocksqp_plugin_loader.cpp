@@ -14,8 +14,8 @@ namespace blockSQP{
 #define INNER_TO_STRING(x) #x
 #define TO_STRING(x) INNER_TO_STRING(x)
 
-/*
-#ifdef N_LINSOL_BIN
+
+#ifdef N_LINSOL_PATHS
     #ifdef LINSOL_PATH_0
         const char *linsol_path_glob_0 = TO_STRING(LINSOL_PATH_0);
     #endif
@@ -67,14 +67,14 @@ const char* get_plugin_path(int linsol_ID){
         #ifdef LINSOL_PATH_7
             case 7: return linsol_path_glob_7;
         #endif
-        //  default: return nullptr;
+            default: ;
     }
-    throw std::runtime_error("No linsol path available for ID " + std::to_string(linsol_ID) + ". Please recompile with -DLINSOL_PATH_0=* ... -DLINSOL_PATH_${N_LINSOL_BIN}=*");
+    throw std::runtime_error("No linsol path available for ID " + std::to_string(linsol_ID) + ". Please recompile with -DN_LINSOL_PATHS=[N > " + std::to_string(linsol_ID) + "]-DLINSOL_PATH_0=* ... -DLINSOL_PATH_${N_LINSOL_PATHS}=*");
 }
 #else
     const char* get_plugin_path(int linsol_ID){return nullptr;}
 #endif
-*/
+
 
 #ifdef LINSOL_PATH
     const char *linsol_path_glob = TO_STRING(LINSOL_PATH);
@@ -141,19 +141,33 @@ void *get_plugin_handle(int ind){
 }
 
 
-
-void load_plugins(int N_plugins){
-    void **handle;
-    for (int i = 0; i < N_plugins; i++){
-        handle = get_handle_ptr(i);
-        if (*handle == nullptr){
-            *handle = dlmopen(LM_ID_NEWLM, get_plugin_path(), RTLD_LAZY | RTLD_LOCAL);
-            if (*handle == nullptr)
-                throw std::runtime_error(std::string("Failed to load library at \"") + get_plugin_path() + "\", dlerror(): " + dlerror());
+#ifdef LINUX
+    void load_plugins(int N_plugins){
+        void **handle;
+        for (int i = 0; i < N_plugins; i++){
+            handle = get_handle_ptr(i);
+            if (*handle == nullptr){
+                *handle = dlmopen(LM_ID_NEWLM, get_plugin_path(), RTLD_LAZY | RTLD_LOCAL);
+                if (*handle == nullptr)
+                    throw std::runtime_error(std::string("Failed to load library at \"") + get_plugin_path() + "\", dlerror(): " + dlerror());
+            }
         }
     }
-}
-
+#elif defined(WINDOWS)
+    void load_plugins(int N_plugins) {
+        void** handle;
+        for (int i = 0; i < N_plugins; i++) {
+            handle = get_handle_ptr(i);
+            if (*handle == nullptr) {
+                std::cout << "Loading module at " << get_plugin_path(i) << "\n";
+                *handle = LoadLibrary(get_plugin_path(i));
+                if (*handle == nullptr)
+                    throw std::runtime_error(std::string("Failed to load library at \"") + get_plugin_path(i) + "\"");
+                std::cout << "Load successful\n";
+            }
+        }
+    }
+#endif
 
 
 

@@ -618,7 +618,7 @@ Matrix Matrix::operator-(const Matrix &M2) const{
 Matrix Matrix::operator*(const Matrix &M2) const{
     #ifdef MATRIX_DEBUG
 	if (n != M2.m){
-		throw std::invalid_argument("Matrox *: Mismatched matrix sizes");
+		throw std::invalid_argument(std::string("Matrix *: Mismatched matrix sizes, M1.n = ") + std::to_string(n) + std::string(", M2.m = ") + std::to_string(M2.m));
 	}
     if (n == 0 && m > 0 && M2.n > 0){
         throw std::invalid_argument("Matrix *: Cannot multiply along chaining dimension zero into a true 2D matrix");

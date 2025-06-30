@@ -450,6 +450,8 @@ class OCProblem:
         self.vBlock_sizes[0] += self.np + self.ntR * self.nu
         self.vBlock_dependencies = [False]
         
+        #TODO: Ctarget starts, layout information for partial condensing
+        
         for i in range(1, self.ntS):
             xopt_arr.append(x_arr[i])
             xopt_arr.append(p_arr[i])

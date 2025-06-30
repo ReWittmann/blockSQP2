@@ -11,6 +11,8 @@
 #include <memory>
 #include <thread>
 #include <future>
+#include <chrono>
+using namespace std::chrono;
 
 #ifdef QPSOLVER_QPOASES
     #include "qpOASES.hpp"
