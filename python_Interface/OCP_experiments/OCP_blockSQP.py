@@ -104,7 +104,7 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
-# prob.cond = cond
+prob.cond = cond
 
 # import copy
 # sp = copy.copy(OCprob.start_point)

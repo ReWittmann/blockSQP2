@@ -422,7 +422,7 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         //QP_threads[maxQP - 1].join();
         //steady_clock::time_point T1 = steady_clock::now();
         
-        steady_clock::time_point TF(T1 + microseconds(int(duration_cast<microseconds>(T1 - T0).count()*1.25)) + microseconds(1000));
+        steady_clock::time_point TF(T1 + microseconds(int(duration_cast<microseconds>(T1 - T0).count()*1.25)) + microseconds(10000));
         std::cout << "BFGS QP took " << duration_cast<microseconds>(T1 - T0).count() << "mus\n";
         
         for (int j = maxQP - 2; j >= 0; j--){

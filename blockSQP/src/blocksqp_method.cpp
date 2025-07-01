@@ -88,7 +88,9 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     // use linsol loader to create QPsolver instances
     
     //sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param, linsol_loader.get());
-    sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
+    if (param->test_opt_1){
+        sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
+    }
     
     //Setup the feasibility restoration problem
     if (param->enable_rest){
