@@ -197,6 +197,8 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
 
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;
+    
+    N_QP_cancels = 0;
 }
 
 SQPiterate::SQPiterate(){}

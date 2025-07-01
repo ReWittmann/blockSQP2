@@ -63,10 +63,8 @@
 
 	#define mumps_c dmumps_c
 	
-	//void fnothing(void*){return;}
-	#ifdef QPOASES_MUMPS_NOMUTEX
+	#ifndef QPOASES_MUMPS_MUTEX
 		#define MUMPS_C(m_struc_c) mumps_c(m_struc_c);
-		//#define MUMPS_C(m_struc_c) fnothing(m_struc_c);
 	#else
 		#include <mutex>
 		std::mutex qpOASES_MUMPS_mutex;
@@ -1167,7 +1165,6 @@ static void MPIfini(void)
 
 MumpsSparseSolver::MumpsSparseSolver( ) : SparseSolver()
 {
-	std::cout << "MUMPS_LIB_PATH = " << MUMPS_LIB_PATH << "\n";
 	a_mumps = 0;
 	irn_mumps = 0;
 	jcn_mumps = 0;

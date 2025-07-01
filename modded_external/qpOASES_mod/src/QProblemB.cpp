@@ -2481,6 +2481,7 @@ returnValue QProblemB::solveQP(	const real_t* const g_new,
 			break;
 		}
 		
+		
 		if (stopToken.stop_requested()){
 			nWSR = iter;
 			if (cputime != 0)

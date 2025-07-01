@@ -47,9 +47,9 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
         if (param->lim_mem && !vars->hess2_updated){
             if (param->fallback_approx <= 2){
                 //steady_clock::time_point T0 = steady_clock::now();
-                //calcHessianUpdateLimitedMemory( param->fallback_approx, param->fallback_sizing, vars->hess2.get());
+                calcHessianUpdateLimitedMemory( param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 //steady_clock::time_point T1 = steady_clock::now();
-                calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
+                //calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 //steady_clock::time_point T2 = steady_clock::now();
                 //std::cout << "Lim mem update took " << duration_cast<microseconds>(T1 - T0).count() << "mus\n";
                 //std::cout << "Lim mem par update took " << duration_cast<microseconds>(T2 - T1).count() << "mus\n";
@@ -425,12 +425,17 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         steady_clock::time_point TF(T1 + microseconds(int(duration_cast<microseconds>(T1 - T0).count()*1.25)) + microseconds(10000));
         std::cout << "BFGS QP took " << duration_cast<microseconds>(T1 - T0).count() << "mus\n";
         
+        bool QP_cancelled = true;
         for (int j = maxQP - 2; j >= 0; j--){
-            QP_results_fs[j] = QP_results_f[j].wait_until(TF);
-            if (QP_results_fs[j] != std::future_status::ready)  QP_threads[j].request_stop();
-            else                                                QP_results[j] = QP_results_f[j].get();
+            //QP_results_fs[j] = QP_results_f[j].wait_until(TF);
+            QP_results_fs[j] = QP_results_f[j].wait_for(duration(T1 - T0)*(0.25 + vars->N_QP_cancels) + milliseconds(1));
+            if (QP_results_fs[j] != std::future_status::ready){
+                QP_cancelled = true;
+            }
+            else QP_results[j] = QP_results_f[j].get();
             QP_threads[j].join();
         }
+        vars->N_QP_cancels = (1 + vars->N_QP_cancels) * int(QP_cancelled);
         
         vars->hess_num_accepted = -1;
         stats->qpResolve = -1;

@@ -100,17 +100,17 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         
         //TODO solve_initial_QP()
         if (!param->test_opt_1){
-            //steady_clock::time_point t0 = steady_clock::now();
+            steady_clock::time_point t0 = steady_clock::now();
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
-            //steady_clock::time_point t1 = steady_clock::now();
-            //std::cout << "Prev solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
+            steady_clock::time_point t1 = steady_clock::now();
+            std::cout << "solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
         }
         else{
-            //steady_clock::time_point t0 = steady_clock::now();
+            steady_clock::time_point t0 = steady_clock::now();
             if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
             else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
-            //steady_clock::time_point t1 = steady_clock::now();
-            //std::cout << "Par solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
+            steady_clock::time_point t1 = steady_clock::now();
+            std::cout << "solveQP_par took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
         }
         
         //if (infoQP == 0) printf("***QP solution successful***");

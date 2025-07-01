@@ -154,7 +154,10 @@ class SQPiterate{
         double cNormSOpt_save;
         scaled_Problemspec *scaled_prob;              // Pointer to a scaled problem or nullptr. Used to save and restore scaling factors. 
         std::unique_ptr<double[]> scaleFactors_save;
-
+        
+        //
+        int N_QP_cancels;
+        
     public:
         /// Call allocation and initializing routines
         SQPiterate(Problemspec* prob, const SQPoptions* param);

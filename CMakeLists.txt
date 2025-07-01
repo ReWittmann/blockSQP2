@@ -38,19 +38,23 @@ endforeach()
 #message(STATUS MUMPS_PATH_1 " " is " " ${MUMPS_PATH_1})
 
 
+#set(BLA_VENDOR OpenBLAS)
+#set(BLA_STATIC ON)
+
+
 list(APPEND CMAKE_PREFIX_PATH "/etc/alternatives")
 
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
-	GIT_TAG b9ddf60306de7979ff42e5015b5eff70e28cdbed# refs/tags/v5.7.3.1
+	GIT_TAG 45c16604c1d8b61134699db04b16aae7b4704fc5# refs/tags/v5.7.3.1
 )
 set(MUMPS_parallel OFF)
 set(BUILD_SHARED_LIBS ON)
-#set(scalapack OFF)
+set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
-set(MUMPS_find_static ON)
+set(MUMPS_find_static OFF)
 
 FetchContent_MakeAvailable(CMAKEMUMPS)
 message(STATUS "MUMPS BINARY DIR:" ${MUMPS_BINARY_DIR})
@@ -117,6 +121,8 @@ set(B_${A} 4)
 message(STATUS "B_${A} = " ${B_3})
 ]]
 
+
+
 set (qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
@@ -139,14 +145,15 @@ add_library(qpOASES STATIC
 
 
 #MUMPS LINEAR SOLVER
+#find_package(BLAS REQUIRED)
+#find_package(LAPACK REQUIRED)
 
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3 -DQPOASES_MUMPS_NOMUTEX INTERFACE -Wno-overloaded-virtual)
-target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
+target_compile_options(qpOASES PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)
 #target_link_libraries(qpOASES PUBLIC LAPACK::LAPACK BLAS::BLAS)
 IF(UNIX AND NOT APPLE)
    target_compile_definitions(qpOASES PRIVATE LINUX)
-   target_compile_options(qpOASES PRIVATE -DMUMPS_LIB_PATH=\"${MUMPS_BINARY_DIR}/libdmumps.so\")
 ELSEIF(WINDOWS)
     target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
 ENDIF()
@@ -155,8 +162,7 @@ target_include_directories(qpOASES
 )
 
 target_include_directories(qpOASES
-	PRIVATE ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/include ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/libseq
-	PUBLIC	${qpos_SOURCE_DIR}/include
+	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
 	#PUBLIC	${CMAKE_CURRENT_SOURCE_DIR}/modded_external
 )
 
@@ -233,7 +239,6 @@ target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINUX)
 target_compile_options(blockSQP PRIVATE 
 	-O3 
 	#-g -O0
-	-DLINUX
 	-Wall -Wextra -Wno-unused-parameter)
 #foreach(i RANGE 0 7)
 #	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
@@ -301,7 +306,8 @@ if(PYTHON_INTERFACE)
 	FetchContent_MakeAvailable(PYBIND11)
 	
 	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
-	target_include_directories(py_blockSQP PUBLIC blockSQP/include)
+	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
+	
 	target_compile_options(py_blockSQP PRIVATE 
 				-fvisibility=hidden
 				-Wall -Wextra -Wno-unused-parameter

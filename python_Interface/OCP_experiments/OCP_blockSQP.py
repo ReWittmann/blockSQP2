@@ -60,7 +60,7 @@ opts.max_extra_steps = 0
 opts.enable_premature_termination = True
 opts.max_filter_overrides = 0
 
-opts.max_QP_secs = 5.0
+opts.max_QP_secs = 50.0
 # opts.qpsol = 'qpOASES'
 # QPopts = py_blockSQP.qpOASES_options()
 # QPopts.terminationTolerance = 1e-10
