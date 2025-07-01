@@ -11,17 +11,18 @@ import OCProblems
 plot_folder = "/home/reinhold/PLOT"
 
 
-Examples = [(OCProblems.Batch_Reactor, "Batch reactor"),
+Examples = [
+            # (OCProblems.Batch_Reactor, "Batch reactor"),
             (OCProblems.Goddard_Rocket, "Goddard's rocket"),
-            (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
-            (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-            (OCProblems.Hanging_Chain, "Hanging chain"),
-            (OCProblems.Cushioned_Oscillation, "Cushioned oscillation"),
-            (OCProblems.Egerstedt_Standard, "Egerstedt standard"),
-            (OCProblems.Electric_Car, "Electric car"),
-            (OCProblems.Particle_Steering, "Particle steering"),
-            (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
-            (OCProblems.Lotka_OED, "Lotka_OED")
+            # (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
+            # (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
+            # (OCProblems.Hanging_Chain, "Hanging chain"),
+            # (OCProblems.Cushioned_Oscillation, "Cushioned oscillation"),
+            # (OCProblems.Egerstedt_Standard, "Egerstedt standard"),
+            # (OCProblems.Electric_Car, "Electric car"),
+            # (OCProblems.Particle_Steering, "Particle steering"),
+            # (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
+            # (OCProblems.Lotka_OED, "Lotka_OED")
             ]
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.terminationTolerance = 1e-10

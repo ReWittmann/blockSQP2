@@ -13,13 +13,19 @@ project(BlockSQP
 )
 set(CMAKE_CXX_STANDARD 14)
 
+enable_language(Fortran C CXX)
+
+set(BLA_VENDOR OpenBLAS)
+set(BLA_STATIC ON)
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
 	GIT_TAG b9ddf60306de7979ff42e5015b5eff70e28cdbed# refs/tags/v5.7.3.1
 )
-set(MUMPS_parallel no)
+set(MUMPS_parallel OFF)
+set(find_static ON)
+set(BUILD_SINGLE OFF)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 
 
@@ -55,7 +61,11 @@ add_library(qpOASES STATIC
 )
 target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
 target_compile_options(qpOASES PRIVATE -O3)
-target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
+
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS BLAS::BLAS LAPACK::LAPACK)
 IF(UNIX)
    target_compile_definitions(qpOASES PRIVATE LINUX)
 ELSEIF(WINDOWS)
@@ -63,23 +73,25 @@ ELSEIF(WINDOWS)
 ENDIF()
 
 
+
 target_include_directories(qpOASES
 	PRIVATE ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/include ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/libseq
 	PUBLIC	${qpos_SOURCE_DIR}/include
 	#INTERFACE ${qpos_SOURCE_DIR}/qpOASES/include ${qpos_SOURCE_DIR}/qpOASES/include/qpOASES
 )
-target_link_libraries(qpOASES PUBLIC ${MUMPS_BIN} dl)
+#target_link_libraries(qpOASES PUBLIC ${MUMPS_BIN} dl)
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS dl)
 if (UNIX)
 	target_compile_options(qpOASES PUBLIC -fPIC)
 endif()
 
 
-add_library(blockSQP SHARED
+add_library(blockSQP STATIC
 	blockSQP/src/blocksqp_condensing.cpp
-    	blockSQP/src/blocksqp_matrix.cpp
-    	blockSQP/src/blocksqp_problemspec.cpp
-    	blockSQP/src/blocksqp_general_purpose.cpp
-    	blockSQP/src/blocksqp_glob.cpp
+	blockSQP/src/blocksqp_matrix.cpp
+	blockSQP/src/blocksqp_problemspec.cpp
+	blockSQP/src/blocksqp_general_purpose.cpp
+	blockSQP/src/blocksqp_glob.cpp
    	blockSQP/src/blocksqp_hess.cpp
    	blockSQP/src/blocksqp_iter.cpp
    	blockSQP/src/blocksqp_method.cpp
