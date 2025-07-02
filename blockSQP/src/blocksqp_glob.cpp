@@ -343,10 +343,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
-        if (!param->test_opt_1)
-            info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
-        else
-            info = solve_SOC_QP_par(deltaXiSOC, lambdaQPSOC);
+        info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
             
         if (info != 0)
             return false; // Could not solve QP, abort SOC

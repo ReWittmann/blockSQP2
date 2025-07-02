@@ -25,7 +25,7 @@
 #include "blocksqp_stats.hpp"
 #include "blocksqp_qpsolver.hpp"
 #include "blocksqp_restoration.hpp"
-#include "blocksqp_plugin_loader.hpp"
+#include "blocksqp_load_mumps.hpp"
 #include <iostream>
 #include <memory>
 #include <thread>

@@ -356,6 +356,7 @@ mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
     .method("set_automatic_scaling", [](blockSQP::SQPoptions &opts, bool val){opts.automatic_scaling = val;})
 	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_filter_overrides = val;})
     .method("set_max_extra_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_extra_steps = val;})
+    .method("set_par_QPs", [](blockSQP::SQPoptions &opts, bool val){opts.par_QPs = val;})
     ;
     
 

@@ -450,8 +450,6 @@ class OCProblem:
         self.vBlock_sizes[0] += self.np + self.ntR * self.nu
         self.vBlock_dependencies = [False]
         
-        #TODO: Ctarget starts, layout information for partial condensing
-        
         for i in range(1, self.ntS):
             xopt_arr.append(x_arr[i])
             xopt_arr.append(p_arr[i])
@@ -769,19 +767,13 @@ class Lotka_Volterra_Fishing(OCProblem):
         x0, x1 = self.get_state_arrays_expanded(xi)
         u = self.get_control_plot_arrays(xi)
         
-        # plt.figure(dpi = dpi)
-        fig,ax = plt.subplots(dpi=dpi)
-        
-        # plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
-        # plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
-        ax.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0(t)$')
-        ax.plot(self.time_grid_ref, x1, 'b--', label = '$x_1(t)$')
-        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
+        plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
         #'y-.'
-        # ax.set_xlabel(r't', loc = 'left', labelpad = -11.5, fontsize = 13)
         
-        ax.step(self.time_grid_ref, u, 'r', label = r'$u(t)$')
-        ax.legend(fontsize='x-large')
+        plt.step(self.time_grid_ref, u, 'r', label = r'$u$')
+        plt.legend(fontsize='x-large')
         
         ttl = None
         if isinstance(title,str):
@@ -791,9 +783,9 @@ class Lotka_Volterra_Fishing(OCProblem):
         if ttl is not None:
             if isinstance(it, int):
                 ttl = ttl + f', iteration {it}'
-            ax.set_title(ttl)
+            plt.title(ttl)
         else:
-            ax.set_title('')
+            plt.title('')
             
         plt.show()
 

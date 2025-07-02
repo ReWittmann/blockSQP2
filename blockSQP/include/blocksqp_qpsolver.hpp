@@ -7,7 +7,7 @@
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_condensing.hpp"
 #include "blocksqp_iterate.hpp"
-#include "blocksqp_plugin_loader.hpp"
+#include "blocksqp_load_mumps.hpp"
 #include <memory>
 #include <thread>
 #include <future>
@@ -194,7 +194,6 @@ class CQPsolver : public QPsolverBase{
 QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param);
 QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
 
-//QPsolverBase **create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QPs);
 std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
 
 
@@ -252,6 +251,9 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         int get_QP_it();
     };
     
+    //For using qpOASES with MUMPS. Mumps is meant to be loaded by the caller several times,
+    //such that the loaded modules are thread safe (e.g. via dlmopen on linux).
+    //Then different instances of this class will be threadsafe between each other. 
     class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
         public:
         void *linsol_handle;
@@ -262,8 +264,6 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         
     };
     
-    void load_linsol_plugins(int N_linsols, void** linsol_handles, std::jthread &linsol_load_TLS_hold);
-    void unload_linsol_plugins(std::jthread linsol_load_TLS_hold);
 #endif
 
 

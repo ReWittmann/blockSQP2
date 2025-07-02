@@ -428,21 +428,23 @@ void SQPmethod::calcHessianUpdateLimitedMemory_par(int updateType, int sizing, S
     //if objective derv is computed exactly, don't set the last block!
     int nBlocks = (param->exact_hess == 1 && param->block_hess) ? vars->nBlocks - 1 : vars->nBlocks;
     
-    if (nBlocks < 4){
+    int nThreads = 4;
+    
+    if (nBlocks < nThreads){
         calcHessianUpdateLimitedMemory(updateType, sizing, hess);
         return;
     }
-    
-    int nThreads = 4;    
-    int blockIdxIdx[4 + 1]{0, int(nBlocks/4), int(nBlocks/2), int((3*nBlocks)/4), nBlocks};
-    std::jthread upThreads[4];
+      
+    int blockIdxIdx[nThreads + 1]{0, int(nBlocks/4), int(nBlocks/2), int((3*nBlocks)/4), nBlocks};
+    std::jthread upThreads[nThreads];
     
     for (int j = 0; j < nThreads; j++){
         upThreads[j] = std::jthread(&SQPmethod::par_inner_update_loop, this, updateType, sizing, hess, blockIdxIdx[j], blockIdxIdx[j+1]);
     }
-    for (int j = 0; j < nThreads; j++){
-        upThreads[j].join();
-    }
+    
+    //for (int j = 0; j < nThreads; j++){
+    //    upThreads[j].join();
+    //}
     return;
 }
 

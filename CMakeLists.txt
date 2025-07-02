@@ -75,8 +75,7 @@ endif()
 
 add_library(qpOASES STATIC
 	${qpos_SOURCE_DIR}/src/Matrices.cpp          
-	#${qpos_SOURCE_DIR}/src/SparseSolver.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/SparseSolver.cpp
+	${qpos_SOURCE_DIR}/src/SparseSolver.cpp
 	${qpos_SOURCE_DIR}/src/Bounds.cpp             
 	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
 	${qpos_SOURCE_DIR}/src/SQProblem.cpp
@@ -88,10 +87,10 @@ add_library(qpOASES STATIC
 	${qpos_SOURCE_DIR}/src/SubjectTo.cpp
 	${qpos_SOURCE_DIR}/src/Indexlist.cpp          
 	${qpos_SOURCE_DIR}/src/QProblemB.cpp      
-	#${CMAKE_CURRENT_SOURCE_DIR}/modded_external/QProblemB.cpp         
+	${qpos_SOURCE_DIR}/src/QProblemB.cpp         
 	${qpos_SOURCE_DIR}/src/Utils.cpp
 	${qpos_SOURCE_DIR}/src/QProblem.cpp     
-	#${CMAKE_CURRENT_SOURCE_DIR}/modded_external/QProblem.cpp           
+	${qpos_SOURCE_DIR}/src/QProblem.cpp           
 	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
 )
 target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
@@ -113,12 +112,6 @@ target_link_libraries(qpOASES PUBLIC ${MUMPS_BIN} dl)
 if (UNIX)
 	target_compile_options(qpOASES PUBLIC -fPIC)
 endif()
-]]
-
-#[[
-set(A 3)
-set(B_${A} 4)
-message(STATUS "B_${A} = " ${B_3})
 ]]
 
 
@@ -167,6 +160,8 @@ target_include_directories(qpOASES
 )
 
 
+
+
 #MA57 LINEAR SOLVER
 #[[
 find_package(BLAS REQUIRED)
@@ -185,6 +180,7 @@ target_include_directories(qpOASES
 target_link_libraries(qpOASES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libcoinhsl.so /home/reinhold/LIB/install/lib/libmetis.a /home/reinhold/LIB/install/lib/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
 ]]
 
+
 #SPRAL LINEAR SOLVER
 #[[
 find_package(BLAS REQUIRED)
@@ -198,9 +194,9 @@ ELSEIF(WINDOWS)
 ENDIF()
 
 target_include_directories(qpOASES
-	PUBLIC	${qpOASES_MODDED_DIR}/include /home/reinhold/LIB/spral/include
+	PUBLIC	${qpOASES_MODDED_DIR}/include /path/to/.../spral/include
 )
-target_link_libraries(qpOASES PUBLIC /home/reinhold/LIB/spral/builddir/libspral.so dl)
+target_link_libraries(qpOASES PUBLIC /path/to/.../libspral.so dl)
 ]]
 
 
@@ -230,7 +226,7 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_defs.cpp
    	blockSQP/src/blocksqp_scaling.cpp
    	blockSQP/src/blocksqp_sqputils.cpp
-	blockSQP/src/blocksqp_plugin_loader.cpp
+	blockSQP/src/ext/blocksqp_load_mumps.cpp
    	)
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINUX)
 #target_compile_options(blockSQP PRIVATE -g -O0)
@@ -245,11 +241,27 @@ target_compile_options(blockSQP PRIVATE
 #endforeach()
 target_compile_options(blockSQP PRIVATE -DLINSOL_PATH=${MUMPS_BINARY_DIR}/libdmumps.so)
 
-set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP)
+set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES)
 target_link_libraries(blockSQP PUBLIC qpOASES)
 #target_link_libraries(blockSQP PUBLIC blockSQP_plugin_loader)
+
+add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
+set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext)
+target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
+
+if(WINDOWS)
+	foreach(i RANGE 0 7)
+		add_library(dmumps_c_dyn_${i} SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
+		set_target_properties(dmumps_c_dyn_${i} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext)
+		target_link_libraries(dmumps_c_dyn_${i} PRIVATE MUMPS::MUMPS)
+		target_compile_options(dmumps_c_dyn_${i} PRIVATE WINDOWS)
+	endforeach()
+endif()
+
+target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
+
 
 add_executable(example1 blockSQP/examples/example1.cpp)
 target_link_libraries(example1 blockSQP)
@@ -338,7 +350,7 @@ if(JULIA_INTERFACE)
 	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl.cpp)
 
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
-	target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter)
+	target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP JlCxx::cxxwrap_julia)
 	#set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/julia_Interface)
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)

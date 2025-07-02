@@ -1,7 +1,7 @@
 import numpy as np
+import os
 import sys
 import time
-import os
 try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 except:
@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Lotka_OED(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -38,15 +38,14 @@ opts.max_QP_secs = 5.0
 
 opts.max_conv_QPs = 4
 opts.conv_strategy = 2
+opts.par_QPs = True
+
 opts.exact_hess = 0
 opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
 opts.BFGS_damping_factor = 1/3
-opts.test_opt_1 = False
-opts.test_opt_2 = True
-opts.test_qp_hotstart = 0
 
 opts.lim_mem = True
 opts.mem_size = 20
@@ -57,16 +56,16 @@ opts.conv_kappa_max = 8.0
 opts.automatic_scaling = True
 
 opts.max_extra_steps = 0
-opts.enable_premature_termination = True
+opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
-opts.max_QP_secs = 50.0
-# opts.qpsol = 'qpOASES'
-# QPopts = py_blockSQP.qpOASES_options()
-# QPopts.terminationTolerance = 1e-10
-# QPopts.printLevel = 0
-# QPopts.sparsityLevel = 2
-# opts.qpsol_options = QPopts
+
+opts.qpsol = 'qpOASES'
+QPopts = py_blockSQP.qpOASES_options()
+QPopts.terminationTolerance = 1e-10
+QPopts.printLevel = 0
+QPopts.sparsityLevel = 2
+opts.qpsol_options = QPopts
 
 # opts.qpsol = 'qpalm'
 
@@ -104,7 +103,7 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
-prob.cond = cond
+# prob.cond = cond
 
 # import copy
 # sp = copy.copy(OCprob.start_point)
@@ -126,26 +125,13 @@ scale_arr = 1.0;
 #     OCprob.set_stage_control(scale_arr, i, [0.001, 10.0,10.0])
 # prob.arr_set_scale(scale)
 #####################
-# prob_ = prob
-# M = py_blockSQP.Matrix()
-# M.Dimension(OCprob.nVar)
-# prob = py_blockSQP.RestorationProblem(prob, M, 1.0, 0.)
-
-
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
 #No condensing
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
-
-# optimizer_2 = py_blockSQP.SQPmethod(prob, opts, stats)
-# optimizer_3 = py_blockSQP.SQPmethod(prob, opts, stats)
-
-#Condensing
-# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
-
-t0 = time.time()
-#####################
 optimizer.init()
+#####################
+t0 = time.time()
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
     ret = int(optimizer.run(1))
@@ -164,6 +150,6 @@ else:
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.time()
 OCprob.plot(xi, dpi=150, it = i, title=plot_title)
-# #####################
-
-print(t1-t0, "s")
+#####################
+time.sleep(0.01)
+print(t1 - t0, "s")

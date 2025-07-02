@@ -76,21 +76,9 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     // Create a solver object for quadratic subproblems.
     sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     
-    // Create multiple solver objects for parallel QP solution
-    /*
-    sub_QPs_par = std::make_unique<std::unique_ptr<QPsolverBase>[]>(param->max_conv_QPs + 1);
-    for (int i = 0; i < param->max_conv_QPs + 1; i++){
-        sub_QPs_par[i] = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
-    }*/
+    // If parallel solution of QPs is enabled, use dedicated QPsolver instances instead
+    if (param->par_QPs) sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
     
-    //linsol_loader = std::make_unique<plugin_loader>(param->max_conv_QPs + 1);
-    //TODO
-    // use linsol loader to create QPsolver instances
-    
-    //sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param, linsol_loader.get());
-    if (param->test_opt_1){
-        sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
-    }
     
     //Setup the feasibility restoration problem
     if (param->enable_rest){

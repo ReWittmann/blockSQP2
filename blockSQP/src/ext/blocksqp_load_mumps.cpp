@@ -1,11 +1,14 @@
-#include "blocksqp_plugin_loader.hpp"
+#include "blocksqp_load_mumps.hpp"
+#include "blocksqp_defs.hpp"
 #include <thread>
 #include <condition_variable>
 #include <future>
 #include <iostream>
+#include <cstring>
 
 #ifdef LINUX
     #include <dlfcn.h>
+    #include <libgen.h>
 #endif
 
 
@@ -140,9 +143,16 @@ void *get_plugin_handle(int ind){
     }
 }
 
+/*
+#ifdef SOLVER_MUMPS
+    extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
+#endif
+*/
 
 #ifdef LINUX
-    void load_plugins(int N_plugins){
+
+    /*
+    void load_mumps_libs(int N_plugins){        
         void **handle;
         for (int i = 0; i < N_plugins; i++){
             handle = get_handle_ptr(i);
@@ -153,21 +163,86 @@ void *get_plugin_handle(int ind){
             }
         }
     }
+    */
+    
+    extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
+    
+    const char* get_mumps_module_dir(){
+        Dl_info info;
+        bool load_success = dladdr((void*) &dmumps_c_dyn, &info);
+        if (!load_success) throw std::runtime_error(std::string("Could not get path to linsol plugins"));//, dlerror(): ") + dlerror());
+        char* path_ = new char[PATH_MAX];
+        std::strncpy(path_, info.dli_fname, PATH_MAX);
+        path_[PATH_MAX - 1] = '\0';
+        const char* dir = dirname(path_);
+        return dir;
+    }
+    
+    void load_mumps_libs(int N_plugins){
+        void **handle;
+        std::string dmumps_c_dyn_dir = std::string(get_mumps_module_dir()) + "/libdmumps_c_dyn.so";
+        for (int i = 0; i < N_plugins; i++){
+            handle = get_handle_ptr(i);
+            if (*handle == nullptr){
+                *handle = dlmopen(LM_ID_NEWLM, dmumps_c_dyn_dir.c_str(), RTLD_LAZY | RTLD_LOCAL);
+                if (*handle == nullptr)
+                    throw std::runtime_error(std::string("Failed to load library at \"") + dmumps_c_dyn_dir + "\", dlerror(): " + dlerror());
+            }
+        }
+    }
+    
+    
+    void *get_fptr_dmumps_c(int ID){
+        if (get_plugin_handle(ID) == nullptr) load_mumps_libs(ID + 1);
+        void *linsol_handle = get_plugin_handle(ID);
+        void *fptr_dmumps_c = dlsym(linsol_handle, "dmumps_c_dyn");
+        if (fptr_dmumps_c == nullptr) throw std::runtime_error(std::string("Error, could not load symbol dmumps_c from handle Nr. ") + std::to_string(ID) + std::string(", dlerror(): ") + std::string(dlerror()));
+        return fptr_dmumps_c;
+    }    
 #elif defined(WINDOWS)
-    void load_plugins(int N_plugins) {
+    
+    const char* get_mumps_module_dir(){
+        HMODULE module = nullptr;
+        bool load_success = GetModuleHandleEx( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(symbol), &module))
+        if (!load_success) throw std::runtime_error("GetModuleHandleEx failed");
+
+        char path[MAX_PATH];
+        DWORD length = GetModuleFileNameA(module, path, MAX_PATH);
+        if (length == 0 || length == MAX_PATH) 
+            throw std::runtime_error("GetModuleHandleEx failed");
+
+        return std::string(path);
+    }
+
+    void load_mumps_libs(int N_plugins) {
         void** handle;
+        std::string dmumps_c_dyn_dir = std::string(get_mumps_module_dir());
         for (int i = 0; i < N_plugins; i++) {
             handle = get_handle_ptr(i);
-            if (*handle == nullptr) {
-                std::cout << "Loading module at " << get_plugin_path(i) << "\n";
-                *handle = LoadLibrary(get_plugin_path(i));
+            if (*handle == nullptr){
+                *handle = LoadLibrary((dmumps_c_dyn_dir + "\\dmumps_c_dyn_" + std::to_string(i) + ".dll").c_str());
                 if (*handle == nullptr)
                     throw std::runtime_error(std::string("Failed to load library at \"") + get_plugin_path(i) + "\"");
                 std::cout << "Load successful\n";
             }
         }
     }
+    
+    void *get_fptr_dmumps_c(int ID){
+        if (get_plugin_handle(ID) == nullptr) load_mumps_libs(ID + 1);
+        void *linsol_handle = get_plugin_handle(ID);
+        fptr_dmumps_c = (void *) GetProcAddress((HMODULE) linsol_handle, "dmumps_c_dyn");
+        if (fptr_dmumps_c == nullptr) throw std::runtime_error("Could not load symbol my_dmumps_c from handle Nr. " + std::to_string(linsol_ID));
+    }
+    
+#else
+    void load_mumps_libs(int N_plugins){
+        throw NotImplementedError("load_mumps_libs should never be called on this platform");
+    }
 #endif
+
+
+
 
 
 

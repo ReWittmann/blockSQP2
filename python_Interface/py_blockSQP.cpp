@@ -679,7 +679,7 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     }
     )
     .def_readwrite("qpsol_options", &blockSQP::SQPoptions::qpsol_options)
-    .def_readwrite("test_opt_1", &blockSQP::SQPoptions::test_opt_1)
+    .def_readwrite("par_QPs", &blockSQP::SQPoptions::par_QPs)
     .def_readwrite("test_opt_2", &blockSQP::SQPoptions::test_opt_2)
     .def_readwrite("test_join_all", &blockSQP::SQPoptions::test_join_all)
     .def_readwrite("test_qp_hotstart", &blockSQP::SQPoptions::test_qp_hotstart)

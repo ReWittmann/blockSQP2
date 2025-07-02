@@ -28,39 +28,35 @@ import OCProblems
 #  'Tubular_Reactor]
 
 ###############################################################################
-OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False)
+OCprob = OCProblems.Egerstedt_Standard(nt = 100, parallel = False, integrator = 'RK4')
 
 nPert0 = 0
-nPertF = 40
-EXP = (1,)
+nPertF = 5
+EXP = (1,2)
 
+suptitle = 'Egerstedt standard'
 titles = [
-    "Ipopt, limited memory",
-    # "Convexification strategy 1",
-    # "Convexification strategy 2",
-    # "Convexification strategy 2",
-    # "Convexification strategy 2, automatic scaling"
-    # ""
+    "Ipopt, limited-memory BFGS",
+    "Ipopt, exact Hessian"
     ]
-itMax = 400
+itMax = 200
 ###############################################################################
 
-ipopts = {'hessian_approximation': 'limited-memory', 
-          'limited_memory_max_history': 20, 
-          'constr_viol_tol': 1e-6, 
-          'tol': 1e-6, 
-          'max_iter': itMax}
+ipopts = {'hessian_approximation': 'limited-memory', 'limited_memory_max_history':20,\
+          'constr_viol_tol':1e-5, 'tol':1e-5, 'max_iter':itMax}
 EXP_N_SQP = []
 EXP_N_secs = []
 EXP_type_sol = []
 n_EXP = 0
 if 1 in EXP:
+    
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.ipopt_perturbed_starts(OCprob, ipopts, nPert0, nPertF, itMax = itMax)
     EXP_N_SQP.append(ret_N_SQP)
     EXP_N_secs.append(ret_N_secs)
     EXP_type_sol.append(ret_type_sol)
     n_EXP += 1
 if 2 in EXP:
+    ipopts['hessian_approximation'] = 'exact'
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.ipopt_perturbed_starts(OCprob, ipopts, nPert0, nPertF, itMax = itMax)
     EXP_N_SQP.append(ret_N_SQP)
     EXP_N_secs.append(ret_N_secs)
@@ -73,7 +69,7 @@ if 3 in EXP:
     EXP_type_sol.append(ret_type_sol)
     n_EXP += 1
 ###############################################################################
-OCP_experiment.plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+OCP_experiment.plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = suptitle)
 
 # OCP_experiment.plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 

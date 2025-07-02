@@ -72,7 +72,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-
+        
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars.get(), param, hasConverged );
@@ -95,11 +95,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         
         /// Solve QP subproblem with qpOASES or QPOPT
-        //if (stats->itCount == 1)    infoQP = solve_initial_QP(vars->deltaXi, vars->lambdaQP);
-        //else                        infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
-        
-        //TODO solve_initial_QP()
-        if (!param->test_opt_1){
+        if (!param->par_QPs){
             steady_clock::time_point t0 = steady_clock::now();
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
             steady_clock::time_point t1 = steady_clock::now();
@@ -391,14 +387,14 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
                 if (param->fallback_approx <= 2)
-                    calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
+                    calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
                 if (param->exact_hess < 2){
                     //Calculate/Update first (pos. indefinite) hessian
                     if (param->hess_approx <= 2 || param->hess_approx > 6)
-                        calcHessianUpdateLimitedMemory(param->hess_approx, param->sizing, vars->hess1.get());
+                        calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
                     else if (param->hess_approx == 4)
                         calcFiniteDiffHessian(vars->hess1.get());
                     vars->hess2_updated = false;

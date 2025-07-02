@@ -145,7 +145,6 @@ class SQPoptions{
     
     
     //For experimental purposes
-    bool test_opt_1 = false;
     bool test_opt_2 = true;
     bool test_join_all = false;
     int test_qp_hotstart = 0;

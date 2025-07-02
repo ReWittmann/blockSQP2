@@ -243,9 +243,18 @@ void SQPoptions::optionsConsistency(){
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
     }
     
-    #ifndef ENABLE_PAR_QPS
-        if (par_QPs) throw ParameterError("Parallel solution of QPs activated, but solver not built for parallel QPs");
-    #endif
+    if (par_QPs && qpsol == QPsolvers::qpOASES){
+        #ifdef SOLVER_MUMPS
+            #if defined(LINUX) && !defined(LINSOL_PATH)
+                throw ParameterError("Parallel solution of QPs is not possible with qpOASES with the sparse solver MUMPS on LINUX unless LINSOL_PATH, the path to the shared MUMPS library, is provided as macro definition, because MUMPS is not thread safe");
+            #elif defined(WINDOWS) && !defined(N_LINSOL_PATHS)
+                throw ParameterError("Parallel solution of QPs is not possible with qpOASES with the sparse solver MUMPS on WINDOWS unless NLINSOL_PATHS, LINSOL_PATH_0,...,LINSOL_PATH_{${N_LINSOL_PATHS} - 1}, the paths to several distinct shared MUMPS libraries, are provided as macro definitions, because MUMPS is not thread safe");
+            #endif
+            #ifndef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
+                throw ParameterError("A modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+            #endif
+        #endif
+    }
     
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
     if (exact_hess == 2){

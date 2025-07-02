@@ -46,8 +46,10 @@ class plugin_loader{
 };
 */
 
-void load_plugins(int N_plugins);
+void load_mumps_libs(int N_plugins);
 void *get_plugin_handle(int ind);
+void *get_fptr_dmumps_c(int ID);
+
 
 }
 #endif

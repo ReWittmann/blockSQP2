@@ -45,7 +45,6 @@
 
 BEGIN_NAMESPACE_QPOASES
 
-
 /**
  *	\brief Implements the online active set strategy for QPs with varying, sparse matrices.
  *
@@ -57,6 +56,10 @@ BEGIN_NAMESPACE_QPOASES
  *	\version 3.2
  *	\date 2012-2017
  */
+
+//Flag indicating that SQProblemSchur constructor has been modified to allow passing through pointer to MUMPS interface function.
+#define SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
+ 
 class SQProblemSchur : public SQProblem
 {
 	/* allow SolutionAnalysis class to access private members */
