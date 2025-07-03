@@ -5,6 +5,8 @@
 #include <future>
 #include <iostream>
 #include <cstring>
+#include <filesystem>
+#include <memory>
 
 #ifdef LINUX
     #include <dlfcn.h>
@@ -201,30 +203,29 @@ void *get_plugin_handle(int ind){
         return fptr_dmumps_c;
     }    
 #elif defined(WINDOWS)
-/*
-    const char* get_mumps_module_dir(){
+
+    std::string get_current_lib_dir(){
         HMODULE module = nullptr;
-        bool load_success = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>((void*) &dmumps_c_dyn), &module);
+        bool load_success = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>((void*) &get_current_lib_dir), &module);
         if (!load_success) throw std::runtime_error("GetModuleHandleEx failed");
 
-        char *path = new char[MAX_PATH];
+        char path[MAX_PATH];
         DWORD length = GetModuleFileNameA(module, path, MAX_PATH);
         if (length == 0 || length == MAX_PATH) 
             throw std::runtime_error("GetModuleFileNameA failed");
         
-        return path;
+        return std::filesystem::path(path).parent_path().string();
     }
-    */
+    
     void load_mumps_libs(int N_plugins) {
         void** handle;
-        std::string dmumps_c_dyn_dir = std::string(get_mumps_module_dir());
+        std::string dmumps_c_dyn_dir = get_current_lib_dir();
         for (int i = 0; i < N_plugins; i++) {
             handle = get_handle_ptr(i);
             if (*handle == nullptr){
                 *handle = LoadLibrary((dmumps_c_dyn_dir + "\\dmumps_c_dyn_" + std::to_string(i) + ".dll").c_str());
                 if (*handle == nullptr)
-                    throw std::runtime_error(std::string("Failed to load library at \"") + dmumps_c_dyn_dir + "\"");
-                std::cout << "Load successful\n";
+                    throw std::runtime_error(std::string("Failed to load library at \"") + dmumps_c_dyn_dir + "\\dmumps_c_dyn_" + std::to_string(i) + ".dll" + "\"");
             }
         }
     }

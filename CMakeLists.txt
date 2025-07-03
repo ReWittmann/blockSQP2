@@ -39,7 +39,11 @@ endforeach()
 
 
 #set(BLA_VENDOR OpenBLAS)
-set(BLA_STATIC ON)
+
+if(WIN32)
+	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
+	add_compile_options(/MT)
+endif()
 
 include(FetchContent)
 FetchContent_Declare(
@@ -251,23 +255,45 @@ target_link_libraries(blockSQP PUBLIC qpOASES)
 
 if (UNIX AND NOT APPLE)
 add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
-set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext
-											  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext
-											  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext)
+set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
+											  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
+											  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
 target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
+target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
+
+function(copy_mumps_dlls LIBPATH)
+endfunction()
 elseif(WIN32)
 	foreach(i RANGE 0 7)
 		add_library(dmumps_c_dyn_${i} SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 		set_target_properties(dmumps_c_dyn_${i} PROPERTIES 
-				LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext
-				ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext
-				RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext)
+				LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
+				ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
+				RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
 		target_link_libraries(dmumps_c_dyn_${i} PRIVATE MUMPS::MUMPS)
 		target_compile_definitions(dmumps_c_dyn_${i} PRIVATE WINDOWS)
+
+		#[[
+		add_custom_command(TARGET dmumps_c_dyn_${i} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${CMAKE_SOURCE_DIR}/blockSQP/bin/dmumps_c_dyn_${i}.dll
+					${CMAKE_SOURCE_DIR}/blockSQP/examples/bin
+		)]]
 	endforeach()
+	function(copy_mumps_dlls LIBPATH)
+		foreach(i RANGE 0 7)
+			set(mumps_lib dmumps_c_dyn_${i})
+			add_custom_command(TARGET ${mumps_lib} POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+						${CMAKE_SOURCE_DIR}/blockSQP/bin/${mumps_lib}.dll
+						${LIBPATH}
+			)
+		endforeach()
+	endfunction()
 endif()
 
-target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
+
+copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
 
 
 
@@ -275,20 +301,20 @@ add_executable(example1 blockSQP/examples/example1.cpp)
 target_link_libraries(example1 blockSQP)
 set_target_properties(example1
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples")
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin")
 	
 add_executable(example1_sparse blockSQP/examples/example1_sparse.cpp)
 target_link_libraries(example1_sparse blockSQP)
 set_target_properties(example1_sparse
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples")
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin")
 
 add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP)
 target_compile_options(example_condensing PRIVATE -g -O0)
 set_target_properties(example_condensing
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
 )
 
 add_executable(example_CQPsolver blockSQP/examples/example_CQPsolver.cpp)
@@ -296,7 +322,7 @@ target_link_libraries(example_CQPsolver blockSQP)
 target_compile_options(example_CQPsolver PRIVATE -g -O0)
 set_target_properties(example_CQPsolver
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
 )
 
 #[[
@@ -340,6 +366,8 @@ if(PYTHON_INTERFACE)
 	target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
+
+	copy_mumps_dlls(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
 endif()
 
 option(JULIA_INTERFACE "build julia interface" OFF)
@@ -362,5 +390,7 @@ if(JULIA_INTERFACE)
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP JlCxx::cxxwrap_julia)
 	#set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/julia_Interface)
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
+
+	copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 endif()
 

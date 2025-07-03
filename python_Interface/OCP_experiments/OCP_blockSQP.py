@@ -121,12 +121,13 @@ scale_arr = 1.0;
 # prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
-
 #No condensing
+tm1 = time.time()
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 optimizer.init()
 #####################
 t0 = time.time()
+print("Created SQPmethod in ", t0 - tm1, "s\n")
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
     ret = int(optimizer.run(1))
@@ -144,7 +145,7 @@ else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.time()
-OCprob.plot(xi, dpi=150, it = i, title=plot_title)
+#OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 #####################
 time.sleep(0.01)
 print(t1 - t0, "s")
