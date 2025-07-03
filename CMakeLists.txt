@@ -39,7 +39,7 @@ endforeach()
 
 
 #set(BLA_VENDOR OpenBLAS)
-set(BLA_STATIC ON)
+#set(BLA_STATIC ON)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -93,7 +93,7 @@ target_compile_options(qpOASES PRIVATE -O3)
 target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
 IF(UNIX AND NOT APPLE)
    target_compile_definitions(qpOASES PRIVATE LINUX)
-ELSEIF(WIN32)
+ELSEIF(WINDOWS)
     target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
 ENDIF()
 
@@ -145,7 +145,7 @@ IF(UNIX)
 	if (NOT APPLE)
 		target_link_libraries(qpOASES PUBLIC -lgfortran)
 	endif()
-ELSEIF(WIN32)
+ELSEIF(WINDOWS)
     target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
 ENDIF()
 target_include_directories(qpOASES
@@ -171,7 +171,7 @@ target_compile_definitions(qpOASES PRIVATE SOLVER_MA57 __NO_COPYRIGHT__)
 target_compile_options(qpOASES PRIVATE -O3)
 IF(UNIX AND NOT APPLE)
    target_compile_definitions(qpOASES PRIVATE LINUX)
-ELSEIF(WIN32)
+ELSEIF(WINDOWS)
     target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
 ENDIF()
 
@@ -190,7 +190,7 @@ target_compile_definitions(qpOASES PRIVATE SOLVER_SPRAL __NO_COPYRIGHT__)
 target_compile_options(qpOASES PRIVATE -O3)
 IF(UNIX AND NOT APPLE)
    target_compile_definitions(qpOASES PRIVATE LINUX)
-ELSEIF(WIN32)
+ELSEIF(WINDOWS)
     target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
 ENDIF()
 
@@ -204,7 +204,7 @@ target_link_libraries(qpOASES PUBLIC /path/to/.../libspral.so dl)
 
 
 
-add_library(blockSQP STATIC
+add_library(blockSQP SHARED
 	blockSQP/src/blocksqp_condensing.cpp
 	blockSQP/src/blocksqp_matrix.cpp
 	blockSQP/src/blocksqp_problemspec.cpp
@@ -230,7 +230,7 @@ target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
 
 if (UNIX AND NOT APPLE)
 	target_compile_definitions(blockSQP PUBLIC LINUX)
-elseif(WIN32)
+elseif(WINDOWS)
 	target_compile_definitions(blockSQP PUBLIC WINDOWS)
 endif()
 
@@ -241,29 +241,21 @@ target_compile_options(blockSQP PRIVATE
 
 #target_compile_options(blockSQP PRIVATE -DLINSOL_PATH=${MUMPS_BINARY_DIR}/libdmumps.so)
 
-set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
-										  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
-										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
+set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES)
 target_link_libraries(blockSQP PUBLIC qpOASES)
 
 
 if (UNIX AND NOT APPLE)
-add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
-set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext
-											  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext
-											  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext)
-target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
+	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
+	set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext)
+	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
 elseif(WIN32)
 	foreach(i RANGE 0 7)
 		add_library(dmumps_c_dyn_${i} SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
-		set_target_properties(dmumps_c_dyn_${i} PROPERTIES 
-				LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext
-				ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext
-				RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin/ext)
+		set_target_properties(dmumps_c_dyn_${i} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext)
 		target_link_libraries(dmumps_c_dyn_${i} PRIVATE MUMPS::MUMPS)
-		target_compile_definitions(dmumps_c_dyn_${i} PRIVATE WINDOWS)
 	endforeach()
 endif()
 
@@ -339,7 +331,8 @@ if(PYTHON_INTERFACE)
 	#that occur after compiling with -O3.
 	target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
-	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface)
+	#set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface)
+	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
 endif()
 
 option(JULIA_INTERFACE "build julia interface" OFF)

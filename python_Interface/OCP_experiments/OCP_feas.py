@@ -9,7 +9,6 @@ except:
     sys.path.append(os.getcwd() + "/..")
 
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 
 
@@ -68,7 +67,7 @@ feas_jac_g_0 = feas_jac_g(feas_start)
 
 
 
-prob = Problemspec()
+prob = py_blockSQP.Problemspec()
 prob.nVar = Lprob.nVar + Lprob.nCon
 prob.nCon = Lprob.nCon
 

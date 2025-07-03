@@ -7,7 +7,6 @@ except:
 
 import OCProblems
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import numpy as np
 import copy
 import time
@@ -100,7 +99,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
     
     
-    prob = Problemspec()
+    prob = py_blockSQP.Problemspec()
     prob.x_start = OCprob.start_point
     
     prob.nVar = OCprob.nVar

@@ -8,7 +8,6 @@ except:
     sys.path.append(os.getcwd() + "/..")
 
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 
 itMax = 100
@@ -59,16 +58,12 @@ opts.max_extra_steps = 0
 opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
-
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.terminationTolerance = 1e-10
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
-
-# opts.qpsol = 'qpalm'
-
 ################################
 
 #Create condenser, chose SCQPmethod below to enable condensing
@@ -88,7 +83,7 @@ cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
 
 
 #Define blockSQP Problemspec
-prob = Problemspec()
+prob = py_blockSQP.Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 

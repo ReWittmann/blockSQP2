@@ -8,7 +8,6 @@ try:
 except:
     sys.path.append(os.getcwd() + "/..")
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 import time
 import copy
