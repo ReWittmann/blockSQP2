@@ -2,7 +2,7 @@
 #include "dmumps_c.h"
 
 #ifdef WINDOWS
-    #define dl_exp __declspec__(dllexpor)
+    #define dl_exp __declspec(dllexport)
 #else
     #define dl_exp
 #endif

@@ -422,7 +422,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMa
     return;
 }
 
-
+#define LIM_MEM_N_THREADS 4
 
 void SQPmethod::calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess){
     //if objective derv is computed exactly, don't set the last block!
@@ -430,15 +430,15 @@ void SQPmethod::calcHessianUpdateLimitedMemory_par(int updateType, int sizing, S
     
     int nThreads = 4;
     
-    if (nBlocks < nThreads){
+    if (nBlocks < LIM_MEM_N_THREADS){
         calcHessianUpdateLimitedMemory(updateType, sizing, hess);
         return;
     }
       
-    int blockIdxIdx[nThreads + 1]{0, int(nBlocks/4), int(nBlocks/2), int((3*nBlocks)/4), nBlocks};
-    std::jthread upThreads[nThreads];
+    int blockIdxIdx[LIM_MEM_N_THREADS + 1]{0, int(nBlocks/4), int(nBlocks/2), int((3*nBlocks)/4), nBlocks};
+    std::jthread upThreads[LIM_MEM_N_THREADS];
     
-    for (int j = 0; j < nThreads; j++){
+    for (int j = 0; j < LIM_MEM_N_THREADS; j++){
         upThreads[j] = std::jthread(&SQPmethod::par_inner_update_loop, this, updateType, sizing, hess, blockIdxIdx[j], blockIdxIdx[j+1]);
     }
     

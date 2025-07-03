@@ -9,6 +9,8 @@
 #ifdef LINUX
     #include <dlfcn.h>
     #include <libgen.h>
+#elif defined(WINDOWS)
+    #include "windows.h"
 #endif
 
 
@@ -149,10 +151,9 @@ void *get_plugin_handle(int ind){
 #endif
 */
 
-extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
 
 #ifdef LINUX
-
+    extern "C" void dmumps_c_dyn(void* mumps_struc_c_dyn);
     /*
     void load_mumps_libs(int N_plugins){        
         void **handle;
@@ -200,19 +201,20 @@ extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
         return fptr_dmumps_c;
     }    
 #elif defined(WINDOWS)
+/*
     const char* get_mumps_module_dir(){
         HMODULE module = nullptr;
-        bool load_success = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(symbol), &module);
+        bool load_success = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>((void*) &dmumps_c_dyn), &module);
         if (!load_success) throw std::runtime_error("GetModuleHandleEx failed");
 
-        char *path_ = new char[MAX_PATH];
+        char *path = new char[MAX_PATH];
         DWORD length = GetModuleFileNameA(module, path, MAX_PATH);
         if (length == 0 || length == MAX_PATH) 
             throw std::runtime_error("GetModuleFileNameA failed");
         
         return path;
     }
-
+    */
     void load_mumps_libs(int N_plugins) {
         void** handle;
         std::string dmumps_c_dyn_dir = std::string(get_mumps_module_dir());
@@ -221,7 +223,7 @@ extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
             if (*handle == nullptr){
                 *handle = LoadLibrary((dmumps_c_dyn_dir + "\\dmumps_c_dyn_" + std::to_string(i) + ".dll").c_str());
                 if (*handle == nullptr)
-                    throw std::runtime_error(std::string("Failed to load library at \"") + get_plugin_path(i) + "\"");
+                    throw std::runtime_error(std::string("Failed to load library at \"") + dmumps_c_dyn_dir + "\"");
                 std::cout << "Load successful\n";
             }
         }
@@ -230,8 +232,9 @@ extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
     void *get_fptr_dmumps_c(int ID){
         if (get_plugin_handle(ID) == nullptr) load_mumps_libs(ID + 1);
         void *linsol_handle = get_plugin_handle(ID);
-        fptr_dmumps_c = (void *) GetProcAddress((HMODULE) linsol_handle, "dmumps_c_dyn");
-        if (fptr_dmumps_c == nullptr) throw std::runtime_error("Could not load symbol my_dmumps_c from handle Nr. " + std::to_string(linsol_ID));
+        void *fptr_dmumps_c = (void *) GetProcAddress((HMODULE) linsol_handle, "dmumps_c_dyn");
+        if (fptr_dmumps_c == nullptr) throw std::runtime_error("Could not load symbol my_dmumps_c from handle Nr. " + std::to_string(ID));
+        return fptr_dmumps_c;
     }
     
 #else

@@ -20,7 +20,7 @@ using namespace std::chrono;
 #ifdef LINUX
     #include <dlfcn.h>
 #elif defined(WINDOWS)
-    #include "windows.h"
+    //#include "windows.h"
 #endif
 
 namespace blockSQP{
@@ -493,10 +493,12 @@ threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, i
         fptr_dmumps_c = dlsym(linsol_handle, "dmumps_c");
         if (fptr_dmumps_c == nullptr) throw std::runtime_error(std::string("Error, could not load symbol dmumps_c from handle Nr. ") + std::to_string(linsol_ID) + std::string(", dlerror(): ") + std::string(dlerror()));
     #elif defined(WINDOWS)
+        /*
         std::cout << "Loading mumps plugin Nr. " << linsol_ID << "\n";
         fptr_dmumps_c = (void *) GetProcAddress((HMODULE) linsol_handle, "my_dmumps_c");
         if (fptr_dmumps_c == nullptr) throw std::runtime_error("Could not load symbol my_dmumps_c from handle Nr. " + std::to_string(linsol_ID));
         std::cout << "Successfully loaded mumps plugin Nr. " << linsol_ID << "\n";
+        */
     #else
         #error "Mission operating system flag in compile options, required for multithreaded QPs with qpOASES with MUMPS solver"
     #endif

@@ -5,6 +5,13 @@ cmake_install.cmake
 CMakeCache.txt
 *.so
 *.a
+*.lib
+*.dll
+*.exp
+*.pyd
+*.exe
+*.pdb
+*.ilk
 CMakeLists_TEMPLATE.txt
 __pycache__
 example1
@@ -13,7 +20,7 @@ sqpits.csv
 updatesequence.txt
 .vscode
 .VSCodeCounter
-
+.vs
 
 build/
 install/

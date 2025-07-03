@@ -21,7 +21,11 @@
 #include <iostream>
 #include <string>
 #include <chrono>
-#include "cblas.h"
+#ifdef WINDOWS
+    #include "mkl.h"
+#else
+    #include "cblas.h"
+#endif
 #define MATRIX_DEBUG
 
 namespace blockSQP
