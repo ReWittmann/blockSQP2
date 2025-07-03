@@ -12,9 +12,9 @@ project(BlockSQP
     	LANGUAGES CXX
 )
 set(CMAKE_CXX_STANDARD 20)
+enable_language(Fortran)
 
-
-set(N_LINSOL_BIN -1 CACHE STRING "The number of created MUMPS binaries for calling in different threads (MUMPS is not thread safe)")
+#set(N_LINSOL_BIN -1 CACHE STRING "The number of created MUMPS binaries for calling in different threads (MUMPS is not thread safe)")
 
 #[[
 include(ExternalProject)
@@ -41,9 +41,6 @@ endforeach()
 #set(BLA_VENDOR OpenBLAS)
 #set(BLA_STATIC ON)
 
-
-list(APPEND CMAKE_PREFIX_PATH "/etc/alternatives")
-
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
@@ -51,14 +48,12 @@ FetchContent_Declare(
 	GIT_TAG 45c16604c1d8b61134699db04b16aae7b4704fc5# refs/tags/v5.7.3.1
 )
 set(MUMPS_parallel OFF)
-set(BUILD_SHARED_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
-set(MUMPS_find_static OFF)
+set(MUMPS_find_static ON)
 
 FetchContent_MakeAvailable(CMAKEMUMPS)
-message(STATUS "MUMPS BINARY DIR:" ${MUMPS_BINARY_DIR})
-
 
 
 #[[
@@ -145,8 +140,11 @@ target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_CO
 target_compile_options(qpOASES PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)
 #target_link_libraries(qpOASES PUBLIC LAPACK::LAPACK BLAS::BLAS)
-IF(UNIX AND NOT APPLE)
-   target_compile_definitions(qpOASES PRIVATE LINUX)
+IF(UNIX)
+	target_compile_definitions(qpOASES PRIVATE LINUX)
+	if (NOT APPLE)
+		target_link_libraries(qpOASES PUBLIC -lgfortran)
+	endif()
 ELSEIF(WINDOWS)
     target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
 ENDIF()
@@ -159,6 +157,9 @@ target_include_directories(qpOASES
 	#PUBLIC	${CMAKE_CURRENT_SOURCE_DIR}/modded_external
 )
 
+if (UNIX)
+	target_compile_options(qpOASES PUBLIC -fPIC)
+endif()
 
 
 
@@ -201,11 +202,6 @@ target_link_libraries(qpOASES PUBLIC /path/to/.../libspral.so dl)
 
 
 
-if (UNIX)
-	target_compile_options(qpOASES PUBLIC -fPIC)
-endif()
-
-
 
 
 add_library(blockSQP SHARED
@@ -228,24 +224,29 @@ add_library(blockSQP SHARED
    	blockSQP/src/blocksqp_sqputils.cpp
 	blockSQP/src/ext/blocksqp_load_mumps.cpp
    	)
-target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES LINUX)
+target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
 #target_compile_options(blockSQP PRIVATE -g -O0)
 #target_compile_options(blockSQP PRIVATE -fvisibility=hidden)
+
+if (UNIX AND NOT APPLE)
+	target_compile_definitions(blockSQP PUBLIC LINUX)
+elseif(WINDOWS)
+	target_compile_definitions(blockSQP PUBLIC WINDOWS)
+endif()
 
 target_compile_options(blockSQP PRIVATE 
 	-O3 
 	#-g -O0
 	-Wall -Wextra -Wno-unused-parameter)
-#foreach(i RANGE 0 7)
-#	target_compile_options(blockSQP PRIVATE -DLINSOL_PATH_${i}=${MUMPS_PATH_${i}})
-#endforeach()
-target_compile_options(blockSQP PRIVATE -DLINSOL_PATH=${MUMPS_BINARY_DIR}/libdmumps.so)
+
+#target_compile_options(blockSQP PRIVATE -DLINSOL_PATH=${MUMPS_BINARY_DIR}/libdmumps.so)
 
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib)
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES)
 target_link_libraries(blockSQP PUBLIC qpOASES)
-#target_link_libraries(blockSQP PUBLIC blockSQP_plugin_loader)
+
+
 
 add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext)
@@ -256,11 +257,11 @@ if(WINDOWS)
 		add_library(dmumps_c_dyn_${i} SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 		set_target_properties(dmumps_c_dyn_${i} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib/ext)
 		target_link_libraries(dmumps_c_dyn_${i} PRIVATE MUMPS::MUMPS)
-		target_compile_options(dmumps_c_dyn_${i} PRIVATE WINDOWS)
 	endforeach()
 endif()
 
 target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
+
 
 
 add_executable(example1 blockSQP/examples/example1.cpp)

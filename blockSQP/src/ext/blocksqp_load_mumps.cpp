@@ -17,7 +17,7 @@ namespace blockSQP{
 #define INNER_TO_STRING(x) #x
 #define TO_STRING(x) INNER_TO_STRING(x)
 
-
+/*
 #ifdef N_LINSOL_PATHS
     #ifdef LINSOL_PATH_0
         const char *linsol_path_glob_0 = TO_STRING(LINSOL_PATH_0);
@@ -85,7 +85,7 @@ const char* get_plugin_path(int linsol_ID){
 #else
      const char* get_plugin_path(){throw std::runtime_error("No linsol path provided");};
 #endif
-
+*/
 
 void *glob_handle_0 = nullptr;
 void *glob_handle_1 = nullptr;
@@ -149,6 +149,8 @@ void *get_plugin_handle(int ind){
 #endif
 */
 
+extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
+
 #ifdef LINUX
 
     /*
@@ -164,8 +166,6 @@ void *get_plugin_handle(int ind){
         }
     }
     */
-    
-    extern "C" void dmumps_c_dyn(void *mumps_struc_c_dyn);
     
     const char* get_mumps_module_dir(){
         Dl_info info;
@@ -200,18 +200,17 @@ void *get_plugin_handle(int ind){
         return fptr_dmumps_c;
     }    
 #elif defined(WINDOWS)
-    
     const char* get_mumps_module_dir(){
         HMODULE module = nullptr;
-        bool load_success = GetModuleHandleEx( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(symbol), &module))
+        bool load_success = GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCSTR>(symbol), &module);
         if (!load_success) throw std::runtime_error("GetModuleHandleEx failed");
 
-        char path[MAX_PATH];
+        char *path_ = new char[MAX_PATH];
         DWORD length = GetModuleFileNameA(module, path, MAX_PATH);
         if (length == 0 || length == MAX_PATH) 
-            throw std::runtime_error("GetModuleHandleEx failed");
-
-        return std::string(path);
+            throw std::runtime_error("GetModuleFileNameA failed");
+        
+        return path;
     }
 
     void load_mumps_libs(int N_plugins) {

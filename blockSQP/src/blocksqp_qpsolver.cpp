@@ -338,6 +338,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
             QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
         }
         */
+        load_mumps_libs(N_QP);
         for (int i = 0; i < N_QP; i++){
             QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
             if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
