@@ -98,19 +98,15 @@ class SQPmethod{
         void updateStepBoundsSOC();
         /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
         //If hess_type is 0, solution is tried with increasingly convexified hessian approximations. If hess_type is 1, only convex hessian approximations are used. If hess_type is 2, only the (scaled) identity is used as hessian
-        virtual int solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP);
+        //virtual int solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP);
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         
         virtual int solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
         virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        //virtual int solveQP_par_conv_str_2(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
-        virtual int solve_SOC_QP_par( Matrix &deltaXi, Matrix &lambdaQP);
         
-        // ??? QP_loop()
-        // 
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         virtual void computeNextHessian( int idx, int maxQP );

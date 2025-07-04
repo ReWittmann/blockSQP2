@@ -133,6 +133,7 @@ class SQPiterate{
 
         //Convexification strategy 1 and 2
         int hess_num_accepted;                        // order of hessian convexification for last QP, ranging from 0 (no regularization) to options.max_conv_QPs (fallback)
+        int QP_num_accepted;                          // Number of QP whose step was chosen, different from hess_num_accepted because the fallback step may be chosen if its norm is greater than a regularized Hessian step
         double convKappa;                             // Last factor in convexification strategy, factors are ... , 2^-2 * convKappa, 2^-1 * convKappa, convKappa     
         
         //Scaling heuristic

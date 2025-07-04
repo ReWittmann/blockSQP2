@@ -227,13 +227,11 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         
         int QP_it;
         
-        //qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, qpOASES_options *QPopts);
-        
         qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts);
         
+        //Passthrough to QPsolver constructor
         qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, const QPsolver_options *QPopts);
         void init_QP_common(int *blockIdx); //Initialize data that is independent of QP type (dense/sparse/schur)
-        ~qpOASES_solver();
         
         void set_lin(const Matrix &grad_obj);
         void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
@@ -253,24 +251,18 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
     
     //For using qpOASES with MUMPS. Mumps is meant to be loaded by the caller several times,
     //such that the loaded modules are thread safe (e.g. via dlmopen on linux).
-    //Then different instances of this class will be threadsafe between each other. 
-    class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
-        public:
-        void *linsol_handle;
-        threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, int linsol_ID);
-        
-        threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
-        ~threadsafe_qpOASES_MUMPS_solver();
-        
-    };
-    
+    //Then different instances of this class will be threadsafe between each other.
+    #ifdef SOLVER_MUMPS
+        class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
+            public:
+            threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
+        };
+    #endif
 #endif
 
 
 
 #ifdef QPSOLVER_GUROBI
-    #include "gurobi_c++.h"
-
     class gurobi_solver : public QPsolver{
     public:
         GRBEnv *env;

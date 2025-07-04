@@ -176,6 +176,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
 
     // Convexification strategy
     hess_num_accepted = 0;
+    QP_num_accepted = 0;
     convKappa = param->conv_kappa_0;
     if (param->max_conv_QPs > 1){
         deltaXi_conv.Dimension(prob->nVar);

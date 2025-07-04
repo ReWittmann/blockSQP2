@@ -84,8 +84,6 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     if (param->enable_rest){
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
         rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->rest_rho, param->rest_zeta);
-        
-        
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
         rest_xi.Dimension(rest_prob->nVar);

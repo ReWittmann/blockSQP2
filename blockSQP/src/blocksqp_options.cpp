@@ -243,12 +243,16 @@ void SQPoptions::optionsConsistency(){
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
     }
     
-    if (par_QPs && qpsol == QPsolvers::qpOASES){
-        #ifdef SOLVER_MUMPS
-            #ifndef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
-                throw ParameterError("A modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+    if (par_QPs){
+        if(qpsol == QPsolvers::qpOASES){
+            #ifdef SOLVER_MUMPS
+                #ifndef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
+                    throw ParameterError("A modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+                #endif
             #endif
-        #endif
+        }
+        if (max_conv_QPs > 7)
+            throw ParameterError("Only up to SQPoptions::max_conv_QPs == 7 convexified QPs are supported for parallel solution");
     }
     
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
