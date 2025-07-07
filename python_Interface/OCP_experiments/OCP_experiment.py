@@ -309,7 +309,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
         
-        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + date_app)
+        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
         
 
 def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol):

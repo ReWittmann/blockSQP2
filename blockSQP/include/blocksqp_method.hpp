@@ -102,7 +102,7 @@ class SQPmethod{
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         
         virtual int solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);

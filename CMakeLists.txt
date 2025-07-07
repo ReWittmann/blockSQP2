@@ -16,6 +16,7 @@ enable_language(Fortran)
 
 
 #Static linking to avoid having to copy dll(-path)s.
+#
 if(WIN32)
 	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
 	add_compile_options(/MT)
@@ -93,7 +94,7 @@ endif()
 
 
 
-set (qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
+set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp

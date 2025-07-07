@@ -2482,7 +2482,7 @@ returnValue QProblemB::solveQP(	const real_t* const g_new,
 		}
 		
 		
-		if (stopToken.stop_requested()){
+		if (stopToken.stop_requested()) [[unlikely]] {
 			nWSR = iter;
 			if (cputime != 0)
 				*cputime = getCPUtime() - starttime;

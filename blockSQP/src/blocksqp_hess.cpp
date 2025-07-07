@@ -428,8 +428,6 @@ void SQPmethod::calcHessianUpdateLimitedMemory_par(int updateType, int sizing, S
     //if objective derv is computed exactly, don't set the last block!
     int nBlocks = (param->exact_hess == 1 && param->block_hess) ? vars->nBlocks - 1 : vars->nBlocks;
     
-    int nThreads = 4;
-    
     if (nBlocks < LIM_MEM_N_THREADS){
         calcHessianUpdateLimitedMemory(updateType, sizing, hess);
         return;

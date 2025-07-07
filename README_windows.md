@@ -1,20 +1,32 @@
-# BlockSQP - C++, Python, Julia - build system using qpOASES and MUMPS
+# BlockSQP - C++, Python, Julia - Build System Using qpOASES and MUMPS
 
-This is a modified version of the blockSQP nonlinear program solver that includes new cmake build specifications, a python interface and a julia interface.
-Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+This is a modified version of the **blockSQP** nonlinear program solver that includes new CMake build specifications, a Python interface, and a Julia interface.
 
+**Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>**
 
-The following configuration is known to work for building blockSQP on windows. 
-    The following need to be installed
-        - CMake build system
-        - Ninja build system backend
-        - MSVC C++ compiler (included in visual studio community 2022)
-        - Intel oneAPI Base Toolkit and oneAPI HPC Toolkit (Fortran compiler, oneMKL (for LAPACK and BLAS))
+## Configuration for Building BlockSQP on Windows
 
-Activate the Intel oneAPI command prompt for Visual Studios 2022. To enable this command prompt,
-the oneAPI setvars.bat, normally located in C:\Program Files (x86)\Intel\oneAPI must be run.
-Navigate to the blockSQP folder and call CMake via
- CMake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release [options]
- CMake --build build 
+The following configuration is known to work for building **blockSQP** on Windows.
 
-See the normal readme.md for build options
+### Requirements:
+- **CMake build system**
+- **Ninja build system backend**
+- **MSVC C++ compiler** (included in Visual Studio Community 2022)
+- **Intel oneAPI Base Toolkit and oneAPI HPC Toolkit**  
+  (Includes Fortran compiler, oneMKL (for LAPACK and BLAS))
+
+### Steps:
+1. Activate the Intel oneAPI command prompt for Visual Studio 2022.
+   - To enable this command prompt, run `setvars.bat` located in:
+     ```
+     C:\Program Files (x86)\Intel\oneAPI
+     ```
+   
+2. Navigate to the `blockSQP` folder and run CMake with the following commands:
+
+    ```bash
+    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release [options]
+    cmake --build build
+    ```
+
+3. See **readme.md** for additional build options.

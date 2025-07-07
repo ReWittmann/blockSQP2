@@ -27,14 +27,19 @@ QPopts = py_blockSQP.qpOASES_options()
 QPopts.terminationTolerance = 1e-10
 
 EXP_1_opts = py_blockSQP.SQPoptions()
-EXP_1_opts.max_conv_QPs = 1
+EXP_1_opts.max_conv_QPs = 5
+EXP_1_opts.conv_strategy = 2
+EXP_1_opts.automatic_scaling = True
 EXP_1_opts.qpsol_options = QPopts
 EXP_1_opts.max_filter_overrides = 0
 EXP_1_opts.conv_kappa_max = 8.0
 
 EXP_2_opts = py_blockSQP.SQPoptions()
-EXP_2_opts.conv_strategy = 1
-EXP_2_opts.max_conv_QPs = 4
+EXP_2_opts.max_conv_QPs = 5
+EXP_2_opts.conv_strategy = 2
+EXP_2_opts.automatic_scaling = True
+EXP_2_opts.par_QPs = True
+EXP_2_opts.enable_QP_cancellation = True
 EXP_2_opts.qpsol_options = QPopts
 EXP_2_opts.max_filter_overrides = 0
 EXP_2_opts.conv_kappa_max = 8.0
@@ -48,12 +53,12 @@ EXP_3_opts.conv_kappa_max = 8.0
 
 Experiments = [(EXP_1_opts, "SR1-BFGS"),
                (EXP_2_opts, "Convexification strategy 1"),
-               (EXP_3_opts, "Convexification strategy 2")
+               # (EXP_3_opts, "Convexification strategy 2")
                ]
 # Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
 #               (OCProblems.Goddard_Rocket, "Goddard's rocket")
 #               ]
-Examples_ = [(OCProblems.Hanging_Chain, "Hanging chain")]
+Examples_ = [(OCProblems.Catalyst_Mixing, "Catalyst_Mixing")]
 
 OCP_experiment.run_blockSQP_experiments(Examples_, Experiments,\
                                         plot_folder,\

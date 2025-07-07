@@ -103,6 +103,7 @@ class SQPoptions{
     double conv_kappa_0 = 1./16.;
     double conv_kappa_max = 2.;
     bool par_QPs = false;                  //Only possible for threadsafe linear solvers (not MUMPS), but possible with workarounds on windows and linux
+    bool enable_QP_cancellation = true;
     
     //Scaling
     int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance 2: FUTURE
@@ -145,8 +146,7 @@ class SQPoptions{
     
     
     //For experimental purposes
-    bool test_opt_2 = true;
-    bool test_join_all = false;
+    bool test_opt_1 = false;
     int test_qp_hotstart = 0;
     
     private:

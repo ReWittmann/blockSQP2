@@ -211,7 +211,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
                 
                 if (vars->KKT_heuristic_enabled){
-                    std::cout << "filterLineSearch failed, try to reduce kktError\n" << std::flush;
+                    std::cout << "filterLineSearch failed, try to reduce kktError\n";
                     vars->KKTerror_save = vars->tol;
                     lsError = kktErrorReduction();
                     if (!lsError)
