@@ -217,8 +217,7 @@ elseif(WIN32)
 endif()
 
 target_compile_options(blockSQP PRIVATE 
-	#-O3
-	-g -O0 
+	-O3
 	-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized)
 
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
@@ -319,7 +318,7 @@ if(PYTHON_INTERFACE)
 	target_compile_options(py_blockSQP PRIVATE 
 				-Wall -Wextra -Wno-unused-parameter
 				-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
-				-g -O0
+				-O3
 				)
 	
 	#Prevent warnings for *_pointer_interface and T_array constructors 

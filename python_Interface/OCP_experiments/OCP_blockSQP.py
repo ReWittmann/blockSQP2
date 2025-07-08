@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Van_der_Pol_Oscillator_3(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Lotka_OED(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -37,7 +37,7 @@ opts.max_QP_secs = 5.0
 
 opts.max_conv_QPs = 4
 opts.conv_strategy = 2
-opts.par_QPs = False
+opts.par_QPs = True
 opts.enable_QP_cancellation=True
 
 opts.exact_hess = 0
