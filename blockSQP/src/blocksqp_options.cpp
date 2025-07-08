@@ -16,6 +16,7 @@
 
 #include "blocksqp_options.hpp"
 #include "blocksqp_qpsolver.hpp"
+#include "blocksqp_defs.hpp"
 #include <iostream>
 #include <limits>
 
@@ -251,7 +252,7 @@ void SQPoptions::optionsConsistency(){
                 #endif
             #endif
         }
-        if (max_conv_QPs > 7)
+        if (max_conv_QPs > PAR_QP_MAX - 1)
             throw ParameterError("Only up to SQPoptions::max_conv_QPs == 7 convexified QPs are supported for parallel solution");
     }
     

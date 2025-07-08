@@ -42,8 +42,8 @@ class SQPmethod{
         std::unique_ptr<SQPiterate>     vars;     ///< All SQP variables for this method
         std::unique_ptr<QPsolverBase>   sub_QP;   ///< Class wrapping an external QP solver
         
-        //std::unique_ptr<plugin_loader> linsol_loader;                   //Loader class for several instances of a library, threadsafe between each other. IMPORTANT: Free only after freeing everything that uses the loaded libraries.
         std::unique_ptr<std::unique_ptr<QPsolverBase>[]> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
+        std::unique_ptr<std::jthread[]> QP_threads;
         
         //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated
         std::unique_ptr<scaled_Problemspec> scaled_prob;

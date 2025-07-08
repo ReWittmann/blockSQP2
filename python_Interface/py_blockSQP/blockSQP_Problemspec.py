@@ -10,7 +10,7 @@ import numpy as np
 import py_blockSQP
 import typing
 
-class blockSQP_pyProblem(py_blockSQP.Problemform):
+class blockSQP_Problemspec(py_blockSQP.Problemform):
     #Primal start point for optimization
     x_start : np.ndarray[np.float64]
     #Dual start point for optimization

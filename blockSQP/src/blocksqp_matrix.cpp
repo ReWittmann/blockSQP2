@@ -249,7 +249,7 @@ Matrix &Matrix::operator=( const Matrix &A )
         else
         {
             if ( m != A.m || n != A.n )
-                Error("= operation not allowed");
+                throw std::invalid_argument(std::string("Matrix::operator=: Cannot assign matrix of size (") + std::to_string(A.m) + "," + std::to_string(A.n) + ") to submatrix of size (" + std::to_string(m) + ", " + std::to_string(n) + ")");
 
             for ( i = 0; i < m; i++ )
                 for ( j = 0; j < n ; j++ )

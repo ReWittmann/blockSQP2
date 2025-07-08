@@ -154,7 +154,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     delta_lb_con.Dimension(nCon).Initialize(0.0);
     delta_ub_con.Dimension(nCon).Initialize(0.0);
 
-    // Miscellaneous conters
+    // Miscellaneous counters
     nquasi = std::unique_ptr<int[]>(new int[nBlocks]());
     noUpdateCounter = std::make_unique<int[]>(nBlocks);
     for (int iBlock = 0; iBlock < nBlocks; iBlock++) noUpdateCounter[iBlock] = -1;
@@ -200,6 +200,14 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     cNormSOpt_save = param->inf;
     
     N_QP_cancels = 0;
+    if (param->par_QPs){
+        par_QP_sols_prim = std::make_unique<Matrix[]>(param->max_conv_QPs + 1);
+        par_QP_sols_dual = std::make_unique<Matrix[]>(param->max_conv_QPs + 1);
+        for (int j = 0; j < param->max_conv_QPs + 1; j++){
+            par_QP_sols_prim[j].Dimension(prob->nVar);
+            par_QP_sols_dual[j].Dimension(prob->nVar + prob->nCon);
+        }
+    }
 }
 
 SQPiterate::SQPiterate(){}

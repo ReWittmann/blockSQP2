@@ -23,6 +23,8 @@
 #include "blocksqp_problemspec.hpp"
 #include "blocksqp_options.hpp"
 #include <memory>
+#include <thread>
+#include <future>
 
 namespace blockSQP{
 
@@ -156,8 +158,13 @@ class SQPiterate{
         scaled_Problemspec *scaled_prob;              // Pointer to a scaled problem or nullptr. Used to save and restore scaling factors. 
         std::unique_ptr<double[]> scaleFactors_save;
         
-        //
+        //For parallel QP solution
         int N_QP_cancels;
+        std::unique_ptr<Matrix[]> par_QP_sols_prim;
+        std::unique_ptr<Matrix[]> par_QP_sols_dual;
+        
+        
+        
         
     public:
         /// Call allocation and initializing routines

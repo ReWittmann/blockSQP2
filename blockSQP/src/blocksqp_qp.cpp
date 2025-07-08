@@ -21,6 +21,7 @@
 #include "blocksqp_stats.hpp"
 #include "blocksqp_method.hpp"
 #include "blocksqp_general_purpose.hpp"
+#include "blocksqp_defs.hpp"
 #include <iostream>
 #include <chrono>
 #include <fstream>
@@ -46,18 +47,12 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
         // Limited memory: compute fallback update only when needed
         if (param->lim_mem && !vars->hess2_updated){
             if (param->fallback_approx <= 2){
-                //steady_clock::time_point T0 = steady_clock::now();
                 calcHessianUpdateLimitedMemory_par( param->fallback_approx, param->fallback_sizing, vars->hess2.get());
-                //steady_clock::time_point T1 = steady_clock::now();
-                //calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
-                //steady_clock::time_point T2 = steady_clock::now();
-                //std::cout << "Lim mem update took " << duration_cast<microseconds>(T1 - T0).count() << "mus\n";
-                //std::cout << "Lim mem par update took " << duration_cast<microseconds>(T2 - T1).count() << "mus\n";
             }
             vars->hess2_updated = true;
         }
     }
-
+    
     // 'Nontrivial' convex combinations
     if (maxQP > 2 && idx < maxQP - 1){
         //Store convex combination in vars->hess_conv, to avoid having to restore the second Hessian if full memory updates are used
@@ -77,7 +72,6 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             //Regularize intermediate Hessian by adding scaled identity
             //idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx == 1));
             idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
-            //std::cout << "H idScale = " << idScale << ", convKappa = " << vars->convKappa << "\n";
             for (int i = 0; i < vars->nBlocks; i++){
                 for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
                     vars->hess_conv[i](j,j) += idScale;
@@ -191,24 +185,6 @@ void SQPmethod::updateStepBoundsSOC(){
 }
 
 
-/*
-int SQPmethod::solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP){
-    sub_QP->set_hess(vars->hess, true);
-    if (param->sparse)
-        sub_QP->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
-    else
-        sub_QP->set_constr(vars->constrJac);
-    updateStepBounds();
-    sub_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-    sub_QP->set_lin(vars->gradObj);
-    int QP_result = sub_QP->solve(deltaXi, lambdaQP);
-    stats->qpIterations2 += sub_QP->get_QP_it();
-    vars->conv_qp_solved = true;
-    vars->hess_num_accepted = param->max_conv_QPs;
-    return QP_result;
-}
-*/
-
 int SQPmethod::solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP){
     sub_QPs_par[param->max_conv_QPs]->set_hess(vars->hess, true);
     if (param->sparse)
@@ -219,12 +195,8 @@ int SQPmethod::solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP){
     sub_QPs_par[param->max_conv_QPs]->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
     sub_QPs_par[param->max_conv_QPs]->set_lin(vars->gradObj);
     
-    steady_clock::time_point T0 = steady_clock::now();
     int QP_result = sub_QPs_par[param->max_conv_QPs]->solve(deltaXi, lambdaQP);
-    steady_clock::time_point T1 = steady_clock::now();
-    std::cout << "BFGS QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
     
-    //int QP_result = sub_QPs_par[param->max_conv_QPs]->solve(deltaXi, lambdaQP);
     stats->qpIterations2 += sub_QPs_par[param->max_conv_QPs]->get_QP_it();
     vars->conv_qp_solved = true;
     vars->hess_num_accepted = param->max_conv_QPs;
@@ -234,9 +206,6 @@ int SQPmethod::solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP){
  
 
 int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
-    //Matrix deltaXi_conv, lambdaQP_conv;
-    //deltaXi_conv.Dimension(prob->nVar);
-    //lambdaQP_conv.Dimension(prob->nVar + prob->nCon);
     double s_indf_N, s_conv_N;
     
     int l, maxQP;
@@ -276,16 +245,12 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             sub_QP->set_timeLimit(1);
         }
         else{
-            //sub_QP->time_limit_type = 0;
             sub_QP->set_timeLimit(0);
             sub_QP->set_hess(vars->hess, false, 0);
         }
         
         //Solve the QP
-        steady_clock::time_point T0 = steady_clock::now();
         QP_result = sub_QP->solve(deltaXi, lambdaQP);
-        steady_clock::time_point T1 = steady_clock::now();
-        if (l == maxQP -1) std::cout << "BFGS QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
         
         if (QP_result == 0){
             if (l == maxQP - 1)
@@ -304,13 +269,7 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
                 computeConvexHessian();
                 sub_QP->set_hess(vars->hess, true, vars->modified_hess_regularizationFactor);
                 sub_QP->set_timeLimit(0);
-                //sub_QP->skip_timeRecord = true;
-                //QP_result_conv = sub_QP->solve(vars->deltaXi_conv, vars->lambdaQP_conv);
-                
-                //steady_clock::time_point T0 = steady_clock::now();
                 QP_result_conv = sub_QP->solve(vars->deltaXi_conv, vars->lambdaQP_conv);
-                //steady_clock::time_point T1 = steady_clock::now();
-                //std::cout << "BFGS QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
                 
                 if (QP_result_conv == 0){
                     s_indf_N = l2VectorNorm(deltaXi);
@@ -343,7 +302,6 @@ int SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
         SOC_QP = sub_QP.get();
     
     SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-    //sub_QP->convex_QP = vars->conv_qp_solved;
 
     int QP_result = SOC_QP->solve(deltaXi, lambdaQP);
 
@@ -353,45 +311,37 @@ int SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
 
 
 int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
-    //int maxQP = param->max_conv_QPs + 1;
     int maxQP;
     if (param->enable_linesearch == 1 && (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6) && stats->itCount > 1 && hess_type == 0)
         maxQP = param->max_conv_QPs + 1;
     else
         return solveQP(deltaXi, lambdaQP, hess_type);
-    
-    
-    
-    
     steady_clock::time_point T0, T1;
-    
-    steady_clock::time_point TM1 = steady_clock::now();
     
     updateStepBounds();
     
-    std::unique_ptr<std::jthread[]> QP_threads = std::make_unique<std::jthread[]>(maxQP - 1);
-    
-    std::unique_ptr<Matrix[]> QP_sols_prim = std::make_unique<Matrix[]>(maxQP);
-    std::unique_ptr<Matrix[]> QP_sols_dual = std::make_unique<Matrix[]>(maxQP);
-    
+    /*
     std::unique_ptr<std::promise<int>[]> QP_results_p = std::make_unique<std::promise<int>[]>(maxQP - 1);
     std::unique_ptr<std::future<int>[]> QP_results_f = std::make_unique<std::future<int>[]>(maxQP - 1);
     for (int j = 0; j < maxQP - 1; j++) QP_results_f[j] = QP_results_p[j].get_future();
     
     std::unique_ptr<std::future_status[]> QP_results_fs = std::make_unique<std::future_status[]>(maxQP - 1);
-    
     std::unique_ptr<int[]> QP_results = std::make_unique<int[]>(maxQP);
     for (int j = 0; j < maxQP; j++) QP_results[j] = -1;
-    
-    //VERY important if using qpOASES solver, else SR1-QP always fails for some reason
-    /*
-    if (vars->hess_num_accepted > 0){
-        for (int j = 0; j < maxQP; j++){
-            sub_QPs_par[j]->set_hotstart_point(sub_QPs_par[vars->hess_num_accepted].get());
-        }
-    }
     */
+       
+    std::promise<int> QP_results_p[PAR_QP_MAX];
+    std::future<int> QP_results_f[PAR_QP_MAX];
+    for (int j = 0; j < maxQP - 1; j++) QP_results_f[j] = QP_results_p[j].get_future();
     
+    std::future_status QP_results_fs[PAR_QP_MAX];
+    int QP_results[PAR_QP_MAX];
+    for (int j = 0; j < maxQP; j++) QP_results[j] = -1;
+    
+    //std::unique_ptr<Matrix[]> QP_sols_prim = std::make_unique<Matrix[]>(maxQP);
+    //std::unique_ptr<Matrix[]> QP_sols_dual = std::make_unique<Matrix[]>(maxQP);
+    
+    //--- VERY important if using qpOASES solver, else SR1-QP always fails for some reason    
     if (param->test_qp_hotstart == 0){
         if (vars->hess_num_accepted > 0){
             for (int j = 0; j < vars->hess_num_accepted; j++){
@@ -411,7 +361,7 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             sub_QPs_par[j]->set_hotstart_point(sub_QPs_par[maxQP - 1].get());
         }
     }
-    
+    //---
     
     for (int j = 0; j < maxQP; j++){
         
@@ -423,43 +373,31 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             sub_QPs_par[j]->set_constr(vars->constrJac);
         sub_QPs_par[j]->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
         sub_QPs_par[j]->set_lin(vars->gradObj);
-        //sub_QPs_par[j]->set_use_hotstart(vars->use_homotopy);
         sub_QPs_par[j]->set_use_hotstart(vars->use_homotopy);
         sub_QPs_par[j]->set_timeLimit(int(j == (maxQP - 1)));
         sub_QPs_par[j]->set_hess(vars->hess, j == maxQP - 1);
         
-        QP_sols_prim[j].Dimension(prob->nVar);
-        QP_sols_dual[j].Dimension(prob->nVar + prob->nCon);
+        //QP_sols_prim[j].Dimension(prob->nVar);
+        //QP_sols_dual[j].Dimension(prob->nVar + prob->nCon);
         
         if (j < maxQP - 1){
             QP_threads[j] = std::jthread(
                 [](std::stop_token stp, QPsolverBase *arg_QPs, std::promise<int> arg_PRM, Matrix &arg_1, Matrix &arg_2){
                     arg_QPs->solve(stp, std::move(arg_PRM), arg_1, arg_2);
                 },
-                sub_QPs_par[j].get(), std::move(QP_results_p[j]), std::ref(QP_sols_prim[j]), std::ref(QP_sols_dual[j])
+                sub_QPs_par[j].get(), std::move(QP_results_p[j]), std::ref(vars->par_QP_sols_prim[j]), std::ref(vars->par_QP_sols_dual[j])
             );
         }
         else{
             T0 = steady_clock::now();
-            //std::cout << "solveQP_par up to fallback QP solve took " << duration_cast<microseconds>(T0 - TM1) << "\n";
-            
-            QP_results[maxQP - 1] = sub_QPs_par[j]->solve(QP_sols_prim[j], QP_sols_dual[j]);
+            QP_results[maxQP - 1] = sub_QPs_par[j]->solve(vars->par_QP_sols_prim[j], vars->par_QP_sols_dual[j]);
             T1 = steady_clock::now();
         }        
     }
     
     //Terminate long running
-    //std::cout << "BFGS QP took " << duration_cast<microseconds>(T1 - T0).count() << "mus\n";
-    //std::cout << "N_QP_cancels = " << vars->N_QP_cancels << "\n";
-    
-    //steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(0.5 + 0.5*vars->N_QP_cancels)).count() + 1000);//+ duration_cast<microseconds>(T1 - T0)*(0.25 + 0.75*vars->N_QP_cancels) + milliseconds(1);
-    
-    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1 + vars->N_QP_cancels)).count() + 1000);//+ duration_cast<microseconds>(T1 - T0)*(0.25 + 0.75*vars->N_QP_cancels) + milliseconds(1);
-
+    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1 + vars->N_QP_cancels)).count() + 1000);
     bool QP_cancelled = false;
-    
-    
-    steady_clock::time_point T_SR1_0, T_SR1_1;
     
     if (param->enable_QP_cancellation){
         /*
@@ -475,8 +413,7 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             QP_threads[j].join();
         }*/
         
-        
-        //NEW//
+        //SR1 QP almost always succeeds/fails fast, so join it. Wait + stop/join QPs until one successfully solved
         QP_threads[0].join();
         QP_results[0] = QP_results_f[0].get();
         if (QP_results[0] == 0){
@@ -505,7 +442,6 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
         
         for (int j = 1; j < maxQP - 1; j++)
             QP_threads[j].join();
-        
     }
     else{
         for (int j = maxQP - 2; j>= 0; j--){
@@ -513,9 +449,6 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             QP_results[j] = QP_results_f[j].get();
         }
     }
-    
-    //steady_clock::time_point T2 = steady_clock::now();
-    //std::cout << "Waiting for other QPs took " << duration_cast<microseconds>(T2 - T1) << "\n";
     
     vars->hess_num_accepted = -1;
     stats->qpResolve = -1;
@@ -526,50 +459,38 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             break;
         }
     }
+    
+    if (vars->hess_num_accepted == -1){
+        return QP_results[maxQP - 1];
+    }
+    
     vars->N_QP_cancels = (1 + vars->N_QP_cancels) * int(QP_cancelled);
     
     double s_indf_N = 1.0, s_conv_N = 0.0;
     if (vars->hess_num_accepted > 1 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == 0){
-        s_indf_N = l2VectorNorm(QP_sols_prim[vars->hess_num_accepted]);
-        s_conv_N = l2VectorNorm(QP_sols_prim[maxQP - 1]);
+        s_indf_N = l2VectorNorm(vars->par_QP_sols_prim[vars->hess_num_accepted]);
+        s_conv_N = l2VectorNorm(vars->par_QP_sols_prim[maxQP - 1]);
     }
-    //Always true if above condition is false
+    //Always true if above conditions are false
     if (s_indf_N >= param->conv_tau_H*s_conv_N){
-        deltaXi = QP_sols_prim[vars->hess_num_accepted];
-        lambdaQP = QP_sols_dual[vars->hess_num_accepted];
+        deltaXi = vars->par_QP_sols_prim[vars->hess_num_accepted];
+        lambdaQP = vars->par_QP_sols_dual[vars->hess_num_accepted];
         vars->QP_num_accepted = vars->hess_num_accepted;
     }
     else{
-        deltaXi = QP_sols_prim[maxQP - 1];
-        lambdaQP = QP_sols_dual[maxQP - 1];
+        deltaXi = vars->par_QP_sols_prim[maxQP - 1];
+        lambdaQP = vars->par_QP_sols_dual[maxQP - 1];
         stats->qpResolve = maxQP - 1;
         vars->QP_num_accepted = maxQP - 1;
     }
     
-    stats->qpIterations2 += sub_QPs_par[vars->hess_num_accepted]->get_QP_it();
+    stats->qpIterations2 += sub_QPs_par[vars->QP_num_accepted]->get_QP_it();
     stats->rejectedSR1 += vars->hess_num_accepted;
-    
-    return QP_results[maxQP - 1];
+    return 0;
 }
 
-/*
-int SQPmethod::solve_SOC_QP_par(Matrix &deltaXi, Matrix &lambdaQP){
 
-    updateStepBoundsSOC();
-
-    sub_QPs_par[vars->hess_num_accepted]->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-    //sub_QP->convex_QP = vars->conv_qp_solved;
-    
-    int QP_result = sub_QPs_par[vars->hess_num_accepted]->solve(deltaXi, lambdaQP);
-
-    stats->qpIterations += sub_QPs_par[vars->hess_num_accepted]->get_QP_it();
-    return QP_result;
-}
-*/
-
-
-
-//Specialized method that only condenses the Hessian and fallback Hessian once each
+//TODO: Specialized method that only condenses the Hessian and fallback Hessian once each
 /*
 int SQPmethod::solveQP_par_cond_conv_2(Matrix &deltaXi, Matrix &lambdaQP){
     

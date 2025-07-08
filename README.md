@@ -5,7 +5,7 @@ Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 
 
-Both a Fortran and a C++ compiler are required, change from defaults by adding -DCMAKE_FC_COMPILER=..., -DCMAKE_CXX_COMPILER= when invoking CMake
+Both a Fortran and a C++-20 compatible compiler are required, change from defaults by adding -DCMAKE_Fortran_COMPILER=..., -DCMAKE_CXX_COMPILER= to command line options when invoking CMake
 
 A build system backend (GNU make, Ninja) is required, generate the build files via
 cmake -B build ${OPTIONS}
@@ -24,14 +24,14 @@ The following OPTIONS may be set
 Compile via
 cmake --build build
 
-This places the binaries for C++/Python/Julia in their respective directories, alongside required helper files for Python/Julia.
+This places the binaries for C++ in /blockSQP/lib /blockSQP/bin, the ones for Python in /python_Interface/py_blockSQP, the ones for Julia in /blockSQP.jl/bin.
 
 See 
     blockSQP/examples/example1,
-    py_blockSQP/example1.py
-    blockSQP_jl/example1.jl
+    python_Interface/examples/example1.py
+    blockSQP.jl/scripts/example1.jl
 for how to interface BlockSQP. 
-See
+See the Manual or
     blockSQP/include/options.hpp
 for possible settings. 
 

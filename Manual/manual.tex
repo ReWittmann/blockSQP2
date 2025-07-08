@@ -217,6 +217,10 @@ In addition to linking the shared/ static binary of a QP solver, the preprocesso
 	\item qpalm [convex QPs, poor performance for nonconvex QPs, dense and sparse matrices]
 \end{itemize}
 thoug gurobi and qpalm are experimental. \qpOASES\ is required if sparse nonconvex QPs are to be solved. In this case qpOASES itself requires a sparse linear solver such as \texttt{MA57} from \texttt{HSL} or \texttt{MUMPS}. See the respective manuals of the QP solvers.
+~\\~\\
+\textbf{Building with qpOASES and MUMPS for parallel QP solution}\\
+The MUMPS sparse linear solver is \textbf{NOT THREADSAFE}. 
+
 \subsection{Interfaces to other languages}
 \textbf{Python.} The python interface code is located in a separate folder of the same name. It requires the pybind11 library, whose headers need to be in the include path and which itself requires the python headers. The pybind11 documentation recommends using CMake to build the python module. Setting PYTHON\_EXECUTABLE to a path to a python interpreter before using find\_package(pybind11) allows specifying the python environment to build for. pybind11\_DIR can be set to the path to the pybind11 cmake files to ensure the right pybind11 installation is found.\\~\\
 \textbf{Julia.} The julia interface code similarly depends on the libcxxwrap-julia  library on the C++ side and the corresponding CxxWrap.jl library on the julia side. Using CMake is again recommended for building.\\~\\

@@ -2088,7 +2088,7 @@ returnValue MumpsSparseSolver_2::copy( 	const MumpsSparseSolver_2& rhs
 	else
 		jcn_mumps = 0;
 	
-	fptr_dmumps_c = rhs.fptr_dmumps_c;	
+	fptr_dmumps_c = rhs.fptr_dmumps_c;
 	
 	return SUCCESSFUL_RETURN;
 }

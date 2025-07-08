@@ -47,6 +47,7 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     //rest_param->BFGS_damping_factor = 1./3.;
 
     rest_param->result_print_color = false;
+    rest_param->par_QPs = false;
     //Do not print to any file
     rest_param->debug_level = 0;
 
@@ -77,7 +78,10 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     
     // If parallel solution of QPs is enabled, use dedicated QPsolver instances instead
-    if (param->par_QPs) sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
+    if (param->par_QPs){
+        sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
+        QP_threads = std::make_unique<std::jthread[]>(param->max_conv_QPs); //One QP can run on main thread
+    }
     
     
     //Setup the feasibility restoration problem
