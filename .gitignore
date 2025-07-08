@@ -14,6 +14,9 @@ CMakeCache.txt
 CMakeLists_TEMPLATE.txt
 __pycache__
 example1
+example1_sparse
+example_CQPsolver
+example_condensing
 TEST_*
 sqpits.csv
 updatesequence.txt
