@@ -25,8 +25,10 @@
 #include "blocksqp_stats.hpp"
 #include "blocksqp_qpsolver.hpp"
 #include "blocksqp_restoration.hpp"
+#include "blocksqp_load_mumps.hpp"
 #include <iostream>
 #include <memory>
+#include <thread>
 
 namespace blockSQP{
 
@@ -37,13 +39,15 @@ class SQPmethod{
         SQPoptions*              param;       ///< Set of algorithmic options and parameters for this method
         SQPstats*                stats;       ///< Statistics object for current SQP run
         
-        std::unique_ptr<SQPiterate> vars;     ///< All SQP variables for this method
-        std::unique_ptr<QPsolver>   sub_QP;   ///< Class wrapping an external QP solver
-
-        //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is acitvated
+        std::unique_ptr<SQPiterate>     vars;     ///< All SQP variables for this method
+        std::unique_ptr<QPsolverBase>   sub_QP;   ///< Class wrapping an external QP solver
+        
+        //std::unique_ptr<plugin_loader> linsol_loader;                   //Loader class for several instances of a library, threadsafe between each other. IMPORTANT: Free only after freeing everything that uses the loaded libraries.
+        std::unique_ptr<std::unique_ptr<QPsolverBase>[]> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
+        
+        //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated
         std::unique_ptr<scaled_Problemspec> scaled_prob;
-
-
+        
         // Objects for feasibility restoration
         //Feasibility restoration problem
         std::unique_ptr<abstractRestorationProblem> rest_prob;
@@ -58,15 +62,12 @@ class SQPmethod{
     protected:
         bool                     initCalled = false;  ///< indicates if init() has been called (necessary for run())
 
-    /*
-     * Methods
-     */
     public:
         /// Construct a method for a given problem and set of algorithmic options
         SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics );
         SQPmethod();
         virtual ~SQPmethod();
-
+        
         // Main interface methods
         /// Initialization, has to be called before run
         void init();
@@ -74,8 +75,7 @@ class SQPmethod{
         SQPresult run( int maxIt, int warmStart = 0 );
         /// Call after the last call of run, to close output files etc.
         void finish();
-
-
+        
         // Utility methods
         /// Print information about the SQP method
         void printInfo( int printLevel );
@@ -98,9 +98,16 @@ class SQPmethod{
         void updateStepBoundsSOC();
         /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
         //If hess_type is 0, solution is tried with increasingly convexified hessian approximations. If hess_type is 1, only convex hessian approximations are used. If hess_type is 2, only the (scaled) identity is used as hessian
+        //virtual int solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP);
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        
+        virtual int solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        
+        
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         virtual void computeNextHessian( int idx, int maxQP );
         /// Compute a convexified hessian and store it in vars->hess2, set hess to hess2
@@ -171,6 +178,10 @@ class SQPmethod{
         void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
         void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
+        void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
+        void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
+        
+        void calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification
@@ -191,6 +202,8 @@ class SQPmethod{
 ////////////////////////////////////////////////////////////
 
 //Sequential Condensed Quadratic Programming method
+
+/*
 class SCQPmethod : public SQPmethod{
     public:
     Condenser *cond;
@@ -243,7 +256,7 @@ class SCQP_correction_method : public SCQPmethod{
     virtual int feasibilityRestorationPhase();
 };
 
-
+*/
 
 } // namespace blockSQP
 

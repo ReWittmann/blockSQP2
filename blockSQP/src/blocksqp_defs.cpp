@@ -9,7 +9,7 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
         std::string colPrefix;
         std::string colSuffix;
         if (print_level == 2){
-            #ifdef __linux__
+            #ifdef LINUX
                 if (int(rs) < 0) colPrefix = "\033[1;31m";
                 else colPrefix = "\033[1;32m";
                 colSuffix = "\033[0m";

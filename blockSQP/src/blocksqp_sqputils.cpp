@@ -85,7 +85,7 @@ void SQPmethod::calcLagrangeGradient(const Matrix &lambda, const Matrix &gradObj
 void SQPmethod::calcLagrangeGradient( Matrix &gradLagrange, int flag )
 {
     if( param->sparse )
-        calcLagrangeGradient( vars->lambda, vars->gradObj, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), gradLagrange, flag );
+        calcLagrangeGradient( vars->lambda, vars->gradObj, vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), gradLagrange, flag );
     else
         calcLagrangeGradient( vars->lambda, vars->gradObj, vars->constrJac, gradLagrange, flag );
 }
@@ -161,7 +161,7 @@ void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHe
 
     if (param->sparse)
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+param->exact_hess, &infoEval);
+                        vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+param->exact_hess, &infoEval);
     else
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                         vars->constrJac, vars->hess1.get(), 1+param->exact_hess, &infoEval);
@@ -237,15 +237,27 @@ void SQPmethod::printInfo( int printLevel )
         return;
 
     /* QP Solver */
-    if(!param->sparse)
+    /*
+    if( param->sparse == 0 )
         strcpy( qpString, "dense, reduced Hessian factorization" );
     else if(param->sparse){
         if (param->qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(param->qpsol_options)->sparsityLevel == 2)
             strcpy( qpString, "sparse, qpOASES Schur complement approach" );
         else 
         strcpy( qpString, "sparse, reduced Hessian factorization" );
+    else if( param->sparse == 2 )
+        strcpy( qpString, "sparse, Schur complement approach" );
+    */
+    
+    if (param->sparse == 0)
+        strcpy( qpString, "dense, reduced Hessian factorization" );
+    else if (param->sparse == 1){
+        if (param->qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(param->qpsol_options)->sparsityLevel == 2)
+            strcpy( qpString, "sparse, Schur complement approach" );
+        else
+            strcpy( qpString, "sparse, reduced Hessian factorization" );
     }
-
+        
     /* Globalization */
     if( param->enable_linesearch == 0 )
         strcpy( globString, "none (full step)" );

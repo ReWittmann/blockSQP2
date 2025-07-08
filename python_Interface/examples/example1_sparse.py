@@ -3,24 +3,22 @@ import sys
 sys.path.append(os.path.abspath('') + "/..")
 
 import py_blockSQP as blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem
 import numpy as np
 import time
 
 opts = blockSQP.SQPoptions()
-opts.optimality_tol = 1.0e-12
-opts.feasibility_tol = 1.0e-12
+opts.opt_tol = 1.0e-12
+opts.feas_tol = 1.0e-12
 opts.enable_linesearch = 0
-opts.hess_approximation = 1
-opts.fallback_approximation = 2
-opts.sizing_strategy = 0
-opts.fallback_sizing_strategy = 0
-opts.limited_memory = True
-opts.memory_size = 20
-opts.max_consec_skipped_updates = 200
+opts.hess_approx = 1
+opts.fallback_approx = 2
+opts.sizing = 0
+opts.fallback_sizing = 0
+opts.lim_mem = 1
+opts.mem_size = 20
 opts.block_hess = 1
-opts.exact_hess_usage = 0
-opts.sparse_mode = 1
+opts.exact_hess = 0
+opts.sparse = True
 opts.print_level = 2
 opts.debug_level = 0
 opts.qpsol = "qpOASES"
@@ -28,7 +26,7 @@ opts.qpsol = "qpOASES"
 
 stats = blockSQP.SQPstats("./")
 
-prob = blockSQP_pyProblem()
+prob = blockSQP.Problemspec()
 prob.nVar = 2
 prob.nCon = 1
 prob.set_blockIndex(np.array([0,1,2], dtype = np.int32))

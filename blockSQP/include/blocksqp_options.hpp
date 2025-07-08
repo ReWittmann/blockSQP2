@@ -101,8 +101,10 @@ class SQPoptions{
     int max_conv_QPs = 4;                       //Maximum number of convexified QPs in each SQP iteration.
     double conv_tau_H = 2./3.;                  //See paper/manual
     double conv_kappa_0 = 1./16.;
-    double conv_kappa_max = 8.0;
-
+    double conv_kappa_max = 2.;
+    bool par_QPs = false;                  //Only possible for threadsafe linear solvers (not MUMPS), but possible with workarounds on windows and linux
+    bool enable_QP_cancellation = true;
+    
     //Scaling
     int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance 2: FUTURE
     
@@ -141,7 +143,12 @@ class SQPoptions{
     int max_bound_refines = 3;              ///< Options for condensed QPs
     int max_correction_steps = 5;           ///< How many additional QPs with bound correction added to dependent variables should be solved
     double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
-
+    
+    
+    //For experimental purposes
+    bool test_opt_1 = false;
+    int test_qp_hotstart = 0;
+    
     private:
     //Holder if no qpsol_options were provided
     std::unique_ptr<QPsolver_options> default_qpsol_options;

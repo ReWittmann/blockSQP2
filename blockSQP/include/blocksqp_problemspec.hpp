@@ -31,30 +31,27 @@ namespace blockSQP{
  * \date 2012-2015
  */
 class Problemspec{
-    /*
-     * VARIABLES
-     */
     public:
-        int         nVar = -1;                                          ///< number of variables
-        int         nCon = -1;                                          ///< number of constraints
-        int         nnz = -1;                                           ///< number of structural nonzero entries of sparse constraint jacobian
+        int         nVar = -1;                                          // number of variables
+        int         nCon = -1;                                          // number of constraints
+        int         nnz = -1;                                           // number of structural nonzero entries of sparse constraint jacobian
 
-        double      objLo = std::numeric_limits<double>::infinity();    ///< lower bound for objective
-        double      objUp = std::numeric_limits<double>::infinity();    ///< upper bound for objective
-        Matrix      lb_var;                                             ///< lower bounds of variables and constraints
-        Matrix      ub_var;                                             ///< upper bounds of variables and constraints
+        double      objLo = std::numeric_limits<double>::infinity();    // lower bound for objective
+        double      objUp = std::numeric_limits<double>::infinity();    // upper bound for objective
+        Matrix      lb_var;                                             // lower bounds of variables and constraints
+        Matrix      ub_var;                                             // upper bounds of variables and constraints
         Matrix      lb_con;             
         Matrix      ub_con;             
-
-        int         nBlocks = -1;                                       ///< number of separable blocks of Lagrangian
-        int*        blockIdx = nullptr;                                 ///< [blockwise] index in the variable vector where a block starts
-
-        int         n_vblocks = -1;                                     ///< number of distinct variable blocks of variables
-        vblock      *vblocks = nullptr;                                 ///< variable blocks, containing structure information (free/dependent, ...)
         
-    /*
-     * METHODS
-     */
+        //Metadata
+        int         nBlocks = -1;                                       // number of separable blocks of Lagrangian
+        int*        blockIdx = nullptr;                                 // [blockwise] index in the variable vector where a block starts
+
+        int         n_vblocks = -1;                                     // number of distinct variable blocks of variables
+        vblock      *vblocks = nullptr;                                 // variable blocks, containing structure information (free/dependent, ...)
+        
+        Condenser   *cond = nullptr;                                      //Condenser for the QPs for this problem
+        
     public:
         Problemspec();
         virtual ~Problemspec();

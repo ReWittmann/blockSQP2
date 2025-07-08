@@ -26,10 +26,10 @@ opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 1
-opts.conv_strategy = 1
+opts.max_conv_QPs = 4
+opts.conv_strategy = 2
 opts.BFGS_damping_factor = 1/3
-opts.automatic_scaling = False
+opts.automatic_scaling = True
 
 
 opts.exact_hess = 0

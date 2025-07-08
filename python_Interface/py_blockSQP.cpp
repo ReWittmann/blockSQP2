@@ -30,8 +30,8 @@ class int_pointer_interface{
     int *ptr;
 
     public:
-    int_pointer_interface(): ptr(nullptr), size(0){}
-    int_pointer_interface(int *ptr_, int size_): size(size_), ptr(ptr_){}
+    int_pointer_interface(): size(0), ptr(nullptr){}
+    int_pointer_interface(int *ptr_, int size_): size(size_), ptr(ptr_){} //Causes linker warning -Walloc-size-larger-than=
     ~int_pointer_interface(){}
 };
 
@@ -41,8 +41,8 @@ class double_pointer_interface{
     double *ptr;
 
     public:
-    double_pointer_interface(): ptr(nullptr), size(0){}
-    double_pointer_interface(double *ptr_, int size_): size(size_), ptr(ptr_){}
+    double_pointer_interface(): size(0), ptr(nullptr){}
+    double_pointer_interface(double *ptr_, int size_): size(size_), ptr(ptr_){} //Causes linker warning -Walloc-size-larger-than=
     ~double_pointer_interface(){}
 };
 
@@ -54,7 +54,7 @@ template <typename T> class T_array{
 
     public:
     T_array(): size(0), ptr(nullptr){}
-    T_array(int size_): size(size_), ptr(new T[size_]){}
+    T_array(int size_): size(size_), ptr(new T[size_]){} //Causes linker warning -Walloc-size-larger-than=
 
     ~T_array(){
         delete[] ptr;
@@ -172,7 +172,7 @@ public:
 
     void solve_QPs(){
         double a = 0;
-        for (int i = 0; i < condensed_Jacobian.nnz; i++){
+        for (int i = 0; i < condensed_Jacobian.colind[condensed_Jacobian.n]; i++){
             a += condensed_Jacobian.nz[i];
         }
         std::cout << "Sum on nonzeros in condensed_Jacobian is " << a << "\n";
@@ -207,9 +207,9 @@ public:
         qp_cond = new qpOASES::SQProblemSchur( red_con_jac.n, red_con_jac.m, qpOASES::HST_UNKNOWN, 50 );
 
         A_qp = new qpOASES::SparseMatrix(con_jac.m, con_jac.n,
-                    con_jac.row, con_jac.colind, con_jac.nz);
+                    con_jac.row.get(), con_jac.colind.get(), con_jac.nz.get());
         A_qp_cond = new qpOASES::SparseMatrix(red_con_jac.m, red_con_jac.n,
-                    red_con_jac.row, red_con_jac.colind, red_con_jac.nz);
+                    red_con_jac.row.get(), red_con_jac.colind.get(), red_con_jac.nz.get());
 
 
         convertHessian(1.0e-15, hess.ptr, hess.size, con_jac.n, hess_nz, hess_row, hess_colind, hess_loind);
@@ -594,18 +594,17 @@ py::class_<blockSQP::SymMatrix>(m, "SymMatrix")
 
 py::class_<blockSQP::Sparse_Matrix>(m, "Sparse_Matrix")
     .def(py::init<>())
-    .def(py::init([](int M, int N, int nnz, double_array &nz, int_array &row, int_array &colind) -> blockSQP::Sparse_Matrix*{
-        double *NZ = nz.ptr; int *ROW = row.ptr; int *COLIND = colind.ptr;
+    .def(py::init([](int M, int N, double_array &nz, int_array &row, int_array &colind) -> blockSQP::Sparse_Matrix*{
+        std::unique_ptr<double[]> NZ = std::unique_ptr<double[]>(nz.ptr); std::unique_ptr<int[]> ROW = std::unique_ptr<int[]>(row.ptr); std::unique_ptr<int[]> COLIND = std::unique_ptr<int[]>(colind.ptr);
         nz.size = 0; nz.ptr = nullptr; row.size = 0; row.ptr = nullptr; colind.size = 0; colind.ptr = nullptr;
-        return new blockSQP::Sparse_Matrix(M, N, nnz, NZ, ROW, COLIND);
+        return new blockSQP::Sparse_Matrix(M, N, std::move(NZ), std::move(ROW), std::move(COLIND));
     }), py::return_value_policy::take_ownership)
     .def_readonly("m", &blockSQP::Sparse_Matrix::m)
     .def_readonly("n", &blockSQP::Sparse_Matrix::n)
-    .def_readonly("nnz", &blockSQP::Sparse_Matrix::nnz)
     .def("dense", &blockSQP::Sparse_Matrix::dense)
-    .def_property("NZ", [](blockSQP::Sparse_Matrix &M)->double_pointer_interface{double_pointer_interface nonzeros; nonzeros.size = M.nnz; nonzeros.ptr = M.nz; return nonzeros;}, nullptr)
-    .def_property("ROW", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface row; row.size = M.nnz; row.ptr = M.row; return row;}, nullptr)
-    .def_property("COLIND", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface colind; colind.size = M.n + 1; colind.ptr = M.colind; return colind;}, nullptr)
+    .def_property("NZ", [](blockSQP::Sparse_Matrix &M)->double_pointer_interface{double_pointer_interface nonzeros; nonzeros.size = M.colind[M.n]; nonzeros.ptr = M.nz.get(); return nonzeros;}, nullptr)
+    .def_property("ROW", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface row; row.size = M.colind[M.n]; row.ptr = M.row.get(); return row;}, nullptr)
+    .def_property("COLIND", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface colind; colind.size = M.n + 1; colind.ptr = M.colind.get(); return colind;}, nullptr)
     ;
 
 py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
@@ -680,6 +679,10 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     }
     )
     .def_readwrite("qpsol_options", &blockSQP::SQPoptions::qpsol_options)
+    .def_readwrite("par_QPs", &blockSQP::SQPoptions::par_QPs)
+    .def_readwrite("enable_QP_cancellation", &blockSQP::SQPoptions::enable_QP_cancellation)
+    .def_readwrite("test_opt_1", &blockSQP::SQPoptions::test_opt_1)
+    .def_readwrite("test_qp_hotstart", &blockSQP::SQPoptions::test_qp_hotstart)
 	;
 
 py::class_<blockSQP::QPsolver_options>(m, "QPsolver_options");
@@ -831,6 +834,7 @@ py::class_<Problemform, blockSQP::Problemspec, Py_Problemform>(m,"Problemform")
 	.def_readonly("nBlocks", &Problemform::nBlocks)
 	.def_property("blockIdx", nullptr, &Problemform::set_blockIdx)
     .def_property("vblocks", nullptr, &Problemform::set_vblocks)
+    .def_property("cond", nullptr, [](Problemform &prob, blockSQP::Condenser *cond){prob.cond = cond;})
     //.def_property("vblocks", nullptr, [](Problemform &P, vblock_array &v_arr){P.vblocks = v_arr.ptr; P.n_vblocks = v_arr.size;})
 	;
 
@@ -870,7 +874,7 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
     .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->automatic_scaling){M.apply_rescaling(arr->ptr);} return;})
     .def("dec_nquasi", [](blockSQP::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
-
+/*
 py::class_<blockSQP::SCQPmethod, blockSQP::SQPmethod>(m, "SCQPmethod")
     .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
     ;
@@ -882,6 +886,7 @@ py::class_<blockSQP::SCQP_bound_method, blockSQP::SCQPmethod>(m, "SCQP_bound_met
 py::class_<blockSQP::SCQP_correction_method, blockSQP::SCQPmethod>(m, "SCQP_correction_method")
     .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
     ;
+*/
 
 py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def_readonly("obj", &blockSQP::SQPiterate::obj)
@@ -908,6 +913,13 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
     .def_readonly("dg_pos", &blockSQP::SQPiterate::dg_pos)
 	;
 
+py::class_<blockSQP::RestorationProblem, blockSQP::Problemspec>(m, "RestorationProblem")
+        .def(py::init<blockSQP::Problemspec*, blockSQP::Matrix&, double, double>())
+        //.def("__init__", [](Problemform* P, blockSQP::Matrix& M, double d1, double d2){return new RestorationProblem(P, M, d1, d2);})
+        ;
+    
+    
+    
 py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
 	.def_readonly("condensed_Jacobian", &blockSQP::SCQPiterate::condensed_Jacobian)
 	.def_readonly("condensed_lb_var", &blockSQP::SCQPiterate::condensed_lb_var)

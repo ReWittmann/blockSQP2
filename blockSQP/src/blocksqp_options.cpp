@@ -205,7 +205,10 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
         throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
     if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
-
+    
+    if (problem->cond != nullptr && !block_hess)
+        throw ParameterError("Condenser passed, but block updates not enabled");
+        
     optionsConsistency();
 }
 
@@ -228,33 +231,30 @@ void SQPoptions::optionsConsistency(){
     if (qpsol_options != nullptr && qpsol_options->sol != qpsol)
         throw ParameterError("Incorrect QP solver options type given for specified QP solver");
     
+    //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
     if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
         if (qpsol == QPsolvers::qpOASES){
-            if (qpsol_options != nullptr && !(static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == 2 || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1))
-                throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (qpOASES_solver::sparsityLevel == 2)");
+            if (qpsol_options == nullptr || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
+                if (!sparse) throw ParameterError("Indefinite Hessians not supported for dense qpOASES (derived from SQPoptions::sparse = 0, as no or default qpOASES_options::sparsityLevel was given)");
+            }
+            else if (static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel != 2)
+                throw ParameterError("Indefinite Hessians only supported for qpOASES with Schur-complement approach (qpOASES_options::sparsityLevel = 2)");
         }
         else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
     }
-
-    /*
-    if (qpsol == QPsolvers::qpOASES){
-        if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::qpOASES)
-            throw ParameterError("qpOASES specified as QP solver, but options given for different QP solver");
-        if (hessUpdate == 1 && sparse < 2)
-            throw ParameterError("qpOASES supports inertia checks for indefinite Hessians only in schur-complement approach (sparse == 2)");
+    
+    if (par_QPs){
+        if(qpsol == QPsolvers::qpOASES){
+            #ifdef SOLVER_MUMPS
+                #ifndef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
+                    throw ParameterError("A modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+                #endif
+            #endif
+        }
+        if (max_conv_QPs > 7)
+            throw ParameterError("Only up to SQPoptions::max_conv_QPs == 7 convexified QPs are supported for parallel solution");
     }
-    if (qpsol == QPsolvers::gurobi){
-        if (qpsol_options != nullptr && qpsol_options->sol != QPsolvers::gurobi)
-            throw ParameterError("gurobi specified as QP solver, but options given for different QP solver");
-        if (hessUpdate == 1 || hessUpdate == 4)
-            throw ParameterError("gurobi provides needed lagrange multipliers only for convex QPs, given Hessian options not possible");
-    }
-    if (qpsol == QPsolvers::qpalm){
-        if (qpsol_options != nullptr && qpsol_options->sol != QPsolver_ID::qpalm)
-            throw ParameterError("qpalm specified as QP solver, but options given for different QP solver");
-    }
-    */
-
+    
     // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
     if (exact_hess == 2){
         std::cout << "Exact Hessian is available, hessUpdate and sizing are ignored\n";

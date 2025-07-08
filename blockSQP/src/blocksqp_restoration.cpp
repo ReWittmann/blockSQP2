@@ -27,9 +27,6 @@ void abstractRestorationProblem::update_xi_ref(const Matrix &xiReference){return
 
 
 RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
-
-    int iVar, iCon;
-
     parent = parentProblem;
     /*
     xiRef.Dimension( parent->nVar ).Initialize(0.);

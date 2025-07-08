@@ -118,8 +118,7 @@ void SQPmethod::calc_free_variables_scaling(double *arg_SF){
 
 // Invokation of scaling algorithms. Decide if algorithm should be invoked in this iteration and apply the scaling
 void SQPmethod::scaling_heuristic(){
-    Matrix deltai, smallDelta, smallGamma;
-    int pos, Bsize;
+    //Matrix deltai, smallDelta, smallGamma;
     //Scale after iterations 1, 2, 3, 5, 10, 15, ...
     if (stats->itCount > 3 && stats->itCount%5) return;
 
@@ -134,7 +133,7 @@ void SQPmethod::scaling_heuristic(){
 // Apply rescaling to the iterate and the scalable problem specification. 
 void SQPmethod::apply_rescaling(const double *resfactors){
     Matrix deltai, smallDelta, smallGamma;
-    int pos, Bsize, nmem;
+    int pos, nmem;
 
     //Rescale the problem
     scaled_prob->rescale(resfactors);
@@ -149,8 +148,8 @@ void SQPmethod::apply_rescaling(const double *resfactors){
 
     if (param->sparse){
         for (int i = 0; i < prob->nVar; i++){
-            for (int k = vars->jacIndCol[i]; k < vars->jacIndCol[i+1]; k++){
-                vars->jacNz[k] /= resfactors[i];
+            for (int k = vars->sparse_constrJac.colind[i]; k < vars->sparse_constrJac.colind[i+1]; k++){
+                vars->sparse_constrJac.nz[k] /= resfactors[i];
             }
         }
     }

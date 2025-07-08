@@ -8,7 +8,6 @@ except:
     sys.path.append(os.getcwd() + "/..")
 
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 
 itMax = 100
@@ -29,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, refine=1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -38,6 +37,9 @@ opts.max_QP_secs = 5.0
 
 opts.max_conv_QPs = 4
 opts.conv_strategy = 2
+opts.par_QPs = False
+opts.enable_QP_cancellation=True
+
 opts.exact_hess = 0
 opts.hess_approx = 1
 opts.sizing = 2
@@ -57,16 +59,12 @@ opts.max_extra_steps = 0
 opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
-
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.terminationTolerance = 1e-10
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
-
-# opts.qpsol = 'qpalm'
-
 ################################
 
 #Create condenser, chose SCQPmethod below to enable condensing
@@ -86,7 +84,7 @@ cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
 
 
 #Define blockSQP Problemspec
-prob = Problemspec()
+prob = py_blockSQP.Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 
@@ -101,11 +99,12 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
+# prob.cond = cond
 
-# import copy
-# sp = copy.copy(OCprob.start_point)
-# OCprob.set_stage_control(sp, 9, [0.1])
-# prob.x_start = sp
+import copy
+sp = copy.copy(OCprob.start_point)
+OCprob.set_stage_control(sp, 10, [0.9])
+prob.x_start = sp
 
 prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
@@ -123,15 +122,13 @@ scale_arr = 1.0;
 # prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
-
 #No condensing
+tm1 = time.time()
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
-
-#Condensing
-# optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
 optimizer.init()
 #####################
 t0 = time.time()
+print("Created SQPmethod in ", t0 - tm1, "s\n")
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
     ret = int(optimizer.run(1))
@@ -149,6 +146,7 @@ else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.time()
-OCprob.plot(xi, dpi=150, it = i, title=plot_title)
+#OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 #####################
+time.sleep(0.01)
 print(t1 - t0, "s")

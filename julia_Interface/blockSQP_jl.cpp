@@ -214,25 +214,25 @@ class JL_Condenser{
 
     JL_Condenser(jlcxx::ArrayRef<blockSQP::vblock, 1> &VBLOCKS, jlcxx::ArrayRef<blockSQP::cblock, 1> &CBLOCKS, jlcxx::ArrayRef<int, 1> &HSIZES, jlcxx::ArrayRef<blockSQP::condensing_target, 1> &TARGETS, int DEP_BOUNDS){
         vblocks = std::make_unique<blockSQP::vblock[]>(VBLOCKS.size());
-        for (int i = 0; i < VBLOCKS.size(); i++){
+        for (std::size_t i = 0; i < VBLOCKS.size(); i++){
             vblocks[i] = VBLOCKS[i];
         }
 
         cblocks = std::make_unique<blockSQP::cblock[]>(CBLOCKS.size());
-        for (int i = 0; i < CBLOCKS.size(); i++){
+        for (std::size_t i = 0; i < CBLOCKS.size(); i++){
             cblocks[i] = CBLOCKS[i];
         }
         
         hsizes = std::make_unique<int[]>(HSIZES.size());
-        for (int i = 0; i < HSIZES.size(); i++){
+        for (std::size_t i = 0; i < HSIZES.size(); i++){
             hsizes[i] = HSIZES[i];
         }
 
         targets = std::make_unique<blockSQP::condensing_target[]>(TARGETS.size());
-        for (int i = 0; i < TARGETS.size(); i++){
+        for (std::size_t i = 0; i < TARGETS.size(); i++){
             targets[i] = TARGETS[i];
         }
-
+        
         Cxx_Condenser = std::make_unique<blockSQP::Condenser>(vblocks.get(), VBLOCKS.size(), cblocks.get(), CBLOCKS.size(), hsizes.get(), HSIZES.size(), targets.get(), TARGETS.size(), DEP_BOUNDS);
     }
 };
@@ -246,10 +246,12 @@ class NULL_QPsolver_options : public blockSQP::QPsolver_options{
 
 namespace jlcxx{
     template<> struct SuperType<Problemform>{typedef blockSQP::Problemspec type;};
+    /*
     template<> struct SuperType<blockSQP::SCQPmethod>{typedef blockSQP::SQPmethod type;};
     template<> struct SuperType<blockSQP::SCQP_bound_method>{typedef blockSQP::SCQPmethod type;};
     template<> struct SuperType<blockSQP::SCQP_correction_method>{typedef blockSQP::SCQPmethod type;};
-
+    */
+    
     template<> struct SuperType<NULL_QPsolver_options>{typedef blockSQP::QPsolver_options type;};
     template<> struct SuperType<blockSQP::qpOASES_options>{typedef blockSQP::QPsolver_options type;};
     template<> struct SuperType<blockSQP::gurobi_options>{typedef blockSQP::QPsolver_options type;};
@@ -354,6 +356,7 @@ mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
     .method("set_automatic_scaling", [](blockSQP::SQPoptions &opts, bool val){opts.automatic_scaling = val;})
 	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_filter_overrides = val;})
     .method("set_max_extra_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_extra_steps = val;})
+    .method("set_par_QPs", [](blockSQP::SQPoptions &opts, bool val){opts.par_QPs = val;})
     ;
     
 
@@ -499,19 +502,18 @@ mod.add_type<blockSQP::Sparse_Matrix>("Cxx_Sparse_Matrix")
     .method("disown!", [](blockSQP::Sparse_Matrix &M){
         M.m = 0;
         M.n = 0;
-        M.nnz = 0;
-        M.nz = nullptr;
-        M.row = nullptr;
-        M.colind = nullptr;
+        M.nz.release();
+        M.row.release();
+        M.colind.release();
     })
-    .method("get_nnz", [](blockSQP::Sparse_Matrix &M){return M.nnz;})
-    .method("show_nz", [](blockSQP::Sparse_Matrix &M){return M.nz;})
-    .method("show_row", [](blockSQP::Sparse_Matrix &M){return M.row;})
-    .method("show_colind", [](blockSQP::Sparse_Matrix &M){return M.colind;})
+    .method("get_nnz", [](blockSQP::Sparse_Matrix &M){return M.colind[M.n];})
+    .method("show_nz", [](blockSQP::Sparse_Matrix &M){return M.nz.get();})
+    .method("show_row", [](blockSQP::Sparse_Matrix &M){return M.row.get();})
+    .method("show_colind", [](blockSQP::Sparse_Matrix &M){return M.colind.get();})
     ;
 
 mod.method("alloc_Cxx_Sparse_Matrix", [](int m, int n, int nnz){
-    return blockSQP::Sparse_Matrix(m, n, nnz, new double[nnz], new int[nnz], new int[n+1]);
+    return blockSQP::Sparse_Matrix(m, n, std::make_unique<double[]>(nnz), std::make_unique<int[]>(nnz), std::make_unique<int[]>(n+1));
 });
 
 
@@ -551,6 +553,8 @@ mod.method("construct_Condenser", [](vblock_array *VBLOCKS, cblock_array &CBLOCK
 
 
 //SCQP (sequential condensed quadratic programming) classes jlcxx::julia_base_type<blockSQP::Problemspec>()
+
+/*
 mod.add_type<blockSQP::SCQPmethod>("Cxx_SCQPmethod", jlcxx::julia_base_type<blockSQP::SQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
@@ -562,7 +566,7 @@ mod.add_type<blockSQP::SCQP_bound_method>("Cxx_SCQP_bound_method", jlcxx::julia_
 mod.add_type<blockSQP::SCQP_correction_method>("Cxx_SCQP_correction_method", jlcxx::julia_base_type<blockSQP::SCQPmethod>())
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>()
     ;
-
+*/
 
 
 

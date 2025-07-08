@@ -22,7 +22,7 @@ import OCProblems
 OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, refine=1, parallel = False, integrator = 'RK4')
 
 
-freeScale = 1.0
+freeScale = 100.0
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -31,7 +31,7 @@ opts.max_QP_secs = 5.0
 
 opts.max_conv_QPs = 1
 opts.conv_strategy = 1
-opts.automatic_scaling = False
+opts.automatic_scaling = True
 
 opts.exact_hess = 0
 opts.hess_approx = 1

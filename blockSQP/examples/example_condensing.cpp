@@ -113,11 +113,11 @@ int main(){
 
 
     //Uncondensed Problem
-    double *NZ = new double[26]{-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,1,1,1,1};
-    int *ROW = new int[26]{0,1,6,0,2,6,1,3,6,2,3,6,2,4,6,3,5,6,4,5,6,4,6,5,6,6};
-    int *COLIND = new int[11]{0,3,6,9,12,15,18,21,23,25,26};
+    std::unique_ptr<double[]> NZ = std::unique_ptr<double[]>(new double[26]{-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,1,1,1,1});
+    std::unique_ptr<int[]> ROW = std::unique_ptr<int[]>(new int[26]{0,1,6,0,2,6,1,3,6,2,3,6,2,4,6,3,5,6,4,5,6,4,6,5,6,6});
+    std::unique_ptr<int[]> COLIND = std::unique_ptr<int[]>(new int[11]{0,3,6,9,12,15,18,21,23,25,26});
 
-    blockSQP::Sparse_Matrix con_jac(7,10,26, NZ, ROW, COLIND);
+    blockSQP::Sparse_Matrix con_jac(7, 10, std::move(NZ), std::move(ROW), std::move(COLIND));
 
     std::cout << "A =\n" << con_jac.dense() << "\n";
 
@@ -174,7 +174,7 @@ int main(){
     qp = new qpOASES::SQProblemSchur( con_jac.n, con_jac.m, qpOASES::HST_UNKNOWN, 50 );
 
     A_qp = new qpOASES::SparseMatrix(con_jac.m, con_jac.n,
-                con_jac.row, con_jac.colind, con_jac.nz);
+                con_jac.row.get(), con_jac.colind.get(), con_jac.nz.get());
 
     convertHessian(1.0e-15, hess, 4, con_jac.n, hess_nz, hess_row, hess_colind, hess_loind);
     std::cout << "converted Hessians\n";
@@ -271,7 +271,7 @@ int main(){
     qp_cond = new qpOASES::SQProblemSchur( condensed_Jacobian.n, condensed_Jacobian.m, qpOASES::HST_UNKNOWN, 50 );
 
     A_qp_cond = new qpOASES::SparseMatrix(condensed_Jacobian.m, condensed_Jacobian.n,
-                condensed_Jacobian.row, condensed_Jacobian.colind, condensed_Jacobian.nz);
+                condensed_Jacobian.row.get(), condensed_Jacobian.colind.get(), condensed_Jacobian.nz.get());
 
     convertHessian(1.0e-15, condensed_hess, 1, condensed_Jacobian.n, hess_nz_cond, hess_row_cond, hess_colind_cond, hess_loind_cond);
     std::cout << "converted Hessians\n";

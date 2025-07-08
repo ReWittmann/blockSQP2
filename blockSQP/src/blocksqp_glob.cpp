@@ -170,7 +170,7 @@ int SQPmethod::fullstep(){
  */
 int SQPmethod::filterLineSearch(){
     double alpha = 1.0;
-    double cNorm, cNormTrial, objTrial, dfTdeltaXi;
+    double cNorm, cNormTrial(0), objTrial, dfTdeltaXi(0);   //cNormTrial and dfTdeltaXi are initialized to prevent compiler warnings
 
     int k, info;
     int nVar = prob->nVar;
@@ -330,13 +330,13 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
         //Update AdeltaXi, where we use the original step in the first iteration and the previous SOC step in the following iterations (thats why we don't do it in the solve_SOC_QP method)
         if (k == 0){
             if (param->sparse)
-                Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->deltaXi, vars->AdeltaXi);
+                Atimesb(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->deltaXi, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, vars->deltaXi, vars->AdeltaXi);
         }
         else{
             if (param->sparse)
-                Atimesb(vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), deltaXiSOC, vars->AdeltaXi);
+                Atimesb(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), deltaXiSOC, vars->AdeltaXi);
             else
                 Atimesb(vars->constrJac, deltaXiSOC, vars->AdeltaXi);
         }
@@ -344,8 +344,8 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
         info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
-
-        if( info != 0 )
+            
+        if (info != 0)
             return false; // Could not solve QP, abort SOC
 
         // Set new SOC trial point
@@ -601,7 +601,7 @@ int SQPmethod::feasibilityRestorationHeuristic(){
  * If the line search fails, check if the full step reduces the KKT error by a factor kappaF.
  */
 int SQPmethod::kktErrorReduction(){
-    int i, info = 0;
+    int info = 0;
     double objTrial, cNormTrial, trialGradNorm, trialTol;
     Matrix trialConstr, trialGradLagrange;
 
@@ -636,8 +636,8 @@ int SQPmethod::kktErrorReduction(){
     // scaled norm of Lagrangian gradient
     trialGradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
     if( param->sparse )
-        calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->jacNz.get(),
-                              vars->jacIndRow.get(), vars->jacIndCol.get(), trialGradLagrange, 0 );
+        calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->sparse_constrJac.nz.get(),
+                              vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), trialGradLagrange, 0 );
     else
         calcLagrangeGradient( vars->lambdaQP, vars->gradObj, vars->constrJac,
                               trialGradLagrange, 0 );
@@ -729,7 +729,7 @@ void SQPmethod::augmentFilter( double cNorm, double obj )
     return;
 }
 
-
+/*
 int SCQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
     if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
@@ -768,7 +768,6 @@ int SCQP_correction_method::filterLineSearch(){
     double max_dep_bound_violation, xi_s;
 
     // Compute ||constr(xi)|| at old point
-    //cNorm = l1ConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
     cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
 
     // Backtracking line search
@@ -785,7 +784,7 @@ int SCQP_correction_method::filterLineSearch(){
             dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
 
         //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
-        //work with a different variable (CSQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
+        //work with a different variable (SCQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
         if (k == 0){
             static_cast<SCQP_correction_iterate*>(vars.get())->deltaXi_save = vars->deltaXi;
             static_cast<SCQP_correction_iterate*>(vars.get())->lambdaQP_save = vars->lambdaQP;
@@ -930,7 +929,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
     //Invoke the restoration phase with setup problem and method
     return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
-
+*/
 
 
 } // namespace blockSQP

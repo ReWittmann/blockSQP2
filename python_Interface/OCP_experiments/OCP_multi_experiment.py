@@ -8,7 +8,6 @@ try:
 except:
     sys.path.append(os.getcwd() + "/..")
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 import matplotlib.pyplot as plt
 import time
 import copy
@@ -28,19 +27,19 @@ import OCProblems
 #  'Tubular_Reactor]
 
 ###############################################################################
-OCprob = OCProblems.Goddard_Rocket(nt = 100, parallel = False)
+OCprob = OCProblems.Lotka_OED(nt = 100, parallel = False)
 
 nPert0 = 0
-nPertF = 40
-EXP = (1,2,3)
+nPertF = 10
+EXP = (3,)
 
 titles = [
-    "SR1-BFGS",
-    "Convexification strategy 1",
+    # "SR1-BFGS",
+    # "Convexification strategy 1",
     "Convexification strategy 2",
     # "Convexification strategy 2",
     # "Convexification strategy 2, automatic scaling"
-    ""
+    # ""
     ]
 itMax = 400
 ###############################################################################
@@ -105,6 +104,8 @@ if 2 in EXP:
 if 3 in EXP:
     opts.max_conv_QPs = 4
     opts.conv_strategy = 2
+    opts.automatic_scaling = True
+    opts.par_QPs = True
     # opts.BFGS_damping_factor = 1/3
     
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax)

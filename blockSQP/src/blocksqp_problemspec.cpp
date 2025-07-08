@@ -22,12 +22,12 @@ Problemspec::~Problemspec(){}
 
 void Problemspec::evaluate( const Matrix &xi, double *objval, Matrix &constr, int *info ){
     Matrix lambdaDummy, gradObjDummy;
-    SymMatrix *hessDummy;
+    SymMatrix *hessDummy(nullptr);
     int dmode = 0;
 
     Matrix constrJacDummy;
-    double *jacNzDummy;
-    int *jacIndRowDummy, *jacIndColDummy;
+    double *jacNzDummy(nullptr);
+    int *jacIndRowDummy(nullptr), *jacIndColDummy(nullptr);
     *info = 0;
 
     // Try sparse version first
@@ -52,6 +52,7 @@ scaled_Problemspec::scaled_Problemspec(Problemspec *UNSCprob): unscaled_prob(UNS
     blockIdx = unscaled_prob->blockIdx;
     vblocks = unscaled_prob->vblocks;
     n_vblocks = unscaled_prob->n_vblocks;
+    cond = unscaled_prob->cond;
     
     for (int i = 0; i < nVar; i++){
         scaling_factors[i] = 1.0;

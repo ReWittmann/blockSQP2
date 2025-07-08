@@ -20,6 +20,7 @@
 #include "blocksqp_defs.hpp"
 #include <iostream>
 #include <vector>
+#include <memory>
 
 namespace blockSQP
 {
@@ -174,18 +175,22 @@ class Sparse_Matrix{
 	public:
 		int m;
 		int n;
-		int nnz;
-		double *nz;
-		int *row;
-		int *colind;
-    bool memoryOwned;
+		//int nnz;
+		std::unique_ptr<double[]> nz;
+		std::unique_ptr<int[]> row;
+		std::unique_ptr<int[]> colind;
+    //bool memoryOwned;
 
-    Sparse_Matrix(int, int, int, double*, int*, int*, bool memOwn = true);
+    Sparse_Matrix(int M, int N, int NNZ);
+    Sparse_Matrix(int M, int N, std::unique_ptr<double[]> NZ, std::unique_ptr<int[]> ROW, std::unique_ptr<int[]> COLIND);
 		Sparse_Matrix(const Sparse_Matrix &M);
 		Sparse_Matrix(Sparse_Matrix &&M);
 		Sparse_Matrix(const CSR_Matrix &M);
 		Sparse_Matrix();
-		~Sparse_Matrix();
+		//~Sparse_Matrix();
+    
+    Sparse_Matrix &Dimension(int M, int N, int NNZ);
+    
 		void operator=(const Sparse_Matrix &M);
 		void operator=(Sparse_Matrix &&M);
 		Sparse_Matrix operator+(const Sparse_Matrix &M2) const;

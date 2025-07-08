@@ -25,7 +25,7 @@ opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 1
+opts.max_conv_QPs = 4
 opts.conv_strategy = 1
 opts.automatic_scaling = False
 
@@ -44,7 +44,7 @@ opts.conv_kappa_max = 2.0
 
 
 opts.max_extra_steps = 0
-opts.enable_premature_termination = True
+opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
 

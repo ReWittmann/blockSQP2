@@ -57,8 +57,8 @@ class RestorationProblem : public abstractRestorationProblem{
         //Submatrix containing slack variables
         Matrix slack;
 
-        double zeta;
         double rho;
+        double zeta;
 
         //double *jacNzOrig;
         //int *jacIndRowOrig;
@@ -190,10 +190,11 @@ class TC_restoration_Problem: public abstractRestorationProblem{
     //Submatrix containing slack variables
     Matrix slack;
 
-    double zeta;
     double rho;
+    double zeta;
 
     Matrix constr_orig;
+    
     double *jac_orig_nz = nullptr;
     int *jac_orig_row = nullptr;
     int *jac_orig_colind = nullptr;

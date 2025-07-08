@@ -46,6 +46,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
     ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
+    /*
     if (!param->sparse){
         constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
         jacNz = nullptr;
@@ -56,7 +57,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         jacNz = std::make_unique<double[]>(prob->nnz);
         jacIndRow = std::make_unique<int[]>(prob->nnz);
         jacIndCol = std::make_unique<int[]>(prob->nVar + 1);
-    }
+    }*/
+    if (!param->sparse) constrJac.Dimension(prob->nCon, prob->nVar).Initialize(0.0);
+    else sparse_constrJac.Dimension(prob->nCon, prob->nVar, prob->nnz);
     
     //Allocate Hessian data
     int maxblocksize;
@@ -173,7 +176,12 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
 
     // Convexification strategy
     hess_num_accepted = 0;
+    QP_num_accepted = 0;
     convKappa = param->conv_kappa_0;
+    if (param->max_conv_QPs > 1){
+        deltaXi_conv.Dimension(prob->nVar);
+        lambdaQP_conv.Dimension(prob->nVar + prob->nCon);
+    }
 
     // Scaling heuristic
     if (param->automatic_scaling){
@@ -190,6 +198,8 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
 
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;
+    
+    N_QP_cancels = 0;
 }
 
 SQPiterate::SQPiterate(){}
@@ -208,6 +218,9 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
     gradLagrange = iter.gradLagrange;
 
     constrJac = iter.constrJac;
+    sparse_constrJac = iter.sparse_constrJac;
+    
+    /*
     if (iter.jacNz != nullptr){
         int nVar = xi.M();
         int nnz = iter.jacIndCol[nVar];
@@ -224,7 +237,8 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
         for (int i = 0; i <= nVar; i++)
             jacIndCol[i] = iter.jacIndCol[i];
     }
-
+    */
+    
     hess = nullptr;
 }
 
@@ -283,8 +297,8 @@ void SQPiterate::restore_iterate(){
 SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond):
         SQPiterate(prob, param){
     //Wrap sparse jacobian array
-    Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
-
+    //Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
+    
     //Allocate solution of condensed QP
     deltaXi_cond.Dimension(cond->condensed_num_vars);
     lambdaQP_cond.Dimension(cond->condensed_num_vars + cond->condensed_num_cons);

@@ -25,6 +25,7 @@
 #include <fstream>
 #include <cmath>
 #include <chrono>
+using namespace std::chrono;
 
 namespace blockSQP{
 
@@ -41,7 +42,7 @@ void SQPmethod::init(){
 
     // Set initial values for all xi and set the Jacobian for linear constraints
     if( param->sparse )
-        prob->initialize(vars->xi, vars->lambda, vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get());
+        prob->initialize(vars->xi, vars->lambda, vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
     else
         prob->initialize(vars->xi, vars->lambda, vars->constrJac);
 
@@ -66,12 +67,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         // SQP iteration 0
         if (param->sparse)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
+                            vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-
+        
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars.get(), param, hasConverged );
@@ -94,13 +95,25 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         
         /// Solve QP subproblem with qpOASES or QPOPT
-        infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+        if (!param->par_QPs){
+            steady_clock::time_point t0 = steady_clock::now();
+            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+            steady_clock::time_point t1 = steady_clock::now();
+            std::cout << "solveQP took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
+        }
+        else{
+            steady_clock::time_point t0 = steady_clock::now();
+            if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
+            else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
+            steady_clock::time_point t1 = steady_clock::now();
+            std::cout << "solveQP_par took " << duration_cast<microseconds>(t1 - t0).count() << "mus.\n"; 
+        }
         
         //if (infoQP == 0) printf("***QP solution successful***");
         if (infoQP == 0);
         else if (infoQP == 1){
             bool qpError = true;
-
+            
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
             if (infoQP){
@@ -198,7 +211,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
                 
                 if (vars->KKT_heuristic_enabled){
-                    std::cout << "filterLineSearch failed, try to reduce kktError\n" << std::flush;
+                    std::cout << "filterLineSearch failed, try to reduce kktError\n";
                     vars->KKTerror_save = vars->tol;
                     lsError = kktErrorReduction();
                     if (!lsError)
@@ -279,7 +292,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Evaluate functions and gradients at the new xi
         if (param->sparse){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                            vars->jacNz.get(), vars->jacIndRow.get(), vars->jacIndCol.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
+                            vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
         }
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
@@ -374,14 +387,14 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
                 if (param->fallback_approx <= 2)
-                    calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
+                    calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
                 if (param->exact_hess < 2){
                     //Calculate/Update first (pos. indefinite) hessian
                     if (param->hess_approx <= 2 || param->hess_approx > 6)
-                        calcHessianUpdateLimitedMemory(param->hess_approx, param->sizing, vars->hess1.get());
+                        calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
                     else if (param->hess_approx == 4)
                         calcFiniteDiffHessian(vars->hess1.get());
                     vars->hess2_updated = false;

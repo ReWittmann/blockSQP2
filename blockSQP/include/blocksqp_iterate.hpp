@@ -30,32 +30,36 @@ namespace blockSQP{
 class SQPiterate{
     public:
         //Initialized by initIterate, 
-        double obj;                                   ///< objective value
-        double cNorm;                                 ///< constraint violation
-        double cNormS;                                ///< scaled constraint violation
-        double gradNorm;                              ///< norm of Lagrangian gradient
-        double lambdaStepNorm;                        ///< norm of step in dual variables
-        double tol;                                   ///< current optimality tolerance
-
-        double alpha;                                 ///< stepsize for line search
-        int nSOCS;                                    ///< number of second-order correction steps
-        int reducedStepCount;                         ///< count number of consecutive reduced steps,
-        int steptype;                                 ///< -2: Filter-overwriting step -1: Step heuristic, 0: Linesearch step, 1: Linesearch step with identity Hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
-        int n_id_hess;                                ///< Number of condecutive uses of identity hessian as fallback
-
+        double obj;                                   // objective value
+        double cNorm;                                 // constraint violation
+        double cNormS;                                // scaled constraint violation
+        double gradNorm;                              // norm of Lagrangian gradient
+        double lambdaStepNorm;                        // norm of step in dual variables
+        double tol;                                   // current optimality tolerance
+        
+        double alpha;                                 // stepsize for line search
+        int nSOCS;                                    // number of second-order correction steps
+        int reducedStepCount;                         // count number of consecutive reduced steps,
+        int steptype;                                 // -2: Filter-overwriting step -1: Step heuristic, 0: Linesearch step, 1: Linesearch step with identity Hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
+        int n_id_hess;                                // Number of condecutive uses of identity hessian as fallback
+        
         //Current primal-dual iterate. 
-        Matrix xi;                                    ///< variable vector
-        Matrix lambda;                                ///< dual variables
-        Matrix constr;                                ///< constraint vector
-        Matrix gradObj;                               ///< gradient of objective
-        Matrix gradLagrange;                          ///< gradient of Lagrangian
-
+        Matrix xi;                                    // variable vector
+        Matrix lambda;                                // dual variables
+        Matrix constr;                                // constraint vector
+        Matrix gradObj;                               // gradient of objective
+        Matrix gradLagrange;                          // gradient of Lagrangian
+        
         //Constraint jacobian
-        Matrix constrJac;                             ///< full constraint Jacobian (not used in sparse mode)
+        Matrix constrJac;                             // full constraint Jacobian (not used in sparse mode)
+        Sparse_Matrix sparse_constrJac;               // sparse constraint Jacobian (not used in dense mode)
+        
+        /*
         std::unique_ptr<double[]> jacNz;              // Constraint Jacobian in CCS form (only used in sparse mode)
         std::unique_ptr<int[]> jacIndRow;
         std::unique_ptr<int[]> jacIndCol;
-
+        */
+        
         //Hessian(s), including layout
         int nBlocks;                                   ///< number of diagonal blocks in Hessian
         std::unique_ptr<int[]> blockIdx;               ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
@@ -86,6 +90,10 @@ class SQPiterate{
         //Additional step data used by the methods
         Matrix AdeltaXi;                              ///< product of constraint Jacobian with deltaXi (from SOC for SOC iterations after the first one), calculated in secondOrderCorrection method as needed
         Matrix lambdaQP;                              ///< dual variables of QP
+        
+        //Convex Hessian step calculated by convexification strategy
+        Matrix deltaXi_conv;
+        Matrix lambdaQP_conv;
 
         Matrix trialXi;                               ///< new trial iterate (for line search)
         Matrix trialLambda;                           ///< Used temporarily if previous Lambda is still required, e.g. to calculate lambdaStepNorm
@@ -125,6 +133,7 @@ class SQPiterate{
 
         //Convexification strategy 1 and 2
         int hess_num_accepted;                        // order of hessian convexification for last QP, ranging from 0 (no regularization) to options.max_conv_QPs (fallback)
+        int QP_num_accepted;                          // Number of QP whose step was chosen, different from hess_num_accepted because the fallback step may be chosen if its norm is greater than a regularized Hessian step
         double convKappa;                             // Last factor in convexification strategy, factors are ... , 2^-2 * convKappa, 2^-1 * convKappa, convKappa     
         
         //Scaling heuristic
@@ -146,7 +155,10 @@ class SQPiterate{
         double cNormSOpt_save;
         scaled_Problemspec *scaled_prob;              // Pointer to a scaled problem or nullptr. Used to save and restore scaling factors. 
         std::unique_ptr<double[]> scaleFactors_save;
-
+        
+        //
+        int N_QP_cancels;
+        
     public:
         /// Call allocation and initializing routines
         SQPiterate(Problemspec* prob, const SQPoptions* param);
