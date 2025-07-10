@@ -946,7 +946,7 @@ class SymSparseMat : public SymmetricMatrix, public SparseMatrix
 						sparse_int_t* c, 	/**< Indices to first entry of columns (nCols+1). */
 						real_t* v			/**< Vector of entries (length). */
 						) : SparseMatrix(nr, nc, r, c, v) { };
-
+		
 		/** Constructor from dense matrix. */
 		SymSparseMat(	int_t nr, 				/**< Number of rows. */
 						int_t nc,		 		/**< Number of columns. */

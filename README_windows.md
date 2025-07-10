@@ -1,19 +1,18 @@
 # BlockSQP - C++, Python, Julia - Build System Using qpOASES and MUMPS
 
-This is a modified version of the **blockSQP** nonlinear program solver that includes new CMake build specifications, a Python interface, and a Julia interface.
-
-**Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>**
-
 ## Configuration for Building BlockSQP on Windows
 
 The following configuration is known to work for building **blockSQP** on Windows.
 
 ### Requirements:
-- **CMake build system**
-- **Ninja build system backend**
+- **CMake build system (https://cmake.org/download/)**
+- **Ninja build system backend (https://github.com/ninja-build/ninja/releases)**
 - **MSVC C++ compiler** (included in Visual Studio Community 2022)
-- **Intel oneAPI Base Toolkit and oneAPI HPC Toolkit**  
-  (Includes Fortran compiler, oneMKL (for LAPACK and BLAS))
+- **Intel Fortran compiler and intel oneMKL from the intel oneAPI HPC Toolkit (https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html)**
+
+#### Python and Julia interfaces
+- **Download Python from (https://www.python.org/downloads/), guaranteed to include required libpython.dll**
+- 
 
 ### Steps:
 1. Activate the Intel oneAPI command prompt for Visual Studio 2022.

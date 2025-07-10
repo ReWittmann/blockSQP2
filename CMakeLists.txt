@@ -33,7 +33,8 @@ set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
 set(MUMPS_find_static ON)
 
-#Shared MUMPS libraries are not supported when building with oneAPI and MSVC on windows, so default to static
+#Shared MUMPS libraries are not supported when building with oneAPI and MSVC on windows
+# + a separate shared library may need to be built from this, so default to static
 set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_MakeAvailable(CMAKEMUMPS)
@@ -93,7 +94,6 @@ endif()
 ]]
 
 
-
 set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
@@ -117,10 +117,10 @@ add_library(qpOASES STATIC
 
 #MUMPS LINEAR SOLVER
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS) #LAPACK and BLAS dependencies are already resolved by CMakeMumps and passed on
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
+	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
 	if (NOT APPLE)
 		target_link_libraries(qpOASES PUBLIC -lgfortran)
 	endif()
@@ -133,18 +133,13 @@ target_include_directories(qpOASES
 
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
-	#PUBLIC	${CMAKE_CURRENT_SOURCE_DIR}/modded_external
 )
-
-if (UNIX)
-	target_compile_options(qpOASES PUBLIC -fPIC)
-endif()
 
 
 
 #MA57 LINEAR SOLVER
 ## Build qpOASES with MA57, requires passing preprocessor flag -DSOLVER_MA57
-## Dependencies are METIS -> GKLIB, LAPACK, BLAS, dl
+## Dependencies are -> METIS -> GKLIB, LAPACK, BLAS, dl
 #[[
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -210,15 +205,17 @@ add_library(blockSQP STATIC
 target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
 
 
-if (UNIX AND NOT APPLE)
-	target_compile_definitions(blockSQP PUBLIC LINUX)
+if (UNIX)
+	if(NOT APPLE)
+		target_compile_definitions(blockSQP PUBLIC LINUX)
+	endif()
+	target_compile_options(blockSQP PRIVATE 
+		-O3
+		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized)
 elseif(WIN32)
 	target_compile_definitions(blockSQP PUBLIC WINDOWS)
 endif()
 
-target_compile_options(blockSQP PRIVATE 
-	-O3
-	-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized)
 
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
 										  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
@@ -226,9 +223,10 @@ set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURC
 
 target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES)
 target_link_libraries(blockSQP PUBLIC qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
-											   #		   to enable workarounds for MUMPS not being thread safe
+											   #		   to enable workarounds for MUMPS not being thread safe,
+											   #		   or prevent MUMPS from running in parallel
 
-
+#Shared mumps library/ies for dynamic loading in a threadsafe way (dlmopen on linux, LoadLibraryA on multiple copies on windows)
 if (UNIX AND NOT APPLE)
 	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 	set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
@@ -260,6 +258,9 @@ elseif(WIN32)
 						${LIBPATH}
 			)
 		endforeach()
+	endfunction()
+else()
+	function(ifwindows_copy_mumps_dlls LIBPATH)
 	endfunction()
 endif()
 
@@ -315,15 +316,18 @@ if(PYTHON_INTERFACE)
 	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
 	
-	target_compile_options(py_blockSQP PRIVATE 
-				-Wall -Wextra -Wno-unused-parameter
-				-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
-				-O3
-				)
+	if(UNIX)
+		target_compile_options(py_blockSQP PRIVATE 
+					-Wall -Wextra -Wno-unused-parameter
+					-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
+					-O3
+					)
+					
+		#Prevent warnings for *_pointer_interface and T_array constructors 
+		#that occur after compiling with -O3. Result of using int instead of size_t.
+		target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
+	endif()
 	
-	#Prevent warnings for *_pointer_interface and T_array constructors 
-	#that occur after compiling with -O3. Result of using int instead of size_t.
-	target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
 									  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
@@ -343,16 +347,19 @@ if(JULIA_INTERFACE)
 	find_package(JlCxx)
 	get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
 	get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
-
+	
 	message(STATUS "Found JlCxx at ${JlCxx_location}")
 	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl.cpp)
-
+	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
-	target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
+	
+	if(UNIX)
+		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
+	endif()
+	
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP JlCxx::cxxwrap_julia)
-	#set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/julia_Interface)
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
-
+	
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 endif()
 
