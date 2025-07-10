@@ -1007,6 +1007,11 @@ class Goddard_Rocket(OCProblem):
         for i in range(nt_acc,nt_acc+nt_dec):
             self.set_stage_control(self.start_point, i, [0.0])
             self.set_stage_param(self.start_point, i, [0.4/(b*0.4)/self.ntS])
+        
+        # for i in range(self.ntS):
+        #     self.set_stage_control(self.start_point, i, [0.4])
+        #     self.set_stage_param(self.start_point, i, [0.4/(b*0.4)/self.ntS])
+        
         self.integrate_full(self.start_point)
         
         
@@ -1043,7 +1048,7 @@ class Goddard_Rocket(OCProblem):
         plt.show()
         
 
-class Goddard_Rocket_MOD(Goddard_Rocket):
+class Goddard_Rocket_TROLL(Goddard_Rocket):
     default_params = {
         'rT':1.01, 
         'b':7.0, 

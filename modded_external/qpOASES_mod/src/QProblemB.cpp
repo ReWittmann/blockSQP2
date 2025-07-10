@@ -2486,7 +2486,7 @@ returnValue QProblemB::solveQP(	const real_t* const g_new,
 			nWSR = iter;
 			if (cputime != 0)
 				*cputime = getCPUtime() - starttime;
-			return THROWERROR(RET_STOP_REQUESTED);
+			return THROWINFO(RET_STOP_REQUESTED);
 		}
 		
 

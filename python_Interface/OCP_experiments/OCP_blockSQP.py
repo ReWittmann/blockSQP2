@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 itMax = 100
 
-step_plots = False
+step_plots = True
 plot_title = True
 
 
@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_OED(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Goddard_Rocket(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -55,7 +55,7 @@ opts.conv_kappa_max = 8.0
 
 opts.automatic_scaling = True
 
-opts.max_extra_steps = 0
+opts.max_extra_steps = 10
 opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
