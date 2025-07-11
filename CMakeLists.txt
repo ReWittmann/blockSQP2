@@ -340,6 +340,9 @@ option(JULIA_INTERFACE "build julia interface" OFF)
 set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (default: empty)")
 
 if(JULIA_INTERFACE)
+
+	#[[
+
 	set(JLCXX_BUILD_EXAMPLES OFF)
 	set(JLCXX_BUILD_TESTS OFF)
 	FetchContent_Declare(
@@ -384,12 +387,15 @@ if(JULIA_INTERFACE)
 	#file(REMOVE_RECURSE ${LIBCXX_OVERRIDE_DIR})
 	file(MAKE_DIRECTORY ${LIBCXX_OVERRIDE_DIR})
 	
-
-	add_custom_command(
-		OUTPUT ${LIBCXX_OVERRIDE_DIR} POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${LibCxxWrap_BINARY_DIR} ${LIBCXX_OVERRIDE_DIR}
-		COMMAND ${CMAKE_COMMAND} -E copy_directory ${LibCxxWrap_INCLUDE_DIR} ${LIBCXX_OVERRIDE_DIR}
+	
+	message(STATUS "LibCxxWrap_BINARY_DIR" ${LibCxxWrap_BINARY_DIR})
+	message(STATUS "LibCxxWrap_INCLUDE_DIR" ${LibCxxWrap_INCLUDE_DIR})
+	
+	add_custom_target(copy_to_override ALL
+    	COMMAND ${CMAKE_COMMAND} -E copy_directory ${LibCxxWrap_BINARY_DIR} ${LIBCXX_OVERRIDE_DIR}/lib
+    	COMMAND ${CMAKE_COMMAND} -E copy_directory ${LibCxxWrap_INCLUDE_DIR} ${LIBCXX_OVERRIDE_DIR}/include
 	)
+	add_dependencies(copy_to_override cxxwrap_julia)
 	
 	
 	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl.cpp)
@@ -401,10 +407,10 @@ if(JULIA_INTERFACE)
 	endif()
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
+	]]
 	
 	
 	
-	#[[
 	if(NOT CXXWRAP_PATH STREQUAL "")
 		list(APPEND CMAKE_PREFIX_PATH ${CXXWRAP_PATH})
 	endif()
@@ -427,6 +433,6 @@ if(JULIA_INTERFACE)
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 	
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
-	]]
+	
 endif()
 
