@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 itMax = 100
 
-step_plots = True
+step_plots = False
 plot_title = True
 
 
@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Particle_Steering(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
 
 ################################
 opts = py_blockSQP.SQPoptions()

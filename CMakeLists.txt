@@ -18,6 +18,9 @@ enable_language(Fortran)
 #Static linking to avoid having to copy dll(-path)s.
 #
 if(WIN32)
+	if(NOT MSVC)
+		message(FATAL_ERROR "This CMakeLists support building on windows only with MSVC and intel oneAPI fortran")
+	endif()
 	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
 	add_compile_options(/MT)
 endif()
@@ -341,14 +344,14 @@ set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (def
 
 if(JULIA_INTERFACE)
 
-	#[[
+	
 
 	set(JLCXX_BUILD_EXAMPLES OFF)
 	set(JLCXX_BUILD_TESTS OFF)
 	FetchContent_Declare(
 		JlCxx
 		GIT_REPOSITORY https://github.com/JuliaInterop/libcxxwrap-julia.git
-		GIT_TAG 3565a1afa4fa18c683bf02ec76f7b7d21b93bfcd
+		GIT_TAG 3565a1afa4fa18c683bf02ec76f7b7d21b93bfcd #0.14.3
 	)
 	FetchContent_MakeAvailable(JlCxx)
 	
@@ -370,12 +373,28 @@ if(JULIA_INTERFACE)
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 	message(STATUS "Julia path: " ${dotJULIA_DIR})
-		
+	
+	###NEW###
+	execute_process(
+		COMMAND julia -E "begin import Pkg; Pkg.activate(\"${CMAKE_SOURCE_DIR}/blocksqp.jl\"); Pkg.instantiate(); exit() end"
+		OUTPUT_VARIABLE dotJULIA_DIR_TEST
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+
+	execute_process(
+		COMMAND julia --project=${CMAKE_SOURCE_DIR}/blocksqp.jl -E "begin import Pkg; Pkg.develop(\"libcxxwrap_julia_jll\"); import libcxxwrap_julia_jll; libcxxwrap_julia_jll.dev_jll(); print(joinpath.(DEPOT_PATH)[1]); exit() end"
+		OUTPUT_VARIABLE dotJULIA_DIR_TEST
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+	#########
+	
+	#[[
 	execute_process( #TODO possibly add Pkg.free(\"libcxxwrap_julia_jll\")
 		COMMAND julia -E "begin import Pkg; Pkg.develop(\"libcxxwrap_julia_jll\"); import libcxxwrap_julia_jll; libcxxwrap_julia_jll.dev_jll(); print(joinpath.(DEPOT_PATH)[1]); exit() end"
 		OUTPUT_VARIABLE dotJULIA_DIR_TEST
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
+	]]
 	
 	if("${dotJULIA_DIR_TEST}" STREQUAL "")
 		message(FATAL_ERROR "Error in julia environment")
@@ -383,8 +402,11 @@ if(JULIA_INTERFACE)
 	
 	set(LIBCXX_OVERRIDE_DIR ${dotJULIA_DIR}/dev/libcxxwrap_julia_jll/override)
 	
-	file(RENAME ${LIBCXX_OVERRIDE_DIR} ${LIBCXX_OVERRIDE_DIR}_OLD)
-	#file(REMOVE_RECURSE ${LIBCXX_OVERRIDE_DIR})
+	if(NOT EXISTS ${LIBCXX_OVERRIDE_DIR}_save_CMAKE_blockSQP)
+		file(RENAME ${LIBCXX_OVERRIDE_DIR} ${LIBCXX_OVERRIDE_DIR}_save_CMAKE_blockSQP)
+	else()
+		file(REMOVE_RECURSE ${LIBCXX_OVERRIDE_DIR})
+	endif()
 	file(MAKE_DIRECTORY ${LIBCXX_OVERRIDE_DIR})
 	
 	
@@ -403,14 +425,15 @@ if(JULIA_INTERFACE)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)# ${JlCxx_SOURCE_DIR}/include)
 	if(UNIX)
-		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
+		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter)
+		#DONT ADD -fvisibility=hidden, else ERROR: LoadError: No appropriate factory for type v
 	endif()
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
-	]]
 	
 	
 	
+	#[[
 	if(NOT CXXWRAP_PATH STREQUAL "")
 		list(APPEND CMAKE_PREFIX_PATH ${CXXWRAP_PATH})
 	endif()
@@ -426,13 +449,14 @@ if(JULIA_INTERFACE)
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
 	
 	if(UNIX)
-		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
+		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter)
+		#DONT ADD -fvisibility=hidden, else ERROR: LoadError: No appropriate factory for type v
 	endif()
 	
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP JlCxx::cxxwrap_julia)
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 	
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
-	
+	]]
 endif()
 
