@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Particle_Steering(nt = 100, refine = 1, parallel = False, integrator = 'RK4')
+OCprob = OCProblems.Goddard_Rocket(nt = 100, refine = 1, parallel = False, integrator = 'rk4')
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -56,7 +56,7 @@ opts.conv_kappa_max = 8.0
 opts.automatic_scaling = True
 
 opts.max_extra_steps = 10
-opts.enable_premature_termination = False
+opts.enable_premature_termination = True
 opts.max_filter_overrides = 0
 
 opts.qpsol = 'qpOASES'
@@ -146,7 +146,7 @@ else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.time()
-#OCprob.plot(xi, dpi=150, it = i, title=plot_title)
+OCprob.plot(xi, dpi=150, it = i, title=plot_title)
 #####################
 time.sleep(0.01)
 print(t1 - t0, "s")
