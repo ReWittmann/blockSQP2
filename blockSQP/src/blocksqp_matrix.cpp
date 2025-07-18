@@ -346,6 +346,13 @@ double *Matrix::ARRAY( void ) const
 {   return array;
 }
 
+double *Matrix::release(){
+    if (tflag) throw std::runtime_error("Submatrix cannot release it's memory.");
+    double *ret = array;
+    array = nullptr;
+    m = 0; n = 0; ldim = 0; tflag = 0;
+    return ret;
+}
 
 int Matrix::TFLAG( void ) const
 {   return tflag;

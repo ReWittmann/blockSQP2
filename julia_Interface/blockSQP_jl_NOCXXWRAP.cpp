@@ -10,9 +10,12 @@
 #include "jlcxx/array.hpp"
 #include "jlcxx/functions.hpp"
 */
+/*
 #include <jlcxx/jlcxx.hpp>
 #include <jlcxx/array.hpp>
 #include <jlcxx/functions.hpp>
+*/
+
 #include "blocksqp_method.hpp"
 #include "blocksqp_condensing.hpp"
 #include "blocksqp_options.hpp"
@@ -21,67 +24,59 @@
 #include <limits>
 #include <iostream>
 #include <string>
+#include <stdexcept>
+#include <cstring>
+#include "stdlib.h"
 
-template <typename T> class T_array{
-    public:
-    int size = 0;
-    T *ptr;
+using namespace blockSQP;
 
-    T_array(int size_): size(size_){
-        ptr = new T[size];
-    }
-    T_array(): size(0), ptr(nullptr){}
-
-    ~T_array(){
-        delete[] ptr;
-    }
-};
-
-typedef T_array<blockSQP::vblock> vblock_array;
-typedef T_array<blockSQP::cblock> cblock_array;
-typedef T_array<blockSQP::SymMatrix> SymMat_array;
-typedef T_array<int> int_array;
-typedef T_array<blockSQP::condensing_target> condensing_targets;
+#ifdef _MSC_VER
+    #define CDLEXP extern "C" __declspec(dllexport)
+#else
+    #define CDLEXP extern "C" __attribute__((visibility ("default")))
+#endif
 
 
+#define MAXLEN_CBLOCKSQP_ERROR_MESSAGE 1000
+char CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE];
 
-class Problemform : public blockSQP::Problemspec{
+CDLEXP char *get_error_message(){
+    return CblockSQP_error_message;
+}
+
+class CProblemspec : public blockSQP::Problemspec{
 public:
-    Problemform(int NVARS, int NCONS){
+    CProblemspec(int NVARS, int NCONS){
         nVar = NVARS;
         nCon = NCONS;
     };
 
-    virtual ~Problemform(){
+    virtual ~CProblemspec(){
         delete[] blockIdx;
         delete[] vblocks;
     };
 
-
-
     //Allocate callbacks (function pointers to global julia functions)
-    void (*initialize_dense)(void *jscope, double *xi, double *lambda, double *constrJac);
-    void (*evaluate_dense)(void *jscope, const double *xi, const double* lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info);
-    void (*evaluate_simple)(void *jscope, const double *xi, double *objval, double *constr, int *info);
+    void (*initialize_dense)(void *closure_pass, double *xi, double *lambda, double *constrJac);
+    void (*evaluate_dense)(void *closure_pass, const double *xi, const double* lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info);
+    void (*evaluate_simple)(void *closure_pass, const double *xi, double *objval, double *constr, int *info);
 
-    void (*initialize_sparse)(void *jscope, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-    void (*evaluate_sparse)(void *jscope, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info);
+    void (*initialize_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
+    void (*evaluate_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info);
 
-    void (*restore_continuity)(void *jscope, double *xi, int *info);
+    void (*restore_continuity)(void *closure_pass, double *xi, int *info);
 
-
-    //Pass-through pointer to julia object wrapper
-    void *Julia_Scope;
-
+    //Pass-through pointer to a closure of the caller, currently for all callbacks. 
+    void *closure;
 
     //Invoke callbacks in overridden methods
     virtual void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, blockSQP::Matrix &constrJac){
-        (*initialize_dense)(Julia_Scope, xi.array, lambda.array, constrJac.array);
+        (*initialize_dense)(closure, xi.array, lambda.array, constrJac.array);
     }
 
 
     virtual void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
-        (*initialize_sparse)(Julia_Scope, xi.array, lambda.array, jacNz, jacIndRow, jacIndCol);
+        (*initialize_sparse)(closure, xi.array, lambda.array, jacNz, jacIndRow, jacIndCol);
     }
 
     virtual void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, blockSQP::Matrix &constrJac, blockSQP::SymMatrix *hess, int dmode, int *info){
@@ -97,7 +92,7 @@ public:
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
 
-        (*evaluate_dense)(Julia_Scope, xi.array, lambda.array, objval, constr.array, gradObj.array, constrJac.array, hessNz, dmode, info);
+        (*evaluate_dense)(closure, xi.array, lambda.array, objval, constr.array, gradObj.array, constrJac.array, hessNz, dmode, info);
         delete[] hessNz;
     }
 
@@ -114,97 +109,25 @@ public:
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
 
-        (*evaluate_sparse)(Julia_Scope, xi.array, lambda.array, objval, constr.array, gradObj.array, jacNz, jacIndRow, jacIndCol, hessNz, dmode, info);
+        (*evaluate_sparse)(closure, xi.array, lambda.array, objval, constr.array, gradObj.array, jacNz, jacIndRow, jacIndCol, hessNz, dmode, info);
         
         delete[] hessNz;
     }
 
     virtual void evaluate(const blockSQP::Matrix &xi, double *objval, blockSQP::Matrix &constr, int *info){
-        (*evaluate_simple)(Julia_Scope, xi.array, objval, constr.array, info);
+        (*evaluate_simple)(closure, xi.array, objval, constr.array, info);
     }
-
 
     //Optional Methods
     virtual void reduceConstrVio(blockSQP::Matrix &xi, int *info){
         if (restore_continuity != nullptr){
-            (*restore_continuity)(Julia_Scope, xi.array, info);
+            (*restore_continuity)(closure, xi.array, info);
         }
     };
-
-
-    //Interface methods
-    void set_bounds(jlcxx::ArrayRef<double, 1> LBV, jlcxx::ArrayRef<double, 1> UBV,
-                    jlcxx::ArrayRef<double, 1> LBC, jlcxx::ArrayRef<double, 1> UBC,
-                    double LBO, double UBO){
-        objLo = LBO;
-        objUp = UBO;
-
-        lb_var.Dimension(nVar);
-        ub_var.Dimension(nVar);
-        lb_con.Dimension(nCon);
-        ub_con.Dimension(nCon);
-
-        for (int i = 0; i < nVar; i++){
-            lb_var(i) = LBV[i];
-            ub_var(i) = UBV[i];
-        }
-
-        for (int i = 0; i < nCon; i++){
-            lb_con(i) = LBC[i];
-            ub_con(i) = UBC[i];
-        }
-        return;
-    }
-    
-    void set_blockIdx(jlcxx::ArrayRef<int,1> BIDX){
-        nBlocks = BIDX.size() - 1;
-        blockIdx = new int[nBlocks + 1];
-
-        for (int i = 0; i < nBlocks + 1; i++){
-            blockIdx[i] = BIDX[i];
-        }
-    }
-
-    //void set_vblocks(jlcxx::ArrayRef<blockSQP::vblock,1> VB){
-    void set_vblocks(vblock_array &VB){
-        n_vblocks = VB.size;
-        vblocks = new blockSQP::vblock[n_vblocks];
-        for (int i = 0; i < n_vblocks; i++){
-            vblocks[i] = VB.ptr[i];
-        }
-    }
-
-
-    void set_scope(void *JSCOPE){
-        Julia_Scope = JSCOPE;
-    }
-
-    //Callback setters
-    void set_dense_init(void (*fp_init_dense)(void* jscope, double* xi, double* lambda, double* constrJac)){
-        initialize_dense = fp_init_dense;
-    }
-
-    void set_dense_eval(void (*fp_eval_dense)(void *jscope, const double *xi, const double* lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info)){
-        evaluate_dense = fp_eval_dense;
-    }
-
-    void set_simple_eval(void (*fp_eval_simple)(void *jscope, const double *xi, double *objval, double *constr, int *info)){
-        evaluate_simple = fp_eval_simple;
-    }
-
-    void set_sparse_init(void (*fp_init_sparse)(void *jscope, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol)){
-        initialize_sparse = fp_init_sparse;
-    }
-
-    void set_sparse_eval(void (*fp_eval_sparse)(void *jscope, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info)){
-        evaluate_sparse = fp_eval_sparse;
-    }
-
-    void set_continuity_restoration(void (*fp_rest_cont)(void *jscope, double *xi, int *info)){
-        restore_continuity = fp_rest_cont;
-    }
 };
 
+
+/*
 class JL_Condenser{
     std::unique_ptr<blockSQP::Condenser> Cxx_Condenser;
     std::unique_ptr<blockSQP::vblock[]> vblocks;
@@ -236,86 +159,212 @@ class JL_Condenser{
         Cxx_Condenser = std::make_unique<blockSQP::Condenser>(vblocks.get(), VBLOCKS.size(), cblocks.get(), CBLOCKS.size(), hsizes.get(), HSIZES.size(), targets.get(), TARGETS.size(), DEP_BOUNDS);
     }
 };
-
-
+*/
+/*
 class NULL_QPsolver_options : public blockSQP::QPsolver_options{
     public:
     NULL_QPsolver_options() : QPsolver_options(blockSQP::QPsolvers::unset){}
 };
+*/
 
 
-
-
-extern "C" void *create_vblock_array(){
-    return new vblock_array;
+CDLEXP void *create_vblock_array(int size){
+    return (void*) new vblock[size];
 }
 
-template<typename T> void T_array_set(void *arr, int index, int size, bool dependent){
+CDLEXP void delete_vblock_array(void* arr){
+    delete[] static_cast<vblock*>(arr);
+}
+
+CDLEXP void vblock_array_set(void *arr, int index, int size, char dependent){
     static_cast<vblock*>(arr)[index].size = size;
-    static_cast<vblock*>(arr)[index].size = size
+    static_cast<vblock*>(arr)[index].dependent = bool(dependent);
+}
+
+
+CDLEXP void delete_QPsolver_options(void *ptr_QPsolver_options){
+    delete static_cast<QPsolver_options*>(ptr_QPsolver_options);
+}
+
+CDLEXP void* create_qpOASES_options(){
+    return static_cast<void*>(new blockSQP::qpOASES_options());
+}
+
+CDLEXP void qpOASES_options_set_sparsityLevel(void *opts, int val){
+    static_cast<blockSQP::qpOASES_options*>(opts)->sparsityLevel = val;
+}
+
+CDLEXP void qpOASES_options_set_printLevel(void *opts, int val){
+    static_cast<blockSQP::qpOASES_options*>(opts)->printLevel = val;
+}
+
+CDLEXP void qpOASES_options_set_terminationTolerance(void *opts, double val){
+    static_cast<blockSQP::qpOASES_options*>(opts)->terminationTolerance = val;
 }
 
 
 
+CDLEXP void *create_SQPoptions(){
+    return static_cast<void*>(new blockSQP::SQPoptions);
+}
 
+CDLEXP void delete_SQPoptions(void *ptr_SQPoptions){
+    delete static_cast<SQPoptions*>(ptr_SQPoptions);
+}
 
-namespace jlcxx{
-    template<> struct SuperType<Problemform>{typedef blockSQP::Problemspec type;};
-    /*
-    template<> struct SuperType<blockSQP::SCQPmethod>{typedef blockSQP::SQPmethod type;};
-    template<> struct SuperType<blockSQP::SCQP_bound_method>{typedef blockSQP::SCQPmethod type;};
-    template<> struct SuperType<blockSQP::SCQP_correction_method>{typedef blockSQP::SCQPmethod type;};
-    */
-    
-    template<> struct SuperType<NULL_QPsolver_options>{typedef blockSQP::QPsolver_options type;};
-    template<> struct SuperType<blockSQP::qpOASES_options>{typedef blockSQP::QPsolver_options type;};
-    template<> struct SuperType<blockSQP::gurobi_options>{typedef blockSQP::QPsolver_options type;};
+CDLEXP void SQPoptions_set_print_level(void *ptr_SQPoptions, int val){
+    static_cast<SQPoptions*>(ptr_SQPoptions)->print_level = val;
+}
+
+//Thx ChatGPT
+CDLEXP void SQPoptions_set_result_print_color(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->result_print_color = val;
+}
+CDLEXP void SQPoptions_set_debug_level(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->debug_level = val;
+}
+CDLEXP void SQPoptions_set_eps(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->eps = val;
+}
+CDLEXP void SQPoptions_set_inf(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->inf = val;
+}
+CDLEXP void SQPoptions_set_opt_tol(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->opt_tol = val;
+}
+CDLEXP void SQPoptions_set_feas_tol(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->feas_tol = val;
+}
+CDLEXP void SQPoptions_set_sparse(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->sparse = bool(val);
+}
+CDLEXP void SQPoptions_set_enable_linesearch(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->enable_linesearch = bool(val);
+}
+CDLEXP void SQPoptions_set_enable_rest(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->enable_rest = bool(val);
+}
+CDLEXP void SQPoptions_set_rest_rho(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->rest_rho = val;
+}
+CDLEXP void SQPoptions_set_rest_zeta(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->rest_zeta = val;
+}
+CDLEXP void SQPoptions_set_max_linesearch_steps(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_linesearch_steps = val;
+}
+CDLEXP void SQPoptions_set_max_consec_reduced_steps(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_consec_reduced_steps = val;
+}
+CDLEXP void SQPoptions_set_max_consec_skipped_updates(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_consec_skipped_updates = val;
+}
+CDLEXP void SQPoptions_set_max_QP_it(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_QP_it = val;
+}
+CDLEXP void SQPoptions_set_block_hess(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->block_hess = val;
+}
+CDLEXP void SQPoptions_set_sizing(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->sizing = val;
+}
+CDLEXP void SQPoptions_set_fallback_sizing(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->fallback_sizing = val;
+}
+CDLEXP void SQPoptions_set_max_QP_secs(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->max_QP_secs = val;
+}
+CDLEXP void SQPoptions_set_initial_hess_scale(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->initial_hess_scale = val;
+}
+CDLEXP void SQPoptions_set_COL_eps(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->COL_eps = val;
+}
+CDLEXP void SQPoptions_set_OL_eps(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->OL_eps = val;
+}
+CDLEXP void SQPoptions_set_COL_tau_1(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->COL_tau_1 = val;
+}
+CDLEXP void SQPoptions_set_COL_tau_2(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->COL_tau_2 = val;
+}
+CDLEXP void SQPoptions_set_BFGS_damping_factor(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->BFGS_damping_factor = val;
+}
+CDLEXP void SQPoptions_set_min_damping_quotient(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->min_damping_quotient = val;
+}
+CDLEXP void SQPoptions_set_hess_approx(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->hess_approx = val;
+}
+CDLEXP void SQPoptions_set_fallback_approx(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->fallback_approx = val;
+}
+CDLEXP void SQPoptions_set_indef_local_only(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->indef_local_only = bool(val);
+}
+CDLEXP void SQPoptions_set_lim_mem(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->lim_mem = bool(val);
+}
+CDLEXP void SQPoptions_set_mem_size(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->mem_size = val;
+}
+CDLEXP void SQPoptions_set_exact_hess(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->exact_hess = val;
+}
+CDLEXP void SQPoptions_set_skip_first_linesearch(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->skip_first_linesearch = val;
+}
+CDLEXP void SQPoptions_set_conv_strategy(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->conv_strategy = val;
+}
+CDLEXP void SQPoptions_set_max_conv_QPs(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_conv_QPs = val;
+}
+CDLEXP void SQPoptions_set_hess_regularization_factor(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->reg_factor = val;
+}
+CDLEXP void SQPoptions_set_max_SOC(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_SOC = val;
+}
+CDLEXP void SQPoptions_set_max_bound_refines(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_bound_refines = val;
+}
+CDLEXP void SQPoptions_set_max_correction_steps(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_correction_steps = val;
+}
+CDLEXP void SQPoptions_set_dep_bound_tolerance(void* ptr, double val) {
+    static_cast<SQPoptions*>(ptr)->dep_bound_tolerance = val;
+}
+CDLEXP void SQPoptions_set_qpsol_options(void* ptr, QPsolver_options* QPopts) {
+    static_cast<SQPoptions*>(ptr)->qpsol_options = QPopts;
+}
+CDLEXP void SQPoptions_set_automatic_scaling(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->automatic_scaling = bool(val);
+}
+CDLEXP void SQPoptions_set_max_local_lenience(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_filter_overrides = val;
+}
+CDLEXP void SQPoptions_set_max_extra_steps(void* ptr, int val) {
+    static_cast<SQPoptions*>(ptr)->max_extra_steps = val;
+}
+CDLEXP void SQPoptions_set_par_QPs(void* ptr, char val) {
+    static_cast<SQPoptions*>(ptr)->par_QPs = bool(val);
+}
+CDLEXP void SQPoptions_set_qpsol(void* ptr, int val){
+    QPsolvers QPS;
+    if (val == 0) QPS = QPsolvers::qpOASES;
+    else if (val == 1) QPS = QPsolvers::gurobi;
+    else QPS = QPsolvers::unset;
+    static_cast<SQPoptions*>(ptr)->qpsol = QPS;
 }
 
 
-JLCXX_MODULE define_julia_module(jlcxx::Module& mod){
-mod.add_type<blockSQP::vblock>("vblock")
-    .constructor<int, bool>()
-    ;
-
-mod.add_type<vblock_array>("vblock_array")
-    .constructor<int>()
-    .method("array_set", [](vblock_array &ARR, int index, blockSQP::vblock V){ARR.ptr[index - 1] = V;})
-    .method("array_get", [](vblock_array &ARR, int index){return ARR.ptr[index - 1];})
-    ;
-
-//mod.add_type<blockSQP::QPsolver_options>("QPsolver_options")
-//    ;
-mod.add_type<blockSQP::QPsolver_options>("Cxx_QPsolver_options")
-    ;
-
-mod.add_type<NULL_QPsolver_options>("Cxx_NULL_QPsolver_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
-    .constructor<>()
-    ;
-
-mod.add_type<blockSQP::qpOASES_options>("Cxx_qpOASES_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
-    .constructor<>()
-    .method("set_printLevel", [](blockSQP::qpOASES_options &QPopts, int val){QPopts.printLevel = val;})
-    .method("set_terminationTolerance", [](blockSQP::qpOASES_options &QPopts, double val){QPopts.terminationTolerance = val;})
-    .method("set_sparsityLevel", [](blockSQP::qpOASES_options &QPopts, int val){QPopts.sparsityLevel = val;})
-    ;
-
-mod.add_type<blockSQP::gurobi_options>("Cxx_gurobi_options", jlcxx::julia_base_type<blockSQP::QPsolver_options>())
-    .constructor<>()
-    .method("set_Method", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.Method = val;})
-    .method("set_NumericFocus", [](blockSQP::gurobi_options &GRBopts, int val){std::cout << "Set NumericFocus to " << val << "\n"; GRBopts.NumericFocus = val;})
-    .method("set_OutputFlag", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.OutputFlag = val;})
-    .method("set_Presolve", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.Presolve = val;})
-    .method("set_Aggregate", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.Aggregate = val;})
-    .method("set_BarHomogeneous", [](blockSQP::gurobi_options &GRBopts, int val){GRBopts.BarHomogeneous = val;})
-    .method("set_OptimalityTol", [](blockSQP::gurobi_options &GRBopts, double val){GRBopts.OptimalityTol = val;})
-    .method("set_FeasibilityTol", [](blockSQP::gurobi_options &GRBopts, double val){GRBopts.FeasibilityTol = val;})
-    .method("set_PSDTol", [](blockSQP::gurobi_options &GRBopts, double val){GRBopts.PSDTol = val;})
-    ;
-
+/*
 mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
     .constructor<>()
-    .method("get_max_QP_it", [](blockSQP::SQPoptions &opts){return opts.max_QP_it;})
+    //.method("get_max_QP_it", [](blockSQP::SQPoptions &opts){return opts.max_QP_it;})
     .method("set_print_level", [](blockSQP::SQPoptions &opts, int val){opts.print_level = val;})
     .method("set_result_print_color", [](blockSQP::SQPoptions &opts, int val){opts.result_print_color = val;})
     .method("set_debug_level", [](blockSQP::SQPoptions &opts, int val){opts.debug_level = val;})
@@ -334,7 +383,7 @@ mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
     .method("set_max_QP_it", [](blockSQP::SQPoptions &opts, int val){opts.max_QP_it = val;})
     .method("set_block_hess", [](blockSQP::SQPoptions &opts, int val){opts.block_hess = val;})
     .method("set_sizing", [](blockSQP::SQPoptions &opts, int val){opts.sizing = val;})
-    .method("set_fallback_sizing", [](blockSQP::SQPoptions &opts, int val){opts.fallback_sizing = val;})
+    .method("set_fallback_sizvoid* ptring", [](blockSQP::SQPoptions &opts, int val){opts.fallback_sizing = val;})
     .method("set_max_QP_secs", [](blockSQP::SQPoptions &opts, double val){opts.max_QP_secs = val;})
     .method("set_initial_hess_scale", [](blockSQP::SQPoptions &opts, double val){opts.initial_hess_scale = val;})
     .method("set_COL_eps", [](blockSQP::SQPoptions &opts, double val){opts.COL_eps = val;})
@@ -357,6 +406,16 @@ mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
     .method("set_max_bound_refines", [](blockSQP::SQPoptions &opts, int val){opts.max_bound_refines = val;})
     .method("set_max_correction_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_correction_steps = val;})
     .method("set_dep_bound_tolerance", [](blockSQP::SQPoptions &opts, double val){opts.dep_bound_tolerance = val;})
+    .method("set_qpsol_options", [](blockSQP::SQPoptions &opts, blockSQP::QPsolver_options *QPopts){opts.qpsol_options = QPopts;})
+    .method("set_automatic_scaling", [](blockSQP::SQPoptions &opts, bool val){opts.automatic_scaling = val;})
+	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_filter_overrides = val;})
+    .method("set_max_extra_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_extra_steps = val;})
+    .method("set_par_QPs", [](blockSQP::SQPoptions &opts, bool val){opts.par_QPs = val;})
+    ;
+    */
+    
+    
+    /*
     .method("set_qpsol", [](blockSQP::SQPoptions &opts, std::string &QPsolver_name){
         if (QPsolver_name == "qpOASES") opts.qpsol = blockSQP::QPsolvers::qpOASES;
         else if (QPsolver_name == "gurobi") opts.qpsol = blockSQP::QPsolvers::gurobi;
@@ -367,20 +426,24 @@ mod.add_type<blockSQP::SQPoptions>("Cxx_SQPoptions")
         else if (opts.qpsol == blockSQP::QPsolvers::gurobi) return std::string("gurobi");
         else throw blockSQP::ParameterError("Unknown QP solver name, known (no neccessarily linked) are qpOASES, gurobi");
     })
-    .method("set_qpsol_options", [](blockSQP::SQPoptions &opts, blockSQP::QPsolver_options *QPopts){opts.qpsol_options = QPopts;})
-    .method("set_automatic_scaling", [](blockSQP::SQPoptions &opts, bool val){opts.automatic_scaling = val;})
-	.method("set_max_local_lenience", [](blockSQP::SQPoptions &opts, int val){opts.max_filter_overrides = val;})
-    .method("set_max_extra_steps", [](blockSQP::SQPoptions &opts, int val){opts.max_extra_steps = val;})
-    .method("set_par_QPs", [](blockSQP::SQPoptions &opts, bool val){opts.par_QPs = val;})
-    ;
-    
+    */
 
+CDLEXP void *create_SQPstats(char *pathstr){
+    return static_cast<void*>(new SQPstats(pathstr));
+}
+
+CDLEXP void delete_SQPstats(void *ptr){
+    delete static_cast<SQPstats*>(ptr);
+}
+
+/*
 mod.add_type<blockSQP::SQPstats>("SQPstats")
     .constructor<char*>()
     .method("get_pathstr", [](blockSQP::SQPstats S){return std::string(S.outpath);})
     ;
+*/
 
-
+/*
 mod.add_bits<blockSQP::SQPresult>("SQPresult", jlcxx::julia_type("CppEnum"));
 mod.set_const("it_finished", blockSQP::SQPresult::it_finished);
 mod.set_const("partial_success", blockSQP::SQPresult::partial_success);
@@ -392,27 +455,151 @@ mod.set_const("linesearch_failure", blockSQP::SQPresult::linesearch_failure);
 mod.set_const("qp_failure", blockSQP::SQPresult::qp_failure);
 mod.set_const("eval_failure", blockSQP::SQPresult::eval_failure);
 mod.set_const("misc_error", blockSQP::SQPresult::misc_error);
+*/
 
 
-mod.add_type<blockSQP::Problemspec>("Problemspec");
+//mod.add_type<blockSQP::Problemspec>("Problemspec");
 
-mod.add_type<Problemform>("Problemform", jlcxx::julia_base_type<blockSQP::Problemspec>())
-    .constructor<int, int>()
-    .method("set_bounds", &Problemform::set_bounds)
-    .method("set_blockIdx", &Problemform::set_blockIdx)
-    .method("set_nnz", [](Problemform &P, int NNZ){P.nnz = NNZ; return;})
-    .method("set_dense_init", &Problemform::set_dense_init)
-    .method("set_dense_eval", &Problemform::set_dense_eval)
-    .method("set_simple_eval", &Problemform::set_simple_eval)
-    .method("set_sparse_init", &Problemform::set_sparse_init)
-    .method("set_sparse_eval", &Problemform::set_sparse_eval)
-    .method("set_continuity_restoration", &Problemform::set_continuity_restoration)
-    .method("set_scope", &Problemform::set_scope)
-    .method("set_vblocks", &Problemform::set_vblocks)
-    ;
 
-mod.add_type<blockSQP::SQPiterate>("SQPiterate");
+CDLEXP void *create_Problemspec(int nVar, int nCon){
+    return static_cast<void*>(new CProblemspec(nVar, nCon));
+}
 
+CDLEXP void delete_Problemspec(void *ptr){
+    delete static_cast<CProblemspec*>(ptr);
+}
+
+CDLEXP void Problemspec_print_info(void *ptr){
+    Problemspec *P = static_cast<CProblemspec*>(ptr);
+    std::cout << "\nnVar: " << P->nVar << "\nnCon: " << P->nCon << "\nnBlocks: " << P->nBlocks << "\nnnz: " << P->nnz << "\nblockIdx: ";
+    for (int i = 0; i <= P->nBlocks; i++){
+        std::cout << P->blockIdx[i] << ", ";
+    }
+    std::cout << "\n";
+}
+
+CDLEXP void Problemspec_set_nnz(void *ptr, int nnz){
+    static_cast<CProblemspec*>(ptr)->nnz = nnz;
+}
+
+CDLEXP void Problemspec_set_bounds(void *ptr, double *arg_lb_var, double *arg_ub_var, double *arg_lb_con, double *arg_ub_con, double arg_lb_obj, double arg_ub_obj){
+    static_cast<CProblemspec*>(ptr)->objLo = arg_lb_obj;
+    static_cast<CProblemspec*>(ptr)->objUp = arg_ub_obj;
+
+    static_cast<CProblemspec*>(ptr)->lb_var.Dimension(static_cast<CProblemspec*>(ptr)->nVar);
+    static_cast<CProblemspec*>(ptr)->ub_var.Dimension(static_cast<CProblemspec*>(ptr)->nVar);
+    static_cast<CProblemspec*>(ptr)->lb_con.Dimension(static_cast<CProblemspec*>(ptr)->nCon);
+    static_cast<CProblemspec*>(ptr)->ub_con.Dimension(static_cast<CProblemspec*>(ptr)->nCon);
+    
+    std::copy(arg_lb_var, arg_lb_var + static_cast<CProblemspec*>(ptr)->nVar, static_cast<CProblemspec*>(ptr)->lb_var.array);
+    std::copy(arg_ub_var, arg_ub_var + static_cast<CProblemspec*>(ptr)->nVar, static_cast<CProblemspec*>(ptr)->ub_var.array);
+    
+    std::copy(arg_lb_con, arg_lb_con + static_cast<CProblemspec*>(ptr)->nCon, static_cast<CProblemspec*>(ptr)->lb_con.array);
+    std::copy(arg_ub_con, arg_ub_con + static_cast<CProblemspec*>(ptr)->nCon, static_cast<CProblemspec*>(ptr)->ub_con.array);
+    
+    return;
+}
+
+CDLEXP void Problemspec_set_blockIdx(void *ptr, int *arg_blockIdx, int arg_nBlocks){
+    static_cast<CProblemspec*>(ptr)->nBlocks = arg_nBlocks;
+    delete[] static_cast<CProblemspec*>(ptr)->blockIdx;
+    static_cast<CProblemspec*>(ptr)->blockIdx = new int[arg_nBlocks + 1];
+    std::copy(arg_blockIdx, arg_blockIdx + arg_nBlocks + 1, static_cast<CProblemspec*>(ptr)->blockIdx);
+}
+
+CDLEXP void Problemspec_set_vblocks(void *ptr, void *arg_vblocks, int arg_n_vblocks){
+    delete[] static_cast<CProblemspec*>(ptr)->vblocks;
+    static_cast<CProblemspec*>(ptr)->n_vblocks = arg_n_vblocks;
+    static_cast<CProblemspec*>(ptr)->vblocks = new vblock[arg_n_vblocks];
+    std::copy(static_cast<vblock*>(arg_vblocks), static_cast<vblock*>(arg_vblocks) + arg_n_vblocks, static_cast<CProblemspec*>(ptr)->vblocks);
+}
+
+CDLEXP void Problemspec_pass_vblocks(void *ptr, void *arg_vblocks, int arg_n_vblocks){
+    delete[] static_cast<CProblemspec*>(ptr)->vblocks;
+    static_cast<CProblemspec*>(ptr)->n_vblocks = arg_n_vblocks;
+    static_cast<CProblemspec*>(ptr)->vblocks = static_cast<vblock*>(arg_vblocks);
+}
+
+CDLEXP void Problemspec_set_closure(void *ptr, void *arg_closure) {
+    static_cast<CProblemspec*>(ptr)->closure = arg_closure;
+}
+
+CDLEXP void Problemspec_set_dense_init(void *ptr, void (*fp_init_dense)(void* closure_pass, double* xi, double* lambda, double* constrJac)) {
+    static_cast<CProblemspec*>(ptr)->initialize_dense = fp_init_dense;
+}
+
+CDLEXP void Problemspec_set_dense_eval(void *ptr, void (*fp_eval_dense)(void *closure_pass, const double *xi, const double* lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info)) {
+    static_cast<CProblemspec*>(ptr)->evaluate_dense = fp_eval_dense;
+}
+
+CDLEXP void Problemspec_set_simple_eval(void *ptr, void (*fp_eval_simple)(void *closure_pass, const double *xi, double *objval, double *constr, int *info)) {
+    static_cast<CProblemspec*>(ptr)->evaluate_simple = fp_eval_simple;
+}
+
+CDLEXP void Problemspec_set_sparse_init(void *ptr, void (*fp_init_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol)) {
+    static_cast<CProblemspec*>(ptr)->initialize_sparse = fp_init_sparse;
+}
+
+CDLEXP void Problemspec_set_sparse_eval(void *ptr, void (*fp_eval_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info)) {
+    static_cast<CProblemspec*>(ptr)->evaluate_sparse = fp_eval_sparse;
+}
+
+CDLEXP void Problemspec_set_continuity_restoration(void *ptr, void (*fp_rest_cont)(void *closure_pass, double *xi, int *info)) {
+    static_cast<CProblemspec*>(ptr)->restore_continuity = fp_rest_cont;
+}
+
+CDLEXP void *create_SQPmethod(void *Problemspec_prob, void *SQPoptions_opts, void *SQPstats_stats){
+    try{
+        return static_cast<void*>(new SQPmethod(static_cast<Problemspec*>(Problemspec_prob), static_cast<SQPoptions*>(SQPoptions_opts), static_cast<SQPstats*>(SQPstats_stats)));
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE - 1] = '\0';
+    return nullptr;
+}
+
+CDLEXP void delete_SQPmethod(void *ptr){
+    delete static_cast<SQPmethod*>(ptr);
+}
+
+CDLEXP void SQPmethod_init(void *ptr){
+    static_cast<SQPmethod*>(ptr)->init();
+}
+
+CDLEXP int SQPmethod_run(void *ptr, int maxIt, int warmStart){
+    
+    try{
+        return static_cast<int>(static_cast<SQPmethod*>(ptr)->run(maxIt, warmStart));
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE - 1] = '\0';
+    return -1000;
+}
+
+CDLEXP void SQPmethod_finish(void *ptr){
+    static_cast<SQPmethod*>(ptr)->finish();
+}
+
+CDLEXP double *SQPmethod_release_xi(void *ptr){
+    Matrix xi(static_cast<SQPmethod*>(ptr)->get_xi());
+    double *xi_array = (double *) malloc(xi.m*sizeof(double));
+    memcpy(xi_array, xi.array, xi.m*sizeof(double));
+    return xi_array;
+    //return static_cast<SQPmethod*>(ptr)->get_xi().release();
+}
+
+CDLEXP double *SQPmethod_release_lambda(void *ptr){
+    Matrix lambda(static_cast<SQPmethod*>(ptr)->get_lambda());
+    double *lambda_array = (double *) malloc(lambda.m*sizeof(double));
+    memcpy(lambda_array, lambda.array, lambda.m*sizeof(double));
+    return lambda_array;
+    //return static_cast<SQPmethod*>(ptr)->get_lambda().release();
+}
+
+/*
 mod.add_type<blockSQP::SQPmethod>("Cxx_SQPmethod")
     .constructor<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*>()
     .method("cpp_init", &blockSQP::SQPmethod::init)
@@ -442,11 +629,13 @@ mod.add_type<blockSQP::SQPmethod>("Cxx_SQPmethod")
         }
     )
     ;
-
+*/
 
 //////////////////////////////////////
 //Classes and methods for condensing//
 //////////////////////////////////////
+
+/*
 mod.add_type<blockSQP::cblock>("cblock")
     .constructor<int>()
     ;
@@ -565,7 +754,7 @@ mod.add_type<blockSQP::Condenser>("Cxx_Condenser")
 mod.method("construct_Condenser", [](vblock_array *VBLOCKS, cblock_array &CBLOCKS, int_array &HSIZES, condensing_targets &TARGETS, int DEP_BOUNDS){
     return blockSQP::Condenser(VBLOCKS->ptr, VBLOCKS->size, CBLOCKS.ptr, CBLOCKS.size, HSIZES.ptr, HSIZES.size, TARGETS.ptr, TARGETS.size, DEP_BOUNDS);}
     );
-
+*/
 
 //SCQP (sequential condensed quadratic programming) classes jlcxx::julia_base_type<blockSQP::Problemspec>()
 
@@ -583,7 +772,4 @@ mod.add_type<blockSQP::SCQP_correction_method>("Cxx_SCQP_correction_method", jlc
     ;
 */
 
-
-
-}
 

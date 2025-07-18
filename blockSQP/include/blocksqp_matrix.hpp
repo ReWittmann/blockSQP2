@@ -56,11 +56,12 @@ class Matrix
       Matrix(const SymMatrix &A);
       //Matrix( Matrix&& M);
       virtual ~Matrix( void );
-
+      
       int M( void ) const;                                          ///< number of rows
       int N( void ) const;                                          ///< number of columns
       int LDIM( void ) const;                                       ///< leading dimensions
       double *ARRAY( void ) const;                                  ///< returns pointer to data array
+      double *release();                                            // Return pointer to data array, passing ownership
       int TFLAG( void ) const;                                      ///< returns this->tflag (1 if it is a submatrix and does not own the memory and 0 otherwise)
 
       virtual double &operator()(int i, int j);                     ///< access element i,j of the matrix
@@ -69,6 +70,7 @@ class Matrix
       virtual double &operator()(int i) const;
       virtual Matrix &operator=(const Matrix &A);                   ///< assignment operator
       virtual Matrix &operator=(const SymMatrix &A);
+      
       //virtual void operator=( Matrix &&A );
       Matrix operator+(const Matrix &M2) const;
       Matrix operator-(const Matrix &M2) const;

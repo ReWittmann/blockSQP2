@@ -193,7 +193,7 @@ Matrix SQPmethod::get_xi(){
 }
 
 Matrix SQPmethod::get_lambda(){
-    return vars->lambda;
+    return Matrix(vars->lambda);
 }
 
 

@@ -956,6 +956,119 @@ class Lotka_Volterra_multimode(OCProblem):
         plt.show()
     
 
+class Lotka_Volterra_Foodsource(OCProblem):
+    # default_params = {'c0':0.4, 'c1':0.2, 'x_init':[0.5,0.7], 't0':0., 'tf':12.}
+    
+    default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[1.5,0.5,1.0]}
+    def build_problem(self):
+        self.set_OCP_data(3,0,1,1,[0.,0.,0.],[2.0, 2.0, 2.0],[],[],[0.],[1.])
+        
+        c1, c2 = (self.model_params[key] for key in ['c1', 'c2'])
+        self.fix_time_horizon(self.model_params['t0'], self.model_params['tf'])
+        self.fix_initial_value(self.model_params['x_init'])
+        
+        x = cs.MX.sym('x', 3)
+        u = cs.MX.sym('w', 1)
+        x0, x1, x2 = cs.vertsplit(x)
+        ode_rhs = cs.vertcat(x0 - x0 * x1 - x0 * x2,
+              -x1 + x0 * x1 - c1 * x1 * u, 
+              -x2 + 1.2 * x0 * x2 - c2 * x2 * u)
+        
+        quad_expr = (x1 - 1)**2 + (x2 - 1)**2 + 1e-3*u**2 + (x0 - 1.7)**2
+        dt = cs.MX.sym('dt', 1)
+        self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        self.set_objective(self.q_tf)
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS+1):
+            self.set_stage_state(self.start_point, i, self.model_params['x_init'])
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0])
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x0, x1, x2 = self.get_state_arrays_expanded(xi)
+        u = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
+        plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
+        plt.plot(self.time_grid_ref, x2, 'y:', label = '$x_2$')
+        #'y-.'
+        
+        plt.step(self.time_grid_ref, u, 'r', label = r'$u$')
+        plt.legend(fontsize='x-large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Lotka Volterra fishing problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+
+class Lotka_Volterra_Competitive(OCProblem):
+    default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[0.5, 1.5]}
+    def build_problem(self):
+        self.set_OCP_data(2,0,1,1,[0.,0.],[2.0, 2.0],[],[],[0.],[1.])
+        
+        c1, c2 = (self.model_params[key] for key in ['c1', 'c2'])
+        self.fix_time_horizon(self.model_params['t0'], self.model_params['tf'])
+        self.fix_initial_value(self.model_params['x_init'])
+        
+        x = cs.MX.sym('x', 2)
+        u = cs.MX.sym('w', 1)
+        x0, x1 = cs.vertsplit(x)
+        ode_rhs = cs.vertcat(
+                x0 * (1 - (x0 + 1.2 * x1)/1.8) - c1 * x0 * u,#x[0] population suffers greater loss from competition with x[1] than vice versa
+                x1 * (1 - (x0 + x1)/1.8) - c2 * x1 * u)
+        
+        quad_expr = (x1 - 1)**2 + (x0 - 1)**2 + 1e-4*u**2 
+        dt = cs.MX.sym('dt', 1)
+        self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        self.set_objective(self.q_tf)
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS+1):
+            self.set_stage_state(self.start_point, i, self.model_params['x_init'])
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0])
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x0, x1 = self.get_state_arrays_expanded(xi)
+        u = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
+        plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
+        #'y-.'
+        
+        plt.step(self.time_grid_ref, u, 'r', label = r'$u$')
+        plt.legend(fontsize='x-large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Lotka Volterra fishing problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+
 class Goddard_Rocket(OCProblem):
     default_params = {
         'rT':1.01, 

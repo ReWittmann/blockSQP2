@@ -345,7 +345,7 @@ set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (def
 if(JULIA_INTERFACE)
 
 	
-
+	#[[
 	set(JLCXX_BUILD_EXAMPLES OFF)
 	set(JLCXX_BUILD_TESTS OFF)
 	FetchContent_Declare(
@@ -387,6 +387,8 @@ if(JULIA_INTERFACE)
 		OUTPUT_STRIP_TRAILING_WHITESPACE
 	)
 	#########
+	]]
+	
 	
 	#[[
 	execute_process( #TODO possibly add Pkg.free(\"libcxxwrap_julia_jll\")
@@ -396,6 +398,8 @@ if(JULIA_INTERFACE)
 	)
 	]]
 	
+	
+	#[[
 	if("${dotJULIA_DIR_TEST}" STREQUAL "")
 		message(FATAL_ERROR "Error in julia environment")
 	endif()
@@ -418,15 +422,14 @@ if(JULIA_INTERFACE)
     	COMMAND ${CMAKE_COMMAND} -E copy_directory ${LibCxxWrap_INCLUDE_DIR} ${LIBCXX_OVERRIDE_DIR}/include
 	)
 	add_dependencies(copy_to_override cxxwrap_julia)
+	]]
 	
-	
-	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl.cpp)
-	target_link_libraries(blockSQP_jl PUBLIC blockSQP cxxwrap_julia)
+	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl_NOCXXWRAP.cpp)
+	target_link_libraries(blockSQP_jl PUBLIC blockSQP)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)# ${JlCxx_SOURCE_DIR}/include)
 	if(UNIX)
-		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter)
-		#DONT ADD -fvisibility=hidden, else ERROR: LoadError: No appropriate factory for type v
+		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
 	endif()
 	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
