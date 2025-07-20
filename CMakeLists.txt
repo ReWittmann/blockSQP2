@@ -432,12 +432,11 @@ if(JULIA_INTERFACE)
 		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
 	endif()
 	set_target_properties(blockSQP_jl PROPERTIES 
+			PREFIX lib
 			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
 			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
 	)
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
-	
-	
 	
 	#[[
 	if(NOT CXXWRAP_PATH STREQUAL "")
