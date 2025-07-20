@@ -284,7 +284,7 @@ set_target_properties(example1_sparse
 
 add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP)
-target_compile_options(example_condensing PRIVATE -g -O0)
+# target_compile_options(example_condensing PRIVATE -g -O0)
 set_target_properties(example_condensing
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
@@ -292,7 +292,7 @@ set_target_properties(example_condensing
 
 add_executable(example_CQPsolver blockSQP/examples/example_CQPsolver.cpp)
 target_link_libraries(example_CQPsolver blockSQP)
-target_compile_options(example_CQPsolver PRIVATE -g -O0)
+# target_compile_options(example_CQPsolver PRIVATE -g -O0)
 set_target_properties(example_CQPsolver
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
@@ -333,8 +333,8 @@ if(PYTHON_INTERFACE)
 	
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
-									  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
-									  )
+												 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
+												 )
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
 endif()
 
@@ -431,7 +431,10 @@ if(JULIA_INTERFACE)
 	if(UNIX)
 		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
 	endif()
-	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
+	set_target_properties(blockSQP_jl PROPERTIES 
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
+	)
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 	
 	

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import typing
 import math
 import copy
-plt.rcParams["text.usetex"] = True
+plt.rcParams["text.usetex"] = False
 
 def RK4_integrator(ODE, M = 2):
     #M: RK4 steps per interval

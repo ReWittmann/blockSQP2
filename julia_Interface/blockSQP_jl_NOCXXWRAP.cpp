@@ -583,21 +583,18 @@ CDLEXP void SQPmethod_finish(void *ptr){
     static_cast<SQPmethod*>(ptr)->finish();
 }
 
-CDLEXP double *SQPmethod_release_xi(void *ptr){
+
+CDLEXP void SQPmethod_get_xi(void* ptr, double *ret_xi) {
     Matrix xi(static_cast<SQPmethod*>(ptr)->get_xi());
-    double *xi_array = (double *) malloc(xi.m*sizeof(double));
-    memcpy(xi_array, xi.array, xi.m*sizeof(double));
-    return xi_array;
-    //return static_cast<SQPmethod*>(ptr)->get_xi().release();
+    std::copy(xi.array, xi.array + xi.m, ret_xi);
 }
 
-CDLEXP double *SQPmethod_release_lambda(void *ptr){
+CDLEXP void SQPmethod_get_lambda(void* ptr, double *ret_lambda) {
     Matrix lambda(static_cast<SQPmethod*>(ptr)->get_lambda());
-    double *lambda_array = (double *) malloc(lambda.m*sizeof(double));
-    memcpy(lambda_array, lambda.array, lambda.m*sizeof(double));
-    return lambda_array;
-    //return static_cast<SQPmethod*>(ptr)->get_lambda().release();
+    std::copy(lambda.array, lambda.array + lambda.m, ret_lambda);
 }
+
+
 
 /*
 mod.add_type<blockSQP::SQPmethod>("Cxx_SQPmethod")
