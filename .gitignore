@@ -7,11 +7,10 @@ CMakeCache.txt
 *.lib
 *.dll
 *.exp
-*.pyd
 *.exe
+*.pyd
 *.pdb
 *.ilk
-CMakeLists_TEMPLATE.txt
 __pycache__
 example1
 example1_sparse
