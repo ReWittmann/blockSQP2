@@ -28,7 +28,12 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, refine = 1, parallel = False, integrator = 'rk4')
+OCprob = OCProblems.Lotka_OED(nt = 1, 
+                              refine = 100, 
+                              parallel = False, 
+                              integrator = 'rk4', 
+                              # epsilon = 100.0
+                              )
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -101,10 +106,10 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 prob.vblocks = vBlocks
 # prob.cond = cond
 
-import copy
-sp = copy.copy(OCprob.start_point)
-OCprob.set_stage_control(sp, 10, [0.9])
-prob.x_start = sp
+# import copy
+# sp = copy.copy(OCprob.start_point)
+# OCprob.set_stage_control(sp, 10, [0.9])
+# prob.x_start = sp
 
 prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)

@@ -1277,7 +1277,7 @@ Sparse_Matrix Sparse_Matrix::operator+(const Sparse_Matrix &M2) const{
 Sparse_Matrix Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int n_end) const{
     #ifdef MATRIX_DEBUG
 	if (m_end > m || n_end > n){
-        std::string err_str = "slice out of matrix bounds: Matrix shape is (" + std::to_string(m) + "," + std::to_string(n) + "), m_end, n_end = " + std::to_string(m_end) + ", " + std::to_string(n_end);
+        std::string err_str = "Sparse_Matrix::get_slice - Slice out of matrix bounds: Matrix shape is (" + std::to_string(m) + "," + std::to_string(n) + "), m_start, n_start = " + std::to_string(m_start) + ", " + std::to_string(n_start) +  "; m_end, n_end = " + std::to_string(m_end) + ", " + std::to_string(n_end);
 		throw std::invalid_argument(err_str);
 	}
 	#endif

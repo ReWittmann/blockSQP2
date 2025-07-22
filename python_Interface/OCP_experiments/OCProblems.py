@@ -3151,12 +3151,12 @@ class Ocean(OCProblem):
         plt.show()
 
 class Lotka_OED(OCProblem):
-    default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0, 'fishing':True}
+    default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0, 'fishing':True, 'epsilon': 0.0}
     def build_problem(self):
         self.set_OCP_data(9, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
-        tf,p1,p2,p3,p4,p5,p6,x_init,M = (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M'])
+        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon'])
         self.fix_time_horizon(0.,tf)
-        self.fix_initial_value(x_init + [0.]*7)
+        self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
         
         S = cs.MX.sym('S', 9)
         x1, x2, G11, G12, G21, G22, F11, F12, F22 = cs.vertsplit(S)
