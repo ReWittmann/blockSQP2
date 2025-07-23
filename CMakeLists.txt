@@ -43,60 +43,6 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 
 
-#[[
-FetchContent_Declare(
-	qpos
-	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
-	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
-	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
-)
-FetchContent_GetProperties(qpos)
-if(NOT qpos_POPULATED)
-	FetchContent_MakeAvailable(qpos)
-endif()
-
-add_library(qpOASES STATIC
-	${qpos_SOURCE_DIR}/src/Matrices.cpp          
-	${qpos_SOURCE_DIR}/src/SparseSolver.cpp
-	${qpos_SOURCE_DIR}/src/Bounds.cpp             
-	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
-	${qpos_SOURCE_DIR}/src/SQProblem.cpp
-	${qpos_SOURCE_DIR}/src/Constraints.cpp        
-	${qpos_SOURCE_DIR}/src/Options.cpp           
-	${qpos_SOURCE_DIR}/src/SQProblemSchur.cpp
-	${qpos_SOURCE_DIR}/src/Flipper.cpp            
-	${qpos_SOURCE_DIR}/src/OQPinterface.cpp      
-	${qpos_SOURCE_DIR}/src/SubjectTo.cpp
-	${qpos_SOURCE_DIR}/src/Indexlist.cpp          
-	${qpos_SOURCE_DIR}/src/QProblemB.cpp      
-	${qpos_SOURCE_DIR}/src/QProblemB.cpp         
-	${qpos_SOURCE_DIR}/src/Utils.cpp
-	${qpos_SOURCE_DIR}/src/QProblem.cpp     
-	${qpos_SOURCE_DIR}/src/QProblem.cpp           
-	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
-)
-target_compile_definitions(qpOASES PRIVATE SOLVER_MUMPS MUMPS_SEQ __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3)
-target_link_libraries(qpOASES PRIVATE MUMPS::MUMPS)
-IF(UNIX AND NOT APPLE)
-   target_compile_definitions(qpOASES PRIVATE LINUX)
-ELSEIF(WIN32)
-    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
-ENDIF()
-
-
-target_include_directories(qpOASES
-	PRIVATE ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/include ${cmakemumps_SOURCE_DIR}/mumps/5.7.3/libseq
-	PUBLIC	${qpos_SOURCE_DIR}/include
-	#PUBLIC	${CMAKE_CURRENT_SOURCE_DIR}/modded_external
-)
-target_link_libraries(qpOASES PUBLIC ${MUMPS_BIN} dl)
-if (UNIX)
-	target_compile_options(qpOASES PUBLIC -fPIC)
-endif()
-]]
-
-
 set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
@@ -179,8 +125,6 @@ target_include_directories(qpOASES
 )
 target_link_libraries(qpOASES PUBLIC /path/to/.../libspral.so dl)
 ]]
-
-
 
 
 #As of right now, there are no export specifications ( __declspec((dllexport)), __attribute__((visibility("default"))) )
