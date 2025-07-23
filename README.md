@@ -4,34 +4,34 @@ This is a modified version of the blockSQP nonlinear program solver that include
 Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 
+#Build requirements
+1. A Fortran compiler, e.g. gfortran
+2. A C++-20 compatible C++ compiler, e.g. g++-14
+3. The CMake build system
+4. A build system backend (GNU make, Ninja)
 
-Both a Fortran and a C++-20 compatible compiler are required, change from defaults by adding -DCMAKE_Fortran_COMPILER=..., -DCMAKE_CXX_COMPILER= to command line options when invoking CMake
-
-A build system backend (GNU make, Ninja) is required, generate the build files via
+##Building
+Build by calling
 cmake -B build ${OPTIONS}
-
-Options are set via the argument -D${OPTION}=...
-The following OPTIONS may be set
-    PYTHON_INTERFACE (ON/OFF)-  build the python interface
-    PYTHON_INTERPRETER (/...)-  path to the python interpreter you wish to build for. Default to the python available from the command line.
-    
-    JULIA_INTERFACE (ON/OFF)-   build the julia interface, requires installing the CxxWrap.jl library via julia pkg
-    CXXWRAP_PATH (/...)-        path to the libcxxwrap-julia artifact of CxxWrap.jl, e.g. 
-                        /path/to/.../.julia/artifacts/65c14d6c8b06e52ca794200129a8f3dd8b7ce34e/lib/cmake/JlCxx
-                        Search for cxxwrap in your artifacts folder, find libcxxwrap_julia_jll in your julia packages folder
-                        and find the git-tree-sha1 for your julia version and system. 
-                        
-Compile via
 cmake --build build
 
-This places the binaries for C++ in /blockSQP/lib /blockSQP/bin, the ones for Python in /python_Interface/py_blockSQP, the ones for Julia in /blockSQP.jl/bin.
+###General build options
+1. -DCMAKE_Fortran_COMPILER=... - chose the Fortran compiler
+2. -DCMAKE_CXX_COMPILER=... - chose the C++ compiler
+3. -G ("Unix Makefiles" / Ninja) - chose the build system backend
 
-See 
-    blockSQP/examples/example1,
-    python_Interface/examples/example1.py
-    blockSQP.jl/scripts/example1.jl
-for how to interface BlockSQP. 
-See the Manual or
-    blockSQP/include/options.hpp
-for possible settings. 
+###blockSQP build options
+1. -DPYTHON_INTERFACE= (ON/OFF) - build py_blockSQP, located in python_Interface
+2. -DPYTHON_INTERPRETER= (/PATH/TO/PYTHON_EXECUTABLE) - choose python interpreter to build for
+3. -DJULIA_INTERFACE= (ON/OFF) - compile the C interface and place the binary into blocksqp.jl/bin to complete the package
+
+See README_WINDOWS.md on how to build for windows with MSVC and intel Fortran.
+
+###Binaries
+The binaries are placed into /blockSQP/lib or /blockSQP/bin, /python_Interface/py_blockSQP and /blocksqp.jl/bin. 
+
+##Examples and documentation
+Check out the manual and the examples to learn how to use blockSQP.  
+C++ examples are located in blockSQP/examples, the example executables are placed into blockSQP/examples/bin.  
+Corresponding python and julia examples are located at python_Interface/examples and blocksqp.jl/scripts.  
 

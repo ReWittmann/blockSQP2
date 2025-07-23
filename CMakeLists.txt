@@ -183,7 +183,7 @@ target_link_libraries(qpOASES PUBLIC /path/to/.../libspral.so dl)
 
 
 
-#As of right now, there are to export specifications ( __declspec((dllexport)), __attribute__((visibility("default"))) )
+#As of right now, there are no export specifications ( __declspec((dllexport)), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended
 add_library(blockSQP STATIC
 	blockSQP/src/blocksqp_condensing.cpp
@@ -236,6 +236,9 @@ if (UNIX AND NOT APPLE)
 												ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
 												RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
 	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
+	
+	#Notify downstream libraries that dmumps_c_dyn will be made available through LDMUMPS_C_DYN compile flag
+	#As of right now, this is only used on linux
 	target_compile_definitions(dmumps_c_dyn INTERFACE LDMUMPS_C_DYN)
 	target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
 	
@@ -286,13 +289,6 @@ set_target_properties(example1_sparse
 add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP)
 set_target_properties(example_condensing
-	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
-)
-
-add_executable(example_CQPsolver blockSQP/examples/example_CQPsolver.cpp)
-target_link_libraries(example_CQPsolver blockSQP)
-set_target_properties(example_CQPsolver
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
 )
