@@ -291,7 +291,7 @@ CDLEXP void SQPoptions_set_qpsol_options(void *ptr, QPsolver_options *QPopts){
 CDLEXP void SQPoptions_set_automatic_scaling(void *ptr, char val){
     static_cast<SQPoptions *>(ptr)->automatic_scaling = bool(val);
 }
-CDLEXP void SQPoptions_set_max_local_lenience(void *ptr, int val){
+CDLEXP void SQPoptions_set_max_filter_overrides(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->max_filter_overrides = val;
 }
 CDLEXP void SQPoptions_set_max_extra_steps(void *ptr, int val){
@@ -299,6 +299,12 @@ CDLEXP void SQPoptions_set_max_extra_steps(void *ptr, int val){
 }
 CDLEXP void SQPoptions_set_par_QPs(void *ptr, char val){
     static_cast<SQPoptions *>(ptr)->par_QPs = bool(val);
+}
+CDLEXP void SQPoptions_set_enable_QP_cancellation(void *ptr, char val){
+    static_cast<SQPoptions *>(ptr)->enable_QP_cancellation = bool(val);
+}
+CDLEXP void SQPoptions_set_enable_premature_termination(void *ptr, char val){
+    static_cast<SQPoptions *>(ptr)->enable_premature_termination = bool(val);
 }
 CDLEXP void SQPoptions_set_qpsol(void *ptr, int val){
     QPsolvers QPS;

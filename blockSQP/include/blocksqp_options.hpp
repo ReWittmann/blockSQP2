@@ -101,7 +101,7 @@ class SQPoptions{
     int max_conv_QPs = 4;                       //Maximum number of convexified QPs in each SQP iteration.
     double conv_tau_H = 2./3.;                  //See paper/manual
     double conv_kappa_0 = 1./16.;
-    double conv_kappa_max = 2.;
+    double conv_kappa_max = 8.;
     bool par_QPs = false;                  //Only possible for threadsafe linear solvers (not MUMPS), but possible with workarounds on windows and linux
     bool enable_QP_cancellation = true;
     
@@ -118,9 +118,9 @@ class SQPoptions{
     int max_consec_reduced_steps = 8;                 // Reset Hessian if stepsize was reduced consecutively too often
     int max_consec_skipped_updates = 100;             // Reset Hessian if too many quasi Newton updates were skipped consecutively
     bool skip_first_linesearch = false;
-
-    //Filter line search parameters
     int max_SOC = 3;                        ///< Maximum number of second order correction (SOC) steps
+        
+    //Filter line search parameters
     double gammaTheta = 1.0e-5;             ///< see IPOPT paper
     double gammaF = 1.0e-5;                 ///< see IPOPT paper   
     double kappaSOC = 0.99;                 ///< see IPOPT paper
