@@ -341,7 +341,11 @@ if(JULIA_INTERFACE)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
 	if(UNIX)
-		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
+		target_compile_options(blockSQP_jl PRIVATE 
+					-Wall -Wextra -Wno-unused-parameter
+					-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
+					-O3
+					)
 	endif()
 	set_target_properties(blockSQP_jl PROPERTIES 
 			PREFIX lib

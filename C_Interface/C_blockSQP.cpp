@@ -26,9 +26,11 @@ using namespace blockSQP;
 #endif
 
 #define MAXLEN_CBLOCKSQP_ERROR_MESSAGE 1000
-char CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE];
+char CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE + 1]; //One char for \0 termination at the end
 
 CDLEXP char *get_error_message(){
+    //Set null terminator again just in case
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
     return CblockSQP_error_message;
 }
 
@@ -418,7 +420,7 @@ CDLEXP void *create_SQPmethod(void *Problemspec_prob, void *SQPoptions_opts, voi
     catch (std::exception &E){
         strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
     }
-    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE - 1] = '\0';
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
     return nullptr;
 }
 
@@ -437,7 +439,7 @@ CDLEXP int SQPmethod_run(void *ptr, int maxIt, int warmStart){
     catch (std::exception &E){
         strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
     }
-    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE - 1] = '\0';
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
     return -1000;
 }
 
