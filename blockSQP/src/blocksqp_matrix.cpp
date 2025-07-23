@@ -346,6 +346,13 @@ double *Matrix::ARRAY( void ) const
 {   return array;
 }
 
+double *Matrix::release(){
+    if (tflag) throw std::runtime_error("Submatrix cannot release it's memory.");
+    double *ret = array;
+    array = nullptr;
+    m = 0; n = 0; ldim = 0; tflag = 0;
+    return ret;
+}
 
 int Matrix::TFLAG( void ) const
 {   return tflag;
@@ -1270,7 +1277,7 @@ Sparse_Matrix Sparse_Matrix::operator+(const Sparse_Matrix &M2) const{
 Sparse_Matrix Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int n_end) const{
     #ifdef MATRIX_DEBUG
 	if (m_end > m || n_end > n){
-        std::string err_str = "slice out of matrix bounds: Matrix shape is (" + std::to_string(m) + "," + std::to_string(n) + "), m_end, n_end = " + std::to_string(m_end) + ", " + std::to_string(n_end);
+        std::string err_str = "Sparse_Matrix::get_slice - Slice out of matrix bounds: Matrix shape is (" + std::to_string(m) + "," + std::to_string(n) + "), m_start, n_start = " + std::to_string(m_start) + ", " + std::to_string(n_start) +  "; m_end, n_end = " + std::to_string(m_end) + ", " + std::to_string(n_end);
 		throw std::invalid_argument(err_str);
 	}
 	#endif

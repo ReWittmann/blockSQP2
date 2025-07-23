@@ -18,6 +18,9 @@ enable_language(Fortran)
 #Static linking to avoid having to copy dll(-path)s.
 #
 if(WIN32)
+	if(NOT MSVC)
+		message(FATAL_ERROR "This CMakeLists support building on windows only with MSVC and intel oneAPI fortran")
+	endif()
 	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
 	add_compile_options(/MT)
 endif()
@@ -226,7 +229,7 @@ target_link_libraries(blockSQP PUBLIC qpOASES) #Important: If qpOASES is built w
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
 
-#Shared mumps library/ies for dynamic loading in a threadsafe way (dlmopen on linux, LoadLibraryA on multiple copies on windows)
+#Shared mumps library/libraries for dynamic loading in a threadsafe way (dlmopen on linux, LoadLibraryA on multiple copies on windows, tough luck if you are on MAC)
 if (UNIX AND NOT APPLE)
 	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 	set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
@@ -259,6 +262,7 @@ elseif(WIN32)
 			)
 		endforeach()
 	endfunction()
+	
 else()
 	function(ifwindows_copy_mumps_dlls LIBPATH)
 	endfunction()
@@ -281,7 +285,6 @@ set_target_properties(example1_sparse
 
 add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP)
-target_compile_options(example_condensing PRIVATE -g -O0)
 set_target_properties(example_condensing
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
@@ -289,17 +292,14 @@ set_target_properties(example_condensing
 
 add_executable(example_CQPsolver blockSQP/examples/example_CQPsolver.cpp)
 target_link_libraries(example_CQPsolver blockSQP)
-target_compile_options(example_CQPsolver PRIVATE -g -O0)
 set_target_properties(example_CQPsolver
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
 )
 
 
-
 option(PYTHON_INTERFACE "build python interface" OFF)
 set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")
-
 if(PYTHON_INTERFACE)
 	if (NOT PYTHON_INTERPRETER STREQUAL "")
 		message(STATUS "Using python interpreter ${PYTHON_INTERPRETER}")
@@ -322,44 +322,36 @@ if(PYTHON_INTERFACE)
 					-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
 					-O3
 					)
-					
+		
 		#Prevent warnings for *_pointer_interface and T_array constructors 
-		#that occur after compiling with -O3. Result of using int instead of size_t.
+		#that occur after compiling with -O3. Result of using int instead of size_t, should not cause any problems.
 		target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
 	endif()
 	
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
-									  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
-									  )
+												 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
+												 )
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
 endif()
 
 
 option(JULIA_INTERFACE "build julia interface" OFF)
 set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (default: empty)")
-#set(CXXWRAP_PATH /home/reinhold/.julia/artifacts/65c14d6c8b06e52ca794200129a8f3dd8b7ce34e/lib/cmake/JlCxx)
+
 if(JULIA_INTERFACE)
-	if(NOT CXXWRAP_PATH STREQUAL "")
-		list(APPEND CMAKE_PREFIX_PATH ${CXXWRAP_PATH})
-	endif()
-	message(STATUS "cxxwrap path is ${CXXWRAP_PATH}")
-	find_package(JlCxx)
-	get_target_property(JlCxx_location JlCxx::cxxwrap_julia LOCATION)
-	get_filename_component(JlCxx_location ${JlCxx_location} DIRECTORY)
-	
-	message(STATUS "Found JlCxx at ${JlCxx_location}")
-	add_library(blockSQP_jl SHARED julia_Interface/blockSQP_jl.cpp)
+	add_library(blockSQP_jl SHARED C_Interface/C_blockSQP.cpp)
+	target_link_libraries(blockSQP_jl PUBLIC blockSQP)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
-	
 	if(UNIX)
 		target_compile_options(blockSQP_jl PRIVATE -Wall -Wextra -Wno-unused-parameter -fvisibility=hidden)
 	endif()
-	
-	target_link_libraries(blockSQP_jl PUBLIC blockSQP JlCxx::cxxwrap_julia)
-	set_target_properties(blockSQP_jl PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
-	
+	set_target_properties(blockSQP_jl PROPERTIES 
+			PREFIX lib
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
+	)
 	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 endif()
 

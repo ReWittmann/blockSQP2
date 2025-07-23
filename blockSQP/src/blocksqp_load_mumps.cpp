@@ -91,7 +91,7 @@ void *get_plugin_handle(int ind){
     }
     #else
         const char* get_mumps_module_dir(){
-            throw std::runtime_error(std::string("Parallel solution of QPs with qpOASES using the MUMPS linear solver requires linking libdmumps_c_dyn.so, built from libdmumps_c_dyn.cpp and setting the preprocessor flag LDUMPS_C_DYN (enables workaround for MUMPS not being thread safe)"));
+            throw std::runtime_error(std::string("Parallel solution of QPs with qpOASES using the MUMPS linear solver requires linking libdmumps_c_dyn.so, built from libdmumps_c_dyn.cpp, and setting the preprocessor flag LDUMPS_C_DYN (enables workaround for MUMPS not being thread safe)"));
         }
     #endif
     

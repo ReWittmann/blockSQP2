@@ -203,7 +203,7 @@ SQPoptions::~SQPoptions(){}
 
 void SQPoptions::optionsConsistency(Problemspec *problem){
     if ((automatic_scaling || (conv_strategy == 2 && max_conv_QPs > 1)) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
-        throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided problem specification");
+        throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided to problem specification");
     if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
     

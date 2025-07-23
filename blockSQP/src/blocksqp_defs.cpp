@@ -15,29 +15,28 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
                 colSuffix = "\033[0m";
             #endif
         }
-
+            
         switch (rs){
             case SQPresult::partial_success: 
-                std::cout << colPrefix + "\n***CONVERGENCE PARTIALLY ACHIEVED***\n" + colSuffix; 
+                std::cout << colPrefix + "\n***CONVERGENCE PARTIALLY ACHIEVED***" + colSuffix + "\n"; 
                 break;
             case SQPresult::success:
-                //std::cout << "\033[1;32m" << "\n***CONVERGENCE ACHIEVED***\n" << "\033[0m";
-                std::cout << colPrefix + "\n***CONVERGENCE ACHIEVED***\n" + colSuffix;
+                std::cout << colPrefix + "\n***CONVERGENCE ACHIEVED***" + colSuffix + "\n";
                 break;
             case SQPresult::super_success:
-                std::cout << colPrefix + "\n***STRONG CONVERGENCE ACHIEVED***\n" + colSuffix;
+                std::cout << colPrefix + "\n***STRONG CONVERGENCE ACHIEVED***" + colSuffix + "\n";
                 break;
             case SQPresult::local_infeasibility:
-                std::cout << colPrefix + "\nLOCAL INFEASIBILITY\n" + colSuffix;
+                std::cout << colPrefix + "\nLOCAL INFEASIBILITY" + colSuffix + "\n";
                 break;
             case SQPresult::restoration_failure:
-                std::cout << colPrefix + "\nRESTORATION ERROR\n" + colSuffix;
+                std::cout << colPrefix + "\nRESTORATION ERROR" + colSuffix + "\n";
                 break;
                 case SQPresult::linesearch_failure:
-                std::cout << colPrefix + "\nLINESEARCH ERROR\n" + colSuffix;
+                std::cout << colPrefix + "\nLINESEARCH ERROR" + colSuffix + "\n";
                 break;
             default:
-                std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL\n" + colSuffix;
+                std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL" + colSuffix + "\n";
         }
     }
     return rs;
