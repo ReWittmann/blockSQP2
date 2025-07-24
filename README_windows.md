@@ -7,7 +7,7 @@ The following configuration is known to work for building **blockSQP** on Window
 ### Requirements:
 - CMake build system (https://cmake.org/download/).
 - Ninja build system backend (https://github.com/ninja-build/ninja/releases). Make sure the executable it is in the search path, adapt "PATH" in the environment variables.
-- MSVC C++ compiler** (included in Visual Studio Community 2022)
+- MSVC C++ compiler (included in Visual Studio Community 2022)
 - Intel Fortran compiler and intel oneMKL from the intel oneAPI HPC Toolkit (https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html)
 
 #### Python and Julia interfaces
@@ -21,7 +21,7 @@ Download Python from (https://www.python.org/downloads/), guaranteed to include 
      ```  
     Search for intel oneAPI command prompt and run it.
    
-2. Navigate to the `blockSQP` folder and run CMake with the following commands:
+2. Navigate to the `blocksqp` folder and run CMake with the following commands:
 
     ```  
     cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release [options]  
