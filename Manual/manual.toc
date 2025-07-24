@@ -1,0 +1,31 @@
+\babel@toc {english}{}\relax 
+\contentsline {section}{\numberline {1}Introduction}{3}{section.1}%
+\contentsline {section}{\numberline {2}Building \texttt {blockSQP}\ }{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Building the C++ package}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Interfaces to other languages}{4}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Building via CMake}{4}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Setting up a problem}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Sparsity format}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The C++ interface}{6}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Class \texttt {Problemspec}}{7}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Class \texttt {Condenser}}{10}{subsubsection.3.2.2}%
+\contentsline {subsubsection}{\numberline {3.2.3}Class \texttt {SQPmethod}\ and \texttt {SCQPmethod}}{11}{subsubsection.3.2.3}%
+\contentsline {subsubsection}{\numberline {3.2.4}Retrieving the primal-dual iterate}{12}{subsubsection.3.2.4}%
+\contentsline {subsection}{\numberline {3.3}The python interface}{13}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}The julia interface}{14}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Options and parameters}{15}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Basic options}{15}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}qpsol\_options}{15}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Common algorithmic options}{16}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Convexification strategy}{16}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Output settings}{17}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}Sizing strategies}{17}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}Filter line search}{18}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}Advanced termination and line search heuristics}{18}{subsection.4.8}%
+\contentsline {section}{\numberline {5}Output}{18}{section.5}%
+\contentsline {section}{\numberline {6}Extending \texttt {blockSQP}\ }{19}{section.6}%
+\contentsline {subsection}{\numberline {6.1}New methods}{19}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Other QP solvers}{19}{subsection.6.2}%
+\contentsline {section}{\nonumberline References}{19}{section*.3}%
+\contentsline {section}{\numberline {A}License}{21}{appendix.A}%
+\providecommand \tocbasic@end@toc@file {}\tocbasic@end@toc@file 

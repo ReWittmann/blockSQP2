@@ -1,84 +1,37 @@
-blockSQP -- Sequential quadratic programming for problems with
-            block-diagonal Hessian matrix.
-Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
+# BlockSQP - C++, Python, Julia - build system using qpOASES and MUMPS
+
+This is a modified version of the blockSQP nonlinear program solver that includes new cmake build specifications, a python interface and a julia interface.
+Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 
-Introduction
-============
-blockSQP is a sequential quadratic programming method for finding local solutions
-of nonlinear, nonconvex optimization problems. It is particularly suited for
----but not limited to---problems whose Hessian matrix has block-diagonal
-structure such as problems arising from direct multiple shooting
-parameterizations of optimal control or optimum experimental design problems.
+#Build requirements
+1. A Fortran compiler, e.g. gfortran
+2. A C++-20 compatible C++ compiler, e.g. g++-14
+3. The CMake build system
+4. A build system backend (GNU make, Ninja)
 
-blockSQP has been developed around the quadratic programming solver
-qpOASES to solve the quadratic subproblems. Gradients of the objective
-and the constraint functions must be supplied by the user. Second derivatives
-are approximated by a combination of SR1 and BFGS updates. Global convergence
-is promoted by the filter line search of Waechter and Biegler that can also
-handle indefinite Hessian approximations.
+##Building
+Build by calling
+cmake -B build ${OPTIONS}
+cmake --build build
 
+###General build options
+1. -DCMAKE_Fortran_COMPILER=... - chose the Fortran compiler
+2. -DCMAKE_CXX_COMPILER=... - chose the C++ compiler
+3. -G ("Unix Makefiles" / Ninja) - chose the build system backend
 
-Installation
-============
-* Download and install qpOASES from
+###blockSQP build options
+1. -DPYTHON_INTERFACE= (ON/OFF) - build py_blockSQP, located in python_Interface
+2. -DPYTHON_INTERPRETER= (/PATH/TO/PYTHON_EXECUTABLE) - choose python interpreter to build for
+3. -DJULIA_INTERFACE= (ON/OFF) - compile the C interface and place the binary into blocksqp.jl/bin to complete the package
 
-  https://projects.coin-or.org/qpOASES .
+See README_WINDOWS.md on how to build for windows with MSVC and intel Fortran.
 
-  It is recommended to use at least release 3.2.0.
-  Alternatively, check out revision 155 from the qpOASES subversion
-  repository that is located at
+###Binaries
+The binaries are placed into /blockSQP/lib or /blockSQP/bin, /python_Interface/py_blockSQP and /blocksqp.jl/bin. 
 
-  https://projects.coin-or.org/svn/qpOASES/trunk/ .
+##Examples and documentation
+Check out the manual and the examples to learn how to use blockSQP.  
+C++ examples are located in blockSQP/examples, the example executables are placed into blockSQP/examples/bin.  
+Corresponding python and julia examples are located at python_Interface/examples and blocksqp.jl/scripts.  
 
-  For best performance it is strongly recommended to install the sparse
-  solver MA57 from HSL as described in the qpOASES manual, Sec. 2.2.
-
-* In the blockSQP main directory, open `makefile` and set `QPOASESDIR`
-  to the correct location of the qpOASES installation.
-
-* Compile blockSQP by calling `make`. This should produce a shared
-  library `libblockSQP.so` in `lib/`, as well as executable example problems
-  in the `examples/` folder.
-
-
-Documentation
-=============
-A user's manual for blockSQP is available under `doc/manual.pdf`.
-There is also Doxygen source code documentation available that can
-be created by calling
-
-  doxygen doxyfileBLOCKSQP
-
-within the `doc/` directory.
-
-
-Licensing
-=========
-blockSQP is published under the very permissive zlib free software
-license which should allow you to use the software wherever you need.
-
-This is the full license text (zlib license):
-
-    blockSQP -- Sequential quadratic programming for problems with
-                block-diagonal Hessian matrix.
-    Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
-
-    This software is provided 'as-is', without any express or implied
-    warranty. In no event will the authors be held liable for any
-    damages arising from the use of this software.
-
-    Permission is granted to anyone to use this software for any purpose,
-    including commercial applications, and to alter it and redistribute
-    it freely, subject to the following restrictions:
-
-        1. The origin of this software must not be misrepresented;
-        you must not claim that you wrote the original software.
-        If you use this software in a product, an acknowledgment in the
-        product documentation would be appreciated but is not required.
-
-        2. Altered source versions must be plainly marked as such,
-        and must not be misrepresented as being the original software.
-
-        3. This notice may not be removed or altered from any source
-        distribution.
