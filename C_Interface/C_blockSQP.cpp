@@ -326,6 +326,10 @@ CDLEXP void delete_SQPstats(void *ptr){
     delete static_cast<SQPstats *>(ptr);
 }
 
+CDLEXP int SQPstats_get_itCount(void *ptr){
+    return static_cast<SQPstats *>(ptr)->itCount;
+}
+
 // Problemspec (C callback subclass)
 CDLEXP void *create_Problemspec(int nVar, int nCon){
     return static_cast<void *>(new CProblemspec(nVar, nCon));

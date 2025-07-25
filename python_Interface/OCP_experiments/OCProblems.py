@@ -1618,7 +1618,7 @@ class Catalyst_Mixing(OCProblem):
         self.ODE = {'x':x, 'p':cs.vertcat(dt,w), 'ode': dt*ode_rhs}
         self.multiple_shooting()
         
-        self.set_objective(-1 + self.x_eval[0,-1] + self.x_eval[1,-1])
+        self.set_objective((-1 + self.x_eval[0,-1] + self.x_eval[1,-1]))
         
         self.build_NLP()
         

@@ -400,19 +400,6 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
     bool QP_cancelled = false;
     
     if (param->enable_QP_cancellation){
-        /*
-        for (int j = maxQP - 2; j >= 0; j--){
-            QP_results_fs[j] = QP_results_f[j].wait_until(TF);
-            if (QP_results_fs[j] != std::future_status::ready){
-                QP_threads[j].request_stop();
-                QP_cancelled = true;
-            }
-            else{
-                QP_results[j] = QP_results_f[j].get();
-            }
-            QP_threads[j].join();
-        }*/
-        
         //SR1 QP almost always succeeds/fails fast, so join it. Wait + stop/join QPs until one successfully solved
         QP_threads[0].join();
         QP_results[0] = QP_results_f[0].get();

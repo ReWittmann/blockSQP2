@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Catalyst_Mixing(nt = 100, 
+OCprob = OCProblems.Goddard_Rocket(nt = 100, 
                               refine = 1, 
                               parallel = False, 
                               integrator = 'rk4', 
@@ -108,7 +108,7 @@ prob.vblocks = vBlocks
 
 # import copy
 # sp = copy.copy(OCprob.start_point)
-# OCprob.set_stage_control(sp, 10, [0.9])
+# OCprob.set_stage_control(sp, 7, [0.1])
 # prob.x_start = sp
 
 prob.x_start = OCprob.start_point
