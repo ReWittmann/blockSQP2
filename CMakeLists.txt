@@ -35,6 +35,7 @@ set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
 set(MUMPS_find_static ON)
+set(MUMPS_intsize64 OFF) #must be off
 
 #Shared MUMPS libraries are not supported when building with oneAPI and MSVC on windows
 # + a separate shared library may need to be built from this, so default to static
