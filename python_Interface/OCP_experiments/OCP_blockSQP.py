@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Goddard_Rocket(nt = 100, 
+OCprob = OCProblems.Lotka_OED(nt = 100, 
                               refine = 1, 
                               parallel = False, 
                               integrator = 'rk4', 
