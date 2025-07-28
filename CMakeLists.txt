@@ -19,7 +19,7 @@ enable_language(Fortran)
 #
 if(WIN32)
 	if(NOT MSVC)
-		message(FATAL_ERROR "This CMakeLists support building on windows only with MSVC and intel oneAPI fortran")
+		message(FATAL_ERROR "This CMakeLists supports building on windows only with MSVC and intel oneAPI fortran")
 	endif()
 	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
 	add_compile_options(/MT)
@@ -29,7 +29,7 @@ include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
-	GIT_TAG 45c16604c1d8b61134699db04b16aae7b4704fc5
+	GIT_TAG 8b6a46501ec1d3c4fecca17c97608a6f2cd218ec
 )
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
