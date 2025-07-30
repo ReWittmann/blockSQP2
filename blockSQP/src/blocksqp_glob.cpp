@@ -449,7 +449,7 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresult ret;
     int maxRestIt = 20;
-    double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
+    double cNormTrial, objTrial, stepsize_sum = 0.;
     
     for (; vars->nRestIt < maxRestIt; vars->nRestIt++){
         // One iteration for minimum norm NLP
@@ -502,32 +502,7 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
     }
     
     // Success, locally infeasible or maximum restoration iterations reached
-    if (feas_result == 0 || feas_result == 2){
-        /*
-        for (int i = 0; i < prob->nVar; i++){
-            //TODO check sign
-            vars->deltaXi(i) = -vars->xi(i);
-            vars->xi(i) = vars->trialXi(i);
-            vars->deltaXi(i) += vars->xi(i);
-        }
-        
-        // Store the infinity norm of the multiplier step
-        rest_method->get_lambda(rest_lambda);
-        rest_prob->recover_lambda(rest_lambda, vars->trialLambda);
-        vars->lambdaStepNorm = 0.0;
-        for (int i = 0; i < vars->lambda.m; i++){
-            if ((lStpNorm  = fabs(vars->trialLambda(i) - vars->lambda(i))) > vars->lambdaStepNorm) vars->lambdaStepNorm = lStpNorm;
-            vars->lambda(i) = vars->trialLambda(i);
-        }
-        
-        rest_method->get_lambdaQP(rest_lambdaQP);
-        rest_prob->recover_lambda(rest_lambdaQP, vars->lambdaQP);
-        
-        vars->obj = objTrial;
-        vars->alpha = 1.0;
-        vars->nSOCS = 0;
-        */
-        
+    if (feas_result == 0 || feas_result == 2){        
         for (int i = 0; i < prob->nVar; i++){
             vars->deltaXi(i) = -vars->xi(i);
             vars->deltaXi(i) += vars->trialXi(i);
@@ -539,7 +514,8 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
         
         if (feas_result == 0){
             acceptStep(vars->deltaXi, vars->trialLambda, 1.0, 0);
-            augmentFilter(cNormTrial, objTrial);
+            // Original blockSQP does not add restoration result to filter, though this is done in the Biegler/Waechter filter line search paper
+            //augmentFilter(cNormTrial, objTrial);
         }
         else if (feas_result == 2){
             //If restoration method converged and remaining constraint violation is small, try overriding the filter

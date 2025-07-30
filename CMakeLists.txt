@@ -187,6 +187,7 @@ if (UNIX AND NOT APPLE)
 	# target_compile_definitions(dmumps_c_dyn INTERFACE DMUMPS_C_DYN)
 	# target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
 	
+	
 	function(maybe_copy_mumps_libs LIBPATH)
 		set(mumps_lib dmumps_c_dyn)
 		add_custom_command(TARGET ${mumps_lib} POST_BUILD
@@ -216,13 +217,13 @@ elseif(WIN32)
 			)
 		endforeach()
 	endfunction()
-	
 else()
 	function(maybe_copy_mumps_libs LIBPATH)
 	endfunction()
 endif()
 
-
+#Mumps dynamic libraries are available. Set corresponding preprocessor flag
+target_compile_definitions(blockSQP PRIVATE DMUMPS_C_DYN)
 maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
 
 add_executable(example1 blockSQP/examples/example1.cpp)

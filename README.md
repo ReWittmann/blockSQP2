@@ -11,9 +11,9 @@ Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 4. A build system backend (GNU make, Ninja)
 
 ##Building
-Build by calling
-cmake -B build ${OPTIONS}
-cmake --build build
+Build by calling:  
+&nbsp;&nbsp; cmake -B build ${OPTIONS}  
+&nbsp;&nbsp; cmake --build build
 
 ###General build options
 1. -DCMAKE_Fortran_COMPILER=... - chose the Fortran compiler
@@ -26,6 +26,8 @@ cmake --build build
 3. -DJULIA_INTERFACE= (ON/OFF) - compile the C interface and place the binary into blocksqp.jl/bin to complete the package
 
 See README_WINDOWS.md on how to build for windows with MSVC and intel Fortran.
+
+CMake finds system python by default. See the output of the build step on which python was found and adjust via PYTHON_INTERPRETER option.
 
 ###Binaries
 The binaries are placed into /blockSQP/lib or /blockSQP/bin, /python_Interface/py_blockSQP and /blocksqp.jl/bin. 

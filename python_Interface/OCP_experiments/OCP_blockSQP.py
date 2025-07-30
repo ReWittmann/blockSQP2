@@ -28,7 +28,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_OED(nt = 100, 
+OCprob = OCProblems.F8_Aircraft(nt = 100, 
                               refine = 1, 
                               parallel = False, 
                               integrator = 'rk4', 
@@ -58,7 +58,7 @@ opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
 opts.conv_kappa_max = 8.0
 
-opts.automatic_scaling = True
+opts.automatic_scaling = False
 
 opts.max_extra_steps = 0
 opts.enable_premature_termination = True
