@@ -396,7 +396,7 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
     }
     
     //Terminate long running
-    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1 + vars->N_QP_cancels)).count() + 1000);
+    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(2 + vars->N_QP_cancels)).count() + 1000);
     bool QP_cancelled = false;
     
     if (param->enable_QP_cancellation){

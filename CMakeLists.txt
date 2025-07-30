@@ -87,6 +87,57 @@ target_include_directories(qpOASES
 
 
 
+#Unmodded qpOASES with MUMPS_SPARSE_SOLVER fix
+#[[
+FetchContent_Declare(
+	qpos
+	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
+	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
+	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
+)
+FetchContent_GetProperties(qpos)
+if(NOT qpos_POPULATED)
+	FetchContent_MakeAvailable(qpos)
+endif()
+
+add_library(qpOASES STATIC
+	${qpos_SOURCE_DIR}/src/Matrices.cpp          
+	${CMAKE_CURRENT_SOURCE_DIR}/modded_external/SparseSolver.cpp
+	${qpos_SOURCE_DIR}/src/Bounds.cpp             
+	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
+	${qpos_SOURCE_DIR}/src/SQProblem.cpp
+	${qpos_SOURCE_DIR}/src/Constraints.cpp        
+	${qpos_SOURCE_DIR}/src/Options.cpp           
+	${qpos_SOURCE_DIR}/src/SQProblemSchur.cpp
+	${qpos_SOURCE_DIR}/src/Flipper.cpp            
+	${qpos_SOURCE_DIR}/src/OQPinterface.cpp      
+	${qpos_SOURCE_DIR}/src/SubjectTo.cpp
+	${qpos_SOURCE_DIR}/src/Indexlist.cpp          
+	${qpos_SOURCE_DIR}/src/QProblemB.cpp      
+	${qpos_SOURCE_DIR}/src/QProblemB.cpp         
+	${qpos_SOURCE_DIR}/src/Utils.cpp
+	${qpos_SOURCE_DIR}/src/QProblem.cpp     
+	${qpos_SOURCE_DIR}/src/QProblem.cpp           
+	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
+)
+target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
+target_compile_options(qpOASES PRIVATE -O3 INTERFACE -Wno-overloaded-virtual PUBLIC -fPIC)
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)
+IF(UNIX AND NOT APPLE)
+   target_compile_definitions(qpOASES PRIVATE LINUX)
+		target_link_libraries(qpOASES PUBLIC -lgfortran)
+ELSEIF(WIN32)
+    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
+ENDIF()
+
+target_include_directories(qpOASES
+	PUBLIC	${qpos_SOURCE_DIR}/include
+			${qpos_SOURCE_DIR}/include/qpOASES
+)
+]]
+
+
+
 #MA57 LINEAR SOLVER
 ## Build qpOASES with MA57, requires passing preprocessor flag -DSOLVER_MA57
 ## Dependencies are -> METIS -> GKLIB, LAPACK, BLAS, dl

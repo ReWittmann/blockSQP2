@@ -483,7 +483,8 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
         }
     #else
         threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
-                                                                        int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c){
+                                                                        int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
+                                                qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
             throw NotImplementedError("Using qpOASES with MUMPS in parallel requires the patched version");
         }
     #endif
@@ -664,7 +665,9 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 void qpOASES_solver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){    
-    qp->set_stop_token(std::move(stopRequest));
+    #ifdef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
+        qp->set_stop_token(std::move(stopRequest));
+    #endif
     int inner_QP_result = solve(deltaXi, lambdaQP);
     QP_result.set_value(inner_QP_result);
 }
