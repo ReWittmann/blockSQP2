@@ -76,24 +76,35 @@ void *get_plugin_handle(int ind){
 
 #ifdef LINUX
     //Flag indicating that libdmumps_c_dyn.so, build from libdmumps_c_dyn.cpp has been linked
-    #ifdef LDMUMPS_C_DYN
-    extern "C" void dmumps_c_dyn(void* mumps_struc_c_dyn);
-    
+    //In this case, rely on rpath to find and load the shared library
+    /*
+    #ifdef DMUMPS_C_DYN
+        extern "C" void dmumps_c_dyn(void* mumps_struc_c_dyn);
+        
+        const char* get_mumps_module_dir(){
+            Dl_info info;
+            bool load_success = dladdr((void*) &dmumps_c_dyn, &info);
+            if (!load_success) throw std::runtime_error(std::string("dladdr failed to obtain path to libdmumps_c_dyn.so from linked symbol dmumps_c_dyn"));
+            char* path_ = new char[PATH_MAX];
+            std::strncpy(path_, info.dli_fname, PATH_MAX);
+            path_[PATH_MAX - 1] = '\0';
+            const char* dir = dirname(path_);
+            return dir;
+        }
+    //If libdmumps_c_syn.so has not been linked, try loading from current directory
+    #else*/
     const char* get_mumps_module_dir(){
         Dl_info info;
-        bool load_success = dladdr((void*) &dmumps_c_dyn, &info);
-        if (!load_success) throw std::runtime_error(std::string("dladdr failed to obtain path to libdmumps_c_dyn.so from linked symbol dmumps_c_dyn"));
+        //Get address of any function (e.g. get_plulgin_handle) in this shared object,
+        bool load_success = dladdr((void*) &get_plugin_handle, &info);
+        if (!load_success) throw std::runtime_error(std::string("dladdr failed to obtain path to libblockSQP"));
         char* path_ = new char[PATH_MAX];
         std::strncpy(path_, info.dli_fname, PATH_MAX);
         path_[PATH_MAX - 1] = '\0';
         const char* dir = dirname(path_);
         return dir;
     }
-    #else
-        const char* get_mumps_module_dir(){
-            throw std::runtime_error(std::string("Parallel solution of QPs with qpOASES using the MUMPS linear solver requires linking libdmumps_c_dyn.so, built from libdmumps_c_dyn.cpp, and setting the preprocessor flag LDUMPS_C_DYN (enables workaround for MUMPS not being thread safe)"));
-        }
-    #endif
+    //#endif
     
     void load_mumps_libs(int N_plugins){
         void **handle;

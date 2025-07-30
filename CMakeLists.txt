@@ -184,10 +184,16 @@ if (UNIX AND NOT APPLE)
 	
 	#Notify downstream libraries that dmumps_c_dyn will be made available through LDMUMPS_C_DYN compile flag
 	#As of right now, this is only used on linux
-	target_compile_definitions(dmumps_c_dyn INTERFACE LDMUMPS_C_DYN)
-	target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
+	# target_compile_definitions(dmumps_c_dyn INTERFACE DMUMPS_C_DYN)
+	# target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
 	
-	function(ifwindows_copy_mumps_dlls LIBPATH)
+	function(maybe_copy_mumps_libs LIBPATH)
+		set(mumps_lib dmumps_c_dyn)
+		add_custom_command(TARGET ${mumps_lib} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${CMAKE_SOURCE_DIR}/blockSQP/bin/lib${mumps_lib}.so
+					${LIBPATH}
+		)
 	endfunction()
 elseif(WIN32)
 	foreach(i RANGE 0 7)
@@ -200,7 +206,7 @@ elseif(WIN32)
 		target_compile_definitions(dmumps_c_dyn_${i} PRIVATE WINDOWS)
 	endforeach()
 	
-	function(ifwindows_copy_mumps_dlls LIBPATH)
+	function(maybe_copy_mumps_libs LIBPATH)
 		foreach(i RANGE 0 7)
 			set(mumps_lib dmumps_c_dyn_${i})
 			add_custom_command(TARGET ${mumps_lib} POST_BUILD
@@ -212,12 +218,12 @@ elseif(WIN32)
 	endfunction()
 	
 else()
-	function(ifwindows_copy_mumps_dlls LIBPATH)
+	function(maybe_copy_mumps_libs LIBPATH)
 	endfunction()
 endif()
 
 
-ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
+maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
 
 add_executable(example1 blockSQP/examples/example1.cpp)
 target_link_libraries(example1 blockSQP)
@@ -273,7 +279,7 @@ if(PYTHON_INTERFACE)
 	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
 												 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
 												 )
-	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
+	maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
 endif()
 
 
@@ -297,6 +303,6 @@ if(JULIA_INTERFACE)
 			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
 			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
 	)
-	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
+	maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 endif()
 
