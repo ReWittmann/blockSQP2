@@ -2,6 +2,7 @@ import numpy as np
 import os
 import sys
 import time
+import copy
 try:
     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
 except:
@@ -28,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Cushioned_Oscillation_TSCALE(nt = 100, 
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
                               refine = 1, 
                               parallel = False, 
                               integrator = 'rk4', 
@@ -40,10 +41,11 @@ opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 4
+opts.max_conv_QPs = 6
 opts.conv_strategy = 2
 opts.par_QPs = True
 opts.enable_QP_cancellation=True
+opts.test_opt_2 = 4
 
 opts.exact_hess = 0
 opts.hess_approx = 1
@@ -66,7 +68,6 @@ opts.max_filter_overrides = 0
 
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
-QPopts.terminationTolerance = 1e-10
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
@@ -108,7 +109,7 @@ prob.vblocks = vBlocks
 
 # import copy
 # sp = copy.copy(OCprob.start_point)
-# OCprob.set_stage_control(sp, 7, [0.1])
+# OCprob.integrate_full(sp)
 # prob.x_start = sp
 
 prob.x_start = OCprob.start_point

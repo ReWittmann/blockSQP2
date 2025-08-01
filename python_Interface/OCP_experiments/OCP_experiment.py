@@ -304,6 +304,8 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     if not isinstance(dirPath, str):
         plt.show()
     else:
+        if not os.path.exists(dirPath):
+            os.makedirs(dirPath)
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
         sep = "" if dirPath[-1] == "/" else "/"

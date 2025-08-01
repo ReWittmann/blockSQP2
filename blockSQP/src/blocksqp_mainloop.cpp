@@ -99,8 +99,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
         }
         else{
-            if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
-            else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
+            //if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
+            if (stats->itCount > param->test_opt_2) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
+            //else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
+            else{
+                infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
+            }
         }
         
         //if (infoQP == 0) printf("***QP solution successful***");
@@ -414,7 +418,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         }
 
         //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
-        if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
+        //if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
+        if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > param->test_opt_2 && !vars->conv_qp_only){
             if (param->max_conv_QPs > 2){
                 //If more than one convexified indefinite QP is tried, shift convexification factor of the successful QP to the last attempted convexified QP.
                 //If more than two convexified indefinite QPs are tried and none were accepted, shift last factor to first factor.

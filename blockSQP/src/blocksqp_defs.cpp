@@ -3,6 +3,7 @@
 
 
 namespace blockSQP{
+std::vector<std::chrono::microseconds> BFGS_times;
 
 SQPresult print_SQPresult(SQPresult rs, int print_level){
     if (print_level > 0){
@@ -39,6 +40,14 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
                 std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL" + colSuffix + "\n";
         }
     }
+    std::chrono::microseconds dur(0);
+    for(size_t i = 0; i < BFGS_times.size(); i++){
+        dur += BFGS_times[i];
+    }
+    dur /= BFGS_times.size();
+    BFGS_times.resize(0);
+    
+    std::cout << "Avg BFGS time: " << dur << "\n";
     return rs;
 }
 

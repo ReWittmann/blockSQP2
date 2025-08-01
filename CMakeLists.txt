@@ -232,7 +232,7 @@ if (UNIX AND NOT APPLE)
 												ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
 												RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
 	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
-	
+	target_compile_options(dmumps_c_dyn PRIVATE -O3 -fvisibility=hidden)
 	#Notify downstream libraries that dmumps_c_dyn will be made available through LDMUMPS_C_DYN compile flag
 	#As of right now, this is only used on linux
 	# target_compile_definitions(dmumps_c_dyn INTERFACE DMUMPS_C_DYN)

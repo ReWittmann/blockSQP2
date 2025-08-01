@@ -24,6 +24,8 @@
 #include <set>
 #include <string>
 #include <stdexcept>
+#include <vector>
+#include <chrono>
 
 namespace blockSQP{
 
@@ -68,7 +70,7 @@ public:
 
 #define PAR_QP_MAX 8
 
-
+extern std::vector<std::chrono::microseconds> BFGS_times;
 
 } // namespace blockSQP
 

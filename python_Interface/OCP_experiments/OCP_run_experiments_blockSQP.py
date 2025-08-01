@@ -8,59 +8,123 @@ import py_blockSQP
 import OCP_experiment
 import OCProblems
 
-plot_folder = "/home/reinhold/PLOT"
+
+def opt_SR1_BFGS_seq():
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = 1
+    opts.par_QPs = False
+    opts.automatic_scaling = False
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
 
 
-Examples = [(OCProblems.Batch_Reactor, "Batch reactor"),
-            (OCProblems.Goddard_Rocket, "Goddard's rocket"),
-            (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
-            (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-            (OCProblems.Hanging_Chain, "Hanging chain"),
-            (OCProblems.Cushioned_Oscillation, "Cushioned oscillation"),
-            (OCProblems.Egerstedt_Standard, "Egerstedt standard"),
-            (OCProblems.Electric_Car, "Electric car"),
-            (OCProblems.Particle_Steering, "Particle steering"),
+def opt_conv_str_1_seq(max_conv_QPs = 4):
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = max_conv_QPs
+    opts.conv_strategy = 1
+    opts.par_QPs = False
+    opts.automatic_scaling = False
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
+
+
+def opt_conv_str_2_seq(max_conv_QPs = 4):
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = max_conv_QPs
+    opts.conv_strategy = 2
+    opts.automatic_scaling = False
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
+
+
+def opt_SR1_BFGS_par():
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = 1
+    opts.par_QPs = True
+    opts.automatic_scaling = False
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
+
+
+def opt_conv_str_1_par(max_conv_QPs = 4):
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = 4
+    opts.conv_strategy = 1
+    opts.par_QPs = True
+    opts.automatic_scaling = False
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
+
+
+def opt_conv_str_2_par(max_conv_QPs = 4):
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = max_conv_QPs
+    opts.conv_strategy = 2
+    opts.par_QPs = True
+    opts.automatic_scaling = False
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
+
+
+def opt_conv_str_2_par_scale(max_conv_QPs = 4):
+    opts = py_blockSQP.SQPoptions()
+    opts.max_conv_QPs = max_conv_QPs
+    opts.conv_strategy = 2
+    opts.par_QPs = True
+    opts.automatic_scaling = True
+    opts.max_filter_overrides = 0
+    opts.conv_kappa_max = 8.0
+    return opts
+
+
+Examples = [#(OCProblems.Batch_Reactor, "Batch reactor"),
+            # (OCProblems.Goddard_Rocket, "Goddard's rocket")# ,
+            # (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
+            # (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
+            # (OCProblems.Hanging_Chain, "Hanging chain"),
+            # (OCProblems.Cushioned_Oscillation_TSCALE, "Cushioned oscillation"),
+            # (OCProblems.Egerstedt_Standard, "Egerstedt standard"),
+            # (OCProblems.Electric_Car, "Electric car"),
+            # (OCProblems.Particle_Steering, "Particle steering"),
             (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
-            (OCProblems.Lotka_OED, "Lotka_OED")
+            # (OCProblems.Lotka_OED, "Lotka_OED")
             ]
-QPopts = py_blockSQP.qpOASES_options()
-QPopts.terminationTolerance = 1e-10
 
-EXP_1_opts = py_blockSQP.SQPoptions()
-EXP_1_opts.max_conv_QPs = 5
-EXP_1_opts.conv_strategy = 2
-EXP_1_opts.automatic_scaling = True
-EXP_1_opts.qpsol_options = QPopts
-EXP_1_opts.max_filter_overrides = 0
-EXP_1_opts.conv_kappa_max = 8.0
 
-EXP_2_opts = py_blockSQP.SQPoptions()
-EXP_2_opts.max_conv_QPs = 5
-EXP_2_opts.conv_strategy = 2
-EXP_2_opts.automatic_scaling = True
-EXP_2_opts.par_QPs = True
-EXP_2_opts.enable_QP_cancellation = True
-EXP_2_opts.qpsol_options = QPopts
-EXP_2_opts.max_filter_overrides = 0
-EXP_2_opts.conv_kappa_max = 8.0
+opt2 = opt_conv_str_2_par(max_conv_QPs = 6)
+# opt2.test_opt_2 = 4
 
-EXP_3_opts = py_blockSQP.SQPoptions()
-EXP_3_opts.conv_strategy = 2
-EXP_3_opts.max_conv_QPs = 4
-EXP_3_opts.qpsol_options = QPopts
-EXP_3_opts.max_filter_overrides = 0
-EXP_3_opts.conv_kappa_max = 8.0
-
-Experiments = [(EXP_1_opts, "SR1-BFGS"),
-               (EXP_2_opts, "Convexification strategy 1"),
-               # (EXP_3_opts, "Convexification strategy 2")
+Experiments = [(opt_SR1_BFGS_seq(), "SR1-BFGS"),
+               (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
+               # (opt_conv_str_2_par(max_conv_QPs = 6), "PAR6")
+               (opt2, "PAR6_test")
                ]
-# Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-#               (OCProblems.Goddard_Rocket, "Goddard's rocket")
-#               ]
-Examples_ = [(OCProblems.Catalyst_Mixing, "Catalyst_Mixing")]
 
-OCP_experiment.run_blockSQP_experiments(Examples_, Experiments,\
+
+plot_folder = "/home/reinhold/PLOT"
+OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
-                                        nPert0 = 0, nPertF = 40)
+                                        nPert0 = 0, nPertF = 20)
 
+
+
+
+
+
+
+    
+
+# Experiments = [#(opt_SR1_BFGS_par(), "SR1-BFGS"),
+#                #(opt_conv_str_1_par(), "Convexification strategy 1"),
+#                (opt_conv_str_2_par(), "Convexification strategy 2")
+#                ]
+# plot_folder = "/home/reinhold/PLOT/SR1_BFGS_CONV_PAR"
+# OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
+#                                         plot_folder,\
+#                                         nPert0 = 0, nPertF = 8)

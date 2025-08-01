@@ -629,7 +629,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
 
     // Return codes: 0 - success, 1 - took too long/too many steps, 2 definiteness condition violated or QP unbounded, 3 - QP was infeasible, 4 - other error
-    if (ret == qpOASES::SUCCESSFUL_RETURN){
+    if (ret == qpOASES::SUCCESSFUL_RETURN || ret == qpOASES::RET_MAX_NWSR_REACHED){
         use_hotstart = true;
         matrices_changed = false;
         
