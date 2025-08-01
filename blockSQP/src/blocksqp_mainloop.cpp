@@ -103,7 +103,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             if (stats->itCount > param->test_opt_2) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
             //else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
             else{
-                infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
+                infoQP = solve_convex_QP_par(vars->deltaXi, vars->lambdaQP);
             }
         }
         

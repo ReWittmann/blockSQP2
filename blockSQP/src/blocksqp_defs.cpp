@@ -16,7 +16,7 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
                 colSuffix = "\033[0m";
             #endif
         }
-            
+        
         switch (rs){
             case SQPresult::partial_success: 
                 std::cout << colPrefix + "\n***CONVERGENCE PARTIALLY ACHIEVED***" + colSuffix + "\n"; 

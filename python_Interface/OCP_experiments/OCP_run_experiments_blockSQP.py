@@ -98,7 +98,7 @@ Examples = [#(OCProblems.Batch_Reactor, "Batch reactor"),
 
 
 opt2 = opt_conv_str_2_par(max_conv_QPs = 6)
-# opt2.test_opt_2 = 4
+opt2.test_opt_2 = 3
 
 Experiments = [(opt_SR1_BFGS_seq(), "SR1-BFGS"),
                (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),

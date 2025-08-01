@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+OCprob = OCProblems.Three_Tank_Multimode(nt = 100, 
                               refine = 1, 
                               parallel = False, 
                               integrator = 'rk4', 
@@ -45,7 +45,7 @@ opts.max_conv_QPs = 6
 opts.conv_strategy = 2
 opts.par_QPs = True
 opts.enable_QP_cancellation=True
-opts.test_opt_2 = 4
+opts.test_opt_2 = 2
 
 opts.exact_hess = 0
 opts.hess_approx = 1
