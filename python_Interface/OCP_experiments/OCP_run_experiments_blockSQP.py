@@ -84,7 +84,7 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
 
 
 Examples = [#(OCProblems.Batch_Reactor, "Batch reactor"),
-            # (OCProblems.Goddard_Rocket, "Goddard's rocket")# ,
+            (OCProblems.Goddard_Rocket, "Goddard's rocket")# ,
             # (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
             # (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
             # (OCProblems.Hanging_Chain, "Hanging chain"),
@@ -92,7 +92,7 @@ Examples = [#(OCProblems.Batch_Reactor, "Batch reactor"),
             # (OCProblems.Egerstedt_Standard, "Egerstedt standard"),
             # (OCProblems.Electric_Car, "Electric car"),
             # (OCProblems.Particle_Steering, "Particle steering"),
-            (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
+            # (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
             # (OCProblems.Lotka_OED, "Lotka_OED")
             ]
 
@@ -100,17 +100,24 @@ Examples = [#(OCProblems.Batch_Reactor, "Batch reactor"),
 opt2 = opt_conv_str_2_par(max_conv_QPs = 6)
 opt2.test_opt_2 = 3
 
-Experiments = [(opt_SR1_BFGS_seq(), "SR1-BFGS"),
-               (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
-               # (opt_conv_str_2_par(max_conv_QPs = 6), "PAR6")
-               (opt2, "PAR6_test")
+
+# opt3 = opt_conv_str_2_seq()
+# opt4 = opt_conv_str_2_seq()
+# opt4.test_opt_2 = 3
+
+Experiments = [# (opt_SR1_BFGS_seq(), "SR1-BFGS"),
+               # (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
+                (opt_conv_str_2_par(max_conv_QPs = 6), "PAR6"),
+                (opt2, "PAR6_test")
+               # (opt3, "2SEQ4"),
+               # (opt4, "2SEQ4_TEST")
                ]
 
 
 plot_folder = "/home/reinhold/PLOT"
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
-                                        nPert0 = 0, nPertF = 20)
+                                        nPert0 = 0, nPertF = 40)
 
 
 

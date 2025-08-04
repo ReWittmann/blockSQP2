@@ -45,7 +45,7 @@ opts.max_conv_QPs = 6
 opts.conv_strategy = 2
 opts.par_QPs = True
 opts.enable_QP_cancellation=True
-opts.test_opt_2 = 2
+opts.test_opt_2 = 3
 
 opts.exact_hess = 0
 opts.hess_approx = 1

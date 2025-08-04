@@ -96,7 +96,9 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         
         /// Solve QP subproblem with qpOASES or QPOPT
         if (!param->par_QPs){
-            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+            //infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
+            
+            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(stats->itCount <= param->test_opt_2 || vars->conv_qp_only));
         }
         else{
             //if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
@@ -200,7 +202,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 bool lsError = true;
                 
                 std::cout << "Filter line search failed, begin handling\n";
-
+                
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->solution_found){
                     vars->restore_iterate();
@@ -215,18 +217,21 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     if (!lsError)
                         vars->steptype = -1;
                 }
-
+                
                 //Heuristic 2: If possibly indefinite Hessian was used, retry with step from fallback Hessian
                 if (lsError && !vars->conv_qp_solved){
                     std::cout << "filterLineSearch failed, try again with fallback Hessian\n";
-                    infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
+                    
+                    infoQP = param->par_QPs ? solve_convex_QP_par(vars->deltaXi, vars->lambdaQP) : solveQP(vars->deltaXi, vars->lambdaQP, 1);
+                    
+                    //infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
                     if (infoQP == 0) lsError = bool(filterLineSearch());
                     if (!lsError) vars->steptype = 0;
                 }
-
+                
                 //Heuristic 3: Ignore acceptance criteria up to a limited number of times if we are close to a solution and feasible
                 //Remove entries from filter that dominate the new point.
-
+                
                 //if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= param->feas_tol && vars->remaining_filter_overrides > 0){
                 if (lsError && vars->tol <= std::pow(param->opt_tol, 2./3.) && vars->cNormS <= param->feas_tol && vars->remaining_filter_overrides > 0){
                     force_accept(1.0);
@@ -235,11 +240,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     std::cout << "Filter line search failed close to a local solution, ignore filter. We can only do this " << vars->remaining_filter_overrides << " more times\n";
                     vars->steptype = -2;
                 }
-
+                
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
-                if (param->enable_premature_termination && lsError && vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
+                if (lsError && param->enable_premature_termination && vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
                     return print_SQPresult(SQPresult::partial_success, param->result_print_color);
-
+                
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if (lsError && vars->cNorm > 0.01 * param->feas_tol && vars->steptype < 2){
                     // Don't do this twice in a row!
@@ -341,7 +346,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             else std::cout << "KKT heuristic successful\n";
         }
-
+        
         //If identity hessian was used three consecutive times, reset Hessian
         if (vars->steptype == 1)
             vars->n_id_hess += 1;
@@ -352,10 +357,10 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             vars->n_id_hess = 0;
             //continue;
         }
-
+        
         //Update position of current calculated delta - gamma pair, set vars->deltaXi, vars->gamma to next (empty) position, precalculate scalar products for Hessian update and sizing
         updateDeltaGammaData();
-
+        
         //If we appear to be reasonably close to a local optimum, enable SR1 updates for faster local convergence if only convex QPs were enabled before
         if (vars->tol <= 1e-4 && vars->cNormS <= 1e-4 && stats->itCount >= 8){
         //if (vars->tol <= std::sqrt(param->opttol) && vars->cNormS <= std::sqrt(param->nlinfeastol) && it >= 8){
@@ -363,8 +368,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             vars->conv_qp_only = false;
         }
         if (vars->milestone > std::max(vars->tol, vars->cNormS)) vars->milestone = std::max(vars->tol, vars->cNormS);
-
-
+        
+        
         //Increment memory counter of each block and scaling memory counter unless step is restoration step.
         if (vars->steptype < 3){
             for (int ind = 0; ind < vars->nBlocks; ind++){
@@ -372,14 +377,14 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             vars->n_scaleIt += int(vars->n_scaleIt < vars->dg_nsave);
         }
-
+        
         //Rescale variables if automatic scaling is enabled. This has to be done before limited memory quasi newton updates are applied.
         if (param->automatic_scaling) scaling_heuristic();
-
+        
         ///
-        ///PHASE 3.5: Update the Hessian 'approximations' and related data///
+        ///PHASE 3.5: Update the Hessian "approximations" and related data///
         ///
-
+        
         if (param->lim_mem){
             //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first

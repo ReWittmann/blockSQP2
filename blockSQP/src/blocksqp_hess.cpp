@@ -487,7 +487,7 @@ void SQPmethod::par_inner_update_loop(int updateType, int sizing, SymMatrix *hes
 }
 
 
-
+/*
 void SQPmethod::calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess){
     int iBlock, nBlocks;
     //Matrix smallGamma, smallDelta;
@@ -536,7 +536,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory_2(int updateType, int sizing, Sym
     stats->averageSizingFactor /= nBlocks;
     return;
 }
-
+*/
 
 
 //void SQPmethod::calcBFGS(const Matrix &gamma, const Matrix &delta, int iBlock, bool damping, SymMatrix *hess){
