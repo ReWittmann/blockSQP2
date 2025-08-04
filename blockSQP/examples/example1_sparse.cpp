@@ -171,8 +171,7 @@ void MyProblem::convertJacobian( const Matrix &constrJac, double *jacNz, int *ja
 
 
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
-{
-    std::cout << "Initialize called\n";
+{   
     // set initial values for xi and lambda
     lambda.Initialize( 0.0 );
     for( int i=0; i<nVar; i++ )
@@ -181,7 +180,7 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
 
 
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol )
-{    std::cout << "Initialize called\n";
+{   
     Matrix constrDummy, gradObjDummy, constrJac;
     SymMatrix *hessDummy;
     double objvalDummy;
