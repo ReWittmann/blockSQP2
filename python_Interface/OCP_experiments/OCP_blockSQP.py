@@ -29,21 +29,21 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider']
 
-OCprob = OCProblems.Three_Tank_Multimode(nt = 100, 
-                              refine = 1, 
-                              parallel = False, 
-                              integrator = 'rk4', 
-                              # epsilon = 100.0
-                              )
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+                    refine = 1, 
+                    parallel = False, 
+                    integrator = 'rk4', 
+                    # epsilon = 100.0
+                    )
 
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 6
+opts.max_conv_QPs = 1
 opts.conv_strategy = 2
-opts.par_QPs = True
+opts.par_QPs = False
 opts.enable_QP_cancellation=True
 opts.test_opt_2 = 3
 

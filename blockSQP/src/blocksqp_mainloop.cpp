@@ -95,6 +95,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         
         /// Solve QP subproblem with qpOASES or QPOPT
+        /*
         if (!param->par_QPs){
             //infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
             
@@ -107,7 +108,10 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             else{
                 infoQP = solve_convex_QP_par(vars->deltaXi, vars->lambdaQP);
             }
-        }
+        }*/
+        
+        //Solve the quadratic subproblem. What kind of QP is solved how depends on options, parameters and iteration states. 
+        infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
         
         //if (infoQP == 0) printf("***QP solution successful***");
         if (infoQP == 0);
@@ -221,18 +225,13 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //Heuristic 2: If possibly indefinite Hessian was used, retry with step from fallback Hessian
                 if (lsError && !vars->conv_qp_solved){
                     std::cout << "filterLineSearch failed, try again with fallback Hessian\n";
-                    
-                    infoQP = param->par_QPs ? solve_convex_QP_par(vars->deltaXi, vars->lambdaQP) : solveQP(vars->deltaXi, vars->lambdaQP, 1);
-                    
-                    //infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
+                    infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
                     if (infoQP == 0) lsError = bool(filterLineSearch());
                     if (!lsError) vars->steptype = 0;
                 }
                 
                 //Heuristic 3: Ignore acceptance criteria up to a limited number of times if we are close to a solution and feasible
                 //Remove entries from filter that dominate the new point.
-                
-                //if (lsError && vars->tol <= 1e2*param->opttol && vars->cNormS <= param->feas_tol && vars->remaining_filter_overrides > 0){
                 if (lsError && vars->tol <= std::pow(param->opt_tol, 2./3.) && vars->cNormS <= param->feas_tol && vars->remaining_filter_overrides > 0){
                     force_accept(1.0);
                     vars->remaining_filter_overrides--;
@@ -290,13 +289,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         ////////////////////////////////////
 
         /// Calculate "old" Lagrange gradient: gamma = dL(xi_k, lambda_k+1)
-        calcLagrangeGradient( vars->gamma, 0 );
+        calcLagrangeGradient(vars->gamma, 0);
 
         /// Evaluate functions and gradients at the new xi
-        if (param->sparse){
+        if (param->sparse)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
-        }
         else
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
@@ -441,7 +439,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         //The scaling factor adjustment in one line of code
         //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->max_conv_QPs + 1 + (param->max_conv_QPs - 3) * (vars->hess_num_accepted == param->max_conv_QPs))*(param->max_conv_QPs > 2) + (1 - 2*(vars->hess_num_accepted < param->max_conv_QPs))*(param->max_conv_QPs <= 2))) * (param->conv_strategy >= 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->conv_strategy < 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
         vars->hess = vars->hess1.get();
-
+        
         //stats->itCount++;
         skipLineSearch = false;
     }

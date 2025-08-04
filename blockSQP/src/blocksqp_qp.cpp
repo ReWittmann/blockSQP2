@@ -111,8 +111,12 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
 
 
 void SQPmethod::computeConvexHessian(){
+    if (vars->hess2 == nullptr){
+        vars->hess = vars->hess1.get();
+        return;
+    }
+    
     vars->hess = vars->hess2.get();
-
     // If last block contains exact Hessian block, we need to copy it
     if (param->exact_hess == 1)
         for (int i = 0; i < vars->hess[vars->nBlocks-1].m; i++)
@@ -184,7 +188,7 @@ void SQPmethod::updateStepBoundsSOC(){
     }
 }
 
-
+/*
 int SQPmethod::solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP){
     computeConvexHessian();
     sub_QPs_par[param->max_conv_QPs]->set_hess(vars->hess, true);
@@ -207,20 +211,25 @@ int SQPmethod::solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP){
     vars->QP_num_accepted = param->max_conv_QPs;
     stats->qpResolve = 0;
     return QP_result;
-}
+}*/
 
 
-int SQPmethod::solveQP_(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
-    bool QP_loop_active = (param->enable_linesearch == 1 
-                        && (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6)
+int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
+    bool QP_loop_active = (
+                          (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6)
                         && stats->itCount > param->test_opt_2 
                         && !vars->conv_qp_only
-                        && hess_type == 0);
+                        && hess_type == 0)
+                        //&& param->enable_linesearch
+                        ;
     if (QP_loop_active){
         if (param->par_QPs) return solveQP_par(deltaXi, lambdaQP);
-        return solveQP(deltaXi, lambdaQP);
+        return solveQP_seq(deltaXi, lambdaQP);
     }
-    return solve_convex_QP(deltaXi, lambdaQP, hess_type == 2, param->par_QPs ? sub_QPs_par[param->max_conv_QPs].get() : sub_QP.get());
+    
+    //if (param->par_QPs)
+        return solve_convex_QP(deltaXi, lambdaQP, hess_type == 2, param->par_QPs ? sub_QPs_par[param->max_conv_QPs].get() : sub_QP.get());
+    //return solveQP_seq(deltaXi, lambdaQP, hess_type);
 }
 
 
@@ -252,10 +261,12 @@ int SQPmethod::solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, 
 }
 
 
-int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
+int SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
     double s_indf_N, s_conv_N;
     
-    int l, maxQP;
+    int maxQP = param->max_conv_QPs + 1;
+    
+    /*
     if (param->enable_linesearch == 1 && (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6) && stats->itCount > 1 && hess_type == 0)
         maxQP = param->max_conv_QPs + 1;
     else
@@ -266,6 +277,8 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
         computeConvexHessian();
     if (hess_type >= 2)
         setIdentityHessian();
+    */
+    
     vars->conv_qp_solved = false;
 
     if (param->sparse)
@@ -279,7 +292,7 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
     sub_QP->set_use_hotstart(vars->use_homotopy);
     
     int QP_result, QP_result_conv;
-    for (l = 0; l < maxQP; l++){
+    for (int l = 0; l < maxQP; l++){
         //Compute a new Hessian
         if (l > 0){
             //If the solution of the first QP was rejected, consider the second Hessian
@@ -304,10 +317,8 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
             stats->qpIterations += sub_QP->get_QP_it();
             
             //Save the number of the first hessian for which the QP solved (even though the step may still be replaced by the step from the convex Hessian)
-            if (hess_type == 0){
-                vars->hess_num_accepted = l;
-                vars->QP_num_accepted = l;
-            }
+            vars->hess_num_accepted = l;
+            vars->QP_num_accepted = l;
             
             //For regularized indefinite hessians, compare steplength to fallback hessian to avoid over-regularized hessians leading to small steps.
             //Skip this for the first regularization as this tends to help lock iterates down to a region of fast convergence.
@@ -338,27 +349,16 @@ int SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
 }
 
 
-int SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
-    QPsolverBase *SOC_QP = param->par_QPs ? sub_QPs_par[vars->QP_num_accepted].get() : sub_QP.get();
-    
-    updateStepBoundsSOC();
-    SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-
-    int QP_result = SOC_QP->solve(deltaXi, lambdaQP);
-    stats->qpIterations += SOC_QP->get_QP_it();
-    return QP_result;
-}
-
-
-int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
-    int maxQP;
+int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
+    int maxQP = param->max_conv_QPs + 1;
+    /*
     if (param->enable_linesearch == 1 && (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6) && stats->itCount > 1 && hess_type == 0)
         maxQP = param->max_conv_QPs + 1;
     else
         return solveQP(deltaXi, lambdaQP, hess_type);
-    steady_clock::time_point T0, T1;
+    */
     
-    updateStepBounds();
+    steady_clock::time_point T0, T1;
     
     std::promise<int> QP_results_p[PAR_QP_MAX];
     std::future<int> QP_results_f[PAR_QP_MAX];
@@ -373,6 +373,7 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
         sub_QPs_par[j]->set_hotstart_point(sub_QPs_par[vars->hess_num_accepted].get());
     }
     
+    updateStepBounds();
     for (int j = 0; j < maxQP; j++){
         
         if (j > 0) computeNextHessian(j, maxQP);
@@ -516,6 +517,21 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
     stats->rejectedSR1 += vars->hess_num_accepted;
     return 0;
 }
+
+
+
+int SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
+    QPsolverBase *SOC_QP = param->par_QPs ? sub_QPs_par[vars->QP_num_accepted].get() : sub_QP.get();
+    
+    updateStepBoundsSOC();
+    SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
+
+    int QP_result = SOC_QP->solve(deltaXi, lambdaQP);
+    stats->qpIterations += SOC_QP->get_QP_it();
+    return QP_result;
+}
+
+
 
 
 ///////////////////////////////////////////////////Subclass methods

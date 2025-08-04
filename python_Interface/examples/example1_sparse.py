@@ -9,12 +9,12 @@ import time
 opts = blockSQP.SQPoptions()
 opts.opt_tol = 1.0e-12
 opts.feas_tol = 1.0e-12
-opts.enable_linesearch = 0
+opts.enable_linesearch = False
 opts.hess_approx = 1
 opts.fallback_approx = 2
 opts.sizing = 0
 opts.fallback_sizing = 0
-opts.lim_mem = 1
+opts.lim_mem = True
 opts.mem_size = 20
 opts.block_hess = 1
 opts.exact_hess = 0

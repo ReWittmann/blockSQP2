@@ -83,8 +83,8 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
     return opts
 
 
-Examples = [#(OCProblems.Batch_Reactor, "Batch reactor"),
-            (OCProblems.Goddard_Rocket, "Goddard's rocket")# ,
+Examples = [# (OCProblems.Batch_Reactor, "Batch reactor"),
+            (OCProblems.Goddard_Rocket, "Goddard's rocket"),
             # (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
             # (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
             # (OCProblems.Hanging_Chain, "Hanging chain"),
@@ -105,10 +105,10 @@ opt2.test_opt_2 = 3
 # opt4 = opt_conv_str_2_seq()
 # opt4.test_opt_2 = 3
 
-Experiments = [# (opt_SR1_BFGS_seq(), "SR1-BFGS"),
-               # (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
+Experiments = [(opt_SR1_BFGS_seq(), "SR1-BFGS"),
+               (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
                 (opt_conv_str_2_par(max_conv_QPs = 6), "PAR6"),
-                (opt2, "PAR6_test")
+               # (opt2, "PAR6_test")
                # (opt3, "2SEQ4"),
                # (opt4, "2SEQ4_TEST")
                ]
@@ -117,7 +117,7 @@ Experiments = [# (opt_SR1_BFGS_seq(), "SR1-BFGS"),
 plot_folder = "/home/reinhold/PLOT"
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
-                                        nPert0 = 0, nPertF = 40)
+                                        nPert0 = 0, nPertF = 20)
 
 
 
