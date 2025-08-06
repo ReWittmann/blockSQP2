@@ -252,11 +252,13 @@ int SQPmethod::solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, 
     
     int QP_result = QPS->solve(deltaXi, lambdaQP);
     
-    stats->qpIterations = QPS->get_QP_it();
-    vars->conv_qp_solved = true;
-    vars->hess_num_accepted = param->max_conv_QPs;
-    vars->QP_num_accepted = param->max_conv_QPs;
-    stats->qpResolve = 0;
+    if (QP_result == 0){
+        stats->qpIterations = QPS->get_QP_it();
+        vars->conv_qp_solved = true;
+        vars->hess_num_accepted = param->max_conv_QPs;
+        vars->QP_num_accepted = param->max_conv_QPs;
+        stats->qpResolve = 0;
+    }
     return QP_result;
 }
 

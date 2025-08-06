@@ -120,8 +120,8 @@ void SQPmethod::calc_free_variables_scaling(double *arg_SF){
 void SQPmethod::scaling_heuristic(){
     //Matrix deltai, smallDelta, smallGamma;
     //Scale after iterations 1, 2, 3, 5, 10, 15, ...
-    if (stats->itCount > 3 && stats->itCount%5) return;
-
+    if ((stats->itCount > 3 && bool(stats->itCount%5)) || vars->steptype == 3) return;
+    
     for (int i = 0; i < prob->nVar; i++){
         vars->rescaleFactors[i] = 1.0;
     }

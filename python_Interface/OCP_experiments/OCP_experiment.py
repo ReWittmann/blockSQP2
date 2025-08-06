@@ -57,7 +57,7 @@ class CountCallback(cs.Callback):
     
 
 def perturbStartPoint(OCP : OCProblems.OCProblem, IND : int, SP : np.array):
-    if (isinstance(OCP, (OCProblems.Goddard_Rocket, OCProblems.Electric_Car, OCProblems.Hang_Glider, OCProblems.Fullers, OCProblems.Tubular_Reactor))):
+    if (isinstance(OCP, (OCProblems.Goddard_Rocket, OCProblems.Electric_Car, OCProblems.Hang_Glider, OCProblems.Fullers, OCProblems.Tubular_Reactor, OCProblems.Cart_Pendulum))):
         val = OCP.get_stage_control(SP, IND)
         OCP.set_stage_control(SP, IND, val - 0.1)
     
@@ -409,9 +409,9 @@ def run_ipopt_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Exp
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
             suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
 
-def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40):
+def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, nt = 100, **kwargs):
     for OCclass, OCname in Examples:        
-        OCprob = OCclass(nt=100, integrator='RK4')
+        OCprob = OCclass(nt = nt, integrator = 'RK4', parallel = True, **kwargs)
         itMax = 200
         titles = []
         EXP_N_SQP = []

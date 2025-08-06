@@ -375,6 +375,9 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             vars->n_scaleIt += int(vars->n_scaleIt < vars->dg_nsave);
         }
+        //Set counter to zero after restoration
+        else vars->n_scaleIt = 0;
+        
         
         //Rescale variables if automatic scaling is enabled. This has to be done before limited memory quasi newton updates are applied.
         if (param->automatic_scaling) scaling_heuristic();
@@ -398,7 +401,6 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                         calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
                     else if (param->hess_approx == 4)
                         calcFiniteDiffHessian(vars->hess1.get());
-                    vars->hess2_updated = false;
                 }
                 vars->hess2_updated = false;
             }

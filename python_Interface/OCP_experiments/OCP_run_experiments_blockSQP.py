@@ -84,7 +84,7 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
 
 
 Examples = [# (OCProblems.Batch_Reactor, "Batch reactor"),
-            (OCProblems.Goddard_Rocket, "Goddard's rocket"),
+            # (OCProblems.Goddard_Rocket, "Goddard's rocket"),
             # (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
             # (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
             # (OCProblems.Hanging_Chain, "Hanging chain"),
@@ -93,23 +93,23 @@ Examples = [# (OCProblems.Batch_Reactor, "Batch reactor"),
             # (OCProblems.Electric_Car, "Electric car"),
             # (OCProblems.Particle_Steering, "Particle steering"),
             # (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
-            # (OCProblems.Lotka_OED, "Lotka_OED")
+            # (OCProblems.Lotka_OED, "Lotka_OED"),
+            (OCProblems.Cart_Pendulum, "Cart pendulum")
             ]
-
 
 opt2 = opt_conv_str_2_par(max_conv_QPs = 6)
 opt2.test_opt_2 = 3
 
+opt3 = opt_conv_str_2_par(max_conv_QPs = 6)
+opt3.test_opt_2 = 3
+opt3.automatic_scaling = True
 
-# opt3 = opt_conv_str_2_seq()
-# opt4 = opt_conv_str_2_seq()
-# opt4.test_opt_2 = 3
 
 Experiments = [(opt_SR1_BFGS_seq(), "SR1-BFGS"),
-               (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
-                (opt_conv_str_2_par(max_conv_QPs = 6), "PAR6"),
-               # (opt2, "PAR6_test")
-               # (opt3, "2SEQ4"),
+               # (opt_conv_str_2_seq(max_conv_QPs = 4), "SEQ"),
+                # (opt_conv_str_2_par(max_conv_QPs = 6), "PAR6"),
+                (opt2, "PAR6_test"),
+                (opt3, "PAR6_scale")
                # (opt4, "2SEQ4_TEST")
                ]
 
@@ -117,7 +117,9 @@ Experiments = [(opt_SR1_BFGS_seq(), "SR1-BFGS"),
 plot_folder = "/home/reinhold/PLOT"
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
-                                        nPert0 = 0, nPertF = 20)
+                                        nPert0 = 0, nPertF = 8,
+                                        nt = 400, lambda_u = 0.05, u_max = 15
+                                        )
 
 
 

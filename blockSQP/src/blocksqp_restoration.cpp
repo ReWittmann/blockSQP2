@@ -28,6 +28,12 @@ void abstractRestorationProblem::update_xi_ref(const Matrix &xiReference){return
 
 RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
     parent = parentProblem;
+    
+    n_vblocks = parent->n_vblocks + 1;
+    vblocks = new vblock[parent->n_vblocks + 1];
+    std::copy(parent->vblocks, parent->vblocks + parent->n_vblocks, vblocks);
+    vblocks[parent->n_vblocks] = vblock(parent->nCon, false);
+    
     /*
     xiRef.Dimension( parent->nVar ).Initialize(0.);
     for(int i=0; i<parent->nVar; i++)
@@ -71,6 +77,7 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
 
 RestorationProblem::~RestorationProblem(){
     delete[] blockIdx;
+    delete[] vblocks;
     //delete[] jacNzOrig;
     //delete[] jacIndRowOrig;
     //delete[] jacIndColOrig;

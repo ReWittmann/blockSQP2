@@ -56,7 +56,7 @@ itMax = 400
 ######################
 #Easy to medium for blockSQP
 # OCprob = OCProblems.Lotka_Volterra_Fishing(nt=100, refine = 1, integrator = 'RK4', parallel=False, fishing = True)
-OCprob = OCProblems.Lotka_OED(nt=100, refine = 1, integrator = 'rk4', parallel=False)
+# OCprob = OCProblems.Lotka_OED(nt=100, refine = 1, integrator = 'rk4', parallel=False)
 # OCprob = OCProblems.Goddard_Rocket(integrator = 'rk4', nt = 100, refine=1, parallel=False) #Strong SR1 effect
 # OCprob = OCProblems.Calcium_Oscillation(nt = 100, integrator = 'cvodes', parallel= False)
 # OCprob = OCProblems.Batch_Reactor(nt=100, integration_method = 'rk4', parallel=False)
@@ -90,14 +90,39 @@ OCprob = OCProblems.Lotka_OED(nt=100, refine = 1, integrator = 'rk4', parallel=F
                                              # integrator = 'explicit_euler',
                                              # S_u = 1000.0)
 
+# OCprob = OCProblems.Cart_Pendulum(nt = 400, 
+#                     refine = 1, 
+#                     parallel = True, 
+#                     integrator = 'rk4', 
+#                     # epsilon = 100.0,
+#                     lambda_u = 0.05, u_max = 15
+#                     )
 
+# OCprob = OCProblems.Denbigh_Reaction(nt = 25, 
+#                     refine = 1,
+#                     parallel = True, 
+#                     integrator = 'explicit_euler', 
+#                     # epsilon = 100.0,
+#                     # lambda_u = 0.5, u_max = 30
+#                     # hT = 75.0
+#                     )
+
+
+OCprob = OCProblems.Clinic_Scheduling(nt = 50, 
+                    refine = 1,
+                    parallel = True, 
+                    integrator = 'explicit_euler', 
+                    # epsilon = 100.0,
+                    # lambda_u = 0.05, u_max = 15
+                    # hT = 75.0
+                    )
 
 counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
 ipopts = dict()
 ipopts['hessian_approximation'] = 'limited-memory'
 # ipopts['limited_memory_max_history'] = 20
-ipopts['constr_viol_tol'] = 1e-5
-ipopts['tol'] = 1e-5
+# ipopts['constr_viol_tol'] = 1e-5
+# ipopts['tol'] = 1e-5
 ipopts['max_iter'] = itMax
 # ipopts['hsllib'] = '/home/reinhold/coinhsl-solvers/.libs/libcoinhsl.so.0.0.0'
 sp = OCprob.start_point

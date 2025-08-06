@@ -258,8 +258,10 @@ class OCProblem:
         if self.integration_method.lower() == 'cvodes':
             # print('cvodes')
             self.odesol_single = cs.integrator('odesol_single', 'cvodes', self.ODE, {'linear_solver': 'csparse', 'augmented_options' : {'linear_solver' : 'csparse'}})
+        elif self.integration_method.lower() == 'collocation':
+            self.odesol_single = cs.integrator('odesol_single', 'collocation', self.ODE)
         elif self.integration_method.lower() == 'explicit_euler':
-            self.odesol_single = explicit_euler_integrator(self.ODE, M = 4)
+            self.odesol_single = explicit_euler_integrator(self.ODE, M = 1)
         else:
             # print('rk4')
             self.odesol_single = RK4_integrator(self.ODE)
@@ -2316,7 +2318,11 @@ class F8_Aircraft(OCProblem):
             plt.title('')
         
         plt.show()
-        
+
+
+
+#HINT: Try solving for hT = 70.0 first, then start solution for hT = 75.0 from there
+#      Cvodes recommended
 class Gravity_Turn(OCProblem):
     default_params = {
     "m0": 11.3,
@@ -2344,6 +2350,7 @@ class Gravity_Turn(OCProblem):
         m0, m1, Isp, Fmax, cd, A, g0, r0, H, rho0, betaT, vT, hT, Tmin, Tmax, eps= (self.model_params[key] for key in ['m0', 'm1', 'Isp', 'Fmax', 'cd', 'A', 'g0', 'r0', 'H', 'rho0', 'betaT', 'vT', 'hT', 'Tmin', 'Tmax', 'eps'])
         self.set_OCP_data(4,1,1,1,[m1, eps, 0, 0], [m0, np.inf, np.pi/2., np.inf], [Tmin/self.ntS], [Tmax/self.ntS * 0.66], [0.], [1.])
         self.fix_initial_value([m0, eps, None, 0.])
+        # self.fix_initial_value([m0, eps, 5e-6, 0.])
         
         x = cs.MX.sym('x', 4)
         m,v,beta,h = cs.vertsplit(x)
@@ -2364,6 +2371,7 @@ class Gravity_Turn(OCProblem):
         self.set_objective(m0 - self.x_eval[0,-1])
         self.add_constraint(cs.cumsum(self.q_eval), 0., np.inf)
         self.add_constraint(self.x_eval[1:4,-1] - cs.DM([vT, betaT, hT]), 0., 0.)
+        
         self.build_NLP()
         
         for i in range(self.ntS):
@@ -3622,6 +3630,244 @@ class Tubular_Reactor_NQ(Tubular_Reactor):
         else:
             plt.title('')
         plt.show()
+
+
+class Cart_Pendulum(OCProblem):
+    default_params = {
+            'M':1.0,
+            'm':0.1,
+            'l':1.0,
+            'g':9.81,
+            'u_max':30,
+            'lambda_u':0.5
+            }
+    
+    def build_problem(self):
+        M, m, l, g, u_max, lambda_u = (self.model_params[key] for key in ['M','m','l','g','u_max','lambda_u'])
+
+        self.set_OCP_data(4,0,1,0, [-2.0, -np.inf, -np.inf, -np.inf], [2.0, np.inf, np.inf, np.inf], [], [], [-u_max], [u_max])
+        self.fix_time_horizon(0., 4.0)
+        self.fix_initial_value([0., 0., 0., 0.])
+        
+        w = cs.MX.sym('w', 4)
+        x,xdot,theta,thetadot = cs.vertsplit(w)
+        _,w2,w3,w4 = (x, xdot, theta, thetadot)
+        u = cs.MX.sym('u', 1)
+        dt = cs.MX.sym('dt', 1)
+        
+        w2dot = (u + m*g*cs.sin(w3)*cs.cos(w3) + m*l*w4**2 * cs.sin(w3))/(M + m*(1 - cs.cos(w3)**2))
+        
+        ode_rhs = cs.vertcat(
+            w2,
+            w2dot,
+            w4,
+            (-g*cs.sin(w3) - w2dot * cs.cos(w3))/l
+        )
+     
+        quad_expr = 10*x**2 + 50*(theta - cs.pi)**2 + lambda_u*u**2
+        self.ODE = {'x':w, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        self.set_objective(self.q_tf[0])
+        
+        self.build_NLP()
+        for j in range(self.ntS):
+            self.set_stage_control(self.start_point, j, 0.)
+        self.integrate_full(self.start_point)
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x,xdot,theta,thetadot = self.get_state_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi=dpi)
+        plt.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'r', label = r'4$\cdot$u/u_max')
+        plt.plot(self.time_grid, x, 'g-', label = 'x')
+        plt.plot(self.time_grid, theta, 'b--', label = 'theta')
+        plt.legend(fontsize='large')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Cart pendulum problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+
+#Differential state 1 is stiff, approximating its lower bound of 0, so an implicit integrator is required.
+#In addition, the bound should be relaxed to something like 1e-[4 -- 6].
+
+#Using one step explicit euler with lower bound 1e-6 also """""""works""""""" as the optimizer can adjust the controls so the collocation does not overshoot 
+class Denbigh_Reaction(OCProblem):
+    default_params = {
+            'E1':3000.0,
+            'E2':6000.0,
+            'E3':3000.0,
+            'E4':0.,
+            }
+    
+    def build_problem(self):
+        E = [self.model_params[key] for key in ['E1','E2','E3','E4']]
+
+        self.set_OCP_data(2,0,1,1, [-1e-6,0.], [1.0, 1.0], [], [], [273.0], [415.0])
+        self.fix_time_horizon(0., 1000.0)
+        self.fix_initial_value([1.0, 0.])
+        
+        x = cs.MX.sym('x', 2)
+        x1, x2 = cs.vertsplit(x)
+        # x1 = cs.fmax(x1_, 0.)
+        
+        T = cs.MX.sym('T', 1)
+        dt = cs.MX.sym('dt', 1)
+        
+        k_s = [1e3,1e7,1e1,1e-3]
+        
+        k1, k2, k3, k4 = [k_s[i]*cs.exp(-E[i]/T) for i in range(4)]
+        
+        ode_rhs = cs.vertcat(
+            -k1*x1 - k2*x1,
+            k1*x1 - (k3 + k4)*x2
+        )
+     
+        quad_expr = k3*x2
+        self.ODE = {'x':x, 'p':cs.vertcat(dt,T), 'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        self.set_objective(-self.q_tf[0])
+        
+        self.build_NLP()
+        for j in range(self.ntS):
+            self.set_stage_control(self.start_point, j, 273.0)
+        self.integrate_full(self.start_point)
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x1, x2 = self.get_state_arrays_expanded(xi)
+        T = self.get_control_plot_arrays(xi)
+        
+        x1_in, x2_in = self.get_state_arrays(xi)
+        x_in = cs.vertcat(x1_in.reshape((1,-1)), x2_in.reshape((1,-1)))[:,:-1]
+        dt = cs.diff(self.time_grid_ref.reshape((1,-1)),1,1)
+        p_in = cs.vertcat(dt,T[:-1].reshape((1,-1)))
+        # print(p_in.shape)
+        
+        out = self.odesol_refined(x0 = x_in, p = p_in)
+        # print(out)
+        q = np.array(cs.cumsum(cs.horzcat(cs.DM([[0]]), out['qf']), 1)).reshape(-1)
+        # print(q)
+        
+        plt.figure(dpi=dpi)
+        plt.step(self.time_grid_ref, 2*(T - 273.0)/142.0, 'r', label = r'2$\cdot$(T-273)/142')
+        plt.plot(self.time_grid_ref, x1, 'g-', label = '$x_1$')
+        plt.plot(self.time_grid_ref, x2, 'b--', label = '$x_2$')
+        plt.plot(self.time_grid_ref, q, 'c', label = 'q')
+        plt.legend(fontsize='large')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Denbigh_Reaction'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+
+class Clinic_Scheduling(OCProblem):    
+    default_params = {
+        'alpha': 2.0,
+        'beta': 3.0,
+        'gamma': 1.5,
+        'delta': 0.1,
+    'lam_max': 15.0,    # Maximum appointment rate [patients/hour]
+    'mu_min': 0.5,       # Minimum service rate factor
+    'mu_max': 2.0,       # Maximum service rate factor
+    'N_max': 8,       # Maximum number of staff
+    'W_max': 30.0,       # Maximum acceptable waiting time [minutes]
+    'U_min': 0.6,       # Minimum utilization requirement
+    'N_total': 60,       # Total appointments to schedule
+    'lam_0': 7.5,       # Target appointment rate [patients/hour]
+    'w1': 1.0,
+    'w2': 0.5,
+    'w3': 0.1,
+    'Q0': 10.0,
+    'S0': 4.0,
+    'W0': 5.0,
+    'U0': 0.8
+    }
+    
+    def build_problem(self):
+        alpha, beta, gamma, delta, lam_max, mu_min, mu_max, N_max, W_max, U_min, N_total, lam_0, w1, w2, w3, Q0, S0, W0, U0 = (self.model_params[key] for key in ['alpha', 'beta', 'gamma', 'delta', 'lam_max', 'mu_min', 'mu_max', 'N_max', 'W_max', 'U_min', 'N_total', 'lam_0', 'w1', 'w2', 'w3', 'Q0', 'S0', 'W0', 'U0'])
+        
+        self.set_OCP_data(4,0,3,0, [0.,0.,0.,U_min], [np.inf,N_max,W_max,1.0], [], [], [0., mu_min, 1.0], [lam_max, mu_max, N_max])
+        self.fix_time_horizon(0., 8.0)
+        self.fix_initial_value([Q0, S0, W0, U0])
+        
+        X = cs.MX.sym('X', 4)
+        Q, S, W, U = cs.vertsplit(X)
+        
+        
+        
+        u = cs.MX.sym('u', 3)
+        lam, mu, N = cs.vertsplit(u)
+        
+        dt = cs.MX.sym('dt', 1)
+        
+        ode_rhs = cs.vertcat(
+            lam - cs.fmin(S, Q)*mu,
+            gamma*(N - S) - delta*S,
+            alpha*(Q/cs.fmax(S, 0.1) - W),
+            beta*(cs.fmin(Q,S)/cs.fmax(S, 0.1) - U)
+        )
+             
+        quad_expr = w1*W**2 + w2 * (1 - U)**2 + w3*(lam - lam_0)**2
+        self.ODE = {'x':X, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        self.set_objective(self.q_tf[0])
+        self.add_constraint(self.u_eval[0,1:] - self.u_eval[0,:-1], -2.0, 2.0)
+        
+        
+        self.build_NLP()
+        for j in range(self.ntS+1):
+            self.set_stage_state(self.start_point, j, self.x_init)
+        for j in range(self.ntS):
+            self.set_stage_control(self.start_point, j, [0., mu_min, 1.0])
+        # self.integrate_full(self.start_point)
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        Q, S, W, U = self.get_state_arrays_expanded(xi)
+        lam, mu, N = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi=dpi)
+        plt.plot(self.time_grid_ref, Q, 'g-', label = r'Q')
+        plt.plot(self.time_grid_ref, S, 'b--', label = r'S')
+        plt.plot(self.time_grid_ref, W, 'c', label = r'W')
+        plt.plot(self.time_grid_ref, 4*U, 'y', label = r'$U\cdot 4$')
+        
+        plt.step(self.time_grid_ref, lam, 'r', label = r'$\lambda$')
+        plt.step(self.time_grid_ref, mu, 'g', label = r'$\mu$')
+        plt.step(self.time_grid_ref, N, 'b', label = r'N')
+        
+        plt.legend(fontsize='large')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Clinic_Scheduling'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+
+
 
 
 

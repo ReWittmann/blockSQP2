@@ -14,7 +14,6 @@ project(BlockSQP
 set(CMAKE_CXX_STANDARD 20)
 enable_language(Fortran)
 
-
 #Static linking to avoid having to copy dll(-path)s.
 #
 if(WIN32)
@@ -34,7 +33,14 @@ FetchContent_Declare(
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
-set(MUMPS_find_static ON)
+
+
+if(WIN32)
+	set(MUMPS_find_static ON)
+else()
+	set(MUMPS_find_static OFF)
+	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os)
+endif()
 set(MUMPS_intsize64 OFF) #must be off
 
 #Shared MUMPS libraries are not supported when building with oneAPI and MSVC on windows
@@ -42,7 +48,7 @@ set(MUMPS_intsize64 OFF) #must be off
 set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_MakeAvailable(CMAKEMUMPS)
-
+#############################################################
 
 set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
 add_library(qpOASES STATIC
