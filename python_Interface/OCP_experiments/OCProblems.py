@@ -3867,6 +3867,119 @@ class Clinic_Scheduling(OCProblem):
         plt.show()
 
 
+# class Heat_Exchanger(OCProblem):
+#     default_params = {
+#     'mh_total': 100,                     # Total mass of milk (hot fluid) that is to be cooled down [kg]
+#     'Cpc': 4180,                         # Specific heat capacity of water (cold fluid) [J/kg*K]
+#     'Cph': 3700,                         # Specific heat capacity of milk (hot fluid) [J/kg*K]
+#     'D': 15e-3,                          # Tube diameter [m]
+#     'L': 2,                              # Tube length [m]
+#     'N_tubes': 20,                       # Number of tubes [-]
+#     'U': 500,                            # Overall heat transfer coefficient [W/(m^2*K)]
+
+#     'mc_0': 0,                           # Accumulated water (cold fluid) mass used at start of simulation [kg]
+#     'Tc_in': 10,                         # Temperature of water (cold fluid) at the inlet [°C]
+#     'Th_in': 75,                         # Temperature of milk (hot fluid) at the inlet [°C]
+#     'Th_out': 35,                        # Temperature of milk (hot fluid) at the outlet [°C]
+#     'T_env': 20,                         # Room temperature [°C]
+    
+#     'mc_dot_max': 7,                     # Max. mass flow rate of water (cold fluid) [kg/s]
+#     'mh_dot_max': 2,                     # Max. mass flow rate of milk (hot fluid) [kg/s]
+#     'delta_T_min': 3,                     # Minimum temperature difference [°C]    
+#     'w1': 1e4,
+#     'w2':10,
+#     't_ramp':5
+#     }
+    
+#     def build_problem(self):
+#         mh_total, Cpc, Cph, D, L, N_tubes, U, mc_0, Tc_in, Th_in, Th_out, T_env, mc_dot_max, mh_dot_max, delta_T_min, w1, w2, t_ramp = (self.model_params[key] for key in ['mh_total', 'Cpc', 'Cph', 'D', 'L', 'N_tubes', 'U', 'mc_0', 'Tc_in', 'Th_in', 'Th_out', 'T_env', 'mc_dot_max', 'mh_dot_max', 'delta_T_min', 'w1', 'w2', 't_ramp'])
+#         A = np.pi * D * L * N_tubes   # Heat transfer area [m^2]
+        
+#         self.set_OCP_data(3,0,1,0, [0.,0.,0.], [np.inf,np.inf,np.inf], [], [], [0.], [1.0])
+#         self.fix_time_horizon(0., mh_total/mh_dot_max)
+#         self.fix_initial_value([mc_0, Tc_in, T_env])
+        
+#         X = cs.MX.sym('X', 3)
+#         mc, Tc, Th = cs.vertsplit(X)
+#         u = cs.MX.sym('u', )
+#         dt = cs.MX.sym('dt', 1)
+#         temperature_locked = cs.MX(0)
+        
+#         def softplus(x, beta = 30):
+#             return cs.if_else(x > 0,
+#                               x + (1/beta) * cs.log1p(cs.exp(-beta * x)),
+#                               (1/beta) * cs.log1p(cs.exp(beta * x)))
+        
+#         def linear_ramp(t, t_end, T_start, T_end):
+#             t = cs.fmin(t, t_end)
+#             return T_start + (T_end - T_start) * (t / t_end)
+        
+#         mc_dot      =  mc_dot_max * (softplus(u) / softplus(1))  # Smoothly map u ∈ [0,1] to mc_dot ∈ [0, mc_dot_max] without discontinuities
+#         mh_dot      =  mh_dot_max
+#         delta_T_eff =  softplus(Th - Tc - delta_T_min)
+#         Tc_dot      =  (U * A / (mc_dot * Cpc)) * delta_T_eff
+#         Th_dot      = -(U * A / (mh_dot * Cph)) * delta_T_eff
+        
+#         ode_rhs = cs.vertcat(
+#             mc_dot,
+#             Tc_dot,
+#             Th_dot
+#         )
+        
+        
+#         self.ODE = {'x':X, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs}
+#         self.multiple_shooting()
+        
+#         mc_eval, Tc_eval, Th_eval = self.x_eval
+#         mc_tf, _, Th_tf = self.x_eval[:,-1]
+#         self.set_objective(mc_tf + w1*(Th_tf - Th_out)**2)
+        
+        
+        
+#         self.add_constraint()
+        
+        
+#         self.build_NLP()
+#         for j in range(self.ntS+1):
+#             self.set_stage_state(self.start_point, j, self.x_init)
+#         for j in range(self.ntS):
+#             self.set_stage_control(self.start_point, j, [0., mu_min, 1.0])
+#         # self.integrate_full(self.start_point)
+    
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         Q, S, W, U = self.get_state_arrays_expanded(xi)
+#         lam, mu, N = self.get_control_plot_arrays(xi)
+        
+#         plt.figure(dpi=dpi)
+#         plt.plot(self.time_grid_ref, Q, 'g-', label = r'Q')
+#         plt.plot(self.time_grid_ref, S, 'b--', label = r'S')
+#         plt.plot(self.time_grid_ref, W, 'c', label = r'W')
+#         plt.plot(self.time_grid_ref, 4*U, 'y', label = r'$U\cdot 4$')
+        
+#         plt.step(self.time_grid_ref, lam, 'r', label = r'$\lambda$')
+#         plt.step(self.time_grid_ref, mu, 'g', label = r'$\mu$')
+#         plt.step(self.time_grid_ref, N, 'b', label = r'N')
+        
+#         plt.legend(fontsize='large')
+#         ttl = None
+#         if isinstance(title,str):
+#             ttl = title
+#         elif title == True:
+#             ttl = 'Clinic_Scheduling'
+#         if ttl is not None:
+#             if isinstance(it, int):
+#                 ttl = ttl + f', iteration {it}'
+#             plt.title(ttl)
+#         else:
+#             plt.title('')
+#         plt.show()
+
+
+
+
+
+
+
 
 
 

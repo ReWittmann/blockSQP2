@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.Clinic_Scheduling(nt = 50, 
+OCprob = OCProblems.Clinic_Scheduling(nt = 200, 
                     refine = 1,
                     parallel = True, 
                     integrator = 'explicit_euler', 
@@ -39,10 +39,10 @@ OCprob = OCProblems.Clinic_Scheduling(nt = 50,
                     )
 
 #Bad local optimum
-for i in range(22,24):
-    OCprob.set_stage_control(OCprob.start_point, i, 15)
-for i in range(25,35):
-    OCprob.set_stage_control(OCprob.start_point, i, -15)
+# for i in range(22,24):
+#     OCprob.set_stage_control(OCprob.start_point, i, 15)
+# for i in range(25,35):
+#     OCprob.set_stage_control(OCprob.start_point, i, -15)
 
 ################################
 opts = py_blockSQP.SQPoptions()
