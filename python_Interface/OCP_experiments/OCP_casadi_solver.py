@@ -50,7 +50,7 @@ import matplotlib.pyplot as plt
 import time
 # from tqdm import tqdm #progress bar
 
-itMax = 400
+itMax = 2000
 ######################
 ##Available problems##
 ######################
@@ -108,21 +108,31 @@ itMax = 400
 #                     )
 
 
-OCprob = OCProblems.Clinic_Scheduling(nt = 50, 
+# OCprob = OCProblems.Clinic_Scheduling(nt = 50, 
+#                     refine = 1,
+#                     parallel = True, 
+#                     integrator = 'explicit_euler', 
+#                     # epsilon = 100.0,
+#                     # lambda_u = 0.05, u_max = 15
+#                     # hT = 75.0
+#                     )
+
+OCprob = OCProblems.Rocket_Landing(nt = 35, 
                     refine = 1,
                     parallel = True, 
                     integrator = 'explicit_euler', 
                     # epsilon = 100.0,
                     # lambda_u = 0.05, u_max = 15
                     # hT = 75.0
+                    objective = "max_performance"
                     )
 
 counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
 ipopts = dict()
-ipopts['hessian_approximation'] = 'limited-memory'
+# ipopts['hessian_approximation'] = 'limited-memory'
 # ipopts['limited_memory_max_history'] = 20
-# ipopts['constr_viol_tol'] = 1e-5
-# ipopts['tol'] = 1e-5
+ipopts['constr_viol_tol'] = 1e-6
+ipopts['tol'] = 1e-6
 ipopts['max_iter'] = itMax
 # ipopts['hsllib'] = '/home/reinhold/coinhsl-solvers/.libs/libcoinhsl.so.0.0.0'
 sp = OCprob.start_point

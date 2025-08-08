@@ -3867,119 +3867,229 @@ class Clinic_Scheduling(OCProblem):
         plt.show()
 
 
-# class Heat_Exchanger(OCProblem):
-#     default_params = {
-#     'mh_total': 100,                     # Total mass of milk (hot fluid) that is to be cooled down [kg]
-#     'Cpc': 4180,                         # Specific heat capacity of water (cold fluid) [J/kg*K]
-#     'Cph': 3700,                         # Specific heat capacity of milk (hot fluid) [J/kg*K]
-#     'D': 15e-3,                          # Tube diameter [m]
-#     'L': 2,                              # Tube length [m]
-#     'N_tubes': 20,                       # Number of tubes [-]
-#     'U': 500,                            # Overall heat transfer coefficient [W/(m^2*K)]
 
-#     'mc_0': 0,                           # Accumulated water (cold fluid) mass used at start of simulation [kg]
-#     'Tc_in': 10,                         # Temperature of water (cold fluid) at the inlet [°C]
-#     'Th_in': 75,                         # Temperature of milk (hot fluid) at the inlet [°C]
-#     'Th_out': 35,                        # Temperature of milk (hot fluid) at the outlet [°C]
-#     'T_env': 20,                         # Room temperature [°C]
+
+
+class Rocket_Landing(OCProblem):    
+    default_params = {
+        'Isp': 350,
+        'g0': 9.81,
+        'g': 9.81,
+        'rho0': 1.225,
+        'H': 8400,
+        'CD': 1.64,
+        'A': 33.18,
+        'Tmin': 2e5,
+        'Tmax': 9e5,
+        'thetamax': 15*(2*np.pi/360),
+        'gammamax': 30*(2*np.pi/360),
+        'mdry': 25e3,
+        'objective': "max_fuel",
+        
+        'Tscale': 1e-5,
+        'xscale': 1e-3,
+        'zscale': 1e-3,
+        'vscale': 1e-2,
+        'mscale': 1e-5,
+        'tscale': 1.0,
+        
+        # 'Tscale': 1.0,
+        # 'xscale': 1.0,
+        # 'zscale': 1.0,
+        # 'vscale': 1.0,
+        # 'mscale': 1.0,
+        # 'tscale': 1.0,
+    }
     
-#     'mc_dot_max': 7,                     # Max. mass flow rate of water (cold fluid) [kg/s]
-#     'mh_dot_max': 2,                     # Max. mass flow rate of milk (hot fluid) [kg/s]
-#     'delta_T_min': 3,                     # Minimum temperature difference [°C]    
-#     'w1': 1e4,
-#     'w2':10,
-#     't_ramp':5
-#     }
+    def build_problem(self):
+        Isp, g0, g, rho0, H, CD, A, Tmin, Tmax, thetamax, gammamax, mdry, objective, Tscale, xscale, zscale, vscale, mscale, tscale = (self.model_params[key] for key in ['Isp', 'g0', 'g', 'rho0', 'H', 'CD', 'A', 'Tmin', 'Tmax', 'thetamax', 'gammamax', 'mdry', 'objective', 'Tscale', 'xscale', 'zscale', 'vscale', 'mscale', 'tscale'])
+        
+        self.set_OCP_data(5,1,2,0, [-np.inf,0.,-np.inf,-np.inf,25e3 * mscale], [np.inf,np.inf,np.inf,np.inf,np.inf], [15/self.ntS * tscale], [45/self.ntS * tscale], [Tmin * Tscale, -thetamax], [Tmax * Tscale, thetamax])
+        self.fix_initial_value([xscale*(-100), zscale*2000, vscale*30, vscale*(-236), mscale*30e3])
+        
+        X = cs.MX.sym('X', 5)
+        X_ = X / [xscale, zscale, vscale, vscale, mscale]
+        x,z,vx,vz,m = cs.vertsplit(X_)
+        
+        u = cs.MX.sym('u', 2)
+        T_, theta = cs.vertsplit(u)
+        T = T_/Tscale
+        
+        dt = cs.MX.sym('dt', 1)
+        dt_s = dt*tscale
+        
+        vsq = vx**2 + vz**2
+        rho = rho0*cs.exp(-z/H)
+        D = 0.5*rho*CD*A*vsq
+        ode_rhs = cs.vertcat(
+            xscale*vx,
+            zscale*vz,
+            vscale*(T*cs.sin(theta)/m - D*vx/(m*cs.sqrt(vsq))),
+            vscale*(T*cs.cos(theta)/m - g - D*vz/(m*cs.sqrt(vsq))),
+            mscale*(-T/(Isp*g0))
+        )
+        
+        self.ODE = {'x':X, 'p':cs.vertcat(dt,u), 'ode': dt_s*ode_rhs}
+        self.multiple_shooting()
+        
+        _,_,_,_,m_tf = cs.vertsplit(self.x_eval[:,-1])
+        
+        if objective == "max_fuel":
+            self.set_objective(-m_tf)
+            con_relax_factor = 1.0
+        elif objective == "max_performance":
+            x_tf = self.x_eval[:-1,-1]
+            dtf = self.p_eval[:,-1]/tscale
+            self.set_objective(1000*(x_tf[0]**2 + x_tf[1]**2 + x_tf[2]**2 + (x_tf[3]+2*vscale)**2) + 0.1*dtf*self.ntS)
+            con_relax_factor = 1.8
+        else:
+            raise Exception("Unknown objective")
+        
+        x_tf, z_tf, vx_tf, vz_tf, m_tf = cs.vertsplit(self.x_eval[:,-1])
+        
+
+        POS_TOL = 3.0
+        VEL_TOL = 3.0
+        Prlx = con_relax_factor * POS_TOL
+        Vrlx = con_relax_factor * VEL_TOL
+        self.add_constraint(self.x_eval[:,-1], [0. - xscale*Prlx, 
+                                                0. - zscale*Prlx, 
+                                                0. - vscale*Vrlx, 
+                                                vscale*(-2. - Vrlx), 
+                                                mscale*25e3], 
+                                                [0. + xscale*Prlx, 
+                                                 0. + zscale*Prlx, 
+                                                 0. + vscale*Vrlx, 
+                                                 vscale*(-2. + Vrlx), 
+                                                 np.inf])
+        
+        self.build_NLP()
+        for j in range(self.ntS+1):
+            self.set_stage_state(self.start_point, j, self.x_init)
+        for j in range(self.ntS):
+            self.set_stage_param(self.start_point, j, [tscale*25/self.ntS])
+        
+        for j in range(0, self.ntS):
+            self.set_stage_control(self.start_point, j, [Tmin*Tscale, 0.])
+        
+        # self.set_stage_control(self.start_point, 10, [Tmax*Tscale, 0.])
+        
+        # for j in range(0, math.floor(self.ntS/2)):
+        #     self.set_stage_control(self.start_point, j, [Tmin*Tscale, 0.])
+        # for j in range(math.floor(self.ntS/2), self.ntS):
+        #     self.set_stage_control(self.start_point, j, [Tmax*Tscale, 0.])
+        
+        self.integrate_full(self.start_point)
     
-#     def build_problem(self):
-#         mh_total, Cpc, Cph, D, L, N_tubes, U, mc_0, Tc_in, Th_in, Th_out, T_env, mc_dot_max, mh_dot_max, delta_T_min, w1, w2, t_ramp = (self.model_params[key] for key in ['mh_total', 'Cpc', 'Cph', 'D', 'L', 'N_tubes', 'U', 'mc_0', 'Tc_in', 'Th_in', 'Th_out', 'T_env', 'mc_dot_max', 'mh_dot_max', 'delta_T_min', 'w1', 'w2', 't_ramp'])
-#         A = np.pi * D * L * N_tubes   # Heat transfer area [m^2]
+    def plot(self, xi, dpi = None, title = None, it = None):
+        Tscale, xscale, zscale, vscale, mscale, tscale = (self.model_params[key] for key in ['Tscale', 'xscale', 'zscale', 'vscale', 'mscale', 'tscale'])
         
-#         self.set_OCP_data(3,0,1,0, [0.,0.,0.], [np.inf,np.inf,np.inf], [], [], [0.], [1.0])
-#         self.fix_time_horizon(0., mh_total/mh_dot_max)
-#         self.fix_initial_value([mc_0, Tc_in, T_env])
+        x,z,vx,vz,m = self.get_state_arrays_expanded(xi)# / [xscale, zscale, vscale, vscale, mscale]
+        T, theta = self.get_control_plot_arrays(xi)# / [Tscale, 1.0]
+        dt_arr = self.get_param_arrays_expanded(xi)
+        time_grid_ref = np.cumsum(np.concatenate([[0], dt_arr])).reshape(-1)
         
-#         X = cs.MX.sym('X', 3)
-#         mc, Tc, Th = cs.vertsplit(X)
-#         u = cs.MX.sym('u', )
-#         dt = cs.MX.sym('dt', 1)
-#         temperature_locked = cs.MX(0)
+        Tscale = self.model_params['Tscale']
         
-#         def softplus(x, beta = 30):
-#             return cs.if_else(x > 0,
-#                               x + (1/beta) * cs.log1p(cs.exp(-beta * x)),
-#                               (1/beta) * cs.log1p(cs.exp(beta * x)))
+        plt.figure(dpi=dpi)
+        plt.plot(time_grid_ref, x*20, 'r-', label = r'x $\cdot$ ' + str(xscale) + r'$\cdot 20$')
+        plt.plot(time_grid_ref, z, 'g--', label = r'z $\cdot$ ' + str(zscale))
+        plt.plot(time_grid_ref, vx, 'b:', label = r'vx $\cdot$ ' + str(vscale))
+        plt.plot(time_grid_ref, vz, 'c-.', label = r'vz $\cdot$ ' + str(vscale))
+        plt.plot(time_grid_ref, (m - self.model_params['mdry']*mscale)*50, 'y-.', label = r'(m - mdry)$\cdot$' + str(mscale) + r'$\cdot 50$')
         
-#         def linear_ramp(t, t_end, T_start, T_end):
-#             t = cs.fmin(t, t_end)
-#             return T_start + (T_end - T_start) * (t / t_end)
+        plt.step(time_grid_ref, T*0.5, 'r', label = r'T$\cdot$ ' + str(Tscale) + r'$\cdot 0.5$')
+        plt.step(time_grid_ref, theta*10, 'g', label = r'theta$\cdot 10$')
         
-#         mc_dot      =  mc_dot_max * (softplus(u) / softplus(1))  # Smoothly map u ∈ [0,1] to mc_dot ∈ [0, mc_dot_max] without discontinuities
-#         mh_dot      =  mh_dot_max
-#         delta_T_eff =  softplus(Th - Tc - delta_T_min)
-#         Tc_dot      =  (U * A / (mc_dot * Cpc)) * delta_T_eff
-#         Th_dot      = -(U * A / (mh_dot * Cph)) * delta_T_eff
-        
-#         ode_rhs = cs.vertcat(
-#             mc_dot,
-#             Tc_dot,
-#             Th_dot
-#         )
-        
-        
-#         self.ODE = {'x':X, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs}
-#         self.multiple_shooting()
-        
-#         mc_eval, Tc_eval, Th_eval = self.x_eval
-#         mc_tf, _, Th_tf = self.x_eval[:,-1]
-#         self.set_objective(mc_tf + w1*(Th_tf - Th_out)**2)
-        
-        
-        
-#         self.add_constraint()
-        
-        
-#         self.build_NLP()
-#         for j in range(self.ntS+1):
-#             self.set_stage_state(self.start_point, j, self.x_init)
-#         for j in range(self.ntS):
-#             self.set_stage_control(self.start_point, j, [0., mu_min, 1.0])
-#         # self.integrate_full(self.start_point)
+        plt.legend(fontsize='small', loc = 'upper left')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Rocket_Landing'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+
+
+class Satellite_Deorbiting(OCProblem):
+    default_params = {
+            'r0':6.821e6,
+            'vr0':0.,
+            'vtheta0':7650,
+            'm0':150,
+            'rT':6491e6,
+            'mu':3.986e14,
+            'RE': 6.371e6,
+            'rho0': 1.225,
+            'H': 8500,
+            'CD': 2.2,
+            'A':1.0,
+            'Isp': 220,
+            'g0': 9.81,
+            'umax': 20,
+            'm0': 150,
+            'mdry': 100
+            }
     
-#     def plot(self, xi, dpi = None, title = None, it = None):
-#         Q, S, W, U = self.get_state_arrays_expanded(xi)
-#         lam, mu, N = self.get_control_plot_arrays(xi)
+    def build_problem(self):
+        r0, vr0, vtheta0, m0, rT, mu, RE, rho0, H, CD, A, Isp, g0, umax, mdry = (self.model_params[key] for key in ['r0', 'vr0', 'vtheta0', 'm0', 'rT', 'mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'mdry'])
         
-#         plt.figure(dpi=dpi)
-#         plt.plot(self.time_grid_ref, Q, 'g-', label = r'Q')
-#         plt.plot(self.time_grid_ref, S, 'b--', label = r'S')
-#         plt.plot(self.time_grid_ref, W, 'c', label = r'W')
-#         plt.plot(self.time_grid_ref, 4*U, 'y', label = r'$U\cdot 4$')
+        self.set_OCP_data(5,0,2,0, [0., , -np.inf, -np.inf, mdry], [np.inf, np.inf, np.inf, np.inf, m0], [], [], [-np.inf, -np.inf], [np.inf, npp.inf])
+        self.fix_time_horizon(0., 3600)
+        self.fix_initial_value([r0, theta0, vr0, vtheta0, m0])
         
-#         plt.step(self.time_grid_ref, lam, 'r', label = r'$\lambda$')
-#         plt.step(self.time_grid_ref, mu, 'g', label = r'$\mu$')
-#         plt.step(self.time_grid_ref, N, 'b', label = r'N')
+        w = cs.MX.sym('w', 4)
+        x,xdot,theta,thetadot = cs.vertsplit(w)
+        _,w2,w3,w4 = (x, xdot, theta, thetadot)
+        u = cs.MX.sym('u', 1)
+        dt = cs.MX.sym('dt', 1)
         
-#         plt.legend(fontsize='large')
-#         ttl = None
-#         if isinstance(title,str):
-#             ttl = title
-#         elif title == True:
-#             ttl = 'Clinic_Scheduling'
-#         if ttl is not None:
-#             if isinstance(it, int):
-#                 ttl = ttl + f', iteration {it}'
-#             plt.title(ttl)
-#         else:
-#             plt.title('')
-#         plt.show()
-
-
-
-
-
-
-
+        w2dot = (u + m*g*cs.sin(w3)*cs.cos(w3) + m*l*w4**2 * cs.sin(w3))/(M + m*(1 - cs.cos(w3)**2))
+        
+        ode_rhs = cs.vertcat(
+            w2,
+            w2dot,
+            w4,
+            (-g*cs.sin(w3) - w2dot * cs.cos(w3))/l
+        )
+     
+        quad_expr = 10*x**2 + 50*(theta - cs.pi)**2 + lambda_u*u**2
+        self.ODE = {'x':w, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        self.set_objective(self.q_tf[0])
+        
+        self.build_NLP()
+        for j in range(self.ntS):
+            self.set_stage_control(self.start_point, j, 0.)
+        self.integrate_full(self.start_point)
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x,xdot,theta,thetadot = self.get_state_arrays(xi)
+        u = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi=dpi)
+        plt.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'r', label = r'4$\cdot$u/u_max')
+        plt.plot(self.time_grid, x, 'g-', label = 'x')
+        plt.plot(self.time_grid, theta, 'b--', label = 'theta')
+        plt.legend(fontsize='large')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Cart pendulum problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
 
 
 

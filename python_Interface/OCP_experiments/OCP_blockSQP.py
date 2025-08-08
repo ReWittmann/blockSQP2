@@ -12,8 +12,8 @@ import py_blockSQP
 import matplotlib.pyplot as plt
 
 itMax = 100
-
-step_plots = True
+step_plots = False
+# step_plots = True
 plot_title = True
 
 
@@ -29,13 +29,14 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.Clinic_Scheduling(nt = 200, 
+OCprob = OCProblems.Rocket_Landing(nt = 35, 
                     refine = 1,
                     parallel = True, 
-                    integrator = 'explicit_euler', 
+                    integrator = 'rk4', 
                     # epsilon = 100.0,
                     # lambda_u = 0.05, u_max = 15
                     # hT = 75.0
+                    objective = "max_performance"
                     )
 
 #Bad local optimum

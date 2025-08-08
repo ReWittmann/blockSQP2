@@ -656,7 +656,8 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         //std::cout << "QP could be solved, qpOASES ret is 0\n";
         return 0;
     }
-
+    std::cout << "qpOASES ret is " << ret << "\n";
+    
     *qp = *qpSave;
 
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
