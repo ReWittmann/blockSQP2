@@ -4016,14 +4016,14 @@ class Rocket_Landing(OCProblem):
         plt.show()
 
 
-
-class Satellite_Deorbiting(OCProblem):
+# TODO finish
+class Satellite_Deorbiting_1(OCProblem):
     default_params = {
-            'r0':6.821e6,
-            'vr0':0.,
-            'vtheta0':7650,
-            'm0':150,
-            'rT':6491e6,
+            # 'r0':6.821e6,
+            # 'vr0':0.,
+            # 'vtheta0':7650,
+            # 'm0':150,
+            # 'rT':6491e6,
             'mu':3.986e14,
             'RE': 6.371e6,
             'rho0': 1.225,
@@ -4034,55 +4034,130 @@ class Satellite_Deorbiting(OCProblem):
             'g0': 9.81,
             'umax': 20,
             'm0': 150,
-            'mdry': 100
+            'omegaE':7.2921e-5
             }
     
     def build_problem(self):
-        r0, vr0, vtheta0, m0, rT, mu, RE, rho0, H, CD, A, Isp, g0, umax, mdry = (self.model_params[key] for key in ['r0', 'vr0', 'vtheta0', 'm0', 'rT', 'mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'mdry'])
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE'])
         
-        self.set_OCP_data(5,0,2,0, [0., , -np.inf, -np.inf, mdry], [np.inf, np.inf, np.inf, np.inf, m0], [], [], [-np.inf, -np.inf], [np.inf, npp.inf])
-        self.fix_time_horizon(0., 3600)
-        self.fix_initial_value([r0, theta0, vr0, vtheta0, m0])
+        h0 = 450000
+        r0 = RE + h0
+        theta0 = 0.
+        vr0 = 0.
+        vorb = np.sqrt(mu/r0)
+        m0 = 150
+        mdry = 100
         
-        w = cs.MX.sym('w', 4)
-        x,xdot,theta,thetadot = cs.vertsplit(w)
-        _,w2,w3,w4 = (x, xdot, theta, thetadot)
-        u = cs.MX.sym('u', 1)
+        hreentry = 120000
+        rfinal = RE + hreentry
+        
+        self.set_OCP_data(5,1,2,0, [RE+5000., -2*np.pi, -10000., 0., mdry - 0.1], [r0 + 100000., 2*np.pi, 10000., 20000, m0 + 0.1], [300/self.ntS], [21600/self.ntS], [-umax, -umax], [umax, umax])
+        self.fix_initial_value([r0, theta0, vr0, vorb, m0])
+        
+        def safe_sqrt(x):
+            return cs.sqrt(cs.fmax(x, 1e-12))
+        
+        # Atmospheric model
+        def atmospheric_density(r_val):
+            h = r_val - RE
+            h_safe = cs.fmax(h, -100000)
+            return rho0 * cs.exp(-h_safe / H)
+        
+        # Relative velocity components
+        def relative_velocity(v_r_val, v_theta_val, r_val):
+            v_rel_r = v_r_val
+            v_rel_theta = v_theta_val - omegaE * r_val
+            v_rel_sq = v_rel_r**2 + v_rel_theta**2
+            v_rel = safe_sqrt(v_rel_sq)
+            return v_rel_r, v_rel_theta, v_rel
+        
+        X = cs.MX.sym('X', 5)
+        r, theta, vr, vtheta, m = cs.vertsplit(X)
+        
+        U = cs.MX.sym('U', 2)
+        ur, utheta = cs.vertsplit(U)
         dt = cs.MX.sym('dt', 1)
         
-        w2dot = (u + m*g*cs.sin(w3)*cs.cos(w3) + m*l*w4**2 * cs.sin(w3))/(M + m*(1 - cs.cos(w3)**2))
+        rsafe = cs.fmax(r, RE + 10000)
+        msafe = cs.fmax(m, mdry)
+        
+        rho = atmospheric_density(rsafe)
+        vrelr, vreltheta, vrel = relative_velocity(vr, vtheta, rsafe)
+        
+        centrifugal = vtheta**2/rsafe
+        gravity = mu/(rsafe**2)
+        drag = 0.5*CD*A/msafe*rho*vrel
+        rthrust = ur/msafe
+        thetathrust = utheta/msafe
         
         ode_rhs = cs.vertcat(
-            w2,
-            w2dot,
-            w4,
-            (-g*cs.sin(w3) - w2dot * cs.cos(w3))/l
+            vr,
+            vtheta/rsafe,
+            centrifugal - gravity + rthrust - drag*vrelr,
+            -vr*vtheta/rsafe + thetathrust - drag*vreltheta,
+            # vtheta**2 / r_safe - mu / r**2 + ur/m - drag*vrelr,
+            # -vr*vtheta/r + utheta/m - drag*vreltheta,
+            -cs.sqrt(ur**2 + utheta**2)/(Isp*g0)
         )
-     
-        quad_expr = 10*x**2 + 50*(theta - cs.pi)**2 + lambda_u*u**2
-        self.ODE = {'x':w, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        
+        self.ODE = {'x':X, 'p':cs.vertcat(dt,U), 'ode': dt*ode_rhs}
         self.multiple_shooting()
-        self.set_objective(self.q_tf[0])
+        self.set_objective(self.ntS*self.p_tf[-1])
+        
+        rT,_,_,_,_ = cs.vertsplit(self.x_eval[:,-1])
+        urt, uthetat = cs.vertsplit(self.u_eval)
+        
+        self.add_constraint(rT, 0., rfinal)
+        self.add_constraint(safe_sqrt(urt**2 + uthetat**2), 0., umax)
         
         self.build_NLP()
+        
+        r_init = np.linspace(r0, rfinal, self.ntS + 1)
+        theta_init = np.linspace(0, 2*np.pi, self.ntS + 1)
+        vr_init = np.zeros(self.ntS + 1)
+        vtheta_init = np.ones(self.ntS + 1)*vorb*0.9
+        m_init = np.linspace(m0, mdry + 10, self.ntS + 1)
+        
+        # ur_init = np.ones(self.ntS)*(-5.0)
+        # utheta_init = np.ones(self.ntS)*(-10.0)
+        
         for j in range(self.ntS):
-            self.set_stage_control(self.start_point, j, 0.)
-        self.integrate_full(self.start_point)
+            self.set_stage_param(self.start_point, j, 1800/self.ntS)
+            self.set_stage_control(self.start_point, j, [-5.0,-10.0])
+        
+        for j in range(self.ntS + 1):
+            self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        x,xdot,theta,thetadot = self.get_state_arrays(xi)
-        u = self.get_control_plot_arrays(xi)
+        RE, = [self.model_params[key] for key in ['RE']]
+        
+        r, theta, vr, vtheta, m = self.get_state_arrays(xi)
+        ur, utheta = self.get_control_plot_arrays(xi)
+        dt = self.get_param_arrays(xi)
+        time_grid = np.cumsum(np.concatenate([np.array([0]), dt]))
+        dte = self.get_param_arrays_expanded(xi)
+        time_grid_ref = np.cumsum(np.concatenate([np.array([0]), dte]))
         
         plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'r', label = r'4$\cdot$u/u_max')
-        plt.plot(self.time_grid, x, 'g-', label = 'x')
-        plt.plot(self.time_grid, theta, 'b--', label = 'theta')
+        plt.plot(time_grid, (r - RE)/1000, 'r--', label = r'(r - Re)/1000')
+        plt.plot(time_grid, theta*50, 'g:', label = r'$\theta\cdot 50$')
+        # plt.plot(time_grid, vr, 'b-.', label = r'$v_r$')
+        # plt.plot(time_grid, vtheta, 'y-', label = r$v_\theta$))
+        plt.plot(time_grid, (m - 100.)*4, 'b-.', label = r'(m - 100)$\cdot 4$')
+        
+        # plt.axhline(y = 5)
+        # plt.axhline(y = 120, color = 'g', linestyle = '--')
+        
+        plt.step(time_grid_ref, ur*20, 'r', label = r'$u_r \cdot 20$')
+        plt.step(time_grid_ref, utheta*20, 'g', label = r'$u_\theta \cdot 20$')
+        
         plt.legend(fontsize='large')
+        
         ttl = None
         if isinstance(title,str):
             ttl = title
         elif title == True:
-            ttl = 'Cart pendulum problem'
+            ttl = 'Satellite Deorbiting min time problem'
         if ttl is not None:
             if isinstance(it, int):
                 ttl = ttl + f', iteration {it}'
@@ -4091,6 +4166,253 @@ class Satellite_Deorbiting(OCProblem):
             plt.title('')
         plt.show()
 
+
+#Doent work well (flat objective due to very low control shifting sensitivity)
+# TODO consider adding scaled duration penalty to objective
+class Satellite_Deorbiting_2(OCProblem):
+    default_params = {
+            # 'r0':6.821e6,
+            # 'vr0':0.,
+            # 'vtheta0':7650,
+            # 'm0':150,
+            # 'rT':6491e6,
+            'mu': 3.986e14,
+            'RE': 6.371e6,
+            'rho0': 1.225,
+            'H': 8500,
+            'CD': 2.2,
+            'A':1.0,
+            'Isp': 220,
+            'g0': 9.81,
+            'umax': 20,
+            'm0': 150,
+            'omegaE':7.2921e-5
+            }
+    
+    def build_problem(self):
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE'])
+        
+        h0 = 450000
+        r0 = RE + h0
+        theta0 = 0.
+        vr0 = 0.
+        vorb = np.sqrt(mu/r0)
+        m0 = 150
+        mdry = 100
+        
+        hreentry = 120000
+        rfinal = RE + hreentry
+        
+        MISSION_DEORBIT_TIME_HOURS = 0.6
+        T_mission_fixed = MISSION_DEORBIT_TIME_HOURS * 3600
+        orbital_period = 2 * np.pi * np.sqrt(r0**3 / mu)
+        n_orbits = T_mission_fixed / orbital_period
+        
+        self.set_OCP_data(5,0,2,0, [RE + 5000., -np.ceil(n_orbits)*2*np.pi, -8000., 1000., mdry - 0.1], [r0 + 50000., np.ceil(n_orbits)*2*np.pi, 8000., 15000., m0 + 0.1], [], [], [-umax, -umax], [umax, umax])
+        self.fix_time_horizon(0., T_mission_fixed)
+        self.fix_initial_value([r0, theta0, vr0, vorb, m0])
+        
+        def safe_sqrt(x):
+            return cs.sqrt(cs.fmax(x, 1e-12))
+        
+        # Atmospheric model
+        def atmospheric_density(r_val):
+            h = r_val - RE
+            h_safe = cs.fmax(h, -100000)
+            return rho0 * cs.exp(-h_safe / H)
+        
+        # Relative velocity components
+        def relative_velocity(v_r_val, v_theta_val, r_val):
+            v_rel_r = v_r_val
+            v_rel_theta = v_theta_val - omegaE * r_val
+            v_rel_sq = v_rel_r**2 + v_rel_theta**2
+            v_rel = safe_sqrt(v_rel_sq)
+            return v_rel_r, v_rel_theta, v_rel
+        
+        X = cs.MX.sym('X', 5)
+        r, theta, vr, vtheta, m = cs.vertsplit(X)
+        
+        U = cs.MX.sym('U', 2)
+        ur, utheta = cs.vertsplit(U)
+        dt = cs.MX.sym('dt', 1)
+        
+        rsafe = cs.fmax(r, RE + 10000)
+        msafe = cs.fmax(m, mdry)
+        
+        rho = atmospheric_density(rsafe)
+        vrelr, vreltheta, vrel = relative_velocity(vr, vtheta, rsafe)
+        
+        centrifugal = vtheta**2/rsafe
+        gravity = mu/(rsafe**2)
+        drag = 0.5*CD*A/msafe*rho*vrel
+        rthrust = ur/msafe
+        thetathrust = utheta/msafe
+        
+        ode_rhs = cs.vertcat(
+            vr,
+            vtheta/rsafe,
+            centrifugal - gravity + rthrust - drag*vrelr,
+            -vr*vtheta/rsafe + thetathrust - drag*vreltheta,
+            # vtheta**2 / r_safe - mu / r**2 + ur/m - drag*vrelr,
+            # -vr*vtheta/r + utheta/m - drag*vreltheta,
+            -cs.sqrt(ur**2 + utheta**2)/(Isp*g0)
+        )
+        
+        self.ODE = {'x':X, 'p':cs.vertcat(dt,U), 'ode': dt*ode_rhs}
+        self.multiple_shooting()
+        
+        _,_,_,_,m_tf = cs.vertsplit(self.x_eval[:,-1])
+        self.set_objective(m0 - m_tf)
+        
+        rT,_,_,_,_ = cs.vertsplit(self.x_eval[:,-1])
+        urt, uthetat = cs.vertsplit(self.u_eval)
+        
+        self.add_constraint(rT, 0., rfinal)
+        self.add_constraint(safe_sqrt(urt**2 + uthetat**2), 0., umax)
+        
+        self.build_NLP()
+        
+        
+        fuel_estimate = 20
+        r_init = np.linspace(r0, rfinal, self.ntS + 1)
+        theta_init = np.linspace(0, 2*np.pi * n_orbits * 0.8, self.ntS + 1)
+        vr_init = np.linspace(0., -500., self.ntS + 1)
+        vtheta_init = np.linspace(vorb, vorb*0.85, self.ntS + 1)
+        m_init = np.linspace(m0, m0 - fuel_estimate, self.ntS + 1)
+        
+        # ur_init = np.ones(self.ntS)*(-5.0)
+        # utheta_init = np.ones(self.ntS)*(-10.0)
+        
+        for j in range(self.ntS):
+            self.set_stage_control(self.start_point, j, [-2.0,-3.0])
+        
+        for j in range(self.ntS + 1):
+            self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        RE, = [self.model_params[key] for key in ['RE']]
+        
+        r, theta, vr, vtheta, m = self.get_state_arrays(xi)
+        ur, utheta = self.get_control_plot_arrays(xi)
+        # dt = self.get_param_arrays(xi)
+        # time_grid = np.cumsum(np.concatenate([np.array([0]), dt]))
+        # dte = self.get_param_arrays_expanded(xi)
+        # time_grid_ref = np.cumsum(np.concatenate([np.array([0]), dte]))
+        
+        plt.figure(dpi=dpi)
+        plt.plot(self.time_grid, (r - RE)/1000, 'r--', label = r'(r - Re)/1000')
+        plt.plot(self.time_grid, theta*50, 'g:', label = r'$\theta\cdot 50$')
+        # plt.plot(time_grid, vr, 'b-.', label = r'$v_r$')
+        # plt.plot(time_grid, vtheta, 'y-', label = r$v_\theta$))
+        plt.plot(self.time_grid, (m - 100.)*4, 'b-.', label = r'(m - 100)$\cdot 4$')
+        
+        # plt.axhline(y = 5)
+        plt.axhline(y = 120, color = 'c', linestyle = '--')
+        
+        plt.step(self.time_grid_ref, ur*20, 'r', label = r'$u_r \cdot 20$')
+        plt.step(self.time_grid_ref, utheta*20, 'g', label = r'$u_\theta \cdot 20$')
+        
+        plt.legend(fontsize='large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Satellite Deorbiting min fuel problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+
+
+#Not working yet
+# class Moon_Landing(OCProblem):
+#     default_params = {
+#             'g0': 1.62e-3,
+#             'r0': 1737,
+#             'rho0': 0.,
+#             'H': 1.0,
+#             'Fmax': 0.045,
+#             'Isp': 300.,
+#             'mmax': 15.,
+#             'mmin': 10.,
+#             'h0': 112.,
+#             'T': 1800.,
+#             'theta0': np.pi
+#             }
+        
+#     def build_problem(self):
+        
+#         g0, r0, rho0, H, Fmax, Isp, mmax, mmin, h0, T, theta0 = (self.model_params[key] for key in ['g0', 'r0', 'rho0', 'H', 'Fmax', 'Isp', 'mmax', 'mmin', 'h0', 'T', 'theta0'])
+#         v0 = cs.sqrt(g0 * r0**2 / (r0+h0))
+#         print("v0 = ", v0, "\n")
+#         self.set_OCP_data(5,0,1,0,[0, -np.inf, -np.pi/2, 0., mmin],[h0, np.inf, np.pi/2, theta0, mmax],[],[],[0.],[1.0])
+        
+#         T = 600.
+#         self.fix_time_horizon(0., T)
+#         self.fix_initial_value([h0, v0, np.pi/2, theta0, mmax])
+        
+#         x = cs.MX.sym('X', 5)
+#         u = cs.MX.sym('u', 1)
+#         h,v,beta,theta,m = cs.vertsplit(x)
+        
+#         ode_rhs = cs.vertcat(
+#             -v*cs.cos(beta),
+#             -1/m * Fmax*u + g0*(r0/(r0+h))**2 * cs.cos(beta),
+#             -g0*(r0/(r0 + h))**2 *cs.sin(beta)/v - v*cs.sin(beta)/(r0 + h),
+#             v*cs.sin(beta)/(r0 + h),
+#             -0.25*Fmax*u/(Isp*g0)
+#         )
+        
+#         dt = cs.MX.sym('dt', 1)
+        
+#         self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs}
+#         self.multiple_shooting()
+        
+#         h_tf,v_tf,beta_tf,theta_tf,m_tf = cs.vertsplit(self.x_eval[:,-1])
+#         self.set_objective(-m_tf)
+        
+        
+#         self.add_constraint(cs.vertcat(v_tf, beta_tf, h_tf, theta_tf), [0.,-np.inf,0.,0.], [0.,np.inf,0.,0.])
+        
+#         self.build_NLP()
+        
+#         self.start_point = np.zeros(self.nVar)
+#         for i in range(self.ntS+1):
+#             self.set_stage_state(self.start_point, i, self.x_init)
+#         for i in range(self.ntS):
+#             self.set_stage_control(self.start_point, i, [0.])
+#         self.integrate_full(self.start_point)
+    
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         h,v,beta,theta,m = self.get_state_arrays_expanded(xi)
+#         u = self.get_control_plot_arrays(xi)
+        
+#         plt.figure(dpi = dpi)
+#         plt.plot(self.time_grid_ref, h/10, 'g-.', label = r'$h/10$')
+#         plt.plot(self.time_grid_ref, v*10, 'c-.', label = r'$v\cdot 10$')
+#         plt.plot(self.time_grid_ref, beta*10, 'r:', label = r'$\beta\cdot 10$')
+#         plt.plot(self.time_grid_ref, theta*10, 'b-.', label = r'$\theta\cdot 10$')
+#         plt.plot(self.time_grid_ref, m, 'y', label = r'$m$')
+        
+#         plt.step(self.time_grid_ref, u*10, 'r', label = r'$u\cdot 10$')
+#         plt.legend()
+        
+#         ttl = None
+#         if isinstance(title,str):
+#             ttl = title
+#         elif title == True:
+#             ttl = 'Moon landing problem'
+#         if ttl is not None:
+#             if isinstance(it, int):
+#                 ttl = ttl + f', iteration {it}'
+#             plt.title(ttl)
+#         else:
+#             plt.title('')
+#         plt.show()
 
 
 

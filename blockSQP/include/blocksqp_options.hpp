@@ -78,6 +78,7 @@ class SQPoptions{
     int fallback_approx = 2;                 //As hess_approx, must be positive definite
     
     double reg_factor = 0.0;        //Enable further regularization of pos.def. fallback Hessians by adding a scaled identity. Beneficial for some QP solvers
+    int indef_delay = 3;            //Dont use indefinite Hessians in the first # steps, value of 3 is recommended when using parallel solution of QPs
     
     //Hessian sizing
     double initial_hess_scale = 1.0;
@@ -148,7 +149,7 @@ class SQPoptions{
     //For experimental purposes
     bool test_opt_1 = false;
     int test_qp_hotstart = 0;
-    int test_opt_2 = 1;
+    
     
     private:
     //Holder if no qpsol_options were provided

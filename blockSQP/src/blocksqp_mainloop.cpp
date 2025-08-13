@@ -55,6 +55,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     bool skipLineSearch = false;
     bool hasConverged = false;
     int whichDerv = param->exact_hess;
+    
+    // int whichDerv = 0;
     int n_convShift;
 
     if (!initCalled){
@@ -89,33 +91,17 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     for (; it<maxIt; it++){
         //Enter new iteration
         stats->itCount++;
-
+        
+        //whichDerv = param->exact_hess * (stats->itCount > param->indef_delay);
         /////////////////////////////////////////////
         ///PHASE 1: Solve the quadratic subproblem///
         /////////////////////////////////////////////
-        
-        /// Solve QP subproblem with qpOASES or QPOPT
-        /*
-        if (!param->par_QPs){
-            //infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(vars->conv_qp_only));
-            
-            infoQP = solveQP(vars->deltaXi, vars->lambdaQP, int(stats->itCount <= param->test_opt_2 || vars->conv_qp_only));
-        }
-        else{
-            //if (stats->itCount > 1) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
-            if (stats->itCount > param->test_opt_2) infoQP = solveQP_par(vars->deltaXi, vars->lambdaQP);
-            //else infoQP = solve_initial_QP_par(vars->deltaXi, vars->lambdaQP);
-            else{
-                infoQP = solve_convex_QP_par(vars->deltaXi, vars->lambdaQP);
-            }
-        }*/
-        
+           
         //Solve the quadratic subproblem. What kind of QP is solved how depends on options, parameters and iteration states. 
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
         
-        //if (infoQP == 0) printf("***QP solution successful***");
-        if (infoQP == 0);
-        else if (infoQP == 1){
+        // infoQP == 0 ~ success
+        if (infoQP == 1){
             bool qpError = true;
             
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
@@ -390,6 +376,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
+            // if ((vars->conv_qp_only || stats->itCount <= param->indef_delay) && vars->hess2 != nullptr){
                 if (param->fallback_approx <= 2)
                     calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
@@ -424,7 +411,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
 
         //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
         //if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
-        if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > param->test_opt_2 && !vars->conv_qp_only){
+        if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > param->indef_delay && !vars->conv_qp_only){
             if (param->max_conv_QPs > 2){
                 //If more than one convexified indefinite QP is tried, shift convexification factor of the successful QP to the last attempted convexified QP.
                 //If more than two convexified indefinite QPs are tried and none were accepted, shift last factor to first factor.

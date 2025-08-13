@@ -120,7 +120,7 @@ void SQPmethod::calc_free_variables_scaling(double *arg_SF){
 void SQPmethod::scaling_heuristic(){
     //Matrix deltai, smallDelta, smallGamma;
     //Scale after iterations 1, 2, 3, 5, 10, 15, ...
-    if ((stats->itCount > 3 && bool(stats->itCount%5)) || vars->steptype == 3) return;
+    if ((stats->itCount > 3 && bool(stats->itCount%5)) || vars->n_scaleIt < 1) return;
     
     for (int i = 0; i < prob->nVar; i++){
         vars->rescaleFactors[i] = 1.0;
@@ -134,7 +134,7 @@ void SQPmethod::scaling_heuristic(){
 void SQPmethod::apply_rescaling(const double *resfactors){
     Matrix deltai, smallDelta, smallGamma;
     int pos, nmem;
-
+    
     //Rescale the problem
     scaled_prob->rescale(resfactors);
 
