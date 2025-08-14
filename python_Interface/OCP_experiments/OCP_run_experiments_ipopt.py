@@ -10,25 +10,34 @@ import OCProblems
 plot_folder = "/home/reinhold/PLOT"
 
 
-Examples = [(OCProblems.Batch_Reactor, "Batch reactor"),
-            (OCProblems.Goddard_Rocket, "Goddard's rocket"),
-            (OCProblems.Catalyst_Mixing, "Catalyst mixing"),
-            (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-            (OCProblems.Hanging_Chain, "Hanging chain"),
-            (OCProblems.Cushioned_Oscillation, "Cushioned oscillation"),
-            (OCProblems.Egerstedt_Standard, "Egerstedt standard"),
-            (OCProblems.Electric_Car, "Electric car"),
-            (OCProblems.Particle_Steering, "Particle steering"),
-            (OCProblems.Three_Tank_Multimode, "Three tank multimode"),
-            (OCProblems.Lotka_OED, "Lotka_OED")
+Examples = [OCProblems.Batch_Reactor,
+            # OCProblems.Goddard_Rocket,
+            OCProblems.Catalyst_Mixing,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Hanging_Chain,
+            # OCProblems.Cushioned_Oscillation,
+            # OCProblems.Egerstedt_Standard,
+            # OCProblems.Electric_Car,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Lotka_OED
             ]
-Experiments = [({'hessian_approximation': "limited-memory", 'limited_memory_max_history':12}, "Ipopt, limited-memory BFGS"),
-               ({'hessian_approximation': "exact"}, "Ipopt, exact Hessian")
-               ]
-Examples_ = [(OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-             (OCProblems.Goddard_Rocket, "Goddard's rocket")
-             ]
-OCP_experiment.run_ipopt_experiments(Examples, Experiments, plot_folder, nPert0 = 0, nPertF = 40)
+Experiments = [
+                #({'hessian_approximation': 'limited-memory', 'limited_memory_max_history':12}, "Ipopt, limited-memory BFGS"),
+                ({'hessian_approximation': "exact", 'tol': 1e-5}, "Ipopt, exact Hessian"),
+                ({'hessian_approximation': 'limited-memory', 'tol': 1e-5}, "Ipopt, limited-memory, tol 1e-5")
+                ]
+Examples_ = [
+            (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
+            (OCProblems.Goddard_Rocket, "Goddard's rocket")
+            ]
+
+plot_folder = "/home/reinhold/PLOT/ipopt_ex_hess_TEST"
+OCP_experiment.run_ipopt_experiments(Examples, 
+                                     Experiments, 
+                                     plot_folder, 
+                                     nPert0 = 0, 
+                                     nPertF = 40)
 
 
 

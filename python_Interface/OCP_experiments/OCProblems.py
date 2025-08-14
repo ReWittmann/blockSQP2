@@ -671,7 +671,11 @@ class OCProblem:
     
     def plot(self, xi, dpi = None, title = None, it = None):
         raise NotImplementedError('No plot functionality for this problem')
-
+    
+    def perturbed_start_point(self, ind):
+        raise NotImplementedError('No perturbed start points available for this problem')
+    
+    
 def from_block_LT(HLT, dim):
     H = np.zeros((dim,dim))
     for i in range(dim):
@@ -764,6 +768,11 @@ class Lotka_Volterra_Fishing(OCProblem):
             self.set_stage_state(self.start_point, i, self.model_params['x_init'])
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0])
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1 = self.get_state_arrays_expanded(xi)
@@ -1162,7 +1171,8 @@ class Goddard_Rocket(OCProblem):
             
         plt.show()
         
-
+#Goddard rocket with only state and control bounds by adding the air friction as a differential state.
+#Formulated by my colleague, NOT me!
 class Goddard_Rocket_TROLL(Goddard_Rocket):
     default_params = {
         'rT':1.01, 
@@ -2321,7 +2331,7 @@ class F8_Aircraft(OCProblem):
 
 
 
-#HINT: Try solving for hT = 70.0 first, then start solution for hT = 75.0 from there
+#HINT: Try solving for hT = 70.0 or nt = 50 first
 #      Cvodes recommended
 class Gravity_Turn(OCProblem):
     default_params = {
@@ -3079,84 +3089,84 @@ class Van_der_Pol_Oscillator_3_NQ(OCProblem):
         plt.show()   
 
 
-
-class Ocean(OCProblem):
-    default_params = {
-        'rho':0.03,
-        'gamma':0.001,
-        'omega':0.1,
-        'b':50.,
-        'mu':0.5,
-        'a1':2.,
-        'a2':2.,
-        'nu':1.,
-        'c1':50.,
-        'c2':0.004,
-        'Spreind':600.,
-        'S0':2000.,
-        'R0':1e4,
-        'DL0':2.3e4
-        }
-    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+# TODO check problem formulation
+# class Ocean(OCProblem):
+#     default_params = {
+#         'rho':0.03,
+#         'gamma':0.001,
+#         'omega':0.1,
+#         'b':50.,
+#         'mu':0.5,
+#         'a1':2.,
+#         'a2':2.,
+#         'nu':1.,
+#         'c1':50.,
+#         'c2':0.004,
+#         'Spreind':600.,
+#         'S0':2000.,
+#         'R0':1e4,
+#         'DL0':2.3e4
+#         }
+#     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+#         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
 
     
-    def build_problem(self):
-        self.set_OCP_data(3,0,2,1,[0.,0.,0.],[1e5,1e5,np.inf],[],[],[0.,0.],[40.,40.])
+#     def build_problem(self):
+#         self.set_OCP_data(3,0,2,1,[0.,0.,0.],[1e5,1e5,np.inf],[],[],[0.,0.],[40.,40.])
         
-        rho, gamma, omega, b, mu, a1, a2, nu, c1, c2, Spreind, S0, R0, DL0 = (self.model_params[key] for key in ['rho', 'gamma', 'omega', 'b', 'mu', 'a1', 'a2', 'nu', 'c1', 'c2', 'Spreind', 'S0', 'R0', 'DL0'])
-        self.fix_time_horizon(0.,400.)
-        self.fix_initial_value([S0,R0,0.])
+#         rho, gamma, omega, b, mu, a1, a2, nu, c1, c2, Spreind, S0, R0, DL0 = (self.model_params[key] for key in ['rho', 'gamma', 'omega', 'b', 'mu', 'a1', 'a2', 'nu', 'c1', 'c2', 'Spreind', 'S0', 'R0', 'DL0'])
+#         self.fix_time_horizon(0.,400.)
+#         self.fix_initial_value([S0,R0,0.])
         
-        x = cs.MX.sym('x',3)
-        S,R,t = cs.vertsplit(x)
-        u = cs.MX.sym('u',2)
-        u1,u2 = cs.vertsplit(u)
-        dt = cs.MX.sym('dt')
+#         x = cs.MX.sym('x',3)
+#         S,R,t = cs.vertsplit(x)
+#         u = cs.MX.sym('u',2)
+#         u1,u2 = cs.vertsplit(u)
+#         dt = cs.MX.sym('dt')
         
-        U = b*u1 - mu*u1**2
-        A = a1*u2 + a2*u2**2
-        C = c1 - c2*R
-        D = nu*(0.3*S-Spreind)**2
-        DL = DL0 + R0 + S0 - R - S
+#         U = b*u1 - mu*u1**2
+#         A = a1*u2 + a2*u2**2
+#         C = c1 - c2*R
+#         D = nu*(0.3*S-Spreind)**2
+#         DL = DL0 + R0 + S0 - R - S
         
-        ode_rhs = cs.vertcat(u1 - u2 - gamma*(S - omega*DL), -u1, cs.DM(1.))
+#         ode_rhs = cs.vertcat(u1 - u2 - gamma*(S - omega*DL), -u1, cs.DM(1.))
         
-        quad = cs.exp(-rho*t)*(U - A - u1*C - D)
-        self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
-        self.multiple_shooting()
-        self.set_objective(-self.q_tf)
-        self.build_NLP()
+#         quad = cs.exp(-rho*t)*(U - A - u1*C - D)
+#         self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
+#         self.multiple_shooting()
+#         self.set_objective(-self.q_tf)
+#         self.build_NLP()
         
-        for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [30.,10.])
-            self.set_stage_state(self.start_point, i, self.x_init)
-        self.set_stage_state(self.start_point, self.ntS, self.x_init)
+#         for i in range(self.ntS):
+#             self.set_stage_control(self.start_point, i, [30.,10.])
+#             self.set_stage_state(self.start_point, i, self.x_init)
+#         self.set_stage_state(self.start_point, self.ntS, self.x_init)
         
-    def plot(self, xi, dpi = None, title = None, it = None):
-        S,R,_ = self.get_state_arrays(xi)
-        u1,u2 = self.get_control_plot_arrays(xi)
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         S,R,_ = self.get_state_arrays(xi)
+#         u1,u2 = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, S-2000, 'r-', label = 'S-2000')
-        plt.plot(self.time_grid, R/1000, 'g-', label = 'R/1000')
-        plt.step(self.time_grid_ref, u1, 'b', label = 'u1')
-        plt.step(self.time_grid_ref, u2, 'c', label = 'u2')
-        plt.legend(fontsize='large')
+#         plt.figure(dpi = dpi)
+#         plt.plot(self.time_grid, S-2000, 'r-', label = 'S-2000')
+#         plt.plot(self.time_grid, R/1000, 'g-', label = 'R/1000')
+#         plt.step(self.time_grid_ref, u1, 'b', label = 'u1')
+#         plt.step(self.time_grid_ref, u2, 'c', label = 'u2')
+#         plt.legend(fontsize='large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Ocean problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+#         ttl = None
+#         if isinstance(title,str):
+#             ttl = title
+#         elif title == True:
+#             ttl = 'Ocean problem'
+#         if ttl is not None:
+#             if isinstance(it, int):
+#                 ttl = ttl + f', iteration {it}'
+#             plt.title(ttl)
+#         else:
+#             plt.title('')
             
-        plt.show()
+#         plt.show()
 
 class Lotka_OED(OCProblem):
     default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0, 'fishing':True, 'epsilon': 0.0}
@@ -4443,7 +4453,7 @@ LIBRARY = {
     'Van_der_Pol_Oscillator': Van_der_Pol_Oscillator,
     'Van_der_Pol_Oscillator_2': Van_der_Pol_Oscillator_2,
     'Van_der_Pol_Oscillator_3': Van_der_Pol_Oscillator_3,
-    'Ocean': Ocean,
+    # 'Ocean': Ocean,
     'Lotka_OED': Lotka_OED,
     'Fermenter': Fermenter,
     'Batch_Distillation': Batch_Distillation,

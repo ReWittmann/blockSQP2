@@ -11,8 +11,8 @@ except:
 import py_blockSQP
 import matplotlib.pyplot as plt
 
-itMax = 200
-step_plots = True
+itMax = 100
+step_plots = False
 # step_plots = True
 plot_title = True
 
@@ -29,10 +29,10 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.F8_Aircraft(nt = 100, 
+OCprob = OCProblems.Satellite_Deorbiting_2(nt = 100, 
                     refine = 1,
                     parallel = True, 
-                    integrator = 'rk4', 
+                    integrator = 'RK4', 
                     # epsilon = 100.0,
                     # lambda_u = 0.05, u_max = 15
                     # hT = 75.0
@@ -51,13 +51,13 @@ opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 4
+opts.max_conv_QPs = 6
 opts.conv_strategy = 2
-opts.par_QPs = False
+opts.par_QPs = True
 opts.enable_QP_cancellation = True
 opts.indef_delay = 3
 
-opts.exact_hess = 2
+opts.exact_hess = 0
 opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
@@ -71,7 +71,7 @@ opts.feas_tol = 1e-6
 opts.conv_kappa_max = 8.0
 # opts.reg_factor = 1e-7
 
-opts.automatic_scaling = False
+opts.automatic_scaling = True
 
 opts.max_extra_steps = 10
 opts.enable_premature_termination = True

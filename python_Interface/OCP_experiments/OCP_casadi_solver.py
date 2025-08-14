@@ -90,13 +90,14 @@ itMax = 2000
                                              # integrator = 'explicit_euler',
                                              # S_u = 1000.0)
 
-# OCprob = OCProblems.Cart_Pendulum(nt = 400, 
-#                     refine = 1, 
-#                     parallel = True, 
-#                     integrator = 'rk4', 
-#                     # epsilon = 100.0,
-#                     lambda_u = 0.05, u_max = 15
-#                     )
+OCprob = OCProblems.Satellite_Deorbiting_2(nt = 100, 
+                    refine = 1, 
+                    parallel = True, 
+                    integrator = 'RK4', 
+                    # epsilon = 100.0,
+                    # lambda_u = 0.05, u_max = 15
+                    # objective = 'max_performance'
+                    )
 
 # OCprob = OCProblems.Denbigh_Reaction(nt = 25, 
 #                     refine = 1,
@@ -137,11 +138,11 @@ itMax = 2000
 #                     # objective = "max_performance"
 #                     )
 
-OCprob = OCProblems.F8_Aircraft(nt = 100, 
-                                refine = 1, 
-                                parallel = True, 
-                                integrator = 'RK4'
-                                )
+# OCprob = OCProblems.Tubular_Reactor(nt = 100, 
+#                                 refine = 1, 
+#                                 parallel = True, 
+#                                 integrator = 'RK4'
+#                                 )
 
 counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
 ipopts = dict()

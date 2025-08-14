@@ -116,9 +116,6 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     prob.vblocks = vBlocks
     return prob, cond, HOLD
 
-
-
-
 def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
     N_SQP = []
     N_secs = []
@@ -152,7 +149,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
             type_sol.append(-1)    
     return N_SQP, N_secs, type_sol
 
-def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 100):
+def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 200):
     NLP = OCprob.NLP
     counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
     opts = {'iteration_callback': counter}
@@ -176,6 +173,8 @@ def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0,
         N_secs.append(t1 - t0)
     
     return N_SQP, N_secs, type_sol
+
+
 
 def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None):
     n_xticks = 10
@@ -239,15 +238,10 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         if r > 0:
             return x
         else:
-            return 0.00001
-    
-    
+            return 0.00001    
     EXP_N_SQP_S = [[F(EXP_N_SQP[i][j], EXP_type_sol[i][j]) for j in range(nPertF - nPert0)] for i in range(n_EXP)]
     EXP_N_secs_S = [[F(EXP_N_secs[i][j], EXP_type_sol[i][j]) for j in range(nPertF - nPert0)] for i in range(n_EXP)]
 
-    # EXP_N_SQP_clean = [[EXP_N_SQP[i][j] for j in range(nPertF - nPert0) if EXP_type_sol[i][j] >= 0] for i in range(n_EXP)]
-    # EXP_N_secs_clean = [[EXP_N_secs[i][j] for j in range(nPertF - nPert0) if EXP_type_sol[i][j] >= 0] for i in range(n_EXP)]
-    
     EXP_N_SQP_mu = [sum(EXP_N_SQP[i])/len(EXP_N_SQP[i]) for i in range(n_EXP)]
     EXP_N_SQP_sigma = [(sum((np.array(EXP_N_SQP[i]) - EXP_N_SQP_mu[i])**2)/len(EXP_N_SQP[i]))**(0.5) for i in range(n_EXP)]
     EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
@@ -256,33 +250,20 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     #Care, doen't work for numbers smaller than 0.0001, representation becomes *e-***
     trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
 
-    # ccodemp = {-1: 'r', 0:'y', 1:'g'}
-    # cmap = [[ccodemp[v] for v in EXP_type_sol[i]] for i in range(n_EXP)]
-
     ###############################################################################
-    # titlesize = 19
-    # axtitlesize = 15
-    # labelsize = 13
-
     titlesize = 23
     axtitlesize = 20
     labelsize = 19
     
-    # titlesize = 21
-    # axtitlesize = 19
-    # labelsize = 16
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
-    
     if isinstance(suptitle, str):
         fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
-    
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     
     if n_EXP == 1:
         subfigs = (subfigs,)
     for i in range(n_EXP):
         ax_it, ax_time = subfigs[i].subplots(nrows=1,ncols=2)
-        # subfigs[i].suptitle(titles[i], size = titlesize)
         
         ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP_S[i])#, c = cmap[i])
         ax_it.set_ylabel('SQP iterations', size = labelsize)
@@ -381,16 +362,68 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         ax_time.set_xticks(xticks)
     plt.show()
 
+import io
 
 
+def print_heading(out : io.TextIOBase, EXP_names : list[str]):
+    for EXP_name in EXP_names:
+        out.write(" "*20 + EXP_name[0:21].ljust(21 + 5))
+    out.write("\n" + " "*20)
+    for i in range(len(EXP_names)):
+        out.write("mu_N".ljust(10) + "sigma_N".ljust(11) + "mu_t".ljust(10) + "sigma_t".ljust(11))
+        if i < len(EXP_names) - 1:
+            out.write("|".ljust(5))
+    
+    out.write("\n")
+    
+def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+    n_EXP = len(EXP_N_SQP)
+    EXP_N_SQP_mu = [sum(EXP_N_SQP[i])/len(EXP_N_SQP[i]) for i in range(n_EXP)]
+    EXP_N_SQP_sigma = [(sum((np.array(EXP_N_SQP[i]) - EXP_N_SQP_mu[i])**2)/len(EXP_N_SQP[i]))**(0.5) for i in range(n_EXP)]
+    EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
+    EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
+    
+    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
+    out.write(name[:20].ljust(20))
+    for i in range(n_EXP):
+        out.write((trunc_float(EXP_N_SQP_mu[i],1) + ",").ljust(10) + (trunc_float(EXP_N_SQP_sigma[i],1) + ";").ljust(11) + (trunc_float(EXP_N_secs_mu[i],1) + "s,").ljust(10) + (trunc_float(EXP_N_secs_sigma[i],1) + "s").ljust(11))
+        if i < n_EXP - 1:
+            out.write("|".ljust(5))
+    out.write("\n")
+    
+
+class out_dummy:
+    def __init__(self):
+        pass
+    def write(self, Str : str):
+        pass
+    def close(self):
+        pass
 
 
-def run_ipopt_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40):
-    for OCclass, OCname in Examples:        
+def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_it = True):
+    if not os.path.exists(dirPath):
+        os.makedirs(dirPath)
+    
+    if print_it:
+        date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
+        sep = "" if dirPath[-1] == "/" else "/"
+        pref = "ipopt"
+        filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+        
+        out = open(filePath, 'w')
+    else:
+        out = out_dummy()
+    
+    titles = [EXP_name for _, EXP_name in Experiments]
+    print_heading(out, titles)
+    #########
+    for OCclass in Examples:        
         OCprob = OCclass(nt=100, integrator='RK4')
         itMax = 200
-        ipopts_base = {'max_iter':itMax, 'tol':1e-5}
-        titles = []
+        # ipopts_base = {'max_iter':itMax, 'tol':1e-5}
+        ipopts_base = {'max_iter':itMax}
+        # titles = []
         EXP_N_SQP = []
         EXP_N_secs = []
         EXP_type_sol = []
@@ -402,15 +435,31 @@ def run_ipopt_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Exp
             EXP_N_SQP.append(ret_N_SQP)
             EXP_N_secs.append(ret_N_secs)
             EXP_type_sol.append(ret_type_sol)
-            titles.append(EXP_name)
+            # titles.append(EXP_name)
             n_EXP += 1
         ###############################################################################
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-            suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
-
-def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, nt = 100, **kwargs):
-    for OCclass, OCname in Examples:        
+            suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "ipopt")
+        print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    out.close()
+            
+            
+def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, nt = 100, print_it = True, **kwargs):
+    if not os.path.exists(dirPath):
+        os.makedirs(dirPath)
+    if print_it:
+        date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
+        sep = "" if dirPath[-1] == "/" else "/"
+        pref = "blockSQP"
+        filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+        out = open(filePath, 'w')
+    else:
+        out = out_dummy()
+    titles = [EXP_name for _, EXP_name in Experiments]
+    print_heading(out, titles)
+    
+    for OCclass in Examples:        
         OCprob = OCclass(nt = nt, integrator = 'RK4', parallel = True, **kwargs)
         itMax = 200
         titles = []
@@ -428,4 +477,6 @@ def run_blockSQP_experiments(Examples : list[tuple[OCProblems.OCProblem, str]], 
         ###############################################################################
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-            suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP")
+            suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP")
+        print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    out.close()
