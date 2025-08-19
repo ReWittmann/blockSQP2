@@ -806,7 +806,7 @@ py::enum_<blockSQP::SQPresult>(m, "SQPresult")
     .value("misc_error", blockSQP::SQPresult::misc_error)
     ;
 
-py::class_<blockSQP::Problemspec>(m, "Problemspec");
+py::class_<blockSQP::Problemspec>(m, "blockSQP_Problemspec_internal");
 
 py::class_<Problemform, blockSQP::Problemspec, Py_Problemform>(m,"Problemform")
 	.def(py::init<>())
