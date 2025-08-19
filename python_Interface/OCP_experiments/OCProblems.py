@@ -3436,14 +3436,18 @@ class Fermenter(OCProblem):
                 mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
                 uS1 + uS2 - uP,
                 -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
-                uP + (uS1 + uS2 - uP)/25 * P + V*P,
+                uP + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),#P,
                 0.0168*uS1,
                 0.01332*uS2
         )
         
         self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode':dt*ode_rhs}
         self.multiple_shooting()
-        self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
+        
+        _,_,_,_,_,_, P_acc, S1_acc, S2_acc = cs.vertsplit(self.x_eval[:,-1])
+        # self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
+        self.set_objective(2*(S1_acc*S2_acc)/P_acc)
+
         self.build_NLP()
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [14*(self.ntS - 1 - i)/(self.ntS-1), 0.7, 0.5])
@@ -3464,12 +3468,12 @@ class Fermenter(OCProblem):
         plt.step(self.time_grid_ref, uS2/10, 'g', label = 'uS2/10')
         plt.step(self.time_grid_ref, uP/30, 'b', label = 'uP/30')
         
-        plt.plot(self.time_grid, P, 'r-', label = 'P')
-        plt.plot(self.time_grid, S1, 'g-', label = 'S1')
-        plt.plot(self.time_grid, S2, 'b-', label = 'S2')
-        plt.plot(self.time_grid, E, 'y-', label = 'E')
-        plt.plot(self.time_grid, V/3, 'c-', label = 'V/3')
-        plt.plot(self.time_grid, G, 'm-', label = 'G')
+        plt.plot(self.time_grid, P, 'r--', label = 'P')
+        plt.plot(self.time_grid, S1, 'g-.', label = 'S1')
+        plt.plot(self.time_grid, S2, 'b:', label = 'S2')
+        plt.plot(self.time_grid, E, 'y--', label = 'E')
+        plt.plot(self.time_grid, V/3, 'c-.', label = 'V/3')
+        plt.plot(self.time_grid, G, 'm:', label = 'G')
         plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):

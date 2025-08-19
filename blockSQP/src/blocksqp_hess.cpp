@@ -25,18 +25,18 @@
 #include <fstream>
 #include <thread>
 
-namespace blockSQP
-{
+namespace blockSQP{
 
 
 void SQPmethod::calcInitialHessian(SymMatrix *hess){
-    for (int iBlock=0; iBlock<vars->nBlocks; iBlock++ )
+    for (int iBlock=0; iBlock<vars->nBlocks; iBlock++){
         //if objective derv is computed exactly, don't set the last block!
         if (!(param->exact_hess == 1 && param->block_hess && iBlock == vars->nBlocks-1)){
             hess[iBlock].Initialize(0.0);
             for (int i=0; i<hess[iBlock].m; i++)
                 hess[iBlock]( i, i ) = param->initial_hess_scale;
         }
+    }
 }
 
 

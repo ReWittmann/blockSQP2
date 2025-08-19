@@ -172,7 +172,7 @@ int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     }
     
     h_updated = false; hess_updated = false; A_updated = false; bounds_updated = false;
-            
+    
     inner_QPsol->set_lin(h_cond);
     inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
     inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
@@ -186,7 +186,6 @@ int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 void CQPsolver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){
-    
     if (!hess_updated && !h_updated && !A_updated)
         cond->SOC_condense(h_qp, lb_A, ub_A, h_cond, lb_A_cond, ub_A_cond);
     else if (hess_updated && !h_updated && !A_updated && !bounds_updated)

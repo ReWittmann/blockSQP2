@@ -54,8 +54,9 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     int it = 0, infoQP = 0, infoEval = 0;
     bool skipLineSearch = false;
     bool hasConverged = false;
-    int whichDerv = param->exact_hess;
+    //int whichDerv = param->exact_hess;
     
+    int whichDerv = param->exact_hess*int(stats->itCount >= param->indef_delay || param->exact_hess == 1);
     // int whichDerv = 0;
     int n_convShift;
 
@@ -66,6 +67,9 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     }
     
     if (warmStart == 0 || stats->itCount == 0){
+        calcInitialHessians();
+        vars->hess2_updated = true;
+        
         // SQP iteration 0
         if (param->sparse)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
@@ -83,8 +87,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
 
-        calcInitialHessians();
-        vars->hess2_updated = true;
+        //calcInitialHessians();
+        //vars->hess2_updated = true;
     }
 
 
@@ -92,11 +96,11 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         //Enter new iteration
         stats->itCount++;
         
-        //whichDerv = param->exact_hess * (stats->itCount > param->indef_delay);
+        whichDerv = param->exact_hess*int(stats->itCount >= param->indef_delay || param->exact_hess == 1);
         /////////////////////////////////////////////
         ///PHASE 1: Solve the quadratic subproblem///
         /////////////////////////////////////////////
-           
+        
         //Solve the quadratic subproblem. What kind of QP is solved how depends on options, parameters and iteration states. 
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
         

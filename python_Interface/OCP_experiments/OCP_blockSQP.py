@@ -12,7 +12,7 @@ import py_blockSQP
 import matplotlib.pyplot as plt
 
 itMax = 100
-step_plots = True
+step_plots = False
 # step_plots = True
 plot_title = True
 
@@ -52,13 +52,13 @@ opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 1
+opts.max_conv_QPs = 6
 opts.conv_strategy = 2
-opts.par_QPs = False
+opts.par_QPs = True
 opts.enable_QP_cancellation = True
-opts.indef_delay = 1
+opts.indef_delay = 3
 
-opts.exact_hess = 2
+opts.exact_hess = 0
 opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
@@ -72,11 +72,11 @@ opts.feas_tol = 1e-6
 # opts.conv_kappa_max = 8
 # opts.reg_factor = 1e-7
 
-opts.automatic_scaling = False
+opts.automatic_scaling = True
 
-opts.max_extra_steps = 0
+opts.max_extra_steps = 10
 opts.enable_premature_termination = True
-opts.max_filter_overrides = 0
+opts.max_filter_overrides = 2
 
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
