@@ -12,7 +12,7 @@ import py_blockSQP
 import matplotlib.pyplot as plt
 
 itMax = 100
-step_plots = False
+step_plots = True
 # step_plots = True
 plot_title = True
 
@@ -29,14 +29,15 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.Satellite_Deorbiting_2(nt = 100, 
-                    refine = 1,
+OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+                    refine = 1, 
                     parallel = True, 
                     integrator = 'RK4', 
-                    # epsilon = 100.0,
+                    # epsilon = 100.0, 
                     # lambda_u = 0.05, u_max = 15
-                    # hT = 75.0
+                    # hT = 70.0
                     # objective = "max_performance"
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
                     )
 
 
@@ -51,13 +52,13 @@ opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 6
+opts.max_conv_QPs = 1
 opts.conv_strategy = 2
-opts.par_QPs = True
+opts.par_QPs = False
 opts.enable_QP_cancellation = True
-opts.indef_delay = 3
+opts.indef_delay = 1
 
-opts.exact_hess = 0
+opts.exact_hess = 2
 opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
@@ -68,12 +69,12 @@ opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
-opts.conv_kappa_max = 8.0
+# opts.conv_kappa_max = 8
 # opts.reg_factor = 1e-7
 
-opts.automatic_scaling = True
+opts.automatic_scaling = False
 
-opts.max_extra_steps = 10
+opts.max_extra_steps = 0
 opts.enable_premature_termination = True
 opts.max_filter_overrides = 0
 
@@ -81,6 +82,7 @@ opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
+# QPopts.terminationTolerance = 1e-10
 opts.qpsol_options = QPopts
 ################################
 
@@ -139,10 +141,10 @@ scale_arr = 1.0;
 # scale = py_blockSQP.double_array(OCprob.nVar)
 # scale_arr = np.array(scale, copy = False)
 # scale_arr[:] = 1.0
-# for i in range(OCprob.ntS + 1):
-#     OCprob.set_stage_state(scale_arr, i, [0.00001,1.0,0.00001,0.00001,0.1])
-# # for i in range(OCprob.ntS):
-# #     OCprob.set_stage_control(scale_arr,)
+# # for i in range(OCprob.ntS + 1):
+# #     OCprob.set_stage_state(scale_arr, i, [0.00001,1.0,0.00001,0.00001,0.1])
+# for i in range(OCprob.ntS):
+#     OCprob.set_stage_control(scale_arr, i, 100.0)
 # prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")

@@ -90,13 +90,15 @@ itMax = 2000
                                              # integrator = 'explicit_euler',
                                              # S_u = 1000.0)
 
-OCprob = OCProblems.Satellite_Deorbiting_2(nt = 100, 
-                    refine = 1, 
-                    parallel = True, 
-                    integrator = 'RK4', 
+OCprob = OCProblems.Rocket_Landing(nt = 100,
+                    refine = 1,
+                    parallel = True,
+                    integrator = 'RK4',
                     # epsilon = 100.0,
                     # lambda_u = 0.05, u_max = 15
                     # objective = 'max_performance'
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
+                    # hT = 70
                     )
 
 # OCprob = OCProblems.Denbigh_Reaction(nt = 25, 
@@ -154,7 +156,7 @@ ipopts['max_iter'] = itMax
 # ipopts['hsllib'] = '/home/reinhold/coinhsl-solvers/.libs/libcoinhsl.so.0.0.0'
 sp = OCprob.start_point
 
-S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts, 'iteration_callback':counter})
+S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})#, 'iteration_callback':counter})
 t0 = time.time()
 out = S(x0=sp, lbx=OCprob.lb_var,ubx=OCprob.ub_var, lbg=OCprob.lb_con, ubg=OCprob.ub_con)
 t1 = time.time()

@@ -797,69 +797,13 @@ class Lotka_Volterra_Fishing(OCProblem):
             plt.title(ttl)
         else:
             plt.title('')
-            
+        
+        plt.xlabel('x')
+        
         plt.show()
 
 
-class Lotka_Volterra_Fishing_S(Lotka_Volterra_Fishing):
-    default_params = {'c0':0.4, 'c1':0.2, 'x_init':[0.5,0.7], 't0':0., 'tf':12., 'S_u': 100.0}
-    
-    def build_problem(self):
-        S_u = self.model_params['S_u']
-        self.set_OCP_data(2,0,1,1,[0,0],[np.inf, np.inf],[],[],[0],[1.0*S_u])
-        self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
-        self.fix_initial_value(self.model_params['x_init'])
-        
-        x = cs.MX.sym('x', 2)
-        w_ = cs.MX.sym('w', 1)
-        w = w_/S_u
-        x0, x1 = cs.vertsplit(x)
-        ode_rhs = cs.vertcat(x0 - x0*x1 - self.model_params['c0']*x0*w, -x1 + x0*x1 - self.model_params['c1']*x1*w)
-        quad_expr = (x0 - 1)**2 + (x1 - 1)**2
-        dt = cs.MX.sym('dt', 1)
-        self.ODE = {'x': x, 'p':cs.vertcat(dt, w_),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
-        self.multiple_shooting()
-        self.set_objective(self.q_tf)
-        self.build_NLP()
-        
-        self.start_point = np.zeros(self.nVar)
-        for i in range(self.ntS+1):
-            self.set_stage_state(self.start_point, i, self.model_params['x_init'])
-        for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [0.])
-    
-    def plot(self, xi, dpi = None, title = None, it = None):
-        # x0, x1 = self.get_state_arrays(xi)
-        x0, x1 = self.get_state_arrays_expanded(xi)
-        u = self.get_control_plot_arrays(xi)
-        
-        plt.figure(dpi = dpi)
-        # plt.plot(self.time_grid, x0, 'g-.', label = '$x_0$')
-        # plt.plot(self.time_grid, x1, 'b--', label = '$x_1$')
-        plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
-        plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
-        #'y-.'
-        
-        S_u = self.model_params['S_u']
-        plt.step(self.time_grid_ref, u/S_u, 'r', label = f'$u/{S_u}$')
-        plt.legend(fontsize='x-large')
-        
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka Volterra fishing problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-
-
-class Lotka_Volterra_Fishing_NQ(OCProblem):
+class Lotka_Volterra_Fishing_MAYER(OCProblem):
     default_params = {'c0':0.4, 'c1':0.2, 'x_init':[0.5,0.7], 't0':0., 'tf':12.}
     
     def build_problem(self):
@@ -886,6 +830,11 @@ class Lotka_Volterra_Fishing_NQ(OCProblem):
             self.set_stage_control(self.start_point, i, [0])
         self.integrate_full(self.start_point)    
         
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1, _ = self.get_state_arrays(xi)
         # x0, x1 = self.get_state_arrays_expanded(xi)
@@ -937,8 +886,15 @@ class Lotka_Volterra_multimode(OCProblem):
         self.add_constraint(cs.sum1(self.u_eval),1.,1.)
         for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.x_init)
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [1/3,1/3,1/3])
         self.build_NLP()
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1 = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
@@ -998,6 +954,11 @@ class Lotka_Volterra_Foodsource(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0])
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1, x2 = self.get_state_arrays_expanded(xi)
         u = self.get_control_plot_arrays(xi)
@@ -1053,6 +1014,11 @@ class Lotka_Volterra_Competitive(OCProblem):
             self.set_stage_state(self.start_point, i, self.model_params['x_init'])
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0])
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1 = self.get_state_arrays_expanded(xi)
@@ -1141,7 +1107,15 @@ class Goddard_Rocket(OCProblem):
         
         self.set_objective(-self.x_eval[2,-1])
         self.build_NLP()
-        
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        if ind < math.ceil(self.ntS*2/5):
+            self.set_stage_control(s, ind, 0.9)
+        else:
+            self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         t_arr = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate(([0], t_arr))).reshape(-1)
@@ -1285,7 +1259,7 @@ class Calcium_Oscillation(OCProblem):
     'tx2': 0.384306,
     'tx3': 0.28977
     }
-    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_thread = 4, **kwargs):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
     
     def build_problem(self):
@@ -1326,7 +1300,13 @@ class Calcium_Oscillation(OCProblem):
         
         for i in range(math.floor(0.4*self.ntS), self.ntS):
             self.set_stage_control(self.ub_var, i, 1.0)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val + 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1, x2, x3 = self.get_state_arrays(xi)
         w = self.get_control_plot_arrays(xi)        
@@ -1383,7 +1363,12 @@ class Batch_Reactor(OCProblem):
             self.set_stage_control(self.start_point, i, 298)
             # self.set_stage_state(self.start_point, i, self.x_init)
         # self.integrate_full(self.start_point)
-        
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 300)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays(xi)
         T = self.get_control_plot_arrays(xi)
@@ -1452,7 +1437,12 @@ class Bioreactor(OCProblem):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_control(self.start_point, i, 28.7)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 30)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         plt.figure(dpi=dpi)
         
@@ -1522,7 +1512,13 @@ class Hanging_Chain(OCProblem):
             self.set_stage_control(self.start_point, i, u_start[i])
             self.set_stage_state(self.start_point, i, [x1_start[i]])
         self.set_stage_state(self.start_point, self.ntS, x1_start[self.ntS])
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val + 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x = self.get_state_arrays(xi)
         # u = self.get_control_plot_arrays(xi)
@@ -1547,7 +1543,7 @@ class Hanging_Chain(OCProblem):
         plt.show()
 
 
-class Hanging_Chain_NQ(Hanging_Chain):
+class Hanging_Chain_MAYER(Hanging_Chain):
     default_params = {'a':1, 'b':3, 'Lp': 4}
     def build_problem(self):
         self.set_OCP_data(3,0,1,0,[0.], [10.], [], [], [-10., -np.inf, -np.inf], [20., np.inf, np.inf])
@@ -1588,6 +1584,12 @@ class Hanging_Chain_NQ(Hanging_Chain):
             self.set_stage_control(self.start_point, i, u_start[i])
             self.set_stage_state(self.start_point, i, [x1_start[i], x2_start[i-1], x3_start[i-1]])
         self.set_stage_state(self.start_point, self.ntS, [x1_start[self.ntS], x2_start[self.ntS - 1], x3_start[self.ntS - 1]])
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val + 0.1)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x, _, _ = self.get_state_arrays(xi)
@@ -1636,7 +1638,12 @@ class Catalyst_Mixing(OCProblem):
         
         for j in range(self.ntS+1):
             self.set_stage_state(self.start_point, j, self.x_init)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         plt.figure(dpi=dpi)
         if title is not None:
@@ -1764,6 +1771,11 @@ class Cushioned_Oscillation(OCProblem):
             self.set_stage_param(self.start_point, i, 10/self.ntS)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,v = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -1817,6 +1829,11 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
             self.set_stage_param(self.start_point, i, 100.0*10.0/self.ntS)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,v = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -1842,9 +1859,28 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
             plt.title('')
         plt.show()
         
-
+#Cvodes recommended
 class D_Onofrio_Chemotherapy(OCProblem):
-    default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0., 'duration': 6.}
+    default_params = {
+        'zeta':0.192, 
+        'b':5.85, 
+        'mu': 0.0, 
+        'd':0.00873, 
+        'G':0.15, 
+        'x20':0.0, 
+        'x30':0.0, 
+        'u0max':75., 
+        'x2max':300., 
+        'x00':12000., 
+        'x10':15000., 
+        'u1max':1., 
+        'x3max':2., 
+        'F':1., 
+        'eta':1., 
+        'alpha':0., 
+        'duration': 6.
+    }
+    
     param_set_1 = {
         'x00': 12000,
         'x10': 15000,
@@ -1873,10 +1909,8 @@ class D_Onofrio_Chemotherapy(OCProblem):
         'x3max': 10
     }
     
-    def __init__(self, nt = 20, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = True, N_threads = 4, **kwargs):
         OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel,**kwargs)
-
-    
     
     def build_problem(self):
         zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
@@ -1901,6 +1935,11 @@ class D_Onofrio_Chemotherapy(OCProblem):
         self.add_constraint(self.q_tf[1:3] - cs.DM([x2max,x3max]), [-np.inf,-np.inf], [0.,0.])
         self.build_NLP()
         self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.1, 0.1])
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         time_grid = self.time_grid
@@ -1992,6 +2031,11 @@ class D_Onofrio_Chemotherapy_VT(OCProblem):
             self.set_stage_param(self.start_point, i, 6/self.ntS)
         self.integrate_full(self.start_point)
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.1,0.1])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         p = self.get_param_arrays(xi)
         time_grid = np.cumsum(np.concatenate([[0], p]))
@@ -2045,7 +2089,7 @@ class Egerstedt_Standard(OCProblem):
         self.ODE = {'x':x, 'p':cs.vertcat(dt,w), 'ode': dt*ode_rhs, 'quad': dt*quad}
         self.multiple_shooting()
         self.set_objective(self.q_tf)
-        self.add_constraint(cs.sum1(self.u_eval)-1.0, 0., 0.)
+        self.add_constraint(cs.sum1(self.u_eval), 1.0, 1.0)
         
         self.build_NLP()
         
@@ -2059,7 +2103,12 @@ class Egerstedt_Standard(OCProblem):
         for i in range(1, self.ntS + 1):
             self.set_stage_state(self.start_point, i, self.x_init)
         # self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
@@ -2087,7 +2136,7 @@ class Egerstedt_Standard(OCProblem):
         plt.show()
 
 
-class Egerstedt_Standard_NQ(Egerstedt_Standard):
+class Egerstedt_Standard_MAYER(Egerstedt_Standard):
     
     def build_problem(self):
         self.set_OCP_data(3,0,3,0, [-np.inf, 0.4, -np.inf], [np.inf,np.inf,np.inf], [], [], [0.,0.,0.], [1.,1.,1.])
@@ -2121,7 +2170,12 @@ class Egerstedt_Standard_NQ(Egerstedt_Standard):
         self.set_stage_control(self.lb_var, 10, [0., 0., 0.4])
         self.set_stage_control(self.lb_var, 11, [0., 0., 0.4])
         self.set_stage_control(self.lb_var, 12, [0., 0., 0.4])
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,_ = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
@@ -2175,6 +2229,12 @@ class Fullers(OCProblem):
             self.set_stage_control(self.start_point, i, 0.5)
             self.set_stage_state(self.start_point, i, self.x_init)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays(xi)
@@ -2243,9 +2303,13 @@ class Electric_Car(OCProblem):
         
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, 0.1 + 0.9*i/self.ntS)
-        
-        
         self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1,x2 = self.get_state_arrays(xi)
@@ -2301,7 +2365,12 @@ class F8_Aircraft(OCProblem):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_param(self.start_point, i, 5./self.ntS)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1,x2 = self.get_state_arrays(xi)
         w = self.get_control_plot_arrays(xi)
@@ -2390,7 +2459,13 @@ class Gravity_Turn(OCProblem):
         for i in range(math.floor(self.ntS*0.5)):
             self.set_stage_control(self.start_point, i, 0.8)
         self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val + 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         m,v,beta,h = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -2462,7 +2537,12 @@ class Oil_Shale_Pyrolysis(OCProblem):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_control(self.start_point, i, 698.15)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 710)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,x3,x4 = self.get_state_arrays(xi)
         T = self.get_control_plot_arrays(xi)
@@ -2524,7 +2604,12 @@ class Particle_Steering(OCProblem):
         
         for i in range(self.ntS):
             self.set_stage_param(self.start_point, i, 1/self.ntS)
-        
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,y1,y2 = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -2589,7 +2674,12 @@ class Quadrotor_Helicopter(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [1/2,0.,1/2, 0.001])
         self.integrate_full(self.start_point)
-        
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [2/3, 0.1, 2/3, 0.001])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,_,x3,_,x5,_ = self.get_state_arrays(xi)
         w1,w2,w3,u = self.get_control_plot_arrays(xi)
@@ -2688,7 +2778,11 @@ class Supermarket_Refrigeration(OCProblem):
             self.set_stage_param(self.start_point, i, [650/self.ntS])
         self.integrate_full(self.start_point)
         
-        
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.9]*3)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x0,x1,x2,x3,x4,x5,x6,x7,x8,_ = self.get_state_arrays(xi)
         u0,u1,u2 = self.get_control_plot_arrays(xi)
@@ -2750,7 +2844,12 @@ class Three_Tank_Multimode(OCProblem):
             self.set_stage_control(self.start_point, i, [1/3,1/3,1/3])
             self.set_stage_state(self.start_point, i, self.x_init)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,x3 = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
@@ -2779,7 +2878,7 @@ class Three_Tank_Multimode(OCProblem):
         plt.show()
 
 
-class Three_Tank_Multimode_NQ(Three_Tank_Multimode):
+class Three_Tank_Multimode_MAYER(Three_Tank_Multimode):
     default_params = {'T':12, 'c1':1, 'c2':2, 'c3':0.8, 'k1':2, 'k2':3, 'k3':1, 'k4':3}
     def build_problem(self):
         self.set_OCP_data(4,0,3,0,[0.,0.,0.,-np.inf], [np.inf,np.inf,np.inf,np.inf], [],[], [0.,0.,0.], [1.,1.,1.])
@@ -2810,7 +2909,12 @@ class Three_Tank_Multimode_NQ(Three_Tank_Multimode):
             self.set_stage_control(self.start_point, i, [1/3,1/3,1/3])
             self.set_stage_state(self.start_point, i, self.x_init)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2,x3,_ = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
@@ -2839,8 +2943,6 @@ class Three_Tank_Multimode_NQ(Three_Tank_Multimode):
         plt.show()
 
 
-
-
 class Time_Optimal_Car(OCProblem):
     default_params = {'vmax':33.}
     def build_problem(self):
@@ -2865,7 +2967,12 @@ class Time_Optimal_Car(OCProblem):
         # for i in range(math.floor(self.ntS*0.5), self.ntS):
         #     self.set_stage_control(self.start_point, i, 0.5)
         # self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         z1,z2 = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -2916,7 +3023,11 @@ class Van_der_Pol_Oscillator(OCProblem):
         for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.x_init)
         
-        
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -2963,8 +3074,12 @@ class Van_der_Pol_Oscillator_2(OCProblem):
         self.build_NLP()
         for i in range(self.ntS+1):
             self.set_stage_state(self.start_point, i, self.x_init)
-        
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -3013,7 +3128,13 @@ class Van_der_Pol_Oscillator_3(OCProblem):
             self.set_stage_control(self.start_point, i, [0.5])
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
         self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -3040,7 +3161,7 @@ class Van_der_Pol_Oscillator_3(OCProblem):
         
 
 
-class Van_der_Pol_Oscillator_3_NQ(OCProblem):
+class Van_der_Pol_Oscillator_3_MAYER(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
 
@@ -3063,7 +3184,13 @@ class Van_der_Pol_Oscillator_3_NQ(OCProblem):
             self.set_stage_control(self.start_point, i, [0.5])
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
         self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,y,_ = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -3205,17 +3332,17 @@ class Lotka_OED(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0.,1/3,1/3])
         self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         u,w1,w2 = self.get_control_plot_arrays(xi)
         x1, x2, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays(xi)
         
         plt.figure(dpi = dpi)
-        # plt.plot(self.time_grid, x1, 'y-.', label = r'$x_1$')
-        # plt.plot(self.time_grid, x2, 'c-.', label = r'$x_2$')
-        # plt.step(self.time_grid_ref, u, 'r-', label = r'$u$')
-        # plt.step(self.time_grid_ref, w1, 'b:', label = r'$w_1$')
-        # plt.step(self.time_grid_ref, w2, 'g--', label = r'$w_2$')
         
         plt.plot(self.time_grid, x1, 'y-', label = r'Biomass prey $x_1(t)$')
         plt.plot(self.time_grid, x2, 'b-', label = r'Biomass predator $x_2(t)$')
@@ -3263,8 +3390,6 @@ class Lotka_OED(OCProblem):
         else:
             plt.title('')
         plt.show()
-        
-        
 
 
 class Fermenter(OCProblem):
@@ -3323,6 +3448,12 @@ class Fermenter(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [14*(self.ntS - 1 - i)/(self.ntS-1), 0.7, 0.5])
         self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val0, val1, val2 = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [val0 + 0.1, val1 + 0.1, val2 + 0.1])
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         P,S1,S2,E,V,G,_,_,_ = self.get_state_arrays(xi)
@@ -3439,7 +3570,16 @@ class Batch_Distillation(OCProblem):
             
             
         self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        if ind < math.floor(0.5*self.ntS):
+            self.set_stage_control(s, ind, val + 1.0*self.uscale)
+        else:
+            self.set_stage_control(s, ind, val - 1.0*self.uscale)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         M0_,x0_,x1,x2,x3,x4,x5,xC_,xD_,MD_ = self.get_state_arrays_expanded(xi)
         
@@ -3454,9 +3594,9 @@ class Batch_Distillation(OCProblem):
         time_grid = np.cumsum(np.concatenate([[0], p/self.tscale])).reshape(-1)
         
         plt.figure(dpi=dpi)
-        plt.plot(time_grid, M0/100, 'r-', label = 'M0/100')
-        plt.plot(time_grid, x0, 'g-', label = 'x0')
-        plt.plot(time_grid, x1, 'b-', label = 'x1')
+        plt.plot(time_grid, M0/100, 'r--', label = 'M0/100')
+        plt.plot(time_grid, x0, 'g-.', label = 'x0')
+        plt.plot(time_grid, x1, 'b:', label = 'x1')
         plt.plot(time_grid, x2, 'y-', label = 'x2')
         plt.plot(time_grid, x3, 'c-', label = 'x3')
         plt.plot(time_grid, x4, 'm-', label = 'x4')
@@ -3531,7 +3671,13 @@ class Hang_Glider(OCProblem):
             self.set_stage_control(self.start_point, j, cmax)
             self.set_stage_param(self.start_point, j, 100/self.ntS)
         self.integrate_full(self.start_point)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x, dx, y, dy = self.get_state_arrays(xi)
         cL = self.get_control_plot_arrays(xi)
@@ -3577,6 +3723,12 @@ class Tubular_Reactor(OCProblem):
         for j in range(self.ntS):
             self.set_stage_control(self.start_point, j, 5.)
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -3599,7 +3751,7 @@ class Tubular_Reactor(OCProblem):
         plt.show()
         
 
-class Tubular_Reactor_NQ(Tubular_Reactor):
+class Tubular_Reactor_MAYER(Tubular_Reactor):
     
     def build_problem(self):
         self.set_OCP_data(2,0,1,0, [-np.inf, -np.inf], [np.inf, np.inf], [], [], [0.], [5.])
@@ -3619,6 +3771,12 @@ class Tubular_Reactor_NQ(Tubular_Reactor):
         self.set_stage_state(self.ub_var, 0, [1.])
         for j in range(self.ntS):
             self.set_stage_control(self.start_point, j, 5.)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 0.1)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x,_ = self.get_state_arrays(xi)
@@ -3652,6 +3810,10 @@ class Cart_Pendulum(OCProblem):
             'lambda_u':0.5
             }
     
+    param_set_1 = {'u_max': 30, 'lambda_u': 0.5}
+    param_set_2 = {'u_max': 15, 'lambda_u': 0.05}
+    
+    
     def build_problem(self):
         M, m, l, g, u_max, lambda_u = (self.model_params[key] for key in ['M','m','l','g','u_max','lambda_u'])
 
@@ -3684,6 +3846,12 @@ class Cart_Pendulum(OCProblem):
             self.set_stage_control(self.start_point, j, 0.)
         self.integrate_full(self.start_point)
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, val - 1.0)
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         x,xdot,theta,thetadot = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
@@ -3710,7 +3878,7 @@ class Cart_Pendulum(OCProblem):
 #Differential state 1 is stiff, approximating its lower bound of 0, so an implicit integrator is required.
 #In addition, the bound should be relaxed to something like 1e-[4 -- 6].
 
-#Using one step explicit euler with lower bound 1e-6 also """""""works""""""" as the optimizer can adjust the controls so the collocation does not overshoot 
+#Using one step explicit euler with lower bound 1e-6 also """""""works""""""" as the optimizer can adjust the controls such that the collocation does not overshoot 
 class Denbigh_Reaction(OCProblem):
     default_params = {
             'E1':3000.0,
@@ -3735,7 +3903,7 @@ class Denbigh_Reaction(OCProblem):
         
         k_s = [1e3,1e7,1e1,1e-3]
         
-        k1, k2, k3, k4 = [k_s[i]*cs.exp(-E[i]/T) for i in range(4)]
+        k1, k2, k3, k4 = [k_s[i]*cs.exp(-E[i]/(T)) for i in range(4)]
         
         ode_rhs = cs.vertcat(
             -k1*x1 - k2*x1,
@@ -3751,6 +3919,11 @@ class Denbigh_Reaction(OCProblem):
         for j in range(self.ntS):
             self.set_stage_control(self.start_point, j, 273.0)
         self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 280.0)
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x1, x2 = self.get_state_arrays_expanded(xi)
@@ -3768,7 +3941,7 @@ class Denbigh_Reaction(OCProblem):
         # print(q)
         
         plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, 2*(T - 273.0)/142.0, 'r', label = r'2$\cdot$(T-273)/142')
+        plt.step(self.time_grid_ref, (T - 273.0)/142.0, 'r', label = r'(T-273)/142')
         plt.plot(self.time_grid_ref, x1, 'g-', label = '$x_1$')
         plt.plot(self.time_grid_ref, x2, 'b--', label = '$x_2$')
         plt.plot(self.time_grid_ref, q, 'c', label = 'q')
@@ -3793,21 +3966,21 @@ class Clinic_Scheduling(OCProblem):
         'beta': 3.0,
         'gamma': 1.5,
         'delta': 0.1,
-    'lam_max': 15.0,    # Maximum appointment rate [patients/hour]
-    'mu_min': 0.5,       # Minimum service rate factor
-    'mu_max': 2.0,       # Maximum service rate factor
-    'N_max': 8,       # Maximum number of staff
-    'W_max': 30.0,       # Maximum acceptable waiting time [minutes]
-    'U_min': 0.6,       # Minimum utilization requirement
-    'N_total': 60,       # Total appointments to schedule
-    'lam_0': 7.5,       # Target appointment rate [patients/hour]
-    'w1': 1.0,
-    'w2': 0.5,
-    'w3': 0.1,
-    'Q0': 10.0,
-    'S0': 4.0,
-    'W0': 5.0,
-    'U0': 0.8
+        'lam_max': 15.0,    # Maximum appointment rate [patients/hour]
+        'mu_min': 0.5,       # Minimum service rate factor
+        'mu_max': 2.0,       # Maximum service rate factor
+        'N_max': 8,       # Maximum number of staff
+        'W_max': 30.0,       # Maximum acceptable waiting time [minutes]
+        'U_min': 0.6,       # Minimum utilization requirement
+        'N_total': 60,       # Total appointments to schedule
+        'lam_0': 7.5,       # Target appointment rate [patients/hour]
+        'w1': 1.0,
+        'w2': 0.5,
+        'w3': 0.1,
+        'Q0': 10.0,
+        'S0': 4.0,
+        'W0': 5.0,
+        'U0': 0.8
     }
     
     def build_problem(self):
@@ -3819,8 +3992,6 @@ class Clinic_Scheduling(OCProblem):
         
         X = cs.MX.sym('X', 4)
         Q, S, W, U = cs.vertsplit(X)
-        
-        
         
         u = cs.MX.sym('u', 3)
         lam, mu, N = cs.vertsplit(u)
@@ -3846,7 +4017,12 @@ class Clinic_Scheduling(OCProblem):
             self.set_stage_state(self.start_point, j, self.x_init)
         for j in range(self.ntS):
             self.set_stage_control(self.start_point, j, [0., mu_min, 1.0])
-        # self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val1, val2, val3 = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [val1 + 0.1, val2 + 0.1, val3 + 1.0])
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         Q, S, W, U = self.get_state_arrays_expanded(xi)
@@ -3877,9 +4053,6 @@ class Clinic_Scheduling(OCProblem):
         plt.show()
 
 
-
-
-
 class Rocket_Landing(OCProblem):    
     default_params = {
         'Isp': 350,
@@ -3896,12 +4069,12 @@ class Rocket_Landing(OCProblem):
         'mdry': 25e3,
         'objective': "max_fuel",
         
-        'Tscale': 1e-5,
-        'xscale': 1e-3,
-        'zscale': 1e-3,
-        'vscale': 1e-2,
-        'mscale': 1e-5,
-        'tscale': 1.0,
+        # 'Tscale': 1e-5,
+        # 'xscale': 1e-3,
+        # 'zscale': 1e-3,
+        # 'vscale': 1e-2,
+        # 'mscale': 1e-5,
+        # 'tscale': 1.0,
         
         # 'Tscale': 1.0,
         # 'xscale': 1.0,
@@ -3909,6 +4082,13 @@ class Rocket_Landing(OCProblem):
         # 'vscale': 1.0,
         # 'mscale': 1.0,
         # 'tscale': 1.0,
+        
+        'Tscale': 1e-6,
+        'xscale': 1e-3,
+        'zscale': 1e-3,
+        'vscale': 1e-2,
+        'mscale': 1e-4,
+        'tscale': 1.0, #leave at 1.0
     }
     
     def build_problem(self):
@@ -3926,7 +4106,7 @@ class Rocket_Landing(OCProblem):
         T = T_/Tscale
         
         dt = cs.MX.sym('dt', 1)
-        dt_s = dt*tscale
+        dt_s = dt/tscale
         
         vsq = vx**2 + vz**2
         rho = rho0*cs.exp(-z/H)
@@ -3982,19 +4162,23 @@ class Rocket_Landing(OCProblem):
         for j in range(0, self.ntS):
             self.set_stage_control(self.start_point, j, [Tmin*Tscale, 0.])
         
-        # self.set_stage_control(self.start_point, 10, [Tmax*Tscale, 0.])
-        
-        # for j in range(0, math.floor(self.ntS/2)):
-        #     self.set_stage_control(self.start_point, j, [Tmin*Tscale, 0.])
-        # for j in range(math.floor(self.ntS/2), self.ntS):
-        #     self.set_stage_control(self.start_point, j, [Tmax*Tscale, 0.])
-        
         self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        Tscale = self.model_params['Tscale']
+        s = copy.copy(self.start_point)
+        T_i, theta_i = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [T_i + 1e5*Tscale, theta_i + (2*np.pi/360)])
+        return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         Tscale, xscale, zscale, vscale, mscale, tscale = (self.model_params[key] for key in ['Tscale', 'xscale', 'zscale', 'vscale', 'mscale', 'tscale'])
         
-        x,z,vx,vz,m = self.get_state_arrays_expanded(xi)# / [xscale, zscale, vscale, vscale, mscale]
+        # x_,z_,vx_,vz_,m_ = self.get_state_arrays_expanded(xi)# / [xscale, zscale, vscale, vscale, mscale]
+        # x,z,vx,vz,m = (x_/xscale, z_/zscale, vx_/vscale, vz_/vscale, m_/mscale)
+        
+        x,z,vx,vz,m = self.get_state_arrays_expanded(xi)
+        
         T, theta = self.get_control_plot_arrays(xi)# / [Tscale, 1.0]
         dt_arr = self.get_param_arrays_expanded(xi)
         time_grid_ref = np.cumsum(np.concatenate([[0], dt_arr])).reshape(-1)
@@ -4002,13 +4186,13 @@ class Rocket_Landing(OCProblem):
         Tscale = self.model_params['Tscale']
         
         plt.figure(dpi=dpi)
-        plt.plot(time_grid_ref, x*20, 'r-', label = r'x $\cdot$ ' + str(xscale) + r'$\cdot 20$')
+        plt.plot(time_grid_ref, x*20, 'm-', label = r'x $\cdot$ ' + str(xscale) + r'$\cdot 20$')
         plt.plot(time_grid_ref, z, 'g--', label = r'z $\cdot$ ' + str(zscale))
         plt.plot(time_grid_ref, vx, 'b:', label = r'vx $\cdot$ ' + str(vscale))
         plt.plot(time_grid_ref, vz, 'c-.', label = r'vz $\cdot$ ' + str(vscale))
-        plt.plot(time_grid_ref, (m - self.model_params['mdry']*mscale)*50, 'y-.', label = r'(m - mdry)$\cdot$' + str(mscale) + r'$\cdot 50$')
+        plt.plot(time_grid_ref, (m - self.model_params['mdry']*mscale)*5.0, 'y-.', label = r'(m - mdry)$\cdot$' + str(mscale) + r'$\cdot 5.0$')
         
-        plt.step(time_grid_ref, T*0.5, 'r', label = r'T$\cdot$ ' + str(Tscale) + r'$\cdot 0.5$')
+        plt.step(time_grid_ref, T, 'r', label = r'T$\cdot$ ' + str(Tscale))
         plt.step(time_grid_ref, theta*10, 'g', label = r'theta$\cdot 10$')
         
         plt.legend(fontsize='small', loc = 'upper left')
@@ -4026,14 +4210,8 @@ class Rocket_Landing(OCProblem):
         plt.show()
 
 
-# TODO finish
 class Satellite_Deorbiting_1(OCProblem):
     default_params = {
-            # 'r0':6.821e6,
-            # 'vr0':0.,
-            # 'vtheta0':7650,
-            # 'm0':150,
-            # 'rT':6491e6,
             'mu':3.986e14,
             'RE': 6.371e6,
             'rho0': 1.225,
@@ -4138,6 +4316,12 @@ class Satellite_Deorbiting_1(OCProblem):
         for j in range(self.ntS + 1):
             self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val0, val1 = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [val0 + 1.0, val1 + 1.0])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         RE, = [self.model_params[key] for key in ['RE']]
         
@@ -4196,11 +4380,12 @@ class Satellite_Deorbiting_2(OCProblem):
             'g0': 9.81,
             'umax': 20,
             'm0': 150,
-            'omegaE':7.2921e-5
+            'omegaE':7.2921e-5,
+            'MDTH': 1.0
             }
     
     def build_problem(self):
-        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE'])
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, MDTH = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'MDTH'])
         
         h0 = 450000
         r0 = RE + h0
@@ -4213,7 +4398,9 @@ class Satellite_Deorbiting_2(OCProblem):
         hreentry = 120000
         rfinal = RE + hreentry
         
-        MISSION_DEORBIT_TIME_HOURS = 0.6
+        # MISSION_DEORBIT_TIME_HOURS = 0.6
+        MISSION_DEORBIT_TIME_HOURS = MDTH
+        
         T_mission_fixed = MISSION_DEORBIT_TIME_HOURS * 3600
         orbital_period = 2 * np.pi * np.sqrt(r0**3 / mu)
         n_orbits = T_mission_fixed / orbital_period
@@ -4299,16 +4486,18 @@ class Satellite_Deorbiting_2(OCProblem):
         for j in range(self.ntS + 1):
             self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
     
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val0, val1 = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [val0 + 0.5, val1 + 0.5])
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         RE, = [self.model_params[key] for key in ['RE']]
         
         r, theta, vr, vtheta, m = self.get_state_arrays(xi)
         ur, utheta = self.get_control_plot_arrays(xi)
-        # dt = self.get_param_arrays(xi)
-        # time_grid = np.cumsum(np.concatenate([np.array([0]), dt]))
-        # dte = self.get_param_arrays_expanded(xi)
-        # time_grid_ref = np.cumsum(np.concatenate([np.array([0]), dte]))
-        
+
         plt.figure(dpi=dpi)
         plt.plot(self.time_grid, (r - RE)/1000, 'r--', label = r'(r - Re)/1000')
         plt.plot(self.time_grid, theta*50, 'g:', label = r'$\theta\cdot 50$')
@@ -4316,7 +4505,6 @@ class Satellite_Deorbiting_2(OCProblem):
         # plt.plot(time_grid, vtheta, 'y-', label = r$v_\theta$))
         plt.plot(self.time_grid, (m - 100.)*4, 'b-.', label = r'(m - 100)$\cdot 4$')
         
-        # plt.axhline(y = 5)
         plt.axhline(y = 120, color = 'c', linestyle = '--')
         
         plt.step(self.time_grid_ref, ur*20, 'r', label = r'$u_r \cdot 20$')
@@ -4426,40 +4614,40 @@ class Satellite_Deorbiting_2(OCProblem):
 
 
 
-LIBRARY = {
-    'Lotka_Volterra_Fishing': Lotka_Volterra_Fishing,
-    'Lotka_Volterra_multimode': Lotka_Volterra_multimode,
-    'Goddard_Rocket': Goddard_Rocket,
-    'Calcium_Oscillation': Calcium_Oscillation,
-    'Batch_Reactor': Batch_Reactor,
-    'Bioreactor': Bioreactor,
-    'Hanging_Chain': Hanging_Chain,
-    'Hanging_Chain_NQ': Hanging_Chain_NQ,
-    'Catalyst_Mixing': Catalyst_Mixing,
-    'Cushioned_Oscillation': Cushioned_Oscillation,
-    'D_Onofrio_Chemotherapy': D_Onofrio_Chemotherapy,
-    'D_Onofrio_Chemotherapy_VT': D_Onofrio_Chemotherapy_VT,
-    'Egerstedt_Standard': Egerstedt_Standard,
-    'Fullers': Fullers,
-    'Electric_Car': Electric_Car,
-    'F8_Aircraft': F8_Aircraft,
-    'Gravity_Turn': Gravity_Turn,
-    'Oil_Shale_Pyrolysis': Oil_Shale_Pyrolysis,
-    'Particle_Steering': Particle_Steering,
-    'Quadrotor_Helicopter': Quadrotor_Helicopter,
-    'Supermarket_Refrigeration': Supermarket_Refrigeration,
-    'Three_Tank_Multimode': Three_Tank_Multimode,
-    'Time_Optimal_Car': Time_Optimal_Car,
-    'Van_der_Pol_Oscillator': Van_der_Pol_Oscillator,
-    'Van_der_Pol_Oscillator_2': Van_der_Pol_Oscillator_2,
-    'Van_der_Pol_Oscillator_3': Van_der_Pol_Oscillator_3,
-    # 'Ocean': Ocean,
-    'Lotka_OED': Lotka_OED,
-    'Fermenter': Fermenter,
-    'Batch_Distillation': Batch_Distillation,
-    'Hang_Glider': Hang_Glider
-}
+# LIBRARY = {
+#     'Lotka_Volterra_Fishing': Lotka_Volterra_Fishing,
+#     'Lotka_Volterra_multimode': Lotka_Volterra_multimode,
+#     'Goddard_Rocket': Goddard_Rocket,
+#     'Calcium_Oscillation': Calcium_Oscillation,
+#     'Batch_Reactor': Batch_Reactor,
+#     'Bioreactor': Bioreactor,
+#     'Hanging_Chain': Hanging_Chain,
+#     'Hanging_Chain_NQ': Hanging_Chain_NQ,
+#     'Catalyst_Mixing': Catalyst_Mixing,
+#     'Cushioned_Oscillation': Cushioned_Oscillation,
+#     'D_Onofrio_Chemotherapy': D_Onofrio_Chemotherapy,
+#     'D_Onofrio_Chemotherapy_VT': D_Onofrio_Chemotherapy_VT,
+#     'Egerstedt_Standard': Egerstedt_Standard,
+#     'Fullers': Fullers,
+#     'Electric_Car': Electric_Car,
+#     'F8_Aircraft': F8_Aircraft,
+#     'Gravity_Turn': Gravity_Turn,
+#     'Oil_Shale_Pyrolysis': Oil_Shale_Pyrolysis,
+#     'Particle_Steering': Particle_Steering,
+#     'Quadrotor_Helicopter': Quadrotor_Helicopter,
+#     'Supermarket_Refrigeration': Supermarket_Refrigeration,
+#     'Three_Tank_Multimode': Three_Tank_Multimode,
+#     'Time_Optimal_Car': Time_Optimal_Car,
+#     'Van_der_Pol_Oscillator': Van_der_Pol_Oscillator,
+#     'Van_der_Pol_Oscillator_2': Van_der_Pol_Oscillator_2,
+#     'Van_der_Pol_Oscillator_3': Van_der_Pol_Oscillator_3,
+#     # 'Ocean': Ocean,
+#     'Lotka_OED': Lotka_OED,
+#     'Fermenter': Fermenter,
+#     'Batch_Distillation': Batch_Distillation,
+#     'Hang_Glider': Hang_Glider
+# }
 
-def print_available_problems():
-    print(list(LIBRARY.keys()))
-    return
+# def print_available_problems():
+#     print(list(LIBRARY.keys()))
+#     return

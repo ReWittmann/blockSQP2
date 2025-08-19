@@ -10,12 +10,12 @@ import OCProblems
 plot_folder = "/home/reinhold/PLOT"
 
 
-Examples = [OCProblems.Batch_Reactor,
+Examples = [#OCProblems.Batch_Reactor,
             # OCProblems.Goddard_Rocket,
-            OCProblems.Catalyst_Mixing,
+            # OCProblems.Catalyst_Mixing,
             # OCProblems.Lotka_Volterra_Fishing,
             # OCProblems.Hanging_Chain,
-            # OCProblems.Cushioned_Oscillation,
+            OCProblems.Cushioned_Oscillation_TSCALE,
             # OCProblems.Egerstedt_Standard,
             # OCProblems.Electric_Car,
             # OCProblems.Particle_Steering,
@@ -32,7 +32,7 @@ Examples_ = [
             (OCProblems.Goddard_Rocket, "Goddard's rocket")
             ]
 
-plot_folder = "/home/reinhold/PLOT/ipopt_ex_hess_TEST"
+plot_folder = "/home/reinhold/PLOT/ipopt_ex_hess_TEST_CO"
 OCP_experiment.run_ipopt_experiments(Examples, 
                                      Experiments, 
                                      plot_folder, 

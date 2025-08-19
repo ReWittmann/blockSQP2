@@ -27,16 +27,17 @@ import OCProblems
 #  'Tubular_Reactor]
 
 ###############################################################################
-OCprob = OCProblems.Lotka_OED(nt = 100, parallel = False)
+OCprob = OCProblems.Electric_Car(nt = 100, parallel = False)
 
 nPert0 = 0
-nPertF = 10
+nPertF = 40
 EXP = (3,)
 
 titles = [
     # "SR1-BFGS",
     # "Convexification strategy 1",
-    "Convexification strategy 2",
+    # "Convexification strategy 2",
+    None
     # "Convexification strategy 2",
     # "Convexification strategy 2, automatic scaling"
     # ""
@@ -104,9 +105,10 @@ if 2 in EXP:
 if 3 in EXP:
     opts.max_conv_QPs = 4
     opts.conv_strategy = 2
-    opts.automatic_scaling = True
-    opts.par_QPs = True
+    opts.automatic_scaling = False
+    opts.par_QPs = False
     # opts.BFGS_damping_factor = 1/3
+    opts.enable_premature_termination = True
     
     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax)
     EXP_N_SQP.append(ret_N_SQP)
@@ -114,5 +116,7 @@ if 3 in EXP:
     EXP_type_sol.append(ret_type_sol)
     n_EXP += 1
 ###############################################################################
-OCP_experiment.plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+# OCP_experiment.plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+
+OCP_experiment.plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = "/home/reinhold/PLOT")
 

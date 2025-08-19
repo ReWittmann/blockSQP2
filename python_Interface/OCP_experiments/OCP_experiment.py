@@ -121,19 +121,21 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
     N_secs = []
     type_sol = []
     for j in range(nPert0,nPertF):
-        start_it = copy.copy(OCprob.start_point)
-        perturbStartPoint(OCprob, j, start_it)
+        # start_it = copy.copy(OCprob.start_point)
+        # perturbStartPoint(OCprob, j, start_it)
+        start_it = OCprob.perturbed_start_point(j)
+        
         prob, cond, HOLD = create_prob_cond(OCprob)
         prob.x_start = start_it
+        if COND:
+            prob.cond = cond
+        
         prob.complete()
 
         stats = py_blockSQP.SQPstats("./solver_outputs")
         
         t0 = time.time()
-        if not COND:
-            optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
-        else:
-            optimizer = py_blockSQP.SCQPmethod(prob, opts, stats, cond)
+        optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
         optimizer.init()
         ret = optimizer.run(itMax)
         optimizer.finish()
@@ -160,8 +162,11 @@ def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0,
     type_sol = []
     for j in range(nPert0, nPertF):
         counter.it = -1
-        start_it = copy.copy(OCprob.start_point)
-        perturbStartPoint(OCprob, j, start_it)
+        # start_it = copy.copy(OCprob.start_point)
+        # perturbStartPoint(OCprob, j, start_it)
+        
+        start_it = OCprob.perturbed_start_point(j)
+        
         t0 = time.time()
         out = S(x0=start_it, lbx=OCprob.lb_var,ubx=OCprob.ub_var, lbg=OCprob.lb_con, ubg=OCprob.ub_con)
         t1 = time.time()
@@ -295,7 +300,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
         
 
-def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -329,8 +334,14 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     titlesize = 23
     axtitlesize = 19
     labelsize = 16
+    
+    # titlesize = 23
+    # axtitlesize = 20
+    # labelsize = 19
 
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
+    if isinstance(suptitle, str):
+        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     if n_EXP == 1:
         subfigs = (subfigs,)
@@ -360,15 +371,24 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
         ax_time.tick_params(labelsize = labelsize - 1)
         ax_time.set_xticks(xticks)
-    plt.show()
+    if not isinstance(dirPath, str):
+        plt.show()
+    else:
+        if not os.path.exists(dirPath):
+            os.makedirs(dirPath)
+        date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
+        name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
+        sep = "" if dirPath[-1] == "/" else "/"
+        pref = "" if savePrefix is None else savePrefix
+        
+        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
 
-import io
 
 
-def print_heading(out : io.TextIOBase, EXP_names : list[str]):
+def print_heading(out, EXP_names : list[str]):
     for EXP_name in EXP_names:
-        out.write(" "*20 + EXP_name[0:21].ljust(21 + 5))
-    out.write("\n" + " "*20)
+        out.write(" "*27 + EXP_name[0:21].ljust(21 + 5))
+    out.write("\n" + " "*27)
     for i in range(len(EXP_names)):
         out.write("mu_N".ljust(10) + "sigma_N".ljust(11) + "mu_t".ljust(10) + "sigma_t".ljust(11))
         if i < len(EXP_names) - 1:
@@ -384,7 +404,7 @@ def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
     
     trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
-    out.write(name[:20].ljust(20))
+    out.write(name[:25].ljust(27))
     for i in range(n_EXP):
         out.write((trunc_float(EXP_N_SQP_mu[i],1) + ",").ljust(10) + (trunc_float(EXP_N_SQP_sigma[i],1) + ";").ljust(11) + (trunc_float(EXP_N_secs_mu[i],1) + "s,").ljust(10) + (trunc_float(EXP_N_secs_sigma[i],1) + "s").ljust(11))
         if i < n_EXP - 1:
@@ -401,11 +421,11 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_it = True):
+def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_output = True):
     if not os.path.exists(dirPath):
         os.makedirs(dirPath)
     
-    if print_it:
+    if print_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "ipopt"
@@ -443,12 +463,12 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
             suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "ipopt")
         print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
     out.close()
-            
-            
-def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, nt = 100, print_it = True, **kwargs):
+
+
+def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, nt = 100, print_output = True, **kwargs):
     if not os.path.exists(dirPath):
         os.makedirs(dirPath)
-    if print_it:
+    if print_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "blockSQP"

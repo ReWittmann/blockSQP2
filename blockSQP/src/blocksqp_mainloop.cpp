@@ -109,7 +109,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             if (infoQP){
                 std::cout << "QP solution failed again, try to reduce constraint violation\n";
                 skipLineSearch = true;
-
+                
                 if (vars->steptype < 2){
                     qpError = feasibilityRestorationHeuristic();
                     if (!qpError){
@@ -119,13 +119,13 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     else
                         std::cout << "Failed\n";
                 }
-
+                
                 if (qpError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                     std::cout << "Start feasibility restoration phase\n";
                     qpError = feasibilityRestorationPhase();
                     vars->steptype = 3;
                 }
-
+                
                 if (qpError){
                     std::cout << "QP error, stop\n";
                     return print_SQPresult(SQPresult::qp_failure, param->result_print_color);
@@ -148,7 +148,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             // 3.) QP infeasible, try to restore feasibility
             int feasError = 1;
             skipLineSearch = true; // don't do line search with restoration step
-
+            
             // Try to reduce constraint violation by heuristic
             if (vars->steptype < 2){
                 printf("***QP infeasible. Trying to reduce constraint violation...");
@@ -159,7 +159,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
                 else printf("Failed.***\n");
             }
-
+            
             // Invoke feasibility restoration phase
             if (feasError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                 printf("***Start feasibility restoration phase.***\n");
@@ -305,7 +305,6 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
             }
             else return print_SQPresult(SQPresult::success, param->result_print_color);
-            //return RES::SUCCESS; //Convergence achieved!
         }
 
         //Handle extra steps for improved accuracy if requested

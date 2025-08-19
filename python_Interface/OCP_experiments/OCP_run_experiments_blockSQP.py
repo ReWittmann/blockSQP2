@@ -87,10 +87,10 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
 Examples = [OCProblems.Batch_Reactor,
             OCProblems.Goddard_Rocket,
             OCProblems.Catalyst_Mixing,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Hanging_Chain,
-            # OCProblems.Cushioned_Oscillation_TSCALE,
-            # OCProblems.Egerstedt_Standard,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Hanging_Chain,
+            OCProblems.Cushioned_Oscillation,
+            OCProblems.Egerstedt_Standard,
             # OCProblems.Electric_Car,
             # OCProblems.Particle_Steering,
             # OCProblems.Three_Tank_Multimode,
@@ -105,10 +105,17 @@ Examples = [OCProblems.Batch_Reactor,
 # opt3.test_opt_2 = 3
 # opt3.automatic_scaling = True
 
-opt1 = opt_SR1_BFGS_seq()
+# opt1 = opt_SR1_BFGS_seq()
 opt2 = opt_conv_str_2_par(max_conv_QPs = 6)
 opt2.automatic_scaling = True
 # opt2.exact_hess = 2
+opt3 = opt_conv_str_2_par(max_conv_QPs = 6)
+opt3.automatic_scaling = True
+# opt3.exact_hess = 2
+# opt3.conv_kappa_max = 64
+QPopts = py_blockSQP.qpOASES_options()
+# QPopts.terminationTolerance = 1e-10
+opt3.qpsol_options = QPopts
 
 # opt3 = opt_conv_str_2_seq()
 # opt4 = opt_conv_str_2_seq()
@@ -121,14 +128,15 @@ Experiments = [
                 # (opt2, "PAR6_test"),
                 # (opt3, "PAR6_scale")
                 # (opt4, "2SEQ4_TEST")
-                (opt1, "SR1-BFGS"),
-                (opt2, "Conv str. 2 par scale")
-                # (opt3, "Conv. Str. 2 nodelay"),
+                # (opt1, "SR1-BFGS"),
+                (opt2, "Conv str. 2 par scale"),
+                (opt3, "Conv. str. 2 par scale QPOTem10")
+                # (opt3, "Conv. Str. 2 par scale ckmax64"),
                 # (opt4, "Conv. Str. 2 delay3")
                ]
 
 
-plot_folder = "/home/reinhold/PLOT/blockSQP_TEST_/"
+plot_folder = "/home/reinhold/PLOT/blockSQP_TEST_TT/"
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
                                         nPert0 = 0, nPertF = 40
