@@ -90,7 +90,7 @@ itMax = 2000
                                              # integrator = 'explicit_euler',
                                              # S_u = 1000.0)
 
-OCprob = OCProblems.Rocket_Landing(nt = 100,
+OCprob = OCProblems.F8_Aircraft(nt = 100,
                     refine = 1,
                     parallel = True,
                     integrator = 'RK4',

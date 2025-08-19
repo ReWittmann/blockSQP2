@@ -53,7 +53,7 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
     for(int i = 0; i < parent->nBlocks + 1; i++)
         blockIdx[i] = parent->blockIdx[i];
     for(int i = parent->nBlocks + 1; i<nBlocks + 1; i++)
-        blockIdx[i] = blockIdx[i-1]+1;
+        blockIdx[i] = blockIdx[i-1] + 1;
 
     /* Set bounds */
     objLo = 0.0;

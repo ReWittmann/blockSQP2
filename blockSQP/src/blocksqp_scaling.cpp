@@ -127,7 +127,6 @@ void SQPmethod::scaling_heuristic(){
     }
     calc_free_variables_scaling(vars->rescaleFactors.get());
     apply_rescaling(vars->rescaleFactors.get());
-    return;
 }
 
 // Apply rescaling to the iterate and the scalable problem specification. 
@@ -205,7 +204,6 @@ void SQPmethod::apply_rescaling(const double *resfactors){
         }
     }
 
-    return;
 }
 
 

@@ -5276,7 +5276,7 @@ returnValue QProblem::performStep(	const real_t* const delta_g,
 		/* print a stepsize warning if stepsize is zero */
 		#ifndef __SUPPRESSANYOUTPUT__
 		snprintf( messageString,MAX_STRING_LENGTH,"Stepsize is %.15e",tau );
-		getGlobalMessageHandler( )->throwWarning( RET_STEPSIZE,messageString,__FUNC__,__FILE__,__LINE__,VS_VISIBLE );
+		//getGlobalMessageHandler( )->throwWarning( RET_STEPSIZE,messageString,__FUNC__,__FILE__,__LINE__,VS_VISIBLE );
 		#endif
 	}
 

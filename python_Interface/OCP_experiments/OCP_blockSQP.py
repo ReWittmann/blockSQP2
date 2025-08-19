@@ -29,7 +29,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+OCprob = OCProblems.F8_Aircraft(nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4', 
