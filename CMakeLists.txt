@@ -28,7 +28,7 @@ include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
-	GIT_TAG 8b6a46501ec1d3c4fecca17c97608a6f2cd218ec
+	GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
 )
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)

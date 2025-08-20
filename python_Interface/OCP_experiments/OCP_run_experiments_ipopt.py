@@ -1,21 +1,21 @@
 import os
 import sys
 try:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    cD = os.path.dirname(os.path.abspath(__file__))
 except:
-    sys.path.append(os.getcwd() + "/..")
+    cD = os.getcwd()
+sys.path += [cD + "/../examples"]
 import OCP_experiment
 import OCProblems
 
-plot_folder = "/home/reinhold/PLOT"
 
-
-Examples = [#OCProblems.Batch_Reactor,
+Examples = [
+            #OCProblems.Batch_Reactor,
             # OCProblems.Goddard_Rocket,
             # OCProblems.Catalyst_Mixing,
             # OCProblems.Lotka_Volterra_Fishing,
             # OCProblems.Hanging_Chain,
-            OCProblems.Cushioned_Oscillation_TSCALE,
+            OCProblems.Cushioned_Oscillation,
             # OCProblems.Egerstedt_Standard,
             # OCProblems.Electric_Car,
             # OCProblems.Particle_Steering,

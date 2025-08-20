@@ -1,9 +1,16 @@
 import os
 import sys
 try:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    cD = os.path.dirname(os.path.abspath(__file__))
 except:
-    sys.path.append(os.getcwd() + "/..")
+    cD = os.getcwd()
+sys.path += [cD + "/..", cD + "/../examples"]
+
+
+# try:
+#     sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+# except:
+#     sys.path.append(os.getcwd() + "/..")
 
 import OCProblems
 import py_blockSQP
@@ -14,6 +21,7 @@ import datetime
 import matplotlib.pyplot as plt
 plt.rcParams["text.usetex"] = True
 import casadi as cs
+import typing
 
 
 class CountCallback(cs.Callback):
@@ -54,35 +62,34 @@ class CountCallback(cs.Callback):
         self.it += 1
         return [0] 
     
-    
 
-def perturbStartPoint(OCP : OCProblems.OCProblem, IND : int, SP : np.array):
-    if (isinstance(OCP, (OCProblems.Goddard_Rocket, OCProblems.Electric_Car, OCProblems.Hang_Glider, OCProblems.Fullers, OCProblems.Tubular_Reactor, OCProblems.Cart_Pendulum))):
-        val = OCP.get_stage_control(SP, IND)
-        OCP.set_stage_control(SP, IND, val - 0.1)
+# def perturbStartPoint(OCP : OCProblems.OCProblem, IND : int, SP : np.array):
+#     if (isinstance(OCP, (OCProblems.Goddard_Rocket, OCProblems.Electric_Car, OCProblems.Hang_Glider, OCProblems.Fullers, OCProblems.Tubular_Reactor, OCProblems.Cart_Pendulum))):
+#         val = OCP.get_stage_control(SP, IND)
+#         OCP.set_stage_control(SP, IND, val - 0.1)
     
-    #For catalyst mixing, Lotka (OED) and cushioned oscillation
-    if (isinstance(OCP, (OCProblems.Lotka_Volterra_Fishing, OCProblems.Catalyst_Mixing, OCProblems.Lotka_OED, OCProblems.Cushioned_Oscillation, OCProblems.Egerstedt_Standard, OCProblems.Particle_Steering, OCProblems.Time_Optimal_Car))):
-        OCP.set_stage_control(SP, IND, 0.1)
+#     #For catalyst mixing, Lotka (OED) and cushioned oscillation
+#     if (isinstance(OCP, (OCProblems.Lotka_Volterra_Fishing, OCProblems.Catalyst_Mixing, OCProblems.Lotka_OED, OCProblems.Cushioned_Oscillation, OCProblems.Egerstedt_Standard, OCProblems.Particle_Steering, OCProblems.Time_Optimal_Car))):
+#         OCP.set_stage_control(SP, IND, 0.1)
     
-    #For hanging chain
-    if (isinstance(OCP, (OCProblems.Hanging_Chain, OCProblems.Van_der_Pol_Oscillator_3))):
-        val = OCP.get_stage_control(SP, IND)
-        OCP.set_stage_control(SP, IND, val + 0.1)
+#     #For hanging chain
+#     if (isinstance(OCP, (OCProblems.Hanging_Chain, OCProblems.Van_der_Pol_Oscillator_3))):
+#         val = OCP.get_stage_control(SP, IND)
+#         OCP.set_stage_control(SP, IND, val + 0.1)
     
-        #For batch reactor
-    if (isinstance(OCP, OCProblems.Batch_Reactor)):
-        OCP.set_stage_control(SP, IND, 300.)
+#         #For batch reactor
+#     if (isinstance(OCP, OCProblems.Batch_Reactor)):
+#         OCP.set_stage_control(SP, IND, 300.)
 
-    #For batch distillation
-    if (isinstance(OCP, OCProblems.Batch_Distillation)):
-        OCP.set_stage_control(SP, IND, 1.5)
+#     #For batch distillation
+#     if (isinstance(OCP, OCProblems.Batch_Distillation)):
+#         OCP.set_stage_control(SP, IND, 1.5)
     
-    if (isinstance(OCP, OCProblems.Three_Tank_Multimode)):
-        OCP.set_stage_control(SP, IND, [0.5, 0.25, 0.25])
+#     if (isinstance(OCP, OCProblems.Three_Tank_Multimode)):
+#         OCP.set_stage_control(SP, IND, [0.5, 0.25, 0.25])
 
 
-def create_prob_cond(OCprob : OCProblems.OCProblem):
+def create_prob_cond(OCprob : typing.Type[OCProblems.OCProblem]):
     vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
     cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
     hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
@@ -116,7 +123,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     prob.vblocks = vBlocks
     return prob, cond, HOLD
 
-def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
+def perturbed_starts(OCprob : typing.Type[OCProblems.OCProblem], opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
     N_SQP = []
     N_secs = []
     type_sol = []
@@ -151,7 +158,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
             type_sol.append(-1)    
     return N_SQP, N_secs, type_sol
 
-def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 200):
+def ipopt_perturbed_starts(OCprob : typing.Type[OCProblems.OCProblem], ipopts : dict, nPert0, nPertF, itMax = 200):
     NLP = OCprob.NLP
     counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
     opts = {'iteration_callback': counter}
@@ -176,7 +183,6 @@ def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0,
         else:
             type_sol.append(1)
         N_secs.append(t1 - t0)
-    
     return N_SQP, N_secs, type_sol
 
 
@@ -298,7 +304,6 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         pref = "" if savePrefix is None else savePrefix
         
         plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
-        
 
 def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
     n_xticks = 10
@@ -318,7 +323,6 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     EXP_N_secs_part = [[EXP_N_secs[i][j] for j in range(nPertF - nPert0) if EXP_type_sol[i][j] == 0] for i in range(n_EXP)]
     EXP_N_secs_fail = [[EXP_N_secs[i][j] for j in range(nPertF - nPert0) if EXP_type_sol[i][j] < 0] for i in range(n_EXP)]
 
-    
     EXP_N_SQP_clean = [[EXP_N_SQP[i][j] for j in range(nPertF - nPert0) if EXP_type_sol[i][j] >= 0] for i in range(n_EXP)]
     EXP_N_secs_clean = [[EXP_N_secs[i][j] for j in range(nPertF - nPert0) if EXP_type_sol[i][j] >= 0] for i in range(n_EXP)]
 
@@ -380,20 +384,18 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
-        
         plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
 
 
-
 def print_heading(out, EXP_names : list[str]):
+    out.write(" "*27)
     for EXP_name in EXP_names:
-        out.write(" "*27 + EXP_name[0:21].ljust(21 + 5))
+        out.write(EXP_name[0:40].ljust(21 + 5 + 27))
     out.write("\n" + " "*27)
     for i in range(len(EXP_names)):
         out.write("mu_N".ljust(10) + "sigma_N".ljust(11) + "mu_t".ljust(10) + "sigma_t".ljust(11))
         if i < len(EXP_names) - 1:
             out.write("|".ljust(5))
-    
     out.write("\n")
     
 def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
@@ -441,9 +443,7 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
     for OCclass in Examples:        
         OCprob = OCclass(nt=100, integrator='RK4')
         itMax = 200
-        # ipopts_base = {'max_iter':itMax, 'tol':1e-5}
         ipopts_base = {'max_iter':itMax}
-        # titles = []
         EXP_N_SQP = []
         EXP_N_secs = []
         EXP_type_sol = []
@@ -455,7 +455,6 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
             EXP_N_SQP.append(ret_N_SQP)
             EXP_N_secs.append(ret_N_secs)
             EXP_type_sol.append(ret_type_sol)
-            # titles.append(EXP_name)
             n_EXP += 1
         ###############################################################################
         plot_successful(n_EXP, nPert0, nPertF,\

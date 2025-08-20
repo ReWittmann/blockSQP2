@@ -4,15 +4,16 @@ import sys
 import time
 import copy
 try:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
+    cD = os.path.dirname(os.path.abspath(__file__))
 except:
-    sys.path.append(os.getcwd() + "/..")
+    cD = os.getcwd()
+sys.path += [cD + "/.."]
 
 import py_blockSQP
 import matplotlib.pyplot as plt
 
 itMax = 100
-step_plots = False
+step_plots = True
 # step_plots = True
 plot_title = True
 
@@ -29,7 +30,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.F8_Aircraft(nt = 100, 
+OCprob = OCProblems.Cushioned_Oscillation(nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4', 
@@ -40,12 +41,6 @@ OCprob = OCProblems.F8_Aircraft(nt = 100,
                     # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
                     )
 
-
-#Bad local optimum
-# for i in range(22,24):
-#     OCprob.set_stage_control(OCprob.start_point, i, 15)
-# for i in range(25,35):
-#     OCprob.set_stage_control(OCprob.start_point, i, -15)
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -70,7 +65,6 @@ opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
 # opts.conv_kappa_max = 8
-# opts.reg_factor = 1e-7
 
 opts.automatic_scaling = True
 
@@ -86,7 +80,7 @@ QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
 ################################
 
-#Create condenser, chose SCQPmethod below to enable condensing
+#Create condenser, pass as cond attribute of problem specification to enable condensing
 vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
 cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
 hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
@@ -99,7 +93,6 @@ for i in range(len(OCprob.hessBlock_sizes)):
     hBlocks[i] = OCprob.hessBlock_sizes[i]
 targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
 cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
-
 
 
 #Define blockSQP Problemspec
@@ -120,13 +113,8 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 prob.vblocks = vBlocks
 # prob.cond = cond
 
-# import copy
-# sp = copy.copy(OCprob.start_point)
-# OCprob.integrate_full(sp)
-# prob.x_start = sp
 
 prob.x_start = OCprob.start_point
-
 
 
 
@@ -141,8 +129,8 @@ scale_arr = 1.0;
 # scale = py_blockSQP.double_array(OCprob.nVar)
 # scale_arr = np.array(scale, copy = False)
 # scale_arr[:] = 1.0
-# # for i in range(OCprob.ntS + 1):
-# #     OCprob.set_stage_state(scale_arr, i, [0.00001,1.0,0.00001,0.00001,0.1])
+# for i in range(OCprob.ntS + 1):
+#     OCprob.set_stage_state(scale_arr, i, [0.00001,1.0,0.00001,0.00001,0.1])
 # for i in range(OCprob.ntS):
 #     OCprob.set_stage_control(scale_arr, i, 100.0)
 # prob.arr_set_scale(scale)

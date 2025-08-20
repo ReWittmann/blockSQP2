@@ -158,10 +158,6 @@ class OCProblem:
     odesol_multi : object #odesol_refined mapped over all shooting intervals
     odesol_full : object #odesol_refC map-accumulated over all shooting intervals
     
-    
-    F_xf : cs.MX
-    F_qf : cs.MX
-    
     #Expressions for building the objective and constraints
     x_eval : cs.MX # State values composed of state variables x_k and intermediate state values F_k(t_k_j, x_k), excluding a fixed initial value
     q_eval : cs.MX # Quadrature values for each control interval
@@ -172,11 +168,15 @@ class OCProblem:
     p_tf : cs.MX # The localized parameter of the last interval
     
     cont_cond_expr : cs.MX
+    
+    #List of constraint expressions and the associated bounds
     constr_arr : list[cs.MX]
     lbc_arr : list
     ubc_arr : list
     
-    
+    #Symbolic integrator output
+    F_xf : cs.MX
+    F_qf : cs.MX
     
     def __init__(self, nt = 100, refine = 1, integrator = 'rk4', parallel = False, N_threads = 4, **kwargs):
         if hasattr(self, 'default_params'):
@@ -801,6 +801,7 @@ class Lotka_Volterra_Fishing(OCProblem):
         plt.xlabel('x')
         
         plt.show()
+        plt.close()
 
 
 class Lotka_Volterra_Fishing_MAYER(OCProblem):
@@ -861,6 +862,7 @@ class Lotka_Volterra_Fishing_MAYER(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 class Lotka_Volterra_multimode(OCProblem):
@@ -921,6 +923,7 @@ class Lotka_Volterra_multimode(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
     
 
 class Lotka_Volterra_Foodsource(OCProblem):
@@ -985,6 +988,7 @@ class Lotka_Volterra_Foodsource(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 class Lotka_Volterra_Competitive(OCProblem):
     default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[0.5, 1.5]}
@@ -1045,6 +1049,7 @@ class Lotka_Volterra_Competitive(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 class Goddard_Rocket(OCProblem):
     default_params = {
@@ -1144,9 +1149,10 @@ class Goddard_Rocket(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
         
 #Goddard rocket with only state and control bounds by adding the air friction as a differential state.
-#Formulated by my colleague, NOT me!
+#Formulated by my colleague, NOT me! Still works, somehow...
 class Goddard_Rocket_TROLL(Goddard_Rocket):
     default_params = {
         'rT':1.01, 
@@ -1230,6 +1236,7 @@ class Goddard_Rocket_TROLL(Goddard_Rocket):
             plt.title('')
             
         plt.show()
+        plt.close()
         
 
 class Calcium_Oscillation(OCProblem):
@@ -1333,6 +1340,7 @@ class Calcium_Oscillation(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
         
 class Batch_Reactor(OCProblem):
     default_params = {}
@@ -1393,6 +1401,7 @@ class Batch_Reactor(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
         
     
 class Bioreactor(OCProblem):
@@ -1473,6 +1482,7 @@ class Bioreactor(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
         
         
 class Hanging_Chain(OCProblem):
@@ -1541,6 +1551,7 @@ class Hanging_Chain(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 class Hanging_Chain_MAYER(Hanging_Chain):
@@ -1613,6 +1624,7 @@ class Hanging_Chain_MAYER(Hanging_Chain):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 
@@ -1668,6 +1680,7 @@ class Catalyst_Mixing(OCProblem):
             plt.title('')
         
         plt.show()
+        plt.close()
 
 
 #Continuously Stirred Tank Reactor
@@ -1743,6 +1756,7 @@ class Catalyst_Mixing(OCProblem):
 #         plt.plot(self.time_grid, thetaK/10, 'c-', label = 'thetaK/10')
 #         plt.legend(fontsize='large')
 #         plt.show()
+#         plt.close()
         
 
 class Cushioned_Oscillation(OCProblem):
@@ -1762,6 +1776,7 @@ class Cushioned_Oscillation(OCProblem):
         self.ODE = {'x':X, 'p':cs.vertcat(p,u), 'ode':dt*ode_rhs}
         self.multiple_shooting()
         self.set_objective(self.ntS*self.p_tf)
+        # self.set_objective(self.p_tf)
         self.add_constraint(cs.vec(self.x_eval[:,-1] - cs.DM([0.,0.])),[0.,0.],[0.,0.])
         
         self.build_NLP()
@@ -1800,6 +1815,7 @@ class Cushioned_Oscillation(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
         
         
 class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
@@ -1858,6 +1874,7 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
         else:
             plt.title('')
         plt.show()
+        plt.close()
         
 #Cvodes recommended
 class D_Onofrio_Chemotherapy(OCProblem):
@@ -1965,7 +1982,8 @@ class D_Onofrio_Chemotherapy(OCProblem):
         else:
             plt.title('')
             
-        plt.show()    
+        plt.show()   
+        plt.close()
     
 class D_Onofrio_Chemotherapy_VT(OCProblem):
     default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0.}
@@ -2064,7 +2082,8 @@ class D_Onofrio_Chemotherapy_VT(OCProblem):
         else:
             plt.title('')
             
-        plt.show()   
+        plt.show()  
+        plt.close()
              
         
 
@@ -2134,6 +2153,7 @@ class Egerstedt_Standard(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 class Egerstedt_Standard_MAYER(Egerstedt_Standard):
@@ -2201,6 +2221,7 @@ class Egerstedt_Standard_MAYER(Egerstedt_Standard):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 
@@ -2259,6 +2280,7 @@ class Fullers(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 class Electric_Car(OCProblem):
     default_params = {
@@ -2338,6 +2360,7 @@ class Electric_Car(OCProblem):
         
         plt.legend(fontsize='large')
         plt.show()
+        plt.close()
         
 
 class F8_Aircraft(OCProblem):
@@ -2397,6 +2420,7 @@ class F8_Aircraft(OCProblem):
             plt.title('')
         
         plt.show()
+        plt.close()
 
 
 
@@ -2494,6 +2518,7 @@ class Gravity_Turn(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 #TODO: Revisit
 class Oil_Shale_Pyrolysis(OCProblem):
@@ -2574,6 +2599,7 @@ class Oil_Shale_Pyrolysis(OCProblem):
         
 
         plt.show()
+        plt.close()
 
 
 
@@ -2639,6 +2665,7 @@ class Particle_Steering(OCProblem):
             plt.title('')
         
         plt.show()
+        plt.close()
     
 class Quadrotor_Helicopter(OCProblem):
     default_params = {'g':9.8,'M':1.3,'L':0.305,'I':0.0605}
@@ -2708,6 +2735,7 @@ class Quadrotor_Helicopter(OCProblem):
             plt.title('')
         
         plt.show()
+        plt.close()
     
 
 class Supermarket_Refrigeration(OCProblem):
@@ -2812,6 +2840,7 @@ class Supermarket_Refrigeration(OCProblem):
             plt.title('')
         
         plt.show()
+        plt.close()
         
     
 class Three_Tank_Multimode(OCProblem):
@@ -2876,6 +2905,7 @@ class Three_Tank_Multimode(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 class Three_Tank_Multimode_MAYER(Three_Tank_Multimode):
@@ -2941,6 +2971,7 @@ class Three_Tank_Multimode_MAYER(Three_Tank_Multimode):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 class Time_Optimal_Car(OCProblem):
@@ -3000,6 +3031,7 @@ class Time_Optimal_Car(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
         
 class Van_der_Pol_Oscillator(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
@@ -3051,6 +3083,7 @@ class Van_der_Pol_Oscillator(OCProblem):
             plt.title('')
             
         plt.show()
+        plt.close()
 
 
 class Van_der_Pol_Oscillator_2(OCProblem):
@@ -3103,6 +3136,7 @@ class Van_der_Pol_Oscillator_2(OCProblem):
             plt.title('')
             
         plt.show()    
+        plt.close()
 
 class Van_der_Pol_Oscillator_3(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
@@ -3158,6 +3192,7 @@ class Van_der_Pol_Oscillator_3(OCProblem):
             plt.title('')
             
         plt.show()    
+        plt.close()
         
 
 
@@ -3214,6 +3249,7 @@ class Van_der_Pol_Oscillator_3_MAYER(OCProblem):
             plt.title('')
             
         plt.show()   
+        plt.close()
 
 
 # TODO check problem formulation
@@ -3365,6 +3401,7 @@ class Lotka_OED(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
         
         
     def plot_sensitivities(self, xi, dpi=None, title=None, it=None):
@@ -3390,7 +3427,7 @@ class Lotka_OED(OCProblem):
         else:
             plt.title('')
         plt.show()
-
+        plt.close()
 
 class Fermenter(OCProblem):
     #Janka PhD and Le master's thesis params
@@ -3487,6 +3524,7 @@ class Fermenter(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 class Batch_Distillation(OCProblem):
@@ -3623,6 +3661,7 @@ class Batch_Distillation(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
         
 
 class Hang_Glider(OCProblem):
@@ -3707,6 +3746,7 @@ class Hang_Glider(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
     
 class Tubular_Reactor(OCProblem):
     def build_problem(self):
@@ -3753,6 +3793,7 @@ class Tubular_Reactor(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
         
 
 class Tubular_Reactor_MAYER(Tubular_Reactor):
@@ -3802,6 +3843,7 @@ class Tubular_Reactor_MAYER(Tubular_Reactor):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 class Cart_Pendulum(OCProblem):
@@ -3877,6 +3919,7 @@ class Cart_Pendulum(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 #Differential state 1 is stiff, approximating its lower bound of 0, so an implicit integrator is required.
@@ -3962,6 +4005,7 @@ class Denbigh_Reaction(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 class Clinic_Scheduling(OCProblem):    
@@ -4055,6 +4099,7 @@ class Clinic_Scheduling(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 class Rocket_Landing(OCProblem):    
@@ -4212,6 +4257,7 @@ class Rocket_Landing(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 class Satellite_Deorbiting_1(OCProblem):
@@ -4363,6 +4409,7 @@ class Satellite_Deorbiting_1(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 #Doent work well (flat objective due to very low control shifting sensitivity)
@@ -4528,6 +4575,7 @@ class Satellite_Deorbiting_2(OCProblem):
         else:
             plt.title('')
         plt.show()
+        plt.close()
 
 
 #Not working yet
@@ -4614,7 +4662,8 @@ class Satellite_Deorbiting_2(OCProblem):
 #             plt.title(ttl)
 #         else:
 #             plt.title('')
-#         plt.show()
+#        plt.show()
+#        plt.close()
 
 
 
