@@ -19,8 +19,8 @@ import OCProblems
 
 
 Examples = [
-            # OCProblems.Batch_Reactor,
-            # OCProblems.Catalyst_Mixing,
+            OCProblems.Batch_Reactor,
+            OCProblems.Catalyst_Mixing,
             OCProblems.Cushioned_Oscillation,
             OCProblems.Egerstedt_Standard,
             OCProblems.Electric_Car,
@@ -29,7 +29,7 @@ Examples = [
             OCProblems.Lotka_Volterra_Fishing,
             OCProblems.Particle_Steering,
             OCProblems.Three_Tank_Multimode,
-            # OCProblems.Lotka_OED,
+            OCProblems.Lotka_OED,
             ]
 
 ipopt_Experiments = [
