@@ -2890,7 +2890,8 @@ class Three_Tank_Multimode(OCProblem):
         plt.step(self.time_grid_ref, w1, 'y-', label = r'$w_1$')
         plt.step(self.time_grid_ref, w2, 'r-', label = r'$w_2$')
         plt.step(self.time_grid_ref, w3, 'grey', label = r'$w_3$')
-        plt.legend(fontsize = 'x-large', loc = 'upper right')
+        # plt.legend(fontsize = 'x-large', loc = 'upper right')
+        plt.legend(prop={'size': 13.4}, loc = 'upper right')
         
         ttl = None
         if isinstance(title,str):
@@ -3159,9 +3160,9 @@ class Van_der_Pol_Oscillator_3(OCProblem):
         self.build_NLP()
         for i in range(self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
-            self.set_stage_control(self.start_point, i, [0.5])
+            self.set_stage_control(self.start_point, i, [0.])
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        self.integrate_full(self.start_point)
+        # self.integrate_full(self.start_point)
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
@@ -3473,7 +3474,7 @@ class Fermenter(OCProblem):
                 mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
                 uS1 + uS2 - uP,
                 -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
-                uP + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),#P,
+                uP*P + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),#P,
                 0.0168*uS1,
                 0.01332*uS2
         )
@@ -3487,7 +3488,7 @@ class Fermenter(OCProblem):
 
         self.build_NLP()
         for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [14*(self.ntS - 1 - i)/(self.ntS-1), 0.7, 0.5])
+            self.set_stage_control(self.start_point, i, [0., 0., 0.])
         self.integrate_full(self.start_point)
     
     def perturbed_start_point(self, ind):
@@ -3501,17 +3502,17 @@ class Fermenter(OCProblem):
         uS1,uS2,uP = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, uS1/15, 'r', label = 'uS1/15')
-        plt.step(self.time_grid_ref, uS2/10, 'g', label = 'uS2/10')
-        plt.step(self.time_grid_ref, uP/30, 'b', label = 'uP/30')
+        plt.step(self.time_grid_ref, uS1/5., 'r', label = 'uS1/5.')
+        plt.step(self.time_grid_ref, uS2/15., 'g', label = 'uS2/15.')
+        plt.step(self.time_grid_ref, uP/60., 'b', label = 'uP/60.')
         
-        plt.plot(self.time_grid, P, 'r--', label = 'P')
+        plt.plot(self.time_grid, P*10., 'r--', label = r'$P\cdot 10.$')
         plt.plot(self.time_grid, S1, 'g-.', label = 'S1')
         plt.plot(self.time_grid, S2, 'b:', label = 'S2')
         plt.plot(self.time_grid, E, 'y--', label = 'E')
         plt.plot(self.time_grid, V/3, 'c-.', label = 'V/3')
         plt.plot(self.time_grid, G, 'm:', label = 'G')
-        plt.legend(fontsize='large')
+        plt.legend(fontsize='medium', loc = 'upper center')
         ttl = None
         if isinstance(title,str):
             ttl = title

@@ -12,7 +12,6 @@ import OCP_experiment
 import OCProblems
 
 
-
 Examples = [
             OCProblems.Batch_Reactor,
             OCProblems.Goddard_Rocket,

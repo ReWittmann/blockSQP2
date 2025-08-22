@@ -13,7 +13,7 @@ import py_blockSQP
 import matplotlib.pyplot as plt
 
 itMax = 100
-step_plots = True
+step_plots = False
 # step_plots = True
 plot_title = True
 
@@ -30,7 +30,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.Cushioned_Oscillation(nt = 100, 
+OCprob = OCProblems.Van_der_Pol_Oscillator_3(nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4', 
@@ -45,7 +45,7 @@ OCprob = OCProblems.Cushioned_Oscillation(nt = 100,
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
-opts.max_QP_secs = 5.0
+opts.max_QP_secs = 10.0
 
 opts.max_conv_QPs = 6
 opts.conv_strategy = 2
@@ -64,13 +64,13 @@ opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
-# opts.conv_kappa_max = 8
+opts.conv_kappa_max = 8.
 
 opts.automatic_scaling = True
 
-opts.max_extra_steps = 10
+opts.max_extra_steps = 0
 opts.enable_premature_termination = True
-opts.max_filter_overrides = 2
+opts.max_filter_overrides = 3
 
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
@@ -92,7 +92,7 @@ for i in range(len(OCprob.cBlock_sizes)):
 for i in range(len(OCprob.hessBlock_sizes)):
     hBlocks[i] = OCprob.hessBlock_sizes[i]
 targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
-cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
+cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets, 2)
 
 
 #Define blockSQP Problemspec

@@ -24,6 +24,18 @@ if(WIN32)
 	add_compile_options(/MT)
 endif()
 
+
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+message(STATUS "BLAS_FOUND = ${BLAS_FOUND}")
+message(STATUS "BLAS_LIBRARIES = ${BLAS_LIBRARIES}")
+message(STATUS "BLAS_LINKER_FLAGS = ${BLAS_LINKER_FLAGS}")
+message(STATUS "LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
+
+set(BLAS_LIBRARY ${BLAS_LIBRARIES})
+set(LAPACK_LIBRARY ${LAPACK_LIBRARIES})
+
+#NOTE: Set LAPACK_LIBRARY beforehand to force CMakeMumps to use that LAPACK_LIBRARY. Dont forget to link BLAS
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
@@ -70,10 +82,9 @@ add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/SolutionAnalysis.cpp
 	)
 
-
 #MUMPS LINEAR SOLVER
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS) #LAPACK and BLAS dependencies are already resolved by CMakeMumps and passed on
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS BLAS::BLAS)
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
 	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)

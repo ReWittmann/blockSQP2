@@ -682,7 +682,10 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
     .def_readwrite("par_QPs", &blockSQP::SQPoptions::par_QPs)
     .def_readwrite("enable_QP_cancellation", &blockSQP::SQPoptions::enable_QP_cancellation)
     .def_readwrite("test_opt_1", &blockSQP::SQPoptions::test_opt_1)
-    .def_readwrite("test_qp_hotstart", &blockSQP::SQPoptions::test_qp_hotstart)
+    .def_readwrite("test_opt_2", &blockSQP::SQPoptions::test_opt_2)
+    .def_readwrite("test_opt_3", &blockSQP::SQPoptions::test_opt_3)
+    .def_readwrite("test_opt_4", &blockSQP::SQPoptions::test_opt_4)
+    .def_readwrite("test_opt_5", &blockSQP::SQPoptions::test_opt_5)
     .def_readwrite("indef_delay", &blockSQP::SQPoptions::indef_delay)
 	;
 

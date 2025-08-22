@@ -51,7 +51,7 @@ opts.automatic_scaling = True
 
 opts.max_extra_steps = 0
 opts.enable_premature_termination = False
-opts.max_filter_overrides = 2
+opts.max_filter_overrides = 3
 
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
@@ -96,18 +96,19 @@ optimizer.init()
 
 ret = optimizer.run(100)
 xi = np.array(optimizer.get_xi()).reshape(-1)
-OCprob.plot(xi)
+OCprob.plot(xi, dpi=200)
 
+print("Optimality and feasibility error without additional steps: ", optimizer.vars.tol, ", ", optimizer.vars.cNorm, "\n")
 
 #Enable new termination features
 opts.max_extra_steps = 10
 opts.enable_premature_termination = True
-opts.max_filter_overrides = 2
+opts.max_filter_overrides = 3
 
 
 optimizer2 = py_blockSQP.SQPmethod(prob, opts, stats)
 optimizer2.init()
 ret = optimizer2.run(100)
 xi_accurate = np.array(optimizer2.get_xi()).reshape(-1)
-OCprob.plot(xi_accurate)
+OCprob.plot(xi_accurate,dpi=200)
 

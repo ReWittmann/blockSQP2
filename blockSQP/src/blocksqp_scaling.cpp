@@ -31,7 +31,7 @@
 
 
 //Algorithm 2 from paper, calculate scaling factor for free variables
-void SQPmethod::calc_free_variables_scaling(double *arg_SF){
+void SQPmethod::calc_free_variables_scaling(double *ret_SF){
     int nIt, pos, nfree = prob->nVar, ind_1, scfree, scdep, count_delta = 0, count_gamma = 0;
     double bardelta_u, bardelta_x, bargamma_u, bargamma_x, S_u, rgamma = 0., rdelta = 0.;
 
@@ -85,10 +85,26 @@ void SQPmethod::calc_free_variables_scaling(double *arg_SF){
     //If no scaling information was accumulated, rdelta is set to 1.0 => all scaling factors are 1.0
     rdelta = (count_delta > 0) ? std::exp(rdelta/count_delta) : 1.0;
     rgamma = (count_gamma > 0) ? std::exp(rgamma/count_gamma) : 1.0;
-
+    /*
+    if (param->test_opt_1){
+        S_u = -1.0;
+        if (rgamma > param->test_opt_3){
+            S_u = rgamma/param->test_opt_3;
+        }
+        else if (rgamma < param->test_opt_2){
+            if (rdelta > param->test_opt_2){
+                if (rgamma < 0.1*param->test_opt_2) S_u = 10.0*rgamma;
+                else S_u = std::min(param->test_opt_2, rdelta*rgamma);
+            }
+            else{
+                S_u = rgamma;
+            }
+        }
+    }
+    else{*/
     S_u = -1.0;
-    if (rgamma > 2.0){
-        S_u = rgamma/2.0;
+    if (rgamma > 10.0){
+        S_u = rgamma/10.0;
     }
     else if (rgamma < 1.0){
         if (rdelta > 1.0){
@@ -99,14 +115,14 @@ void SQPmethod::calc_free_variables_scaling(double *arg_SF){
             S_u = rgamma;
         }
     }
-
+    //}
     if (S_u > 0){
         vars->vfreeScale *= S_u;
         ind_1 = 0;
         for (int k = 0; k < prob->n_vblocks; k++){
             if (!prob->vblocks[k].dependent){
                 for (int i = 0; i < prob->vblocks[k].size; i++){
-                    arg_SF[ind_1 + i] *= S_u;
+                    ret_SF[ind_1 + i] *= S_u;
                 }
             }
             ind_1 += prob->vblocks[k].size;

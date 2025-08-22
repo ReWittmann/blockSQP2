@@ -10,17 +10,17 @@ import OCProblems
 
 
 Examples = [
-            #OCProblems.Batch_Reactor,
-            # OCProblems.Goddard_Rocket,
-            # OCProblems.Catalyst_Mixing,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Hanging_Chain,
+            OCProblems.Batch_Reactor,
+            OCProblems.Catalyst_Mixing,
             OCProblems.Cushioned_Oscillation,
-            # OCProblems.Egerstedt_Standard,
-            # OCProblems.Electric_Car,
-            # OCProblems.Particle_Steering,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Lotka_OED
+            OCProblems.Egerstedt_Standard,
+            OCProblems.Electric_Car,
+            OCProblems.Goddard_Rocket,
+            OCProblems.Hanging_Chain,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Particle_Steering,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Lotka_OED,
             ]
 Experiments = [
                 #({'hessian_approximation': 'limited-memory', 'limited_memory_max_history':12}, "Ipopt, limited-memory BFGS"),

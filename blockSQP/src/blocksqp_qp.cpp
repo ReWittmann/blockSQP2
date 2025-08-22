@@ -359,7 +359,9 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     
     // Set time at which still running QPs get terminated. 
     // To prevent too many "good" QPs from being terminated, increase allowed time with successive terminations
-    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1 + vars->N_QP_cancels)).count() + 2000);
+    //steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1 + vars->N_QP_cancels)).count() + 2000);
+    
+    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1.0 + 0.5*vars->N_QP_cancels)).count() + 2000);
     
     bool QP_cancelled = false;
     if (param->enable_QP_cancellation){

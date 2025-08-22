@@ -45,19 +45,12 @@ opts.lim_mem = True
 opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
-# opts.conv_kappa_max = 8
 
 opts.automatic_scaling = False
 
 opts.max_extra_steps = 0
 opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
-
-# opts.qpsol = 'qpOASES'
-# QPopts = py_blockSQP.qpOASES_options()
-# QPopts.printLevel = 0
-# QPopts.sparsityLevel = 2
-# opts.qpsol_options = QPopts
 
 
 vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
@@ -100,7 +93,7 @@ xi = np.array(optimizer.get_xi()).reshape(-1)
 OCprob.plot(xi, dpi=200)
 
 
-#Scale x1 by 0.01, x2 by 100.0
+### Scale x1 by 0.01, x2 by 100.0 ###
 prob2 = py_blockSQP.scaled_Problemspec(prob)
 scale = py_blockSQP.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
@@ -108,15 +101,13 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_state(scale_arr, i, [0.01, 100.0])
 prob2.arr_set_scale(scale)
-####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
 optimizer2 = py_blockSQP.SQPmethod(prob2, opts, stats)
 optimizer2.init()
-
 ret = optimizer2.run(100)
 
 
-#Vice versa
+### Vice versa ###
 prob3 = py_blockSQP.scaled_Problemspec(prob)
 scale = py_blockSQP.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
@@ -124,17 +115,13 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_state(scale_arr, i, [100.0, 0.01])
 prob3.arr_set_scale(scale)
-####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
 optimizer3 = py_blockSQP.SQPmethod(prob3, opts, stats)
 optimizer3.init()
-
 ret = optimizer3.run(100)
 
 
-###TODO: Plots with correct scale of u
-
-#u scaled by 10
+### u scaled by 10 ###
 prob4 = py_blockSQP.scaled_Problemspec(prob)
 scale = py_blockSQP.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
@@ -142,17 +129,26 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS):
     OCprob.set_stage_control(scale_arr, i, 10.0)
 prob4.arr_set_scale(scale)
-####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
 optimizer4 = py_blockSQP.SQPmethod(prob4, opts, stats)
 optimizer4.init()
-
 ret = optimizer4.run(10)
 xi = np.array(optimizer4.get_xi()).reshape(-1)
-OCprob.plot(xi, dpi=200)
+
+x1,x2 = OCprob.get_state_arrays(xi)
+u = OCprob.get_control_plot_arrays(xi)
+plt.figure(dpi=200)
+plt.plot(OCprob.time_grid, x1, 'g-.', label = '$x_1$')
+plt.plot(OCprob.time_grid, x2, 'b--', label = '$x_2$')
+plt.step(OCprob.time_grid_ref, u/10, 'r-', label = r'$u\cdot 0.1$')
+plt.legend(fontsize='large')
+plt.show()
+plt.close()
+
 ret = optimizer4.run(90,1)
 
-#u scaled by 100
+
+### u scaled by 100 ###
 prob5 = py_blockSQP.scaled_Problemspec(prob)
 scale = py_blockSQP.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
@@ -160,12 +156,20 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_control(scale_arr, i, 100.0)
 prob5.arr_set_scale(scale)
-####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
 optimizer5 = py_blockSQP.SQPmethod(prob5, opts, stats)
 optimizer5.init()
-
 ret = optimizer5.run(10)
 xi = np.array(optimizer5.get_xi()).reshape(-1)
-OCprob.plot(xi, dpi=200)
+
+x1,x2 = OCprob.get_state_arrays(xi)
+u = OCprob.get_control_plot_arrays(xi)
+plt.figure(dpi=200)
+plt.plot(OCprob.time_grid, x1, 'g-.', label = r'$x_1$')
+plt.plot(OCprob.time_grid, x2, 'b--', label = r'$x_2$')
+plt.step(OCprob.time_grid_ref, u/100, 'r-', label = r'$u \cdot 0.01$')
+plt.legend(fontsize='large')
+plt.show()
+plt.close()
+
 ret = optimizer5.run(90,1)

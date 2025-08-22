@@ -11,7 +11,7 @@ import time
 itMax = 2000
 
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100,
+OCprob = OCProblems.Van_der_Pol_Oscillator_3(nt = 100,
                     refine = 1,
                     parallel = True,
                     integrator = 'RK4',

@@ -21,7 +21,6 @@ import datetime
 import matplotlib.pyplot as plt
 plt.rcParams["text.usetex"] = True
 import casadi as cs
-import typing
 
 
 class CountCallback(cs.Callback):
@@ -88,8 +87,7 @@ class CountCallback(cs.Callback):
 #     if (isinstance(OCP, OCProblems.Three_Tank_Multimode)):
 #         OCP.set_stage_control(SP, IND, [0.5, 0.25, 0.25])
 
-
-def create_prob_cond(OCprob : typing.Type[OCProblems.OCProblem]):
+def create_prob_cond(OCprob : OCProblems.OCProblem):
     vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
     cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
     hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
@@ -121,9 +119,10 @@ def create_prob_cond(OCprob : typing.Type[OCProblems.OCProblem]):
     prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
     prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
     prob.vblocks = vBlocks
+    
     return prob, cond, HOLD
 
-def perturbed_starts(OCprob : typing.Type[OCProblems.OCProblem], opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
+def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
     N_SQP = []
     N_secs = []
     type_sol = []
@@ -138,6 +137,23 @@ def perturbed_starts(OCprob : typing.Type[OCProblems.OCProblem], opts : py_block
             prob.cond = cond
         
         prob.complete()
+
+
+        # prob_unscaled = prob
+        # prob = py_blockSQP.scaled_Problemspec(prob)
+        # scale = py_blockSQP.double_array(OCprob.nVar)
+        # scale_arr = np.array(scale, copy = False)
+        # scale_arr[:] = 1.0
+        # # for i in range(OCprob.ntS + 1):
+        # #     OCprob.set_stage_state(scale_arr, i, [0.00001,1.0,0.00001,0.00001,0.1])
+        # # for i in range(OCprob.ntS):
+        # #     OCprob.set_stage_control(scale_arr, i, [0.01, 1.0, 1.0])
+        # # for i in range(OCprob.ntS):
+        # #     OCprob.set_stage_param(scale_arr, i, [10.0])
+        # # for i in range(OCprob.ntS):
+        # #     OCprob.set_stage_control(scale_arr, i, [0.1])
+        # prob.arr_set_scale(scale)
+
 
         stats = py_blockSQP.SQPstats("./solver_outputs")
         
@@ -158,7 +174,7 @@ def perturbed_starts(OCprob : typing.Type[OCProblems.OCProblem], opts : py_block
             type_sol.append(-1)    
     return N_SQP, N_secs, type_sol
 
-def ipopt_perturbed_starts(OCprob : typing.Type[OCProblems.OCProblem], ipopts : dict, nPert0, nPertF, itMax = 200):
+def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 200):
     NLP = OCprob.NLP
     counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
     opts = {'iteration_callback': counter}
@@ -390,7 +406,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 def print_heading(out, EXP_names : list[str]):
     out.write(" "*27)
     for EXP_name in EXP_names:
-        out.write(EXP_name[0:40].ljust(21 + 5 + 27))
+        out.write(EXP_name[0:40].ljust(21 + 5 + 21))
     out.write("\n" + " "*27)
     for i in range(len(EXP_names)):
         out.write("mu_N".ljust(10) + "sigma_N".ljust(11) + "mu_t".ljust(10) + "sigma_t".ljust(11))

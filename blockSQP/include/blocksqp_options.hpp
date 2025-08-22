@@ -55,22 +55,22 @@ class SQPoptions{
     double feas_tol = 1.0e-6;
     bool enable_premature_termination = false;  // Allow terminating with partial success if opt error is below opt_tol**0.75, we are feasible and the linesearch fails
     int max_extra_steps = 0;                    // Maximum number of steps after opt_tol and feas_tol were reached for improved accuracy.
-
+    
     //Line search heuristics
-    int max_filter_overrides = 2;
-
+    int max_filter_overrides = 3;
+    
     //Derivative evaluation
     bool sparse = true;                    // Decide wether dense or sparse problem functions should be used
-
+    
     //Restoration phase
     bool enable_rest = true; 
     double rest_rho = 1.0;                     // Restoration objective: Rho * ||s||^2 + zeta * ||xi - xi_ref||^2, s - slack variables, xi_ref - iterate at which restoration was invoked
     double rest_zeta = 1.0e-6;
-
+    
     //Full/limited memory quasi newton
     bool lim_mem = true;                       // Enable limited memory quasi newton
     int mem_size = 20;                             // Limited memory size
-
+    
     //Hessian approximation
     int block_hess = 1;                             //0: Full space updates, 1: partitioned updates, 2: 2 blocks: 1 full space update block, 1 objective Hessian block
     int exact_hess = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
@@ -146,7 +146,11 @@ class SQPoptions{
     
     //For experimental purposes
     bool test_opt_1 = false;
-    int test_qp_hotstart = 0;
+    double test_opt_2 = 1.0;
+    double test_opt_3 = 2.0;
+    double test_opt_4 = 0.5;
+    bool test_opt_5 = false;
+    //int test_qp_hotstart = 0;
     
     private:
     //Holder if no qpsol_options were provided

@@ -18,7 +18,7 @@ import OCProblems
 
 
 ###############################################################################
-OCprob = OCProblems.Electric_Car(nt = 100, parallel = True)
+OCprob = OCProblems.Cushioned_Oscillation_TSCALE(nt = 100, parallel = True)
 
 nPert0 = 0
 nPertF = 40
@@ -47,6 +47,8 @@ opts.mem_size = 20
 opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
 
+opts.automatic_scaling = False
+
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
@@ -54,26 +56,9 @@ QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
 
 
-#New termination features disabled
-opts.max_extra_steps = 0
-opts.enable_premature_termination = False
-opts.max_filter_overrides = 0
-
 ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax)
 EXP_N_SQP = [ret_N_SQP]
 EXP_N_secs = [ret_N_secs]
 EXP_type_sol = [ret_type_sol]
-OCP_experiment.plot_varshape(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD + "/out_Electric_Car")
-
-
-#New termination features enabled, no extra steps since we dont need extra accuracy for this experiment.
-opts.max_extra_steps = 0
-opts.enable_premature_termination = True
-opts.max_filter_overrides = 3
-
-ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, opts, nPert0, nPertF, itMax = itMax)
-EXP_N_SQP = [ret_N_SQP]
-EXP_N_secs = [ret_N_secs]
-EXP_type_sol = [ret_type_sol]
-OCP_experiment.plot_varshape(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD + "/out_Electric_Car")
+OCP_experiment.plot_successful(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD + "/out_Cushioned_Oscillation")
 

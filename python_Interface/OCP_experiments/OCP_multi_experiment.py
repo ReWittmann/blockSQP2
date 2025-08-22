@@ -27,7 +27,7 @@ import OCProblems
 #  'Tubular_Reactor]
 
 ###############################################################################
-OCprob = OCProblems.Electric_Car(nt = 100, parallel = False)
+OCprob = OCProblems.Lotka_OED(nt = 100, parallel = False)
 
 nPert0 = 0
 nPertF = 40
