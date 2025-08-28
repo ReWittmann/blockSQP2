@@ -1,0 +1,13 @@
+                           SR1-BFGS                                       Convexification strategy 1                     Convexification strategy 2                     
+                           mu_N      sigma_N    mu_t      sigma_t    |    mu_N      sigma_N    mu_t      sigma_t    |    mu_N      sigma_N    mu_t      sigma_t    
+Batch_Reactor              28.75,    5.50;      0.39s,    0.049s     |    20.12,    0.84;      0.28s,    0.0087s    |    19.6,     1.09;      0.27s,    0.011s     
+Goddard's Rocket           30.75,    10.49;     0.63s,    0.16s      |    17.82,    1.62;      0.50s,    0.049s     |    17.57,    1.89;      0.49s,    0.056s     
+Catalyst_Mixing            144.65,   50.64;     1.54s,    0.94s      |    23.45,    3.71;      0.24s,    0.036s     |    25.12,    3.66;      0.26s,    0.041s     
+Lotka_Volterra_Fishing     15.45,    1.07;      0.36s,    0.016s     |    15.9,     0.99;      0.39s,    0.024s     |    15.77,    0.93;      0.40s,    0.023s     
+Hanging_Chain              150.85,   67.29;     1.36s,    0.76s      |    24.6,     4.96;      0.19s,    0.043s     |    21.85,    3.01;      0.16s,    0.025s     
+Cushioned_Oscillation      27.32,    2.48;      0.43s,    0.041s     |    26.07,    3.48;      1.19s,    0.27s      |    27.05,    3.33;      1.28s,    0.27s      
+Egerstedt_Standard         23.67,    3.01;      0.52s,    0.042s     |    21.45,    2.10;      0.67s,    0.092s     |    21.05,    1.16;      0.59s,    0.055s     
+Electric_Car               13.55,    0.86;      0.23s,    0.014s     |    12.8,     1.16;      0.26s,    0.034s     |    13.55,    0.86;      0.26s,    0.018s     
+Particle_Steering          25.72,    2.50;      0.95s,    0.21s      |    36.25,    9.29;      1.35s,    0.35s      |    27.37,    2.60;      1.05s,    0.17s      
+Three_Tank_Multimode       18.37,    0.85;      0.61s,    0.020s     |    18.27,    1.54;      0.69s,    0.081s     |    17.07,    1.78;      0.66s,    0.088s     
+Lotka_OED                  95.95,    29.08;     6.05s,    1.23s      |    72.32,    8.07;      11.23s,   2.01s      |    39.4,     5.35;      8.34s,    1.64s      

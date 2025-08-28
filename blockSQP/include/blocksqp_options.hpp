@@ -57,7 +57,7 @@ class SQPoptions{
     int max_extra_steps = 0;                    // Maximum number of steps after opt_tol and feas_tol were reached for improved accuracy.
     
     //Line search heuristics
-    int max_filter_overrides = 3;
+    int max_filter_overrides = 2;
     
     //Derivative evaluation
     bool sparse = true;                    // Decide wether dense or sparse problem functions should be used
@@ -116,13 +116,14 @@ class SQPoptions{
     //Filter line search options
     bool enable_linesearch = true;                      
     int max_linesearch_steps = 10;
-    int max_consec_reduced_steps = 8;                 // Reset Hessian if stepsize was reduced consecutively too often
+    int max_consec_reduced_steps = 3;                 // Reset Hessian if stepsize was reduced consecutively too often
     int max_consec_skipped_updates = 100;             // Reset Hessian if too many quasi Newton updates were skipped consecutively
     bool skip_first_linesearch = false;
     int max_SOC = 3;                        ///< Maximum number of second order correction (SOC) steps
         
     //Filter line search parameters
-    double gammaTheta = 1.0e-5;             ///< see IPOPT paper
+    //double gammaTheta = 1.0e-5;             ///< see IPOPT paper
+    double gammaTheta = 1.0e-2;             ///< see IPOPT paper
     double gammaF = 1.0e-5;                 ///< see IPOPT paper   
     double kappaSOC = 0.99;                 ///< see IPOPT paper
     double kappaF = 0.8;                    ///< see IPOPT paper
@@ -131,8 +132,9 @@ class SQPoptions{
     double delta = 1.0;                     ///< see IPOPT paper
     double sTheta = 1.1;                    ///< see IPOPT paper
     double sF = 2.3;                        ///< see IPOPT paper
-    double eta = 1.0e-4;                    ///< see IPOPT paper
-
+    //double eta = 1.0e-4;                    ///< see IPOPT paper
+    double eta = 1.0e-2;                    ///< see IPOPT paper
+    
     //QP solver options
     QPsolvers qpsol = QPsolvers::unset;             ///< which linked QP solver (qpOASES, gurobi, ...) should be used
     QPsolver_options *qpsol_options = nullptr;      ///< options to be passed to the specific qp solver

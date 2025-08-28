@@ -1,0 +1,13 @@
+                           Conv. str. 2, no scaling                       Conv. str. 2, automatic scaling                
+                           mu_N      sigma_N    mu_t      sigma_t    |    mu_N      sigma_N    mu_t      sigma_t    
+Batch_Reactor              19.75,    0.94;      0.34s,    0.025s     |    19.82,    1.94;      0.31s,    0.023s     
+Goddard_Rocket             18.12,    2.08;      0.46s,    0.036s     |    18.02,    2.04;      0.46s,    0.034s     
+Catalyst_Mixing            25.15,    3.78;      0.25s,    0.044s     |    25.35,    3.92;      0.25s,    0.043s     
+Lotka_Volterra_Fishing     15.77,    0.98;      0.37s,    0.016s     |    9.42,     0.54;      0.28s,    0.0052s    
+Hanging_Chain              19.8,     3.09;      0.18s,    0.046s     |    20.22,    4.51;      0.17s,    0.047s     
+Cushioned_Oscillation      28.57,    2.80;      0.71s,    0.094s     |    35.37,    8.61;      0.99s,    0.25s      
+Egerstedt_Standard         21.85,    1.42;      0.55s,    0.030s     |    23.72,    2.29;      0.60s,    0.066s     
+Electric_Car               13.65,    0.96;      0.23s,    0.028s     |    11.67,    0.64;      0.20s,    0.012s     
+Particle_Steering          27.82,    3.23;      0.92s,    0.18s      |    28.1,     3.08;      0.48s,    0.10s      
+Three_Tank_Multimode       17.3,     1.80;      0.58s,    0.050s     |    13.8,     0.6;       0.63s,    0.033s     
+Lotka_OED                  40.9,     5.00;      4.64s,    0.49s      |    37.55,    3.66;      4.52s,    0.47s      

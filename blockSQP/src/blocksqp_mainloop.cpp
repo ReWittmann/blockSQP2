@@ -231,9 +231,16 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 }
                 
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
+                /*
                 if (lsError && param->enable_premature_termination && vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
                     return print_SQPresult(SQPresult::partial_success, param->result_print_color);
-                
+                */
+                if (lsError && param->enable_premature_termination && vars->it_saved){
+                    //A feasible iterate with higher optimality error was saved, restore it and declare partial success
+                    vars->restore_iterate();
+                    return print_SQPresult(SQPresult::partial_success, param->result_print_color);
+                }
+                    
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if (lsError && vars->cNorm > 0.01 * param->feas_tol && vars->steptype < 2){
                     // Don't do this twice in a row!
@@ -356,6 +363,13 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         }
         if (vars->milestone > std::max(vars->tol, vars->cNormS)) vars->milestone = std::max(vars->tol, vars->cNormS);
         
+        
+        if (!vars->it_saved){
+            if(vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
+                vars->save_iterate();
+        }
+        else if (vars->cNormS < vars->cNormSOpt_save && vars->tol < vars->tolOpt_save)
+            vars->save_iterate();
         
         //Increment memory counter of each block and scaling memory counter unless step is restoration step.
         if (vars->steptype < 3){

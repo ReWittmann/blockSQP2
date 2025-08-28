@@ -43,6 +43,7 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->sizing = 2;
     rest_param->BFGS_damping_factor = 0.2;
     rest_param->sparse = parent_options->sparse;
+    rest_param->max_filter_overrides = 0;
     //rest_param->sizing = 4;
     //rest_param->BFGS_damping_factor = 1./3.;
 

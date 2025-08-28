@@ -308,6 +308,8 @@ int main(int argc, const char* argv[]){
     opts->par_QPs = false;
     opts->max_conv_QPs = 1;
     
+    opts->indef_delay = 1;
+    
 
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES

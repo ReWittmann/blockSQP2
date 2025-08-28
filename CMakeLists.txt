@@ -62,7 +62,7 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 #############################################################
 
-set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
+set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/qpOASES_mod)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
@@ -314,7 +314,7 @@ set_target_properties(example_condensing
 )
 
 
-option(PYTHON_INTERFACE "build python interface" OFF)
+option(PYTHON_INTERFACE "build python interface" ON)
 set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")
 if(PYTHON_INTERFACE)
 	if (NOT PYTHON_INTERPRETER STREQUAL "")
@@ -329,7 +329,7 @@ if(PYTHON_INTERFACE)
 	)
 	FetchContent_MakeAvailable(PYBIND11)
 	
-	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
+	pybind11_add_module(py_blockSQP Interface_src/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
 	
 	if(UNIX)
@@ -345,18 +345,20 @@ if(PYTHON_INTERFACE)
 	endif()
 	
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
-	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
-												 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
+	
+	set(py_blockSQP_DIR ${CMAKE_SOURCE_DIR}/py_blockSQP)
+	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
+												 RUNTIME_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
 												 )
-	maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
+	maybe_copy_mumps_libs(${py_blockSQP_DIR})
 endif()
 
 
-option(JULIA_INTERFACE "build julia interface" OFF)
+option(JULIA_INTERFACE "build julia interface" ON)
 set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (default: empty)")
 
 if(JULIA_INTERFACE)
-	add_library(blockSQP_jl SHARED C_Interface/C_blockSQP.cpp)
+	add_library(blockSQP_jl SHARED Interface_src/C_blockSQP.cpp)
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)

@@ -657,7 +657,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     }
     
     *qp = *qpSave;
-
+        
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
     

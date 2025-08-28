@@ -70,9 +70,15 @@ void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double
         vars->lambda( k ) = (1.0 - alpha)*vars->lambda( k ) + alpha*lambdaQP( k );
     
     // Count consecutive reduced steps
+    /*
     if( vars->alpha < 1.0 )
         vars->reducedStepCount++;
     else
+        vars->reducedStepCount = 0;
+    */
+    if (vars->alpha < 0.25)
+        vars->reducedStepCount++;
+    else if (vars->alpha > 0.99)
         vars->reducedStepCount = 0;
 }
 
@@ -220,8 +226,6 @@ int SQPmethod::filterLineSearch(){
         // Check acceptability to the filter
         if (pairInFilter(cNormTrial, objTrial)){
             // Trial point is in the prohibited region defined by the filter, try second order correction
-            if (k == 0) std::cout << "Point is in the filter, try SOC\n";
-
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                 break;
             else{
@@ -241,7 +245,6 @@ int SQPmethod::filterLineSearch(){
                     // Switching conditions hold: Require satisfaction of Armijo condition for objective
                     if (objTrial > vars->obj + param->eta*alpha*dfTdeltaXi){
                         //Armijo condition violated, try second order correction
-                        if (k == 0) std::cout << "Armijo condition violated, try SOC\n";
                         if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                             break;
                         else{
@@ -266,7 +269,6 @@ int SQPmethod::filterLineSearch(){
             break;
         }
         else{
-            std::cout << "Filter condition violated, try SOC\n";
             // Trial point is dominated by current point, try second order correction
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, false)) break; // SOC yielded suitable alpha, stop
             else{
@@ -302,9 +304,9 @@ int SQPmethod::filterLineSearch(){
 bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double dfTdeltaXi, bool swCond){
 
     // If constraint violation of the trialstep is lower than the current one skip SOC
-    if(cNormTrial < cNorm)// && stats->itCount != 4)
+    if(cNormTrial < cNorm || cNormTrial < 1e-2*param->feas_tol)// && stats->itCount != 4)
     {
-        std::cout << "Constraint violation is lower than current one, skip SOC\n";
+        std::cout << "Constraint violation is low, skip SOC\n";
         return false;
     }
 
@@ -693,6 +695,7 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
      */
 
     for (iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
+        //Note: Changing the tolerance away from 0.01 is not recommended, leads to a lot more linesearch failures and unsuccessful terminations
         if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->feas_tol && iter->first < 0.01 * param->feas_tol)) &&
              obj >= iter->second - param->gammaF * iter->first)
             return 1;
