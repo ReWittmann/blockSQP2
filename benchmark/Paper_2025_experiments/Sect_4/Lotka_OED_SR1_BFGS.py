@@ -9,8 +9,8 @@ sys.path += [cD + "/../..", cD + "/../../.."]
 
 import py_blockSQP
 
-itMax = 100
-step_plots = True
+itMax = 250
+step_plots = False
 plot_title = False
 
 import OCProblems

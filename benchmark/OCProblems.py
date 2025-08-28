@@ -1660,8 +1660,6 @@ class Catalyst_Mixing(OCProblem):
     
     def plot(self, xi, dpi = None, title = None, it = None):
         plt.figure(dpi=dpi)
-        if title is not None:
-            plt.title(title)
         x1,x2 = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
         plt.plot(self.time_grid, x1, 'g-.', label = r'$x_1$')
@@ -3384,10 +3382,10 @@ class Lotka_OED(OCProblem):
         
         plt.figure(dpi = dpi)
         
-        plt.plot(self.time_grid, x1, 'y-', label = r'Biomass prey $x_1(t)$')
-        plt.plot(self.time_grid, x2, 'b-', label = r'Biomass predator $x_2(t)$')
+        plt.plot(self.time_grid, x1, 'y-.', label = r'Biomass prey $x_1(t)$')
+        plt.plot(self.time_grid, x2, 'c-.', label = r'Biomass predator $x_2(t)$')
         plt.step(self.time_grid_ref, u, 'r-', label = r'Fishing control $u$')
-        plt.step(self.time_grid_ref, w1, 'c-', label = r'sampling $w^{(1)}$')
+        plt.step(self.time_grid_ref, w1, 'b:', label = r'sampling $w^{(1)}$')
         plt.step(self.time_grid_ref, w2, 'g--', label = r'sampling $w^{(2)}$')
         
         plt.ylim(0.,4.)

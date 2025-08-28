@@ -13,7 +13,7 @@ import py_blockSQP
 import matplotlib.pyplot as plt
 
 itMax = 100
-step_plots = False
+step_plots = True
 # step_plots = True
 plot_title = True
 
@@ -30,7 +30,7 @@ import OCProblems
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
 #  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+OCprob = OCProblems.Satellite_Deorbiting_2(nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4', 
@@ -40,7 +40,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100,
                     # hT = 70.0
                     # objective = "max_performance"
                     # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
-                    # MDTH = 1.0
+                    MDTH = 1.0
                     )
 
 
@@ -78,7 +78,7 @@ opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
-# QPopts.terminationTolerance = 1e-12
+QPopts.terminationTolerance = 1e-12
 opts.qpsol_options = QPopts
 ################################
 

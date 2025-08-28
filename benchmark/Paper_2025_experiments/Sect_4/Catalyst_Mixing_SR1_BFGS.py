@@ -51,6 +51,7 @@ opts.max_filter_overrides = 0
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
+QPopts.terminationTolerance = 1e-10
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
 

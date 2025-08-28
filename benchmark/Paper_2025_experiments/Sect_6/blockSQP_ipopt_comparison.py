@@ -18,7 +18,7 @@ import OCP_experiment
 import OCProblems
 
 ODE_integrator = 'RK4'
-dirPath = cD + "/blockSQP_ipopt_comparison_RK4"
+dirPath = cD + "/out_blockSQP_ipopt_comparison_RK4"
 
 Examples = [
             OCProblems.Batch_Reactor,
