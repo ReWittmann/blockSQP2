@@ -18,7 +18,7 @@ import OCP_experiment
 import OCProblems
 
 ODE_integrator = 'RK4'
-dirPath = cD + "/out_blockSQP_ipopt_comparison_RK4"
+dirPath = cD + "/out_blockSQP___comparison_RK4"
 
 Examples = [
             OCProblems.Batch_Reactor,
@@ -92,7 +92,7 @@ OCP_experiment.print_heading(out, titles)
 #########
 for OCclass in Examples:
     OCprob = OCclass(nt=100, integrator=ODE_integrator, parallel = True)
-    itMax = 200
+    itMax = 1000
     ipopts_base = {'max_iter':itMax}
     EXP_N_SQP = []
     EXP_N_secs = []

@@ -10,13 +10,13 @@ sys.path += [cD + "/../..", cD + "/../../.."]
 import py_blockSQP
 
 itMax = 250
-step_plots = False
+step_plots = True
 plot_title = False
 
 import OCProblems
 OCprob = OCProblems.Lotka_OED(nt = 100, 
                     refine = 1, 
-                    parallel = True, 
+                    parallel = False, 
                     integrator = 'RK4', 
                     )
 
@@ -77,6 +77,7 @@ prob.complete()
 
 stats = py_blockSQP.SQPstats("./solver_outputs")
 
+xi_arr = []
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 optimizer.init()
 #####################
@@ -90,8 +91,16 @@ if (step_plots):
         ret = int(optimizer.run(1,1))
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1
-        OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
+        # Note: Due to randomness, likely in the sparse linear solver, 
+        # several runs may be needed to reproduce the exact plots in the paper.
+        # The general iteration behavior is unaffected.
+        if i in (15, 80, 105, 106):
+            xi_arr.append(xi)
 else:
     ret = int(optimizer.run(itMax))
     xi = np.array(optimizer.get_xi()).reshape(-1)
 OCprob.plot(xi, dpi=200, title=plot_title)
+
+
+for sol in xi_arr:
+    OCprob.plot(sol, dpi=200, title=plot_title)

@@ -10,7 +10,7 @@ sys.path += [cD + "/../..", cD + "/../../.."]
 import py_blockSQP
 
 itMax = 100
-step_plots = True
+step_plots = False
 plot_title = False
 
 import OCProblems
@@ -51,7 +51,6 @@ opts.max_filter_overrides = 0
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
-QPopts.terminationTolerance = 1e-10
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
 

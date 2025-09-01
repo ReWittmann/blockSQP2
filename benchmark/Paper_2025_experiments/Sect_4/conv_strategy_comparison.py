@@ -31,6 +31,7 @@ OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 opt_SR1_BFGS = py_blockSQP.SQPoptions()
 opt_SR1_BFGS.max_conv_QPs = 1
 opt_SR1_BFGS.max_filter_overrides = 0
+# opt_SR1_BFGS.BFGS_damping_factor = 0.2
 
 #Convexification strategy 1
 opt_CS1 = py_blockSQP.SQPoptions()

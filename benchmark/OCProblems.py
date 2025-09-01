@@ -780,13 +780,14 @@ class Lotka_Volterra_Fishing(OCProblem):
         x0, x1 = self.get_state_arrays_expanded(xi)
         u = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
-        plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
+        # plt.figure(dpi = dpi)
+        fig,ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
+        ax.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
         #'y-.'
         
-        plt.step(self.time_grid_ref, u, 'r', label = r'$u$')
-        plt.legend(fontsize='x-large')
+        ax.step(self.time_grid_ref, u, 'r', label = r'$u$')
+        ax.legend(fontsize='x-large')
         
         ttl = None
         if isinstance(title,str):
@@ -800,7 +801,8 @@ class Lotka_Volterra_Fishing(OCProblem):
         else:
             plt.title('')
         
-        plt.xlabel('x')
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
         
         plt.show()
         plt.close()
@@ -1129,14 +1131,17 @@ class Goddard_Rocket(OCProblem):
         u = self.get_control_plot_arrays(xi)
         r,v,m = self.get_state_arrays_expanded(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, (r - 1)*100, 'b:', label = r'$(r-1)\cdot 100$')
-        plt.plot(time_grid, v*20, 'g--', label = r'$v\cdot 20$')
-        plt.plot(time_grid, m, 'y-.', label = '$m$')
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid, (r - 1)*100, 'b:', label = r'$(r-1)\cdot 100$')
+        ax.plot(time_grid, v*20, 'g--', label = r'$v\cdot 20$')
+        ax.plot(time_grid, m, 'y-.', label = '$m$')
         
         
-        plt.step(time_grid, u, 'r', label = '$u$')
-        plt.legend(fontsize = 'large')
+        ax.step(time_grid, u, 'r', label = '$u$')
+        ax.legend(fontsize = 'large')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
         
         ttl = None
         if isinstance(title,str):
@@ -1154,7 +1159,7 @@ class Goddard_Rocket(OCProblem):
         plt.close()
         
 #Goddard rocket with only state and control bounds by adding the air friction as a differential state.
-#Formulated by my colleague, NOT me! Still works, somehow...
+#Formulated by my another PhD student, NOT me!
 class Goddard_Rocket_TROLL(Goddard_Rocket):
     default_params = {
         'rT':1.01, 
@@ -1535,10 +1540,10 @@ class Hanging_Chain(OCProblem):
         x = self.get_state_arrays(xi)
         # u = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x, 'r-', label = 'chain')
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid, x, 'r-', label = 'chain')
         # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
-        plt.legend(fontsize='large')
+        ax.legend(fontsize='large')
         
         ttl = None
         if isinstance(title,str):
@@ -1659,13 +1664,16 @@ class Catalyst_Mixing(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        plt.figure(dpi=dpi)
+        fig, ax = plt.subplots(dpi=dpi)
         x1,x2 = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
-        plt.plot(self.time_grid, x1, 'g-.', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'b--', label = r'$x_2$')
-        plt.step(self.time_grid, u, 'r', label = r'$u$')
-        plt.legend(fontsize = 'large')
+        ax.plot(self.time_grid, x1, 'g-.', label = r'$x_1$')
+        ax.plot(self.time_grid, x2, 'b--', label = r'$x_2$')
+        ax.step(self.time_grid, u, 'r', label = r'$u$')
+        ax.legend(fontsize = 'large')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
         
         ttl = None
         if isinstance(title,str):
@@ -1797,11 +1805,14 @@ class Cushioned_Oscillation(OCProblem):
         p = self.get_param_arrays(xi)
         time_grid = np.cumsum(np.concatenate([[0], p.reshape(-1)]))
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, x, 'b--', label = 'x')
-        plt.plot(time_grid, v, 'g-.', label = 'v')
-        plt.step(time_grid, u, 'r', label = 'u')
-        plt.legend(loc='upper right', fontsize = 'large')
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid, x, 'b--', label = 'x')
+        ax.plot(time_grid, v, 'g-.', label = 'v')
+        ax.step(time_grid, u, 'r', label = 'u')
+        ax.legend(loc='upper right', fontsize = 'large')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
         
         ttl = None
         if isinstance(title,str):
@@ -2339,13 +2350,14 @@ class Electric_Car(OCProblem):
         u = self.get_control_plot_arrays(xi)
         
         # if dpi is not None:
-        plt.figure(dpi = dpi)
+        # plt.figure(dpi = dpi)
+        fig, ax = plt.subplots(dpi = dpi)
         # else:
         #     plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x0, 'y--', label = r'$x_0$')
-        plt.plot(self.time_grid, x1, 'g-.', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'b:', label = r'$x_2$')
-        plt.step(self.time_grid_ref, u*100, 'r-', label = r'$u\cdot 100$')
+        ax.plot(self.time_grid, x0, 'y--', label = r'$x_0$')
+        ax.plot(self.time_grid, x1, 'g-.', label = r'$x_1$')
+        ax.plot(self.time_grid, x2, 'b:', label = r'$x_2$')
+        ax.step(self.time_grid_ref, u*100, 'r-', label = r'$u\cdot 100$')
         
         ttl = None
         if isinstance(title,str):
@@ -2359,7 +2371,11 @@ class Electric_Car(OCProblem):
         else:
             plt.title('')
         
-        plt.legend(fontsize='large')
+        ax.legend(fontsize='large')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
         plt.show()
         plt.close()
         
@@ -2884,15 +2900,18 @@ class Three_Tank_Multimode(OCProblem):
         x1,x2,x3 = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'y--', label = r'$x_1$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
-        plt.plot(self.time_grid, x2, 'm-.', label = r'$x_2$')
-        plt.plot(self.time_grid, x3, 'c:', label = r'$x_3$')
-        plt.step(self.time_grid_ref, w1, 'y-', label = r'$w_1$')
-        plt.step(self.time_grid_ref, w2, 'r-', label = r'$w_2$')
-        plt.step(self.time_grid_ref, w3, 'grey', label = r'$w_3$')
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid, x1, 'y--', label = r'$x_1$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
+        ax.plot(self.time_grid, x2, 'm-.', label = r'$x_2$')
+        ax.plot(self.time_grid, x3, 'c:', label = r'$x_3$')
+        ax.step(self.time_grid_ref, w1, 'y-', label = r'$w_1$')
+        ax.step(self.time_grid_ref, w2, 'r-', label = r'$w_2$')
+        ax.step(self.time_grid_ref, w3, 'grey', label = r'$w_3$')
         # plt.legend(fontsize = 'x-large', loc = 'upper right')
-        plt.legend(prop={'size': 13.4}, loc = 'upper right')
+        ax.legend(prop={'size': 13.4}, loc = 'upper right')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
         
         ttl = None
         if isinstance(title,str):
@@ -3380,17 +3399,27 @@ class Lotka_OED(OCProblem):
         u,w1,w2 = self.get_control_plot_arrays(xi)
         x1, x2, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays(xi)
         
-        plt.figure(dpi = dpi)
+        fig, ax = plt.subplots(dpi=dpi)
         
-        plt.plot(self.time_grid, x1, 'y-.', label = r'Biomass prey $x_1(t)$')
-        plt.plot(self.time_grid, x2, 'c-.', label = r'Biomass predator $x_2(t)$')
-        plt.step(self.time_grid_ref, u, 'r-', label = r'Fishing control $u$')
-        plt.step(self.time_grid_ref, w1, 'b:', label = r'sampling $w^{(1)}$')
-        plt.step(self.time_grid_ref, w2, 'g--', label = r'sampling $w^{(2)}$')
+        # ax.plot(self.time_grid, x1, 'y-.', label = r'Biomass prey $x_1(t)$')
+        # ax.plot(self.time_grid, x2, 'c-.', label = r'Biomass predator $x_2(t)$')
+        # ax.step(self.time_grid_ref, u, 'r-', label = r'Fishing control $u$')
+        # ax.step(self.time_grid_ref, w1, 'b:', label = r'sampling $w^{(1)}$')
+        # ax.step(self.time_grid_ref, w2, 'g--', label = r'sampling $w^{(2)}$')
         
-        plt.ylim(0.,4.)
+        ax.plot(self.time_grid, x1, 'y-.', label = r'$x_1$')
+        ax.plot(self.time_grid, x2, 'c-.', label = r'$x_2$')
+        ax.step(self.time_grid_ref, u, 'r-', label = r'$u$')
+        ax.step(self.time_grid_ref, w1, 'b:', label = r'$w^{(1)}$')
+        ax.step(self.time_grid_ref, w2, 'g--', label = r'$w^{(2)}$')
         
-        plt.legend(fontsize = 'medium', loc = 'upper left')
+        ax.set_ylim(0.,4.)
+        
+        ax.legend(fontsize = 'large', loc = 'upper left')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
         ttl = None
         if isinstance(title,str):
             ttl = title

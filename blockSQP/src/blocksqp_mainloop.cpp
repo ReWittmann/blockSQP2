@@ -365,7 +365,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         
         
         if (!vars->it_saved){
-            if(vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
+            if(vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 2./3.))
                 vars->save_iterate();
         }
         else if (vars->cNormS < vars->cNormSOpt_save && vars->tol < vars->tolOpt_save)

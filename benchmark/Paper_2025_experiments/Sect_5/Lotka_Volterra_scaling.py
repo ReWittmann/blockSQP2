@@ -101,11 +101,10 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_state(scale_arr, i, [100.0, 0.01])
 prob2.arr_set_scale(scale)
-stats = py_blockSQP.SQPstats("./solver_outputs")
-optimizer2 = py_blockSQP.SQPmethod(prob2, opts, stats)
+stats_100_001 = py_blockSQP.SQPstats("./solver_outputs")
+optimizer2 = py_blockSQP.SQPmethod(prob2, opts, stats_100_001)
 optimizer2.init()
 ret = optimizer2.run(100)
-
 
 ### Vice versa ###
 prob3 = py_blockSQP.scaled_Problemspec(prob)
@@ -115,8 +114,8 @@ scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_state(scale_arr, i, [0.01, 100.0])
 prob3.arr_set_scale(scale)
-stats = py_blockSQP.SQPstats("./solver_outputs")
-optimizer3 = py_blockSQP.SQPmethod(prob3, opts, stats)
+stats_001_100 = py_blockSQP.SQPstats("./solver_outputs")
+optimizer3 = py_blockSQP.SQPmethod(prob3, opts, stats_001_100)
 optimizer3.init()
 ret = optimizer3.run(100)
 
@@ -137,11 +136,13 @@ xi = np.array(optimizer4.get_xi()).reshape(-1)
 
 x1,x2 = OCprob.get_state_arrays(xi)
 u = OCprob.get_control_plot_arrays(xi)
-plt.figure(dpi=200)
-plt.plot(OCprob.time_grid, x1, 'g-.', label = '$x_1$')
-plt.plot(OCprob.time_grid, x2, 'b--', label = '$x_2$')
-plt.step(OCprob.time_grid_ref, u/10, 'r-', label = r'$u\cdot 0.1$')
-plt.legend(fontsize='large')
+fig, ax = plt.subplots(dpi=200)
+ax.plot(OCprob.time_grid, x1, 'g-.', label = '$x_1$')
+ax.plot(OCprob.time_grid, x2, 'b--', label = '$x_2$')
+ax.step(OCprob.time_grid_ref, u/10, 'r-', label = r'$u\cdot 0.1$')
+ax.legend(fontsize='large')
+ax.set_xlabel('t', fontsize = 17.5)
+ax.xaxis.set_label_coords(1.015,-0.006)
 plt.show()
 plt.close()
 
@@ -164,12 +165,22 @@ xi = np.array(optimizer5.get_xi()).reshape(-1)
 
 x1,x2 = OCprob.get_state_arrays(xi)
 u = OCprob.get_control_plot_arrays(xi)
-plt.figure(dpi=200)
-plt.plot(OCprob.time_grid, x1, 'g-.', label = r'$x_1$')
-plt.plot(OCprob.time_grid, x2, 'b--', label = r'$x_2$')
-plt.step(OCprob.time_grid_ref, u/100, 'r-', label = r'$u \cdot 0.01$')
-plt.legend(fontsize='large')
+fig, ax = plt.subplots(dpi=200)
+ax.plot(OCprob.time_grid, x1, 'g-.', label = r'$x_1$')
+ax.plot(OCprob.time_grid, x2, 'b--', label = r'$x_2$')
+ax.step(OCprob.time_grid_ref, u/100, 'r-', label = r'$u \cdot 0.01$')
+ax.legend(fontsize='large')
+ax.set_xlabel('t', fontsize = 17.5)
+ax.xaxis.set_label_coords(1.015,-0.006)
 plt.show()
 plt.close()
 
 ret = optimizer5.run(90,1)
+
+
+time.sleep(0.25)
+print("#################################################################")
+print("With x1, x2 scaled by 100, 0.01, the number of iterations was ", stats_100_001.itCount)
+print("With x1, x2 scaled by 0.01, 100, the number of iterations was ", stats_001_100.itCount)
+print("#################################################################")
+
