@@ -1389,9 +1389,9 @@ class Batch_Reactor(OCProblem):
         T = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'r-', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'g-', label = r'$x_2$')
-        plt.step(self.time_grid_ref, (T-298)*0.1, 'y', label = r'$(u-298)\cdot 0.1$')
+        plt.plot(self.time_grid, x1, 'g--', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'b-.', label = r'$x_2$')
+        plt.step(self.time_grid_ref, (T-298)*0.05, 'r', label = r'$(u-298)\cdot 0.05$')
         
         plt.legend(fontsize='large')
         
@@ -1541,7 +1541,7 @@ class Hanging_Chain(OCProblem):
         # u = self.get_control_plot_arrays(xi)
         
         fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(self.time_grid, x, 'r-', label = 'chain')
+        ax.plot(self.time_grid, x, 'k-', label = 'chain')
         # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
         ax.legend(fontsize='large')
         
@@ -2145,11 +2145,11 @@ class Egerstedt_Standard(OCProblem):
         w1,w2,w3 = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'c-', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'y-', label = r'$x_2$')
+        plt.plot(self.time_grid, x1, 'g--', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'b--', label = r'$x_2$')
         plt.step(self.time_grid, w1, 'r-', label = r'$w_1$')
-        plt.step(self.time_grid, w2, 'b-', label = r'$w_2$')
-        plt.step(self.time_grid, w3, 'g-', label = r'$w_3$')
+        plt.step(self.time_grid, w2, 'y-.', label = r'$w_2$')
+        plt.step(self.time_grid, w3, 'c:', label = r'$w_3$')
         plt.legend(loc = 'center left', fontsize = 'large')
         
         ttl = None
@@ -2662,10 +2662,10 @@ class Particle_Steering(OCProblem):
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid, x1, 'b-', label = r'$x_1$')
-        plt.plot(time_grid, x2, 'g-', label = r'$x_2$')
-        plt.plot(time_grid, y1, 'y-', label = r'$y_1$')
-        plt.plot(time_grid, y2, 'c-', label = r'$y_2$')
+        plt.plot(time_grid, x1, 'g-', label = r'$x_1$')
+        plt.plot(time_grid, x2, 'b-', label = r'$x_2$')
+        plt.plot(time_grid, y1, 'g-.', label = r'$v_1$')
+        plt.plot(time_grid, y2, 'b-.', label = r'$v_2$')
         plt.step(time_grid_ref, u*10, 'r', label = r'$u\cdot 10$')
         plt.legend(fontsize='large')
         
@@ -4638,12 +4638,8 @@ class Satellite_Deorbiting_2(OCProblem):
             vtheta/rsafe,
             centrifugal - gravity + rthrust - drag*vrelr,
             -vr*vtheta/rsafe + thetathrust - drag*vreltheta,
-            # vtheta**2 / r_safe - mu / r**2 + ur/m - drag*vrelr,
-            # -vr*vtheta/r + utheta/m - drag*vreltheta,
             -cs.sqrt(ur**2 + utheta**2)/(Isp*g0)
         )
-        
-        # quad_expr = -cs.sqrt(ur**2 + utheta**2)/(Isp*g0)
         
         
         self.ODE = {'x':X, 'p':cs.vertcat(dt,U), 'ode': dt*ode_rhs}
@@ -4651,7 +4647,6 @@ class Satellite_Deorbiting_2(OCProblem):
         
         _,_,_,_,m_tf = cs.vertsplit(self.x_eval[:,-1])
         self.set_objective(m0 - m_tf)
-        # self.set_objective(-self.q_tf)
         
         rT,_,_,_,_ = cs.vertsplit(self.x_eval[:,-1])
         urt, uthetat = cs.vertsplit(self.u_eval)
@@ -4661,7 +4656,6 @@ class Satellite_Deorbiting_2(OCProblem):
         
         self.build_NLP()
         
-        
         fuel_estimate = 20
         r_init = np.linspace(r0, rfinal, self.ntS + 1)
         theta_init = np.linspace(0, 2*np.pi * n_orbits * 0.8, self.ntS + 1)
@@ -4669,16 +4663,13 @@ class Satellite_Deorbiting_2(OCProblem):
         vtheta_init = np.linspace(vorb, vorb*0.85, self.ntS + 1)
         m_init = np.linspace(m0, m0 - fuel_estimate, self.ntS + 1)
         
-        # ur_init = np.ones(self.ntS)*(-5.0)
-        # utheta_init = np.ones(self.ntS)*(-10.0)
-        
         for j in range(self.ntS):
             self.set_stage_control(self.start_point, j, [-2.0,-3.0])
         
         for j in range(self.ntS + 1):
             self.set_stage_state(self.start_point, j, [r_init[j] - RE, theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
-            
-            
+    
+    
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
         val0, val1 = self.get_stage_control(s, ind)

@@ -7,18 +7,19 @@ try:
     cD = os.path.dirname(os.path.abspath(__file__))
 except:
     cD = os.getcwd()
-sys.path += [cD + "/../..", cD + "/..", cD + "/../../examples"]
+sys.path += [cD + "/../..", cD + "/../../.."]
 import py_blockSQP
 import matplotlib.pyplot as plt
 import time
 import copy
 import datetime
 import OCP_experiment
-
 import OCProblems
 
+#RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD + "/out_blockSQP___comparison_RK4"
+dirPath = cD + "/out_blockSQP_ipopt_comparison_RK4"
+
 
 Examples = [
             OCProblems.Batch_Reactor,
@@ -33,6 +34,7 @@ Examples = [
             OCProblems.Three_Tank_Multimode,
             OCProblems.Lotka_OED,
             ]
+OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
 Extended = [
             OCProblems.D_Onofrio_Chemotherapy,
@@ -60,11 +62,8 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
     return opts
 
 opt1 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
-# opt1.enable_premature_termination = True
-# opt1.opt_tol = 1e-5
 opt2 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2.exact_hess = 2
-# opt2.opt_tol = 1e-5
 
 
 blockSQP_Experiments = [

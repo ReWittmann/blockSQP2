@@ -14,8 +14,8 @@ import matplotlib.pyplot as plt
 
 itMax = 100
 # step_plots = True
-step_plots = False
-plot_title = True
+step_plots = True
+plot_title = False
 
 
 import OCProblems
@@ -60,7 +60,7 @@ opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
-opts.BFGS_damping_factor = 1/3
+opts.BFGS_damping_factor = 1./3.
 
 opts.lim_mem = True
 opts.mem_size = 20
@@ -72,7 +72,7 @@ opts.automatic_scaling = True
 
 opts.max_extra_steps = 0
 opts.enable_premature_termination = True
-opts.max_filter_overrides = 3
+opts.max_filter_overrides = 2
 
 opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
@@ -114,10 +114,7 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
 # prob.cond = cond
-
-
 prob.x_start = OCprob.start_point
-
 
 
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)

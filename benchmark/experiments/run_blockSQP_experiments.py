@@ -88,60 +88,46 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
 
 
 Examples = [
-            # OCProblems.Batch_Reactor,
+            OCProblems.Batch_Reactor,
             OCProblems.Catalyst_Mixing,
-            # OCProblems.Cushioned_Oscillation,
+            OCProblems.Cushioned_Oscillation,
             OCProblems.Egerstedt_Standard,
             OCProblems.Electric_Car,
             OCProblems.Goddard_Rocket,
             OCProblems.Hanging_Chain,
             OCProblems.Lotka_Volterra_Fishing,
             OCProblems.Particle_Steering,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Lotka_OED,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Lotka_OED,
+            ]
+Extended = [
+            OCProblems.D_Onofrio_Chemotherapy,
+            OCProblems.Quadrotor_Helicopter,
+            OCProblems.Van_der_Pol_Oscillator,
+            OCProblems.Hang_Glider,
+            OCProblems.Tubular_Reactor,
+            OCProblems.Cart_Pendulum,
+            OCProblems.Satellite_Deorbiting_1,
+            # OCProblems.Satellite_Deorbiting_2,
             ]
 
-opt1 = opt_conv_str_2_par_scale(max_conv_QPs = 6)
-opt1.enable_premature_termination = True
-opt1.kappaF = 0.8
-opt1.kappaSOC = 0.99
-opt1.gammaTheta = 1e-2
-opt1.eta = 1e-2
+# Examples += Extended
+Examples = Extended
 
-# opt2 = opt_conv_str_2_par(max_conv_QPs = 6)
-# opt2.automatic_scaling = False
-
-# opt3 = opt_conv_str_2_par(max_conv_QPs = 6)
-# opt3.automatic_scaling = True
-# opt3.test_opt_1 = False
-# opt3.test_opt_2 = 1.5
-# opt3.test_opt_3 = 4.0
+opt1 = opt_conv_str_2_par()
 
 
 Experiments = [
-                (opt1, "conv2"),
-                # (opt2, "conv2_no_scaling"),
-                # (opt3, "conv2_scaling_new"),
-                # (opt4, "conv2_scale mod2"),
-                # (opt5, "conv2_scale mod3"),
-                # (opt6, "conv2_scale mod4"),
-                # (opt7, "conv2_scale mod5"),
-                # (opt8, "conv2_scale mod6"),
-                # (opt9, "conv2_scale mod7"),
-                # (opt10, "conv2_scale mod8"),
-                # (opt11, "conv2_scale mod9"),
-                # (opt12, "conv2_scale mod10"),
-               # (opt5, "default conv2_scale"),
-               # (opt6, "conv2_scale, QPterm mod")
+                # (opt1, "conv2"),
                ]
 
 
-plot_folder = "/home/reinhold/PLOT/TEST_term_RK4_"
+plot_folder = cD + "/out_blockSQP_experiments"
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
                                         nPert0 = 0, nPertF = 20,
                                         nt = 100,
-                                        integrator = 'cvodes',
+                                        integrator = 'RK4',
                                         parallel = True
                                         )
 

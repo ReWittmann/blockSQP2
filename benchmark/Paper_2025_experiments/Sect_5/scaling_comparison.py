@@ -25,6 +25,7 @@ Examples = [
             OCProblems.Three_Tank_Multimode,
             OCProblems.Lotka_OED,
             ]
+OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
 opt_CS2 = py_blockSQP.SQPoptions()
 opt_CS2.max_conv_QPs = 4
