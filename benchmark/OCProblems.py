@@ -4408,11 +4408,16 @@ class Satellite_Deorbiting_1(OCProblem):
             'g0': 9.81,
             'umax': 20,
             'm0': 150,
-            'omegaE':7.2921e-5
+            'omegaE':7.2921e-5,
+            'rscale': 1.0e-2,
+            'vscale': 1.0e-1,
+            'thetascale': 1.0,
+            'mscale': 1.0e1,
+            'TSCALE': 1.0
             }
     
     def build_problem(self):
-        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE'])
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, rscale, thetascale, mscale, vscale, TSCALE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'rscale', 'thetascale', 'mscale', 'vscale', 'TSCALE'])
         
         h0 = 450000
         r0 = RE + h0
@@ -4425,8 +4430,8 @@ class Satellite_Deorbiting_1(OCProblem):
         hreentry = 120000
         rfinal = RE + hreentry
         
-        self.set_OCP_data(5,1,2,0, [RE+5000., -2*np.pi, -10000., 0., mdry - 0.1], [r0 + 100000., 2*np.pi, 10000., 20000, m0 + 0.1], [300/self.ntS], [21600/self.ntS], [-umax, -umax], [umax, umax])
-        self.fix_initial_value([r0, theta0, vr0, vorb, m0])
+        self.set_OCP_data(5,1,2,0, [(RE+5000. - RE)*rscale, -2*np.pi*thetascale, -10000.*vscale, 0.*vscale, (mdry - 0.1)*mscale], [(r0 + 100000. - RE)*rscale, 2*np.pi*thetascale, 10000.*vscale, 20000*vscale, (m0 + 0.1)*mscale], [300/self.ntS * TSCALE], [21600/self.ntS * TSCALE], [-umax, -umax], [umax, umax])
+        self.fix_initial_value([(r0 - RE)*rscale, theta0*thetascale, vr0*vscale, vorb*vscale, m0*mscale])
         
         def safe_sqrt(x):
             return cs.sqrt(cs.fmax(x, 1e-12))
@@ -4446,11 +4451,17 @@ class Satellite_Deorbiting_1(OCProblem):
             return v_rel_r, v_rel_theta, v_rel
         
         X = cs.MX.sym('X', 5)
-        r, theta, vr, vtheta, m = cs.vertsplit(X)
+        r_, theta_, vr_, vtheta_, m_ = cs.vertsplit(X)
+        r = r_/rscale + RE
+        theta = theta_/thetascale
+        vr = vr_/vscale
+        vtheta = vtheta_/vscale
+        m = m_/mscale
         
         U = cs.MX.sym('U', 2)
         ur, utheta = cs.vertsplit(U)
-        dt = cs.MX.sym('dt', 1)
+        dt_ = cs.MX.sym('dt', 1)
+        dt = dt_/TSCALE
         
         rsafe = cs.fmax(r, RE + 10000)
         msafe = cs.fmax(m, mdry)
@@ -4465,40 +4476,36 @@ class Satellite_Deorbiting_1(OCProblem):
         thetathrust = utheta/msafe
         
         ode_rhs = cs.vertcat(
-            vr,
-            vtheta/rsafe,
-            centrifugal - gravity + rthrust - drag*vrelr,
-            -vr*vtheta/rsafe + thetathrust - drag*vreltheta,
+            vr * rscale,
+            vtheta/rsafe * thetascale,
+            (centrifugal - gravity + rthrust - drag*vrelr) * vscale,
+            (-vr*vtheta/rsafe + thetathrust - drag*vreltheta) * vscale,
             # vtheta**2 / r_safe - mu / r**2 + ur/m - drag*vrelr,
             # -vr*vtheta/r + utheta/m - drag*vreltheta,
-            -cs.sqrt(ur**2 + utheta**2)/(Isp*g0)
+            (-cs.sqrt(ur**2 + utheta**2)/(Isp*g0)) * mscale
         )
         
-        self.ODE = {'x':X, 'p':cs.vertcat(dt,U), 'ode': dt*ode_rhs}
+        self.ODE = {'x':X, 'p':cs.vertcat(dt_,U), 'ode': dt*ode_rhs}
         self.multiple_shooting()
-        self.set_objective(self.ntS*self.p_tf[-1])
+        self.set_objective(self.ntS*self.p_tf[-1]/TSCALE)
         
         rT,_,_,_,_ = cs.vertsplit(self.x_eval[:,-1])
         urt, uthetat = cs.vertsplit(self.u_eval)
         
-        self.add_constraint(rT, 0., rfinal)
+        self.add_constraint(rT/rscale, 0., rfinal - RE)
         self.add_constraint(safe_sqrt(urt**2 + uthetat**2), 0., umax)
         
         self.build_NLP()
         
-        r_init = np.linspace(r0, rfinal, self.ntS + 1)
-        theta_init = np.linspace(0, 2*np.pi, self.ntS + 1)
-        vr_init = np.zeros(self.ntS + 1)
-        vtheta_init = np.ones(self.ntS + 1)*vorb*0.9
-        m_init = np.linspace(m0, mdry + 10, self.ntS + 1)
-        
-        # ur_init = np.ones(self.ntS)*(-5.0)
-        # utheta_init = np.ones(self.ntS)*(-10.0)
-        
         for j in range(self.ntS):
-            self.set_stage_param(self.start_point, j, 1800/self.ntS)
+            self.set_stage_param(self.start_point, j, 1800/self.ntS * TSCALE)
             self.set_stage_control(self.start_point, j, [-5.0,-10.0])
         
+        r_init = (np.linspace(r0, rfinal, self.ntS + 1) - RE) * rscale
+        theta_init = np.linspace(0, 2*np.pi, self.ntS + 1) * thetascale
+        vr_init = np.zeros(self.ntS + 1) * rscale
+        vtheta_init = np.ones(self.ntS + 1)*vorb*0.9 * rscale
+        m_init = np.linspace(m0, mdry + 10, self.ntS + 1) * mscale
         for j in range(self.ntS + 1):
             self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
     
@@ -4509,14 +4516,20 @@ class Satellite_Deorbiting_1(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        RE, = [self.model_params[key] for key in ['RE']]
+        RE, rscale, thetascale, mscale, TSCALE = [self.model_params[key] for key in ['RE', 'rscale', 'thetascale', 'mscale', 'TSCALE']]
         
-        r, theta, vr, vtheta, m = self.get_state_arrays(xi)
+        r_, theta_, vr_, vtheta_, m_ = self.get_state_arrays(xi)
+        r = r_/rscale + RE
+        theta = theta_/thetascale
+        # vr = vr_/rscale
+        # vtheta = vtheta_/rscale
+        m = m_/mscale
+        
         ur, utheta = self.get_control_plot_arrays(xi)
         dt = self.get_param_arrays(xi)
-        time_grid = np.cumsum(np.concatenate([np.array([0]), dt]))
+        time_grid = np.cumsum(np.concatenate([np.array([0]), dt]))/TSCALE
         dte = self.get_param_arrays_expanded(xi)
-        time_grid_ref = np.cumsum(np.concatenate([np.array([0]), dte]))
+        time_grid_ref = np.cumsum(np.concatenate([np.array([0]), dte]))/TSCALE
         
         plt.figure(dpi=dpi)
         plt.plot(time_grid, (r - RE)/1000, 'r--', label = r'(r - Re)/1000')

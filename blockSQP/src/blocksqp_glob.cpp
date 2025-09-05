@@ -432,8 +432,9 @@ int SQPmethod::feasibilityRestorationPhase(){
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-    bool warmStart = false;
-    if (vars->steptype != 3){
+    bool warmStart = (vars->steptype == 3);
+    
+    if (!warmStart){
         vars->nRestIt = 0;
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
         //NEW
@@ -443,7 +444,6 @@ int SQPmethod::feasibilityRestorationPhase(){
         rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());
         rest_method->init();
     }
-    else warmStart = true;
     //Invoke the restoration loop with setup problem and method
     return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }

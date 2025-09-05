@@ -181,7 +181,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////////////////////
 
         /// Determine steplength alpha
-        if (param->enable_linesearch == 0 || (param->skip_first_linesearch && stats->itCount == 1)){
+        if (!param->enable_linesearch || (param->skip_first_linesearch && stats->itCount == 1)){
             // No enable_linesearch strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
@@ -189,7 +189,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             vars->steptype = 0;
         }
-        else if (param->enable_linesearch == 1 && !skipLineSearch){
+        else if (param->enable_linesearch && !skipLineSearch){
             // Filter line search based on Waechter et al., 2006 (Ipopt paper)
             if (filterLineSearch() || vars->reducedStepCount > param->max_consec_reduced_steps){
                 // Filter line search did not produce a step. Now there are a few things we can try ...
@@ -258,7 +258,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     std::cout << "***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
                     if (infoQP == 0) lsError = bool(filterLineSearch());
-                    vars->steptype = 1;
+                    if (!lsError) vars->steptype = 1;
                 }
 
                 // If this does not yield a successful step, start restoration phase

@@ -19,6 +19,7 @@ def opt_SR1_BFGS_seq():
     opts.automatic_scaling = False
     opts.max_filter_overrides = 0
     opts.conv_kappa_max = 8.0
+    opts.BFGS_damping_factor = 0.2
     return opts
 
 
@@ -61,6 +62,7 @@ def opt_conv_str_1_par(max_conv_QPs = 4):
     opts.automatic_scaling = False
     opts.max_filter_overrides = 0
     opts.conv_kappa_max = 8.0
+    opts.indef_delay = 3
     return opts
 
 
@@ -84,6 +86,7 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
     opts.automatic_scaling = True
     opts.max_filter_overrides = 0
     opts.conv_kappa_max = 8.0
+    opts.indef_delay = 3
     return opts
 
 
@@ -101,31 +104,42 @@ Examples = [
             OCProblems.Lotka_OED,
             ]
 Extended = [
-            OCProblems.D_Onofrio_Chemotherapy,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Van_der_Pol_Oscillator,
-            OCProblems.Hang_Glider,
-            OCProblems.Tubular_Reactor,
             OCProblems.Cart_Pendulum,
+            # OCProblems.D_Onofrio_Chemotherapy,
+            OCProblems.Hang_Glider,
+            OCProblems.Quadrotor_Helicopter,
             OCProblems.Satellite_Deorbiting_1,
             # OCProblems.Satellite_Deorbiting_2,
+            OCProblems.Tubular_Reactor,
+            OCProblems.Van_der_Pol_Oscillator,
             ]
 
 # Examples += Extended
 Examples = Extended
+# Examples = [OCProblems.Oil_Shale_Pyrolysis]
 
-opt1 = opt_conv_str_2_par()
+opt1 = opt_SR1_BFGS_seq()
+opt2 = opt_conv_str_1_seq()
+opt3 = opt_conv_str_2_seq()
+
+opt4 = opt_conv_str_2_par()
+opt5 = opt_conv_str_2_par()
+opt5.automatic_scaling = True
 
 
 Experiments = [
-                # (opt1, "conv2"),
+                (opt1, "SR1-BFGS"),
+                (opt2, "conv. str. 1"),
+                (opt3, "conv. str. 2"),
+                (opt4, "no scaling"),
+                (opt5, "automatic scaling")
                ]
 
 
 plot_folder = cD + "/out_blockSQP_experiments"
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\
-                                        nPert0 = 0, nPertF = 20,
+                                        nPert0 = 0, nPertF = 40,
                                         nt = 100,
                                         integrator = 'RK4',
                                         parallel = True

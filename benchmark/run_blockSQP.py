@@ -12,9 +12,9 @@ sys.path += [cD + "/.."]
 import py_blockSQP
 import matplotlib.pyplot as plt
 
-itMax = 100
+itMax = 200
 # step_plots = True
-step_plots = True
+step_plots = False
 plot_title = False
 
 
