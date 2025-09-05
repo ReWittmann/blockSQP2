@@ -14,7 +14,6 @@ project(BlockSQP
 set(CMAKE_CXX_STANDARD 20)
 enable_language(Fortran)
 
-
 #Static linking to avoid having to copy dll(-path)s.
 #
 if(WIN32)
@@ -25,16 +24,35 @@ if(WIN32)
 	add_compile_options(/MT)
 endif()
 
+
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+message(STATUS "BLAS_FOUND = ${BLAS_FOUND}")
+message(STATUS "BLAS_LIBRARIES = ${BLAS_LIBRARIES}")
+message(STATUS "BLAS_LINKER_FLAGS = ${BLAS_LINKER_FLAGS}")
+message(STATUS "LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
+
+set(BLAS_LIBRARY ${BLAS_LIBRARIES})
+set(LAPACK_LIBRARY ${LAPACK_LIBRARIES})
+
+#NOTE: Set LAPACK_LIBRARY beforehand to force CMakeMumps to use that LAPACK_LIBRARY. Dont forget to link BLAS
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
-	GIT_TAG 8b6a46501ec1d3c4fecca17c97608a6f2cd218ec
+	GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
 )
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
-set(MUMPS_find_static ON)
+
+
+if(WIN32)
+	set(MUMPS_find_static ON)
+else()
+	set(MUMPS_find_static OFF)
+	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os)
+endif()
 set(MUMPS_intsize64 OFF) #must be off
 
 #Shared MUMPS libraries are not supported when building with oneAPI and MSVC on windows
@@ -42,9 +60,9 @@ set(MUMPS_intsize64 OFF) #must be off
 set(BUILD_SHARED_LIBS OFF)
 
 FetchContent_MakeAvailable(CMAKEMUMPS)
+#############################################################
 
-
-set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modded_external/qpOASES_mod)
+set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/qpOASES_mod)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
@@ -64,10 +82,9 @@ add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/SolutionAnalysis.cpp
 	)
 
-
 #MUMPS LINEAR SOLVER
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS) #LAPACK and BLAS dependencies are already resolved by CMakeMumps and passed on
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS BLAS::BLAS)
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
 	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
@@ -84,6 +101,57 @@ target_include_directories(qpOASES
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
 )
+
+
+
+#Unmodded qpOASES with MUMPS_SPARSE_SOLVER fix
+#[[
+FetchContent_Declare(
+	qpos
+	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
+	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
+	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
+)
+FetchContent_GetProperties(qpos)
+if(NOT qpos_POPULATED)
+	FetchContent_MakeAvailable(qpos)
+endif()
+
+add_library(qpOASES STATIC
+	${qpos_SOURCE_DIR}/src/Matrices.cpp          
+	${CMAKE_CURRENT_SOURCE_DIR}/modded_external/SparseSolver.cpp
+	${qpos_SOURCE_DIR}/src/Bounds.cpp             
+	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
+	${qpos_SOURCE_DIR}/src/SQProblem.cpp
+	${qpos_SOURCE_DIR}/src/Constraints.cpp        
+	${qpos_SOURCE_DIR}/src/Options.cpp           
+	${qpos_SOURCE_DIR}/src/SQProblemSchur.cpp
+	${qpos_SOURCE_DIR}/src/Flipper.cpp            
+	${qpos_SOURCE_DIR}/src/OQPinterface.cpp      
+	${qpos_SOURCE_DIR}/src/SubjectTo.cpp
+	${qpos_SOURCE_DIR}/src/Indexlist.cpp          
+	${qpos_SOURCE_DIR}/src/QProblemB.cpp      
+	${qpos_SOURCE_DIR}/src/QProblemB.cpp         
+	${qpos_SOURCE_DIR}/src/Utils.cpp
+	${qpos_SOURCE_DIR}/src/QProblem.cpp     
+	${qpos_SOURCE_DIR}/src/QProblem.cpp           
+	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
+)
+target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
+target_compile_options(qpOASES PRIVATE -O3 INTERFACE -Wno-overloaded-virtual PUBLIC -fPIC)
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)
+IF(UNIX AND NOT APPLE)
+   target_compile_definitions(qpOASES PRIVATE LINUX)
+		target_link_libraries(qpOASES PUBLIC -lgfortran)
+ELSEIF(WIN32)
+    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
+ENDIF()
+
+target_include_directories(qpOASES
+	PUBLIC	${qpos_SOURCE_DIR}/include
+			${qpos_SOURCE_DIR}/include/qpOASES
+)
+]]
 
 
 
@@ -181,13 +249,20 @@ if (UNIX AND NOT APPLE)
 												ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
 												RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
 	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
-	
+	target_compile_options(dmumps_c_dyn PRIVATE -O3 -fvisibility=hidden)
 	#Notify downstream libraries that dmumps_c_dyn will be made available through LDMUMPS_C_DYN compile flag
 	#As of right now, this is only used on linux
-	target_compile_definitions(dmumps_c_dyn INTERFACE LDMUMPS_C_DYN)
-	target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
+	# target_compile_definitions(dmumps_c_dyn INTERFACE DMUMPS_C_DYN)
+	# target_link_libraries(blockSQP PUBLIC dmumps_c_dyn)
 	
-	function(ifwindows_copy_mumps_dlls LIBPATH)
+	
+	function(maybe_copy_mumps_libs LIBPATH)
+		set(mumps_lib dmumps_c_dyn)
+		add_custom_command(TARGET ${mumps_lib} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different
+					${CMAKE_SOURCE_DIR}/blockSQP/bin/lib${mumps_lib}.so
+					${LIBPATH}
+		)
 	endfunction()
 elseif(WIN32)
 	foreach(i RANGE 0 7)
@@ -200,7 +275,7 @@ elseif(WIN32)
 		target_compile_definitions(dmumps_c_dyn_${i} PRIVATE WINDOWS)
 	endforeach()
 	
-	function(ifwindows_copy_mumps_dlls LIBPATH)
+	function(maybe_copy_mumps_libs LIBPATH)
 		foreach(i RANGE 0 7)
 			set(mumps_lib dmumps_c_dyn_${i})
 			add_custom_command(TARGET ${mumps_lib} POST_BUILD
@@ -210,14 +285,14 @@ elseif(WIN32)
 			)
 		endforeach()
 	endfunction()
-	
 else()
-	function(ifwindows_copy_mumps_dlls LIBPATH)
+	function(maybe_copy_mumps_libs LIBPATH)
 	endfunction()
 endif()
 
-
-ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
+#Mumps dynamic libraries are available. Set corresponding preprocessor flag
+target_compile_definitions(blockSQP PRIVATE DMUMPS_C_DYN)
+maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
 
 add_executable(example1 blockSQP/examples/example1.cpp)
 target_link_libraries(example1 blockSQP)
@@ -239,7 +314,7 @@ set_target_properties(example_condensing
 )
 
 
-option(PYTHON_INTERFACE "build python interface" OFF)
+option(PYTHON_INTERFACE "build python interface" ON)
 set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")
 if(PYTHON_INTERFACE)
 	if (NOT PYTHON_INTERPRETER STREQUAL "")
@@ -254,7 +329,7 @@ if(PYTHON_INTERFACE)
 	)
 	FetchContent_MakeAvailable(PYBIND11)
 	
-	pybind11_add_module(py_blockSQP python_Interface/py_blockSQP.cpp)
+	pybind11_add_module(py_blockSQP Interface_src/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
 	
 	if(UNIX)
@@ -270,18 +345,20 @@ if(PYTHON_INTERFACE)
 	endif()
 	
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
-	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
-												 RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP
+	
+	set(py_blockSQP_DIR ${CMAKE_SOURCE_DIR}/py_blockSQP)
+	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
+												 RUNTIME_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
 												 )
-	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/python_Interface/py_blockSQP)
+	maybe_copy_mumps_libs(${py_blockSQP_DIR})
 endif()
 
 
-option(JULIA_INTERFACE "build julia interface" OFF)
+option(JULIA_INTERFACE "build julia interface" ON)
 set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (default: empty)")
 
 if(JULIA_INTERFACE)
-	add_library(blockSQP_jl SHARED C_Interface/C_blockSQP.cpp)
+	add_library(blockSQP_jl SHARED Interface_src/C_blockSQP.cpp)
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
@@ -297,6 +374,6 @@ if(JULIA_INTERFACE)
 			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
 			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
 	)
-	ifwindows_copy_mumps_dlls(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
+	maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
 endif()
 

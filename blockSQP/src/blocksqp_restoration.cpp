@@ -28,6 +28,12 @@ void abstractRestorationProblem::update_xi_ref(const Matrix &xiReference){return
 
 RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
     parent = parentProblem;
+    
+    n_vblocks = parent->n_vblocks + 1;
+    vblocks = new vblock[parent->n_vblocks + 1];
+    std::copy(parent->vblocks, parent->vblocks + parent->n_vblocks, vblocks);
+    vblocks[parent->n_vblocks] = vblock(parent->nCon, false);
+    
     /*
     xiRef.Dimension( parent->nVar ).Initialize(0.);
     for(int i=0; i<parent->nVar; i++)
@@ -47,7 +53,7 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
     for(int i = 0; i < parent->nBlocks + 1; i++)
         blockIdx[i] = parent->blockIdx[i];
     for(int i = parent->nBlocks + 1; i<nBlocks + 1; i++)
-        blockIdx[i] = blockIdx[i-1]+1;
+        blockIdx[i] = blockIdx[i-1] + 1;
 
     /* Set bounds */
     objLo = 0.0;
@@ -71,6 +77,7 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
 
 RestorationProblem::~RestorationProblem(){
     delete[] blockIdx;
+    delete[] vblocks;
     //delete[] jacNzOrig;
     //delete[] jacIndRowOrig;
     //delete[] jacIndColOrig;
@@ -101,7 +108,7 @@ void RestorationProblem::evaluate(
     for( iCon=0; iCon<nCon; iCon++ )
         constr(iCon) -= slack(iCon);
 
-
+    
     /* Evaluate objective: minimize slacks plus deviation from reference point */
     if( dmode < 0 )
         return;
@@ -121,7 +128,7 @@ void RestorationProblem::evaluate(
     }
     regTerm = 0.5 * zeta * regTerm;
     *objval += regTerm;
-
+    
     if (dmode > 0){
         // compute objective gradient
 
@@ -173,7 +180,7 @@ void RestorationProblem::evaluate( const Matrix &xi, const Matrix &lambda,
     for( i=0; i<nCon; i++ )
         *objval += slack( i ) * slack( i );
     *objval = 0.5 * rho * (*objval);
-
+    
     // Second part: regularization term
     regTerm = 0.0;
     for( i=0; i<parent->nVar; i++ )
@@ -304,11 +311,6 @@ void RestorationProblem::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJa
     for( i=0; i<parent->nVar; i++ )
         if( fabs( xi_ref( i ) ) > 1.0 )
             diagScale( i ) = 1.0 / fabs( xi_ref( i ) );
-
-    // Regularization factor zeta and rho \todo wie setzen?
-    zeta = 1.0e-3;
-    //zeta = 0.0;
-    rho = 1.0e3;
 
     lambda.Initialize( 0.0 );
 }

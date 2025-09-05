@@ -76,7 +76,11 @@ void *get_plugin_handle(int ind){
 
 #ifdef LINUX
     //Flag indicating that libdmumps_c_dyn.so, build from libdmumps_c_dyn.cpp has been linked
-    #ifdef LDMUMPS_C_DYN
+    //In this case, rely on rpath to find and load the shared library
+    
+    /*
+    #ifdef DMUMPS_C_DYN
+    //Rely on dynamic linking and rpath to find the directory of libdmumps_c_dyn.so
     extern "C" void dmumps_c_dyn(void* mumps_struc_c_dyn);
     
     const char* get_mumps_module_dir(){
@@ -89,15 +93,25 @@ void *get_plugin_handle(int ind){
         const char* dir = dirname(path_);
         return dir;
     }
-    #else
-        const char* get_mumps_module_dir(){
-            throw std::runtime_error(std::string("Parallel solution of QPs with qpOASES using the MUMPS linear solver requires linking libdmumps_c_dyn.so, built from libdmumps_c_dyn.cpp, and setting the preprocessor flag LDUMPS_C_DYN (enables workaround for MUMPS not being thread safe)"));
-        }
     #endif
+    */
+            
+    //Search for libdmumps_c_syn.so in current directory
+    const char* get_current_lib_dir(){
+        Dl_info info;
+        //Get address of any function (e.g. this function) in this shared object,
+        bool load_success = dladdr((void*) &get_current_lib_dir, &info);
+        if (!load_success) throw std::runtime_error(std::string("dladdr failed to obtain path to libblockSQP"));
+        char* path_ = new char[PATH_MAX];
+        std::strncpy(path_, info.dli_fname, PATH_MAX);
+        path_[PATH_MAX - 1] = '\0';
+        const char* dir = dirname(path_);
+        return dir;
+    }
     
     void load_mumps_libs(int N_plugins){
         void **handle;
-        std::string dmumps_c_dyn_dir = std::string(get_mumps_module_dir()) + "/libdmumps_c_dyn.so";
+        std::string dmumps_c_dyn_dir = std::string(get_current_lib_dir()) + "/libdmumps_c_dyn.so";
         for (int i = 0; i < N_plugins; i++){
             handle = get_handle_ptr(i);
             if (*handle == nullptr){
@@ -130,7 +144,7 @@ void *get_plugin_handle(int ind){
         return std::filesystem::path(path).parent_path().string();
     }
     
-    void load_mumps_libs(int N_plugins) {
+    void load_mumps_libs(int N_plugins){
         void** handle;
         std::string dmumps_c_dyn_dir = get_current_lib_dir();
         for (int i = 0; i < N_plugins; i++) {

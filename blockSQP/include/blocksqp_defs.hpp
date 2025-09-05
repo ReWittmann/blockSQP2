@@ -24,6 +24,8 @@
 #include <set>
 #include <string>
 #include <stdexcept>
+#include <vector>
+#include <chrono>
 
 namespace blockSQP{
 
@@ -67,8 +69,6 @@ public:
 
 
 #define PAR_QP_MAX 8
-
-
 
 } // namespace blockSQP
 

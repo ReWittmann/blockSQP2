@@ -55,22 +55,22 @@ class SQPoptions{
     double feas_tol = 1.0e-6;
     bool enable_premature_termination = false;  // Allow terminating with partial success if opt error is below opt_tol**0.75, we are feasible and the linesearch fails
     int max_extra_steps = 0;                    // Maximum number of steps after opt_tol and feas_tol were reached for improved accuracy.
-
+    
     //Line search heuristics
     int max_filter_overrides = 2;
-
+    
     //Derivative evaluation
     bool sparse = true;                    // Decide wether dense or sparse problem functions should be used
-
+    
     //Restoration phase
     bool enable_rest = true; 
     double rest_rho = 1.0;                     // Restoration objective: Rho * ||s||^2 + zeta * ||xi - xi_ref||^2, s - slack variables, xi_ref - iterate at which restoration was invoked
     double rest_zeta = 1.0e-6;
-
+    
     //Full/limited memory quasi newton
     bool lim_mem = true;                       // Enable limited memory quasi newton
     int mem_size = 20;                             // Limited memory size
-
+    
     //Hessian approximation
     int block_hess = 1;                             //0: Full space updates, 1: partitioned updates, 2: 2 blocks: 1 full space update block, 1 objective Hessian block
     int exact_hess = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
@@ -78,6 +78,7 @@ class SQPoptions{
     int fallback_approx = 2;                 //As hess_approx, must be positive definite
     
     double reg_factor = 0.0;        //Enable further regularization of pos.def. fallback Hessians by adding a scaled identity. Beneficial for some QP solvers
+    int indef_delay = 3;            //Dont use indefinite Hessians in the first # steps, value of 3 is recommended when using parallel solution of QPs
     
     //Hessian sizing
     double initial_hess_scale = 1.0;
@@ -115,13 +116,14 @@ class SQPoptions{
     //Filter line search options
     bool enable_linesearch = true;                      
     int max_linesearch_steps = 10;
-    int max_consec_reduced_steps = 8;                 // Reset Hessian if stepsize was reduced consecutively too often
+    int max_consec_reduced_steps = 3;                 // Reset Hessian if stepsize was reduced consecutively too often
     int max_consec_skipped_updates = 100;             // Reset Hessian if too many quasi Newton updates were skipped consecutively
     bool skip_first_linesearch = false;
     int max_SOC = 3;                        ///< Maximum number of second order correction (SOC) steps
         
     //Filter line search parameters
-    double gammaTheta = 1.0e-5;             ///< see IPOPT paper
+    //double gammaTheta = 1.0e-5;             ///< see IPOPT paper
+    double gammaTheta = 1.0e-2;             ///< see IPOPT paper
     double gammaF = 1.0e-5;                 ///< see IPOPT paper   
     double kappaSOC = 0.99;                 ///< see IPOPT paper
     double kappaF = 0.8;                    ///< see IPOPT paper
@@ -130,24 +132,27 @@ class SQPoptions{
     double delta = 1.0;                     ///< see IPOPT paper
     double sTheta = 1.1;                    ///< see IPOPT paper
     double sF = 2.3;                        ///< see IPOPT paper
-    double eta = 1.0e-4;                    ///< see IPOPT paper
-
+    //double eta = 1.0e-4;                    ///< see IPOPT paper
+    double eta = 1.0e-2;                    ///< see IPOPT paper
+    
     //QP solver options
     QPsolvers qpsol = QPsolvers::unset;             ///< which linked QP solver (qpOASES, gurobi, ...) should be used
     QPsolver_options *qpsol_options = nullptr;      ///< options to be passed to the specific qp solver
     int max_QP_it = 5000;                         ///< Maximum number of QP iterations per SQP iteration
     double max_QP_secs = 3600.0;                 ///< Maximum number of seconds per QP solve per SQP iteration
-
-
+    
     //SQPmethod subclass options, outsource into SQPoptions subclass if they become too many
     int max_bound_refines = 3;              ///< Options for condensed QPs
     int max_correction_steps = 5;           ///< How many additional QPs with bound correction added to dependent variables should be solved
     double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
     
-    
     //For experimental purposes
     bool test_opt_1 = false;
-    int test_qp_hotstart = 0;
+    double test_opt_2 = 1.0;
+    double test_opt_3 = 2.0;
+    double test_opt_4 = 0.5;
+    bool test_opt_5 = false;
+    //int test_qp_hotstart = 0;
     
     private:
     //Holder if no qpsol_options were provided

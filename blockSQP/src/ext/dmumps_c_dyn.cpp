@@ -1,13 +1,13 @@
 
 #include "dmumps_c.h"
 
-#ifdef WINDOWS
-    #define dl_exp __declspec(dllexport)
+#ifdef _MSC_VER
+    #define CDLEXP extern "C" __declspec(dllexport)
 #else
-    #define dl_exp
+    #define CDLEXP extern "C" __attribute__((visibility("default")))
 #endif
 
 
-extern "C" dl_exp void dmumps_c_dyn(void *mumps_struc_c_dyn){
+CDLEXP void dmumps_c_dyn(void *mumps_struc_c_dyn){
     dmumps_c((DMUMPS_STRUC_C*) mumps_struc_c_dyn);
 }

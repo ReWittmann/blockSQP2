@@ -43,10 +43,12 @@ void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double
     for(k=0; k<vars->xi.M(); k++){
 
         //TrialXi was already set in bounds, set the step in bounds as well
-        if (alpha * vars->deltaXi(k) < prob->lb_var(k) - vars->xi(k)){
+        // if (alpha * vars->deltaXi(k) < prob->lb_var(k) - vars->xi(k)){
+        if (alpha * deltaXi(k) < prob->lb_var(k) - vars->xi(k)){
             vars->deltaXi(k) = prob->lb_var(k) - vars->xi(k);
         }
-        else if (alpha * vars->deltaXi(k) > prob->ub_var(k) - vars->xi(k)){
+        // else if (alpha * vars->deltaXi(k) > prob->ub_var(k) - vars->xi(k)){
+        else if (alpha * deltaXi(k) > prob->ub_var(k) - vars->xi(k)){
             vars->deltaXi(k) = prob->ub_var(k) - vars->xi(k);
         }
         else{
@@ -56,21 +58,27 @@ void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double
         //Trial iterate becomes new iterate
         vars->xi(k) = vars->trialXi(k);
     }
-
+    
     // Store the infinity norm of the multiplier step
     vars->lambdaStepNorm = 0.0;
     for(k = 0; k < vars->lambda.M(); k++)
         if( (lStpNorm = fabs( alpha*lambdaQP( k ) - alpha*vars->lambda( k ) )) > vars->lambdaStepNorm )
             vars->lambdaStepNorm = lStpNorm;
-
+    
     // Set new multipliers
     for (k = 0; k < vars->lambda.M(); k++)
         vars->lambda( k ) = (1.0 - alpha)*vars->lambda( k ) + alpha*lambdaQP( k );
-
+    
     // Count consecutive reduced steps
+    /*
     if( vars->alpha < 1.0 )
         vars->reducedStepCount++;
     else
+        vars->reducedStepCount = 0;
+    */
+    if (vars->alpha < 0.25)
+        vars->reducedStepCount++;
+    else if (vars->alpha > 0.99)
         vars->reducedStepCount = 0;
 }
 
@@ -85,17 +93,17 @@ void SQPmethod::force_accept(double alpha){
 //Force a step to be accepted, ignoring the filter and remove dominating entries
 void SQPmethod::force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS){
     int infoEval;
-
+    
     acceptStep(deltaXi, lambdaQP, alpha, nSOCS);
-
+    
     prob->evaluate(vars->xi, &vars->obj, vars->constr, &infoEval);
     vars->cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
-
+    
     //Remove filter entries that dominate the set point
     std::set<std::pair<double,double>>::iterator iter;
     std::set<std::pair<double,double>>::iterator iterToRemove;
     iter = vars->filter.begin();
-
+    
     while (iter != vars->filter.end()){
         if (iter->first < vars->cNorm && iter->second < vars->obj){
             iterToRemove = iter;
@@ -103,9 +111,6 @@ void SQPmethod::force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, doub
             vars->filter.erase(iterToRemove);
         }
         else iter++;
-    }
-    for (std::set<std::pair<double,double>>::iterator iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
-        
     }
 
     augmentFilter(vars->cNorm, vars->obj);
@@ -221,8 +226,6 @@ int SQPmethod::filterLineSearch(){
         // Check acceptability to the filter
         if (pairInFilter(cNormTrial, objTrial)){
             // Trial point is in the prohibited region defined by the filter, try second order correction
-            if (k == 0) std::cout << "Point is in the filter, try SOC\n";
-
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                 break;
             else{
@@ -242,7 +245,6 @@ int SQPmethod::filterLineSearch(){
                     // Switching conditions hold: Require satisfaction of Armijo condition for objective
                     if (objTrial > vars->obj + param->eta*alpha*dfTdeltaXi){
                         //Armijo condition violated, try second order correction
-                        if (k == 0) std::cout << "Armijo condition violated, try SOC\n";
                         if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                             break;
                         else{
@@ -267,7 +269,6 @@ int SQPmethod::filterLineSearch(){
             break;
         }
         else{
-            std::cout << "Filter condition violated, try SOC\n";
             // Trial point is dominated by current point, try second order correction
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, false)) break; // SOC yielded suitable alpha, stop
             else{
@@ -303,9 +304,9 @@ int SQPmethod::filterLineSearch(){
 bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double dfTdeltaXi, bool swCond){
 
     // If constraint violation of the trialstep is lower than the current one skip SOC
-    if(cNormTrial < cNorm)// && stats->itCount != 4)
+    if(cNormTrial < cNorm || cNormTrial < 1e-2*param->feas_tol)// && stats->itCount != 4)
     {
-        std::cout << "Constraint violation is lower than current one, skip SOC\n";
+        std::cout << "Constraint violation is low, skip SOC\n";
         return false;
     }
 
@@ -431,14 +432,18 @@ int SQPmethod::feasibilityRestorationPhase(){
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-    bool warmStart = false;
-    if (vars->steptype != 3){
-        rest_prob->update_xi_ref(vars->xi);
+    bool warmStart = (vars->steptype == 3);
+    
+    if (!warmStart){
         vars->nRestIt = 0;
+        rest_stats = std::make_unique<SQPstats>(stats->outpath);
+        //NEW
+        rest_prob = std::make_unique<RestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+        //rest_prob->update_xi_ref(vars->xi);
+        
         rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());
         rest_method->init();
     }
-    else warmStart = true;
     //Invoke the restoration loop with setup problem and method
     return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
@@ -449,8 +454,8 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresult ret;
     int maxRestIt = 20;
-    double cNormTrial, objTrial, lStpNorm, stepsize_sum = 0.;
-
+    double cNormTrial, objTrial, stepsize_sum = 0.;
+    
     for (; vars->nRestIt < maxRestIt; vars->nRestIt++){
         // One iteration for minimum norm NLP
         ret = rest_method->run(1, RwarmStart);
@@ -461,24 +466,23 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
             feas_result = 3;
             break;
         }
-
+        
         // Require sufficient progress
         stepsize_sum += rest_method->vars->alpha;
         if (stepsize_sum < min_stepsize_sum){
             continue;
         }
-
         // Get new xi from the restoration phase
         rest_method->get_xi(rest_xi);
         rest_prob->recover_xi(rest_xi, vars->trialXi);
-
+        
         // Compute objective at trial point
         prob->evaluate(vars->trialXi, &objTrial, vars->constr, &info);
         stats->nFunCalls++;
         cNormTrial = lInfConstraintNorm(vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
         if (info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial))
             continue;
-
+        
         // Is this iterate acceptable for the filter?
         if (!pairInFilter(cNormTrial, objTrial)){
             // success
@@ -486,50 +490,67 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
             feas_result = 0;
             break;
         }
-
+        
         // If minimum norm NLP has converged, declare local infeasibility
+        /*
         if (rest_method->vars->tol < param->opt_tol && rest_method->vars->cNormS < param->feas_tol){
+            std::cout << "feas_ret = " << static_cast<int>(ret) << "\n";
+            feas_result = 2;
+            break;
+        }
+        */
+        
+        if (static_cast<int>(ret) > 0){
             feas_result = 2;
             break;
         }
     }
-
+    
     // Success, locally infeasible or maximum restoration iterations reached
-    if (feas_result < 2){
+    if (feas_result == 0 || feas_result == 2){        
         for (int i = 0; i < prob->nVar; i++){
-            //TODO check sign
             vars->deltaXi(i) = -vars->xi(i);
-            vars->xi(i) = vars->trialXi(i);
-            vars->deltaXi(i) += vars->xi(i);
+            vars->deltaXi(i) += vars->trialXi(i);
         }
-
-        // Store the infinity norm of the multiplier step
-        rest_method->get_lambda(rest_lambda);
-        rest_prob->recover_lambda(rest_lambda, vars->trialLambda);
-        vars->lambdaStepNorm = 0.0;
-        for (int i = 0; i < vars->lambda.m; i++){
-            if ((lStpNorm  = fabs(vars->trialLambda(i) - vars->lambda(i))) > vars->lambdaStepNorm) vars->lambdaStepNorm = lStpNorm;
-            vars->lambda(i) = vars->trialLambda(i);
-        }
-
+        rest_method->get_lambda(rest_lambda); 
         rest_method->get_lambdaQP(rest_lambdaQP);
+        rest_prob->recover_lambda(rest_lambda, vars->trialLambda);
         rest_prob->recover_lambda(rest_lambdaQP, vars->lambdaQP);
-
-        vars->alpha = 1.0;
-        vars->nSOCS = 0;
-
+        
+        if (feas_result == 0){
+            acceptStep(vars->deltaXi, vars->trialLambda, 1.0, 0);
+            // Original blockSQP does not add restoration result to filter, though this is done in the Biegler/Waechter filter line search paper
+            //augmentFilter(cNormTrial, objTrial);
+        }
+        else if (feas_result == 2){
+            //If restoration method converged and remaining constraint violation is small, try overriding the filter
+            if (cNormTrial < 1e-4 && vars->remaining_filter_overrides > 0){
+                force_accept(vars->deltaXi, vars->trialLambda, 1.0, 0);
+                vars->remaining_filter_overrides -= 1;
+                feas_result = 0;
+            }
+            else{
+                acceptStep(vars->deltaXi, vars->trialLambda, 1.0, 0);
+            }
+        }
+        
+        vars->obj = objTrial;
+        vars->cNorm = cNormTrial;
+        
         // reset reduced step counter
         vars->reducedStepCount = 0;
-
+        
         // reset Hessian and limited memory information
         resetHessians();
         vars->n_scaleIt = 0;
     }
-    else if (feas_result == 2){
+    
+    
+    if (feas_result == 2){
         stats->printProgress( prob, vars.get(), param, 0 );
         printf("The problem seems to be locally infeasible. Infeasibilities minimized.\n");
     }
-
+    
     return feas_result;
 }
 
@@ -674,6 +695,7 @@ bool SQPmethod::pairInFilter( double cNorm, double obj )
      */
 
     for (iter = vars->filter.begin(); iter != vars->filter.end(); iter++){
+        //Note: Changing the tolerance away from 0.01 is not recommended, leads to a lot more linesearch failures and unsuccessful terminations
         if ((cNorm >= (1.0 - param->gammaTheta) * iter->first || (cNorm < 0.01 * param->feas_tol && iter->first < 0.01 * param->feas_tol)) &&
              obj >= iter->second - param->gammaF * iter->first)
             return 1;

@@ -43,6 +43,7 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->sizing = 2;
     rest_param->BFGS_damping_factor = 0.2;
     rest_param->sparse = parent_options->sparse;
+    rest_param->max_filter_overrides = 0;
     //rest_param->sizing = 4;
     //rest_param->BFGS_damping_factor = 1./3.;
 
@@ -87,12 +88,15 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     //Setup the feasibility restoration problem
     if (param->enable_rest){
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->rest_rho, param->rest_zeta);
-        rest_stats = std::make_unique<SQPstats>(stats->outpath);
+        //rest_prob = std::make_unique<RestorationProblem>(prob, Matrix(), param->rest_rho, param->rest_zeta);
+        //rest_stats = std::make_unique<SQPstats>(stats->outpath);
 
-        rest_xi.Dimension(rest_prob->nVar);
-        rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
-        rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);
+        //rest_xi.Dimension(rest_prob->nVar);
+        //rest_lambda.Dimension(rest_prob->nVar + rest_prob->nCon);
+        //rest_lambdaQP.Dimension(rest_prob->nVar + rest_prob->nCon);
+        rest_xi.Dimension(prob->nVar + prob->nCon);
+        rest_lambda.Dimension(prob->nVar + prob->nCon + prob->nCon);
+        rest_lambdaQP.Dimension(prob->nVar + prob->nCon + prob->nCon);
    }
 }
 

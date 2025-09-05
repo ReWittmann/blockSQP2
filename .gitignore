@@ -17,6 +17,7 @@ example1_sparse
 example_CQPsolver
 example_condensing
 TEST_*
+out_*/
 sqpits.csv
 updatesequence.txt
 .vscode
@@ -24,5 +25,6 @@ updatesequence.txt
 .vs
 
 build/
+.build/
 install/
 blockSQP/examples/bin/

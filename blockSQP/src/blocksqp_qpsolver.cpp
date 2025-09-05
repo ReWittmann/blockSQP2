@@ -172,7 +172,7 @@ int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     }
     
     h_updated = false; hess_updated = false; A_updated = false; bounds_updated = false;
-            
+    
     inner_QPsol->set_lin(h_cond);
     inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
     inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
@@ -186,7 +186,6 @@ int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 void CQPsolver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){
-    
     if (!hess_updated && !h_updated && !A_updated)
         cond->SOC_condense(h_qp, lb_A, ub_A, h_cond, lb_A_cond, ub_A_cond);
     else if (hess_updated && !h_updated && !A_updated && !bounds_updated)
@@ -312,30 +311,43 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
     
     #ifdef SOLVER_MUMPS
     }
-        //Work around the MUMPS sparse solver not being thread safe (Currently only possible on linux and windows)
-        int n_QP, m_QP, n_hess_QP, *blockIdx;
-        QPsolverBase *QPsol = nullptr;
-        if (prob->cond == nullptr){
-            m_QP = prob->nCon;
-            n_QP = prob->nVar;
-            n_hess_QP = vars->nBlocks;
-            blockIdx = vars->blockIdx.get();
-        }
-        else{
-            m_QP = prob->cond->condensed_num_cons;
-            n_QP = prob->cond->condensed_num_vars;
-            n_hess_QP = prob->cond->condensed_num_hessblocks;
-            blockIdx = prob->cond->condensed_blockIdx;
-        }
-        
-        load_mumps_libs(N_QP);
-        for (int i = 0; i < N_QP; i++){
-            QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
-            if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
-            QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
-        }
-        
-        return QPsols_par;
+    //Work around the MUMPS sparse solver not being thread safe (Currently only possible on linux and windows)
+    int n_QP, m_QP, n_hess_QP, *blockIdx;
+    QPsolverBase *QPsol = nullptr;
+    if (prob->cond == nullptr){
+        m_QP = prob->nCon;
+        n_QP = prob->nVar;
+        n_hess_QP = vars->nBlocks;
+        blockIdx = vars->blockIdx.get();
+    }
+    else{
+        m_QP = prob->cond->condensed_num_cons;
+        n_QP = prob->cond->condensed_num_vars;
+        n_hess_QP = prob->cond->condensed_num_hessblocks;
+        blockIdx = prob->cond->condensed_blockIdx;
+    }
+    
+    /*
+    load_mumps_libs(N_QP);
+    for (int i = 0; i < N_QP; i++){
+        QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
+        if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
+        QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
+    }
+    */
+    
+    load_mumps_libs(N_QP - 1);
+    for (int i = 0; i < N_QP - 1; i++){
+        QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
+        if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
+        QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
+    }
+    
+    QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
+    if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
+    QPsols_par[N_QP - 1] = std::unique_ptr<QPsolverBase>(QPsol);
+    
+    return QPsols_par;
     #endif
 }
 
@@ -483,7 +495,8 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
         }
     #else
         threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
-                                                                        int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c){
+                                                                        int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
+                                                qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
             throw NotImplementedError("Using qpOASES with MUMPS in parallel requires the patched version");
         }
     #endif
@@ -642,9 +655,9 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         //std::cout << "QP could be solved, qpOASES ret is 0\n";
         return 0;
     }
-
+    
     *qp = *qpSave;
-
+        
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
     
@@ -664,7 +677,9 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 void qpOASES_solver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){    
-    qp->set_stop_token(std::move(stopRequest));
+    #ifdef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
+        qp->set_stop_token(std::move(stopRequest));
+    #endif
     int inner_QP_result = solve(deltaXi, lambdaQP);
     QP_result.set_value(inner_QP_result);
 }

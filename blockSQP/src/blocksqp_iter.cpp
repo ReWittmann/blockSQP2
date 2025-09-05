@@ -208,6 +208,8 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
             par_QP_sols_dual[j].Dimension(prob->nVar + prob->nCon);
         }
     }
+    
+    it_saved = false;
 }
 
 SQPiterate::SQPiterate(){}
@@ -283,8 +285,7 @@ void SQPiterate::save_iterate(){
             scaleFactors_save[i] = scaled_prob->scaling_factors[i];
         }
     }
-
-    return;
+    it_saved = true;
 }
 
 void SQPiterate::restore_iterate(){

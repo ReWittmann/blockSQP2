@@ -96,13 +96,25 @@ class SQPmethod{
         void updateStepBounds();
         /// Update the bounds on the current step for a second order correction, i.e. lb_s = lb - constr(trialXi) + constrJac(Xi)*deltaXi = prob->lb_con - vars->trialConstr + vars->AdeltaXi
         void updateStepBoundsSOC();
+        
         /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
         //If hess_type is 0, solution is tried with increasingly convexified hessian approximations. If hess_type is 1, only convex hessian approximations are used. If hess_type is 2, only the (scaled) identity is used as hessian
-        //virtual int solve_initial_QP(Matrix &deltaXi, Matrix &lambdaQP);
-        virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
         
-        virtual int solve_initial_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        /////////////////////////////////NEW
+        /// Resolve options, iteration state and call parameters and dispatch the appropriate solve[*]QP_* method. 
+        virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        virtual int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        virtual int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        
+        
+        /// Sequentially try to solve increasingly convexified QPs. 
+        //virtual int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        /////////////////////////////////
+        
+        //virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        //virtual int solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
@@ -181,7 +193,7 @@ class SQPmethod{
         void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
         void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
         
-        void calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess);
+        //void calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification

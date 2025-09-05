@@ -248,7 +248,9 @@ void SQPoptions::optionsConsistency(){
         if(qpsol == QPsolvers::qpOASES){
             #ifdef SOLVER_MUMPS
                 #ifndef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
-                    throw ParameterError("A modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+                    throw ParameterError("SQPoptions::par_QPs = true -- a modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+                #elif !defined(DMUMPS_C_DYN)
+                    throw ParameterError("SQPoptions::par_QPs = true -- parallel QP solution must be enabled via DMUMPS_C_DYN preprocessor flag if using qpOASES with mumps sparse solver, in addition to providing dynamically loadable mumps shared libraries");
                 #endif
             #endif
         }
@@ -272,11 +274,12 @@ void SQPoptions::optionsConsistency(){
 
     if (lim_mem && mem_size == 0) 
         throw ParameterError("hessMemsize must be greater zero for limited memory quasi newton");
-
+    
+    
     if (lim_mem && mem_size > 200){
         std::cout << "WARNING: Large value of mem_size (> 200). Performance may be impeded\n";
-    }
-
+    }   
+    
     complete_QP_options();
 }
 
@@ -302,8 +305,6 @@ void SQPoptions::complete_QP_options(){
         if (!sparse) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
         else              static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
     }
-
-    return;
 }
 
 
@@ -317,7 +318,6 @@ QPsolver_options::~QPsolver_options(){}
 
 qpOASES_options::qpOASES_options(): QPsolver_options(QPsolvers::qpOASES){
     sparsityLevel = -1;
-
     printLevel = 0;
     terminationTolerance = 5.0e6*2.221e-16;
 }

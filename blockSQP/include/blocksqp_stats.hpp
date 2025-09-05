@@ -63,6 +63,8 @@ class SQPstats{
 
         //Progress
         //double obj_progress;
+        
+        
 
     /*
      * Methods
