@@ -51,7 +51,7 @@ if(WIN32)
 	set(MUMPS_find_static ON)
 else()
 	set(MUMPS_find_static OFF)
-	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os)
+	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
 endif()
 set(MUMPS_intsize64 OFF) #must be off
 

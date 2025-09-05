@@ -316,6 +316,9 @@ CDLEXP void SQPoptions_set_qpsol(void *ptr, int val){
         QPS = QPsolvers::unset;
     static_cast<SQPoptions *>(ptr)->qpsol = QPS;
 }
+CDLEXP void SQPoptions_set_indef_delay(void *ptr, int val){
+    static_cast<SQPoptions *>(ptr)->indef_delay = val;
+}
 
 // SQPstats
 CDLEXP void *create_SQPstats(char *pathstr){
