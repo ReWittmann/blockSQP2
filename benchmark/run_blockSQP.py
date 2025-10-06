@@ -32,10 +32,10 @@ import OCProblems
 #  'Tubular_Reactor', 
 #  ]
 
-OCprob = OCProblems.Tubular_Reactor(nt = 100, 
+OCprob = OCProblems.Cart_Pendulum(nt = 100, 
                     refine = 1, 
                     parallel = True, 
-                    integrator = 'RK4',
+                    integrator = 'RK4', 
                     N_threads = 4, 
                     # epsilon = 100.0, 
                     # **OCProblems..param_set_2,

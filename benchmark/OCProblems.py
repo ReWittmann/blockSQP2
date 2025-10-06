@@ -1143,12 +1143,12 @@ class Goddard_Rocket(OCProblem):
         r,v,m = self.get_state_arrays_expanded(xi)
         
         fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(time_grid, (r - 1)*100, 'b:', label = r'$(r-1)\cdot 100$')
-        ax.plot(time_grid, v*20, 'g--', label = r'$v\cdot 20$')
-        ax.plot(time_grid, m, 'y-.', label = '$m$')
+        ax.plot(time_grid, (r - 1)*100, 'tab:blue', linestyle = ':', label = r'$(r-1)\cdot 100$')
+        ax.plot(time_grid, v*20, 'tab:green', linestyle = '--', label = r'$v\cdot 20$')
+        ax.plot(time_grid, m, 'tab:olive', linestyle = '-.', label = '$m$')
         
         
-        ax.step(time_grid, u, 'r', label = '$u$')
+        ax.step(time_grid, u, 'tab:red', label = '$u$')
         ax.legend(fontsize = 'large')
         
         ax.set_xlabel('t', fontsize = 17.5)
@@ -1400,9 +1400,9 @@ class Batch_Reactor(OCProblem):
         T = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'g--', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'b-.', label = r'$x_2$')
-        plt.step(self.time_grid_ref, (T-298)*0.05, 'r', label = r'$(u-298)\cdot 0.05$')
+        plt.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'tab:blue', linestyle = '-.', label = r'$x_2$')
+        plt.step(self.time_grid_ref, (T-298)*0.05, 'tab:red', label = r'$(u-298)\cdot 0.05$')
         
         plt.legend(fontsize='large')
         
@@ -1817,9 +1817,9 @@ class Cushioned_Oscillation(OCProblem):
         time_grid = np.cumsum(np.concatenate([[0], p.reshape(-1)]))
         
         fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(time_grid, x, 'b--', label = 'x')
-        ax.plot(time_grid, v, 'g-.', label = 'v')
-        ax.step(time_grid, u, 'r', label = 'u')
+        ax.plot(time_grid, x, 'tab:blue', linestyle = '--', label = 'x')
+        ax.plot(time_grid, v, 'tab:green', linestyle = '-.', label = 'v')
+        ax.step(time_grid, u, 'tab:red', label = 'u')
         ax.legend(loc='upper right', fontsize = 'large')
         
         ax.set_xlabel('t', fontsize = 17.5)
@@ -1880,9 +1880,12 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
         time_grid = np.cumsum(np.concatenate([[0], p.reshape(-1)]))/TSCALE
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid, x, 'b-', label = 'x')
-        plt.plot(time_grid, v, 'g-', label = 'v')
-        plt.step(time_grid, u, 'r', label = 'u')
+        # plt.plot(time_grid, x, 'b-', label = 'x')
+        # plt.plot(time_grid, v, 'g-', label = 'v')
+        # plt.step(time_grid, u, 'r', label = 'u')
+        plt.plot(time_grid, x, 'tab:blue', linestyle = '--', label = 'x')
+        plt.plot(time_grid, v, 'tab:green', linestyle = '-.', label = 'v')
+        plt.step(time_grid, u, 'tab:red', label = 'u')
         plt.legend(loc='upper right')
         
         ttl = None
@@ -2156,11 +2159,11 @@ class Egerstedt_Standard(OCProblem):
         w1,w2,w3 = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'g--', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'b--', label = r'$x_2$')
-        plt.step(self.time_grid, w1, 'r-', label = r'$w_1$')
-        plt.step(self.time_grid, w2, 'y-.', label = r'$w_2$')
-        plt.step(self.time_grid, w3, 'c:', label = r'$w_3$')
+        plt.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'tab:blue', linestyle = '--', label = r'$x_2$')
+        plt.step(self.time_grid, w1, 'tab:red', label = r'$w_1$')
+        plt.step(self.time_grid, w2, 'tab:olive', linestyle = '-.', label = r'$w_2$')
+        plt.step(self.time_grid, w3, 'tab:cyan', linestyle = ':', label = r'$w_3$')
         plt.legend(loc = 'center left', fontsize = 'large')
         
         ttl = None
@@ -2678,11 +2681,11 @@ class Particle_Steering(OCProblem):
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid, x1, 'g-', label = r'$x_1$')
-        plt.plot(time_grid, x2, 'b-', label = r'$x_2$')
-        plt.plot(time_grid, y1, 'g-.', label = r'$v_1$')
-        plt.plot(time_grid, y2, 'b-.', label = r'$v_2$')
-        plt.step(time_grid_ref, u*10, 'r', label = r'$u\cdot 10$')
+        plt.plot(time_grid, x1, 'tab:green', linestyle = '-', label = r'$x_1$')
+        plt.plot(time_grid, x2, 'tab:blue', linestyle = '-', label = r'$x_2$')
+        plt.plot(time_grid, y1, 'tab:green', linestyle = '-.', label = r'$v_1$')
+        plt.plot(time_grid, y2, 'tab:blue', linestyle = '-.', label = r'$v_2$')
+        plt.step(time_grid_ref, u*10, 'tab:red', label = r'$u\cdot 10$')
         plt.legend(fontsize='large')
         
         ttl = None
@@ -2745,14 +2748,14 @@ class Quadrotor_Helicopter(OCProblem):
         w1,w2,w3,u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'b--', label = 'x1')
-        plt.plot(self.time_grid, x3*3, 'g--', label = 'x3*3')
-        plt.plot(self.time_grid, x5*20, 'y--', label = 'x5*20')
+        plt.plot(self.time_grid, x1, 'tab:blue', linestyle = '--', label = r'$x_1$')
+        plt.plot(self.time_grid, x3*3, 'tab:green', linestyle = '-.', label = r'$x_3\cdot 3$')
+        plt.plot(self.time_grid, x5*20, 'tab:olive', linestyle = ':', label = r'$x_5\cdot 20$')
         
-        plt.step(self.time_grid, w1, 'r', label = 'w1')
-        plt.step(self.time_grid, w2, 'g', label = 'w2')
-        plt.step(self.time_grid, w3, 'b', label = 'w3')
-        plt.step(self.time_grid, u*2000, 'c', label = 'u*2000')
+        plt.step(self.time_grid, w1, 'tab:red', linestyle = '--', label = r'$w_1$')
+        plt.step(self.time_grid, w2, 'tab:green', label = r'$w_2$')
+        plt.step(self.time_grid, w3, 'tab:blue', linestyle = '-.', label = r'$w_3$')
+        plt.step(self.time_grid, u*2000, 'tab:cyan', linestyle = ':', label = r'$u\cdot 2000$')
         plt.legend(fontsize='large')
         
         ttl = None
@@ -3050,9 +3053,9 @@ class Time_Optimal_Car(OCProblem):
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
         plt.figure(dpi = dpi)
-        plt.plot(time_grid, z1, 'b-', label = 'z1')
-        plt.plot(time_grid, z2*5, 'g-', label = 'z2*5')
-        plt.step(time_grid_ref, u*20, 'r', label = 'u*20')
+        plt.plot(time_grid, z1, 'tab:blue', linestyle = '--', label = r'$z_1$')
+        plt.plot(time_grid, z2*5, 'tab:green', linestyle = '-.', label = r'$z_2\cdot5$')
+        plt.step(time_grid_ref, u*20, 'tab:red', label = r'$u\cdot20$')
         plt.legend(fontsize='large')
         
         ttl = None
@@ -3426,8 +3429,8 @@ class Lotka_OED(OCProblem):
         ax.plot(self.time_grid, x1, 'tab:olive', linestyle='-.', label = r'$x_1$')
         ax.plot(self.time_grid, x2, 'tab:cyan', linestyle='-.', label = r'$x_2$')
         ax.step(self.time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
-        ax.step(self.time_grid_ref, w1, 'tab:blue', linestyle=':', label = r'$w^{(1)}$')
-        ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w^{(2)}$')
+        ax.step(self.time_grid_ref, w1, 'tab:blue', linestyle=':', label = r'$w_1$')
+        ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w_2$')
         
         ax.set_ylim(0.,4.)
         
@@ -3880,11 +3883,11 @@ class Hang_Glider(OCProblem):
         time_grid = np.cumsum(np.concatenate([[0], p])).reshape(-1)
         
         plt.figure(dpi=dpi)
-        plt.step(time_grid, cL, 'r', label = 'cL')
-        plt.plot(time_grid, x/500, 'g-', label = 'x/500')
-        plt.plot(time_grid, dx/10, 'g:', label = 'dx/10')
-        plt.plot(time_grid, (y-900)/100, 'b-', label = '(y-900)/1000')
-        plt.plot(time_grid, dy/10, 'b:', label = 'dy/10')
+        plt.step(time_grid, cL, 'tab:red', label = 'cL')
+        plt.plot(time_grid, x/500, 'tab:green', linestyle = '-', label = 'x/500')
+        plt.plot(time_grid, dx/10, 'tab:green', linestyle = ':', label = 'dx/10')
+        plt.plot(time_grid, (y-900)/100, 'tab:blue', linestyle = '-', label = '(y-900)/1000')
+        plt.plot(time_grid, dy/10, 'tab:blue', linestyle = ':', label = 'dy/10')
         plt.legend(fontsize='large', loc = 'upper right')
         ttl = None
         if isinstance(title,str):
@@ -3931,8 +3934,8 @@ class Tubular_Reactor(OCProblem):
         u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, u, 'r', label = 'u')
-        plt.plot(self.time_grid, x, 'g-', label = 'x')
+        plt.step(self.time_grid_ref, u, 'tab:red', label = 'u')
+        plt.plot(self.time_grid, x, 'tab:green', linestyle = '--', label = 'x')
         plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
@@ -4056,9 +4059,9 @@ class Cart_Pendulum(OCProblem):
         u = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'r', label = r'4$\cdot$u/u_max')
-        plt.plot(self.time_grid, x, 'g-', label = 'x')
-        plt.plot(self.time_grid, theta, 'b--', label = 'theta')
+        plt.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'tab:red', label = r'4$\cdot$u/$u_{max}$')
+        plt.plot(self.time_grid, x, 'tab:green', linestyle = '--', label = 'x')
+        plt.plot(self.time_grid, theta, 'tab:blue', linestyle = '-.', label = 'theta')
         plt.legend(fontsize='large')
         ttl = None
         if isinstance(title,str):
