@@ -14,15 +14,20 @@ import OCProblems
 
 Examples = [
             OCProblems.Batch_Reactor,
+            OCProblems.Cart_Pendulum,
             OCProblems.Catalyst_Mixing,
             OCProblems.Cushioned_Oscillation,
             OCProblems.Egerstedt_Standard,
             OCProblems.Electric_Car,
             OCProblems.Goddard_Rocket,
+            OCProblems.Hang_Glider,
             OCProblems.Hanging_Chain,
             OCProblems.Lotka_Volterra_Fishing,
             OCProblems.Particle_Steering,
+            OCProblems.Quadrotor_Helicopter,
             OCProblems.Three_Tank_Multimode,
+            OCProblems.Time_Optimal_Car,
+            OCProblems.Tubular_Reactor,
             OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
@@ -31,7 +36,6 @@ OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 opt_SR1_BFGS = py_blockSQP.SQPoptions()
 opt_SR1_BFGS.max_conv_QPs = 1
 opt_SR1_BFGS.max_filter_overrides = 0
-# opt_SR1_BFGS.BFGS_damping_factor = 0.2
 
 #Convexification strategy 1
 opt_CS1 = py_blockSQP.SQPoptions()

@@ -20,7 +20,6 @@ OCprob = OCProblems.Electric_Car(nt = 100,
                     integrator = 'RK4', 
                     )
 
-
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000

@@ -314,7 +314,7 @@ struct Prob_Data{
 	int_pointer_interface jacIndCol;		///< starting indices of columns
 
     //Each hessian blocks elements are a double array, wrapper by double_pointer_interface
-    //These are the once again wrapped by doubel_pointer_interface_interface
+    //These are the once again wrapped by double_pointer_interface_interface
     double_pointer_interface_array hess_arr;
     int dmode;				                ///< derivative mode
     int info;				                ///< error flag
@@ -913,6 +913,7 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def("get_hess2_block", [](blockSQP::SQPiterate &vars, int i){return vars.hess2[i];})
 	.def_readonly("filter", &blockSQP::SQPiterate::filter)
 	.def_readonly("gradLagrange", &blockSQP::SQPiterate::gradLagrange)
+    .def_readonly("gradObj", &blockSQP::SQPiterate::gradObj)
 	.def_readonly("gammaMat", &blockSQP::SQPiterate::gammaMat)
 	.def_readonly("deltaXi", &blockSQP::SQPiterate::deltaXi)
 	.def_readonly("deltaMat", &blockSQP::SQPiterate::deltaMat)

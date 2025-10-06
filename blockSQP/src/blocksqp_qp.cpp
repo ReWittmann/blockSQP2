@@ -38,6 +38,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
     double idScale;
     // Compute fallback update only once
     if ((idx == 1 && param->conv_strategy == 0) || (idx == maxQP - 1 && param->conv_strategy > 0)){
+    //if ((idx == 1 && (param->conv_strategy == 0 || param->conv_strategy == 3)) || (idx == maxQP - 1 && param->conv_strategy > 0)){
         // If last block contains exact Hessian, we need to copy it
         if (param->exact_hess == 1)
             for (int i=0; i<vars->hess[vars->nBlocks-1].m; i++)
@@ -101,7 +102,14 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
                 }
                 ind_1 += prob->vblocks[k].size;
             }
-        }
+        }/*
+        else if (param->conv_strategy == 3){
+            idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
+            for (int k = 0; k < vars->nBlocks; k++){
+                vars->hess_conv[k] = vars->hess1[k] + vars->hess2[k] * idScale;
+            }
+        }*/
+        
         vars->hess = vars->hess_conv.get();
     }
     else{

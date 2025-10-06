@@ -629,6 +629,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel == 2){
             *dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp.get());
             ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()));
+            //ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qp.get()));
         }
         else{
             *qpCheck = *qp;

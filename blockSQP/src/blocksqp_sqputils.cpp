@@ -141,10 +141,34 @@ bool SQPmethod::calcOptTol(){
     vars->cNorm  = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     vars->cNormS = vars->cNorm /( 1.0 + lInfVectorNorm( vars->xi ) );
 
+    //TODO complementarity. Has not made a difference in practice so far.
+    /*
+    double comp_error = 0;
+    double ctol = 1e-5;
+    for (int i = 0; i < prob->nVar; i++){
+        if (prob->ub_var(i) - prob->lb_var(i) < ctol){}
+        else if (vars->xi(i) < prob->lb_var(i) + ctol)
+            comp_error += fmax(-vars->lambda(i), 0);
+        else if (vars->xi(i) > prob->ub_var(i) - ctol)
+            comp_error += fmax(vars->lambda(i), 0);
+        else 
+            comp_error += abs(vars->lambda(i));
+    }
+    for (int i = 0; i < prob->nCon; i++){
+        if (prob->ub_con(i) - prob->lb_con(i) < ctol){}
+        else if (vars->constr(i) < prob->lb_con(i) + ctol)
+            comp_error += fmax(-vars->lambda(prob->nVar + i), 0);
+        else if (vars->constr(i) > prob->ub_con(i) - ctol)
+            comp_error += fmax(vars->lambda(prob->nVar + i), 0);
+        else 
+            comp_error += abs(vars->lambda(prob->nVar + i));
+    }
+    std::cout << "Comp error = " << comp_error << "\n";
+    */
+    
     if (vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol)
         return true;
-    else
-        return false;
+    return false;
 }
 
 

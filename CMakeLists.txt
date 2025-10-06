@@ -14,6 +14,10 @@ project(BlockSQP
 set(CMAKE_CXX_STANDARD 20)
 enable_language(Fortran)
 
+#include(CheckIPOSupported)
+#check_ipo_supported()
+#set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+
 #Static linking to avoid having to copy dll(-path)s.
 #
 if(WIN32)
@@ -83,6 +87,7 @@ add_library(qpOASES STATIC
 	)
 
 #MUMPS LINEAR SOLVER
+#
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS BLAS::BLAS)
 IF(UNIX)
@@ -101,7 +106,6 @@ target_include_directories(qpOASES
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
 )
-
 
 
 #Unmodded qpOASES with MUMPS_SPARSE_SOLVER fix
@@ -162,7 +166,7 @@ target_include_directories(qpOASES
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 target_compile_definitions(qpOASES PRIVATE SOLVER_MA57 __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3)
+target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
 IF(UNIX AND NOT APPLE)
    target_compile_definitions(qpOASES PRIVATE LINUX)
 ELSEIF(WIN32)
@@ -172,8 +176,10 @@ ENDIF()
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include
 )
-target_link_libraries(qpOASES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libcoinhsl.so /path/to/libmetis.a /path/to/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
+# target_link_libraries(qpOASES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libcoinhsl.so /path/to/libmetis.a /path/to/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
+target_link_libraries(qpOASES PUBLIC /home/reinhold/LIB/coinhsl-solvers/libcoinhsl.so /home/reinhold/LIB/install/lib/libmetis.a /home/reinhold/LIB/install/lib/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
 ]]
+
 
 
 #SPRAL LINEAR SOLVER
@@ -265,6 +271,7 @@ if (UNIX AND NOT APPLE)
 		)
 	endfunction()
 elseif(WIN32)
+	#[[
 	foreach(i RANGE 0 7)
 		add_library(dmumps_c_dyn_${i} SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 		set_target_properties(dmumps_c_dyn_${i} PROPERTIES 
@@ -274,7 +281,17 @@ elseif(WIN32)
 		target_link_libraries(dmumps_c_dyn_${i} PRIVATE MUMPS::MUMPS)
 		target_compile_definitions(dmumps_c_dyn_${i} PRIVATE WINDOWS)
 	endforeach()
+	]]
 	
+	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
+	set_target_properties(dmumps_c_dyn PROPERTIES 
+		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
+		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
+		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
+	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
+	target_compile_definitions(dmumps_c_dyn PRIVATE WINDOWS)
+	
+	#[[
 	function(maybe_copy_mumps_libs LIBPATH)
 		foreach(i RANGE 0 7)
 			set(mumps_lib dmumps_c_dyn_${i})
@@ -285,6 +302,19 @@ elseif(WIN32)
 			)
 		endforeach()
 	endfunction()
+	]]
+	
+	function(maybe_copy_mumps_libs LIBPATH)
+		foreach(i RANGE 0 7)
+			set(mumps_copy dmumps_c_dyn_${i})
+			add_custom_command(TARGET dmumps_c_dyn POST_BUILD
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different
+						${CMAKE_SOURCE_DIR}/blockSQP/bin/${mumps_copy}.dll
+						${LIBPATH}
+			)
+		endforeach()
+	endfunction()
+	
 else()
 	function(maybe_copy_mumps_libs LIBPATH)
 	endfunction()

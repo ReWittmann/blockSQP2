@@ -18,24 +18,23 @@ import OCProblems
 
 #RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD + "/out_blockSQP_ipopt_comparison_RK4_extended"
+dirPath = cD + "/out_WORHP"
 
-
+#Problems
 Examples = [
-            OCProblems.Batch_Reactor,
-            OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
-            OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
+            # OCProblems.Batch_Reactor,
+            # OCProblems.Catalyst_Mixing,
+            # OCProblems.Cushioned_Oscillation,
+            # OCProblems.Egerstedt_Standard,
+            # OCProblems.Electric_Car,
+            # OCProblems.Goddard_Rocket,
             OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Lotka_OED,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
-
 Extended = [
             OCProblems.Cart_Pendulum,
             # OCProblems.D_Onofrio_Chemotherapy,
@@ -47,12 +46,29 @@ Extended = [
             OCProblems.Van_der_Pol_Oscillator,
             ]
 
-Examples = Extended
 
 ipopt_Experiments = [
                      # ({'hessian_approximation': 'limited-memory', 'tol': 1e-6}, 'ipopt, limited-memory'),
-                     ({'hessian_approximation': 'exact', 'tol': 1e-6}, 'ipopt, exact Hessian')
+                     ({'ipopt': {'hessian_approximation': 'exact', 'tol': 1e-6}}, 'ipopt, exact Hessian')
                      ]
+
+casadi_blockSQP_Experiments = [({'block_hess':True, 'linsol':'ma27', 'max_iter': 1000}, 'casadi blockSQP')]
+
+worhp_Experiments = [({'worhp':{'ScaledKKT':False, 
+                                'TolOpti':1e-6, 
+                                'TolFeas':1e-6,
+                                'UserHM' : False,
+                                'BFGSmethod' : 100,
+                                'BFGSmaxblockSize': 20,
+                                }}, 'WORHP')]
+
+
+#     'BFGSmethod' : 100,
+#     'BFGSmaxblockSize': 20,
+#     'UserHM' : False,
+#     'TolOpti': 1e-6,
+#     'ScaledKKT' : False,
+#     'FidifHM' : False
 
 def opt_conv_str_2_par_scale(max_conv_QPs = 4):
     opts = py_blockSQP.SQPoptions()
@@ -61,33 +77,34 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
     opts.par_QPs = True
     opts.automatic_scaling = True
     return opts
-
 opt1 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2.exact_hess = 2
-
-
 blockSQP_Experiments = [
                         (opt1, 'blockSQP, SR1-...-BFGS'),
                         # (opt2, 'blockSQP, exH-...-BFGS')
                         ]
 
-
+######################################
 nPert0 = 0
-nPertF = 10
+nPertF = 40
 
 if not os.path.exists(dirPath):
     os.makedirs(dirPath)
 
 date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
 sep = "" if dirPath[-1] == "/" else "/"
-pref = "ipopt"
+pref = "casadi_WORHP"
 filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
 
 out = open(filePath, 'w')
 
 
-titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP_Experiments]
+# titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP_Experiments]
+# titles = [EXP_name for _, EXP_name in casadi_blockSQP_Experiments]
+titles = [EXP_name for _, EXP_name in worhp_Experiments]
+
+
 OCP_experiment.print_heading(out, titles)
 #########
 for OCclass in Examples:
@@ -98,17 +115,33 @@ for OCclass in Examples:
     EXP_N_secs = []
     EXP_type_sol = []
     n_EXP = 0
-    for EXP_opts, EXP_name in ipopt_Experiments:
-        ipopts = dict(ipopts_base)
-        ipopts.update(EXP_opts)
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.ipopt_perturbed_starts(OCprob, ipopts, nPert0, nPertF, itMax = itMax)
-        EXP_N_SQP.append(ret_N_SQP)
-        EXP_N_secs.append(ret_N_secs)
-        EXP_type_sol.append(ret_type_sol)
-        n_EXP += 1
+    # for EXP_opts, EXP_name in ipopt_Experiments:
+    #     ipopts = dict(ipopts_base)
+    #     ipopts.update(EXP_opts)
+    #     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('ipopt', OCprob, ipopts, nPert0, nPertF, itMax = itMax)
+    #     EXP_N_SQP.append(ret_N_SQP)
+    #     EXP_N_secs.append(ret_N_secs)
+    #     EXP_type_sol.append(ret_type_sol)
+    #     n_EXP += 1
     
-    for EXP_opts, EXP_name in blockSQP_Experiments:
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
+    # for EXP_opts, EXP_name in blockSQP_Experiments:
+    #     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
+    #     EXP_N_SQP.append(ret_N_SQP)
+    #     EXP_N_secs.append(ret_N_secs)
+    #     EXP_type_sol.append(ret_type_sol)
+    #     titles.append(EXP_name)
+    #     n_EXP += 1
+    
+    # for EXP_opts, EXP_name in casadi_blockSQP_Experiments:
+    #     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('blocksqp', OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
+    #     EXP_N_SQP.append(ret_N_SQP)
+    #     EXP_N_secs.append(ret_N_secs)
+    #     EXP_type_sol.append(ret_type_sol)
+    #     titles.append(EXP_name)
+    #     n_EXP += 1
+        
+    for EXP_opts, EXP_name in worhp_Experiments:
+        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('worhp', OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)
@@ -118,6 +151,6 @@ for OCclass in Examples:
     ###############################################################################
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP_ipopt")
+        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "WORHP")
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

@@ -7,7 +7,7 @@
 
 
 import numpy as np
-import py_blockSQP
+from . import py_blockSQP
 import typing
 
 class blockSQP_Problemspec(py_blockSQP.Problemform):

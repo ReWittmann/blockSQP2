@@ -28,21 +28,24 @@ import OCProblems
 #  'Particle_Steering', 'Quadrotor_Helicopter', 'Supermarket_Refrigeration', 
 #  'Three_Tank_Multimode', 'Time_Optimal_Car', 'Van_der_Pol_Oscillator', 
 #  'Van_der_Pol_Oscillator_2', 'Van_der_Pol_Oscillator_3',
-#  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum']
+#  'Lotka_OED', 'Fermenter', 'Batch_Distillation', 'Hang_Glider', 'Cart_Pendulum'
+#  'Tubular_Reactor', 
+#  ]
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+OCprob = OCProblems.Tubular_Reactor(nt = 100, 
                     refine = 1, 
                     parallel = True, 
-                    integrator = 'RK4', 
-                    N_threads = 4,
+                    integrator = 'RK4',
+                    N_threads = 4, 
                     # epsilon = 100.0, 
-                    # lambda_u = 0.05, u_max = 15
+                    # **OCProblems..param_set_2,
                     # hT = 70.0
                     # objective = "max_performance"
                     # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
                     # MDTH = 1.0
                     )
 
+start = OCprob.start_point
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -60,7 +63,9 @@ opts.hess_approx = 1
 opts.sizing = 2
 opts.fallback_approx = 2
 opts.fallback_sizing = 4
-opts.BFGS_damping_factor = 1./3.
+opts.BFGS_damping_factor = 1/3
+
+
 
 opts.lim_mem = True
 opts.mem_size = 20
@@ -70,7 +75,7 @@ opts.conv_kappa_max = 8.
 
 opts.automatic_scaling = True
 
-opts.max_extra_steps = 0
+opts.max_extra_steps = 10
 opts.enable_premature_termination = True
 opts.max_filter_overrides = 2
 
@@ -78,7 +83,7 @@ opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
-QPopts.terminationTolerance = 1e-12
+# QPopts.terminationTolerance = 1e-12
 opts.qpsol_options = QPopts
 ################################
 
@@ -114,7 +119,7 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 prob.vblocks = vBlocks
 # prob.cond = cond
-prob.x_start = OCprob.start_point
+prob.x_start = start
 
 
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
@@ -129,9 +134,9 @@ scale_arr = 1.0;
 # scale_arr = np.array(scale, copy = False)
 # scale_arr[:] = 1.0
 # for i in range(OCprob.ntS + 1):
-#     OCprob.set_stage_state(scale_arr, i, [1e-4,1.0,1e-3,1e-3,1.0e-2])
+#     OCprob.set_stage_state(scale_arr, i, [1.0,100.0])
 # for i in range(OCprob.ntS):
-#     OCprob.set_stage_control(scale_arr, i, [10.0, 100.0])
+#     OCprob.set_stage_param(scale_arr, i, [1.0])
 # prob.arr_set_scale(scale)
 #####################
 stats = py_blockSQP.SQPstats("./solver_outputs")
@@ -154,9 +159,9 @@ if (step_plots):
         # OCprob.plot(xi, dpi = 200, it = i, title=False)
 else:
     ret = int(optimizer.run(itMax))
-    xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
 t1 = time.monotonic()
-OCprob.plot(xi, dpi=150, title=plot_title)
+xi = np.array(optimizer.get_xi()).reshape(-1)/scale_arr
+OCprob.plot(xi, dpi=200, title=plot_title)
 #####################
 time.sleep(0.01)
 print(t1 - t0, "s")

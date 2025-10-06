@@ -34,7 +34,7 @@ void Problemspec::evaluate( const Matrix &xi, double *objval, Matrix &constr, in
     evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, jacNzDummy, jacIndRowDummy, jacIndColDummy, hessDummy, dmode, info);
 
     // If sparse version is not implemented, try dense version
-    if (info) evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, constrJacDummy, hessDummy, dmode, info);
+    if (*info) evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, constrJacDummy, hessDummy, dmode, info);
 }
 
 
