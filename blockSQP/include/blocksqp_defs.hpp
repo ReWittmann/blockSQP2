@@ -42,6 +42,7 @@ enum class SQPresult{
     qp_failure = -4,
     eval_failure = -5,
     misc_error = -10,
+    sensitivity_eval_failure = -100
 };
 //Colored print output when exiting with  return print_RES(RES::__)
 SQPresult print_SQPresult(SQPresult rs, int print_level = 2);

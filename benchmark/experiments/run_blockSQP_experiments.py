@@ -109,17 +109,6 @@ Examples = [
             OCProblems.Tubular_Reactor,
             OCProblems.Lotka_OED,
             ]
-# Extended = [
-#             OCProblems.Cart_Pendulum,
-#             # OCProblems.D_Onofrio_Chemotherapy,
-#             OCProblems.Hang_Glider,
-#             OCProblems.Quadrotor_Helicopter,
-#             OCProblems.Satellite_Deorbiting_1,
-#             # OCProblems.Satellite_Deorbiting_2,
-#             OCProblems.Tubular_Reactor,
-#             OCProblems.Van_der_Pol_Oscillator,
-#             ]
-
 
 
 opt1 = opt_SR1_BFGS_seq()
@@ -134,7 +123,7 @@ opt5.automatic_scaling = True
 opt_SR1_BFGS = py_blockSQP.SQPoptions()
 opt_SR1_BFGS.max_conv_QPs = 1
 opt_SR1_BFGS.max_filter_overrides = 0
-# opt_SR1_BFGS.BFGS_damping_factor = 0.2
+opt_SR1_BFGS.BFGS_damping_factor = 0.2
 
 #Convexification strategy 0
 opt_CS0 = py_blockSQP.SQPoptions()
@@ -161,26 +150,8 @@ Experiments = [
                (opt_CS2, "conv. str. 2")
                ]
 
-# Experiments = [
-#                 (opt1, "SR1-BFGS"),
-#                 (opt2, "conv. str. 1"),
-#                 (opt3, "conv. str. 2"),
-#                 (opt4, "no scaling"),
-#                 (opt5, "automatic scaling")
-#                ]
-
-
-# opt_default = opt_conv_str_2_par_scale()
-# Experiments = [(opt_default, "new blockSQP MA57")]
 
 plot_folder = cD + "/out_blockSQP_experiments"
-# OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
-#                                         plot_folder,\
-#                                         nPert0 = 0, nPertF = 40,
-#                                         nt = 100,
-#                                         integrator = 'RK4',
-#                                         parallel = True
-#                                         )
 
 nPert0 = 0
 nPertF = 40

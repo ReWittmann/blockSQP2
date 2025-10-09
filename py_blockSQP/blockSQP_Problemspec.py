@@ -189,42 +189,57 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
         xi_ = np.maximum(self.Data.xi, self.lb_input)
         xi_ = np.minimum(xi_, self.ub_input)
         
-        self.Data.objval = self.f(self.Data.xi)
-        self.Data.constr[:] = self.g(self.Data.xi)
-        
-        if self.Data.dmode > 0:
-           self.Data.gradObj[:] = self.grad_f(self.Data.xi)
-           self.Data.constrJac[:,:] = self.jac_g(self.Data.xi)
-        if self.Data.dmode == 2:
-            self.Data.hess_last[:] = self.last_hessBlock(self.Data.xi, self.Data.lam[self.nVar:self.nVar + self.nCon])
-        if self.Data.dmode == 3:
-            hess_eval = self.hess(self.Data.xi, self.Data.lam[self.nVar:self.nVar + self.nCon])
-            for j in range(self.nBlocks):
-                self.Data.hess_arr[j][:] = hess_eval[j]
+        try:
+            self.Data.objval = self.f(self.Data.xi)
+            self.Data.constr[:] = self.g(self.Data.xi)
+            
+            if self.Data.dmode > 0:
+                self.Data.gradObj[:] = self.grad_f(self.Data.xi)
+                self.Data.constrJac[:,:] = self.jac_g(self.Data.xi)
+            if self.Data.dmode == 2:
+                self.Data.hess_last[:] = self.last_hessBlock(self.Data.xi, self.Data.lam[self.nVar:self.nVar + self.nCon])
+            if self.Data.dmode == 3:
+                hess_eval = self.hess(self.Data.xi, self.Data.lam[self.nVar:self.nVar + self.nCon])
+                for j in range(self.nBlocks):
+                    self.Data.hess_arr[j][:] = hess_eval[j]
+        except Exception:
+            self.Cpp_Data.info = 1
+        else:
+            self.Cpp_Data.info = 0
     
     def evaluate_sparse(self):
         xi_ = np.maximum(self.Data.xi, self.lb_input)
         xi_ = np.minimum(xi_, self.ub_input)
         
-        self.Data.objval = self.f(xi_)
-        self.Data.constr[:] = self.g(xi_)
-        
-        if self.Data.dmode > 0:
-            self.Data.gradObj[:] = self.grad_f(xi_)
-            self.Data.jacNz[:] = self.jac_g_nz(xi_)
-        if self.Data.dmode == 2:
-            self.Data.hess_last[:] = self.last_hessBlock(self.Data.xi, self.Data.lam[self.nVar : self.nVar + self.nCon])
-        if self.Data.dmode == 3:
-            hess_eval = self.hess(self.Data.xi, self.Data.lam[self.nVar : self.nVar + self.nCon])
-            for j in range(self.nBlocks):
-                self.Data.hess_arr[j][:] = hess_eval[j]
+        try:
+            self.Data.objval = self.f(xi_)
+            self.Data.constr[:] = self.g(xi_)
+            
+            if self.Data.dmode > 0:
+                self.Data.gradObj[:] = self.grad_f(xi_)
+                self.Data.jacNz[:] = self.jac_g_nz(xi_)
+            if self.Data.dmode == 2:
+                self.Data.hess_last[:] = self.last_hessBlock(self.Data.xi, self.Data.lam[self.nVar : self.nVar + self.nCon])
+            if self.Data.dmode == 3:
+                hess_eval = self.hess(self.Data.xi, self.Data.lam[self.nVar : self.nVar + self.nCon])
+                for j in range(self.nBlocks):
+                    self.Data.hess_arr[j][:] = hess_eval[j]
+        except:
+            self.Cpp_Data.info = 1
+        else:
+            self.Cpp_Data.info = 0
     
     def evaluate_simple(self):
         xi_ = np.maximum(self.Data.xi, self.lb_input)
         xi_ = np.minimum(xi_, self.ub_input)
         
-        self.Data.objval = self.f(xi_)
-        self.Data.constr[:] = self.g(xi_)
+        try:
+            self.Data.objval = self.f(xi_)
+            self.Data.constr[:] = self.g(xi_)
+        except Exception:
+            self.Cpp_Data.info = 1
+        else:
+            self.Cpp_Data.info = 0
         
     def restore_continuity(self):
         if self.rest_cont:

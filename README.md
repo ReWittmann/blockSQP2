@@ -1,7 +1,7 @@
 # BlockSQP - C++, Python, Julia - build system using qpOASES and MUMPS
 
 This is a modified version of the blockSQP nonlinear program solver that includes new cmake build specifications, a python interface and a julia interface.
-Copyright (c) 2012-2015 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+Copyright (c) 2024-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 
 #Build requirements
@@ -33,7 +33,10 @@ CMake finds system python by default. See the output of the build step on which 
 The binaries are placed into /blockSQP/lib or /blockSQP/bin, /python_Interface/py_blockSQP and /blocksqp.jl/bin. 
 
 ##Examples and documentation
-Check out the manual and the examples to learn how to use blockSQP.  
+If py_blockSQP was built, try running benchmark/run_blockSQP.py to confirm the solver works.  
+Edit run_blockSQP.py to select various example problems and options.
+
 C++ examples are located in blockSQP/examples, the example executables are placed into blockSQP/examples/bin.  
-Corresponding python and julia examples are located at python_Interface/examples and blocksqp.jl/scripts.  
+
+If blockSQP.jl was built, julia examples are located at blocksqp.jl/scripts.  
 

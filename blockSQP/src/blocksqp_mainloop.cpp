@@ -78,6 +78,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
+        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresult::sensitivity_eval_failure, param->result_print_color);
         
         /// Check if converged
         hasConverged = calcOptTol();
@@ -296,7 +297,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-
+        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresult::sensitivity_eval_failure, param->result_print_color);
+        
         /// Check if converged
         hasConverged = calcOptTol();
 

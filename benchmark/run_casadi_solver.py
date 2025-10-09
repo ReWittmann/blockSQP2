@@ -9,13 +9,13 @@ itMax = 1000
 OCprob = OCProblems.Hang_Glider(nt = 100,
                     refine = 1,
                     parallel = True,
-                    integrator = 'RK4',
+                    integrator = 'collocation',
                     # MDTH = 1.0
                     # **OCProblems.Cart_Pendulum.param_set_1
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'exact'
+ipopts['hessian_approximation'] = 'limited-memory'
 # ipopts['limited_memory_max_history'] = 20
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['tol'] = 1e-6

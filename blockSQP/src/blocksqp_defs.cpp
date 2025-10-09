@@ -32,8 +32,11 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
             case SQPresult::restoration_failure:
                 std::cout << colPrefix + "\nRESTORATION ERROR" + colSuffix + "\n";
                 break;
-                case SQPresult::linesearch_failure:
+            case SQPresult::linesearch_failure:
                 std::cout << colPrefix + "\nLINESEARCH ERROR" + colSuffix + "\n";
+                break;
+            case SQPresult::sensitivity_eval_failure:
+                std::cout << colPrefix + "\nSENSITIVITY EVALUATION ERROR" + colSuffix + "\n";
                 break;
             default:
                 std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL" + colSuffix + "\n";

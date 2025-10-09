@@ -1,6 +1,3 @@
-import numpy as np
-import os
-import sys
 import os
 import sys
 try:
@@ -9,46 +6,52 @@ except:
     cD = os.getcwd()
 sys.path += [cD + "/../..", cD + "/../../.."]
 import py_blockSQP
-import matplotlib.pyplot as plt
-import time
 import copy
 import datetime
 import OCP_experiment
 import OCProblems
 
 #RK4/collocation/cvodes
-ODE_integrator = 'collocation'
-dirPath = cD + "/out_blockSQP_ipopt_comparison_collocation"
+ODE_integrator = 'RK4'
+dirPath = cD + "/out_blockSQP_ipopt_comparison_RK4"
 
+#Range for applying perturbations to initial discretized controls
+nPert0 = 0
+nPertF = 40
 
 Examples = [
-            # OCProblems.Batch_Reactor,
-            # OCProblems.Cart_Pendulum,
-            # OCProblems.Catalyst_Mixing,
-            # OCProblems.Cushioned_Oscillation,
-            # OCProblems.Egerstedt_Standard,
-            # OCProblems.Electric_Car,
-            # OCProblems.Goddard_Rocket,
+            OCProblems.Batch_Reactor,
+            OCProblems.Cart_Pendulum,
+            OCProblems.Catalyst_Mixing,
+            OCProblems.Cushioned_Oscillation,
+            OCProblems.Egerstedt_Standard,
+            OCProblems.Electric_Car,
+            OCProblems.Goddard_Rocket,
             OCProblems.Hang_Glider,
-            # OCProblems.Hanging_Chain,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Particle_Steering,
-            # OCProblems.Quadrotor_Helicopter,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Time_Optimal_Car,
-            # OCProblems.Tubular_Reactor,
-            # OCProblems.Lotka_OED,
+            OCProblems.Hanging_Chain,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Particle_Steering,
+            OCProblems.Quadrotor_Helicopter,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Time_Optimal_Car,
+            OCProblems.Tubular_Reactor,
+            OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
-if ODE_integrator == 'collocation' and OCProblems.Hang_Glider in Examples:
-    Examples = [x for x in Examples if x != OCProblems.Hang_Glider]
-
-
-
+# [(solver options, experiment name)]
 ipopt_Experiments = [
-                     ({'ipopt':{'hessian_approximation': 'limited-memory', 'tol': 1e-6, 'constr_viol_tol': 1e-6}}, 'ipopt, limited-memory'),
-                     ({'ipopt':{'hessian_approximation': 'exact', 'tol': 1e-6, 'constr_viol_tol': 1e-6}}, 'ipopt, exact Hessian')
+                     ({'ipopt':{
+                                 'hessian_approximation': 'limited-memory', 
+                                 'tol': 1e-6, 
+                                 'constr_viol_tol': 1e-6
+                                 }}, 
+                      'ipopt, limited-memory'),
+                     ({'ipopt':{
+                                'hessian_approximation': 'exact', 
+                                'tol': 1e-6, 
+                                'constr_viol_tol': 1e-6}}, 
+                     'ipopt, exact Hessian')
                      ]
 
 def opt_conv_str_2_par_scale(max_conv_QPs = 4):
@@ -70,28 +73,24 @@ blockSQP_Experiments = [
                         ]
 
 
-nPert0 = 0
-nPertF = 2
-
+#Run the experiments
 if not os.path.exists(dirPath):
     os.makedirs(dirPath)
 
+#Create an open file to write results into
 date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
 sep = "" if dirPath[-1] == "/" else "/"
-pref = "ipopt"
+pref = "blockSQP_ipopt"
 filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
-
 out = open(filePath, 'w')
 
 
 titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP_Experiments]
 OCP_experiment.print_heading(out, titles)
-#########
+
+#Iterate over example problems and experiments
 for OCclass in Examples:
-    if OCclass == OCProblems.Hang_Glider and ODE_integrator == 'collocation':
-        OCprob = OCclass(nt=100, integrator='cvodes', parallel = True)
-    else:
-        OCprob = OCclass(nt=100, integrator=ODE_integrator, parallel = True)
+    OCprob = OCclass(nt=100, integrator=ODE_integrator, parallel = True)
     itMax = 1000
     ipopts_base = {'max_iter':itMax}
     EXP_N_SQP = []
@@ -118,9 +117,10 @@ for OCclass in Examples:
         titles.append(EXP_name)
         n_EXP += 1
     
-    ###############################################################################
+    #Create scatter plot of total iterations and runtimes for problem
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP_ipopt")
+    #Print results (iterations/runtime - mean/stddev) for problem to file
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

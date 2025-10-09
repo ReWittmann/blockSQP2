@@ -325,20 +325,20 @@ class Problemform : public blockSQP::Problemspec
 {
 public:
     Problemform(){}
-
+    
     virtual ~Problemform(){
         delete[] blockIdx;
         delete[] vblocks;
     };
-
+    
     Prob_Data Cpp_Data; //values that get evaluated and returned by the evaluate methods
-
+    
     void init_Cpp_Data(bool Sparse_QP, int nnz){
         Cpp_Data.xi.size = nVar;
         Cpp_Data.lambda.size = nVar + nCon;
         Cpp_Data.gradObj.size = nVar;
         Cpp_Data.constr.size = nCon;
-
+        
         if (Sparse_QP){
             Cpp_Data.jacNz.size = nnz;
             Cpp_Data.jacIndRow.size = nnz;
@@ -351,7 +351,7 @@ public:
             Cpp_Data.constrJac.ldim = -1;
             Cpp_Data.constrJac.tflag = 1;
         }
-
+        
         Cpp_Data.hess_arr.size = nBlocks;
         double_pointer_interface *h_arrays = new double_pointer_interface[nBlocks];
         for (int j = 0; j < nBlocks; j++){
@@ -360,25 +360,25 @@ public:
         Cpp_Data.hess_arr.ptr = h_arrays;
         Cpp_Data.info = 0;
     }
-
-
+    
+    
     //Methods to be implemented on python side:
     virtual void initialize_dense(){}; //initialize Cpp_Data (dense jacobian)
     virtual void initialize_sparse(){}; //initialize Cpp_Data (sparse jacobian)
     virtual void evaluate_dense(){}; //evaluate and write Cpp_Data (dense jacobian)
     virtual void evaluate_sparse(){}; //evaluate and write Cpp_Data (sparse jacobian)
     virtual void evaluate_simple(){}; //evaluate and write Cpp_Data (no derivatives)
-
+    
     virtual void update_inits(){};
     virtual void update_evals(){};
     virtual void update_simple(){};
     virtual void update_xi(){};
-
+    
     virtual void get_objval(){};
-
+    
     virtual void restore_continuity(){};
-
-
+    
+    
     void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, blockSQP::Matrix &constrJac) override {
         Cpp_Data.xi.ptr = xi.array;
         Cpp_Data.lambda.ptr = lambda.array;
@@ -387,8 +387,8 @@ public:
         update_inits();
         initialize_dense();
     }
-
-
+    
+    
     void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol) override {
         Cpp_Data.xi.ptr = xi.array;
         Cpp_Data.lambda.ptr = lambda.array;
@@ -398,8 +398,8 @@ public:
         update_inits();
         initialize_sparse();
     }
-
-
+    
+    
     void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, 
             double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, blockSQP::Matrix &constrJac,
             blockSQP::SymMatrix *hess, int dmode, int *info) override {
@@ -409,7 +409,7 @@ public:
         Cpp_Data.constr.ptr = constr.array;
         Cpp_Data.gradObj.ptr = gradObj.array;
         Cpp_Data.constrJac.array = constrJac.array;
-
+        
         if (dmode == 3){
             for (int j = 0; j < nBlocks; j++)
                 Cpp_Data.hess_arr.ptr[j].ptr = hess[j].array;
@@ -417,16 +417,18 @@ public:
         else if (dmode == 2){
             Cpp_Data.hess_arr.ptr[nBlocks - 1].ptr = hess[nBlocks - 1].array;
         }
-
+        
         update_evals();
         evaluate_dense();
+        
+        *info = Cpp_Data.info;
+        if (*info > 0) [[unlikely]] return;
+        
         get_objval();
-
         *objval = Cpp_Data.objval;
-        *info = 0;
     }
-
-
+    
+    
     void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, 
                     blockSQP::Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, blockSQP::SymMatrix *hess, 
                         int dmode, int *info) override {
@@ -438,7 +440,7 @@ public:
         Cpp_Data.jacNz.ptr = jacNz;
         Cpp_Data.jacIndRow.ptr = jacIndRow;
         Cpp_Data.jacIndCol.ptr = jacIndCol;
-
+        
         if (dmode == 3){
             for (int j = 0; j < nBlocks; j++)
                 Cpp_Data.hess_arr.ptr[j].ptr = hess[j].array;
@@ -446,36 +448,40 @@ public:
         else if (dmode == 2){
             Cpp_Data.hess_arr.ptr[nBlocks - 1].ptr = hess[nBlocks - 1].array;
         }
-
+        
         update_evals();
         evaluate_sparse();
+        
+        *info = Cpp_Data.info;
+        if (*info > 0) [[unlikely]] return;
+        
         get_objval();
-
         *objval = Cpp_Data.objval;
-        *info = 0;
     }
-
-
+    
+    
     void evaluate(const blockSQP::Matrix &xi, double *objval, blockSQP::Matrix &constr, int *info) override {
         Cpp_Data.xi.ptr = xi.array;
         Cpp_Data.constr.ptr = constr.array;
-
+        
         update_simple();
         evaluate_simple();
+        
+        *info = Cpp_Data.info;
+        if (*info > 0) [[unlikely]] return;
+        
         get_objval();
-
         *objval = Cpp_Data.objval;
-        *info = 0;
     }
-
-
+    
+    
     void set_blockIdx(py::array_t<int> arr){
         py::buffer_info buff = arr.request();
         nBlocks = buff.size - 1;
         blockIdx = new int[buff.size];
         std::copy((int*)buff.ptr, (int*)buff.ptr + buff.size, blockIdx);
     }
-
+    
     void set_vblocks(vblock_array &VB){
         n_vblocks = VB.size;
         vblocks = new blockSQP::vblock[n_vblocks];
@@ -483,7 +489,7 @@ public:
             vblocks[i] = VB.ptr[i];
         }
     }
-
+    
     void reduceConstrVio(blockSQP::Matrix &xi, int *info) override {
         Cpp_Data.xi.ptr = xi.array;
         update_xi();
@@ -497,23 +503,23 @@ class Py_Problemform: public Problemform{
     void initialize_dense() override {
         PYBIND11_OVERRIDE(void, Problemform, initialize_dense,);
     }
-
+    
     void initialize_sparse() override {
         PYBIND11_OVERRIDE(void, Problemform, initialize_sparse,);
     }
-
+    
     void evaluate_dense() override {
         PYBIND11_OVERRIDE(void, Problemform, evaluate_dense,);
     }
-
+    
     void evaluate_sparse() override {
         PYBIND11_OVERRIDE(void, Problemform, evaluate_sparse,);
     }
-
+    
     void evaluate_simple() override {
         PYBIND11_OVERRIDE(void, Problemform, evaluate_simple,);
     }
-
+    
     void update_inits() override {
         PYBIND11_OVERRIDE(void, Problemform, update_inits,);
     }
@@ -523,15 +529,15 @@ class Py_Problemform: public Problemform{
     void update_simple() override {
         PYBIND11_OVERRIDE(void, Problemform, update_simple,);
     }
-
+    
     void update_xi() override {
         PYBIND11_OVERRIDE(void, Problemform, update_xi,);
     }
-
+    
     void get_objval() override {
         PYBIND11_OVERRIDE(void, Problemform, get_objval,);
     }
-
+    
     void restore_continuity() override {
         PYBIND11_OVERRIDE(void, Problemform, restore_continuity,);
     }
