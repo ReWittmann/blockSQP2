@@ -11,33 +11,36 @@ import OCProblems
 
 Examples = [
             OCProblems.Batch_Reactor,
-            # OCProblems.Catalyst_Mixing,
-            # OCProblems.Cushioned_Oscillation,
-            # OCProblems.Egerstedt_Standard,
-            # OCProblems.Electric_Car,
-            # OCProblems.Goddard_Rocket,
-            # OCProblems.Hanging_Chain,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Particle_Steering,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Lotka_OED,
+            OCProblems.Cart_Pendulum,
+            OCProblems.Catalyst_Mixing,
+            OCProblems.Cushioned_Oscillation,
+            OCProblems.Egerstedt_Standard,
+            OCProblems.Electric_Car,
+            OCProblems.Goddard_Rocket,
+            OCProblems.Hang_Glider,
+            OCProblems.Hanging_Chain,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Particle_Steering,
+            OCProblems.Quadrotor_Helicopter,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Time_Optimal_Car,
+            OCProblems.Tubular_Reactor,
+            OCProblems.Lotka_OED,
             ]
 Experiments = [
-                #({'hessian_approximation': 'limited-memory', 'limited_memory_max_history':12}, "Ipopt, limited-memory BFGS"),
-                ({'ipopt': {'hessian_approximation': "exact", 'tol': 1e-5}}, "Ipopt, exact Hessian"),
-                ({'ipopt': {'hessian_approximation': 'limited-memory', 'tol': 1e-5}}, "Ipopt, limited-memory, tol 1e-5")
+                ({'ipopt': {'hessian_approximation': 'limited-memory', 'tol': 1e-6}}, "Ipopt, limited-memory, tol 1e-6"),
+                ({'ipopt': {'hessian_approximation': "exact", 'tol': 1e-6}}, "Ipopt, exact Hessian"),
                 ]
-Examples_ = [
-            (OCProblems.Lotka_Volterra_Fishing, "Lotka Volterra fishing"),
-            (OCProblems.Goddard_Rocket, "Goddard's rocket")
-            ]
 
-plot_folder = "/home/reinhold/PLOT/ipopt_ex_hess_TEST_CO"
+
+plot_folder = cD + "/out_ipopt_experiments"
 OCP_experiment.run_ipopt_experiments(Examples, 
                                      Experiments, 
                                      plot_folder, 
                                      nPert0 = 0, 
-                                     nPertF = 40)
+                                     nPertF = 40,
+                                     file_output = True
+                                     )
 
 
 

@@ -6,32 +6,26 @@ import time
 itMax = 1000
 
 
-OCprob = OCProblems.Hang_Glider(nt = 100,
+OCprob = OCProblems.Lotka_Volterra_Fishing(
+                    nt = 100,
                     refine = 1,
                     parallel = True,
-                    integrator = 'collocation',
-                    # MDTH = 1.0
-                    # **OCProblems.Cart_Pendulum.param_set_1
+                    integrator = 'RK4',
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'limited-memory'
-# ipopts['limited_memory_max_history'] = 20
-ipopts['constr_viol_tol'] = 1e-6
+ipopts['hessian_approximation'] = 'exact'
 ipopts['tol'] = 1e-6
+ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax
 
 OCprob.integrate_full(OCprob.start_point)
 sp = OCprob.start_point
-
-
 S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 
 
-
-
 # S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : None, "jit" : False, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}})#, 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":False, "fatrop.print_level":10, "jit_options": {"flags": "-O3", "verbose": True}})#, {'ipopt':ipopts})
-#See legacy/src/OCPCInterface.cpp for options
+#See fatrop source code - legacy/src/OCPCInterface.cpp for options
 # S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : 'manual', 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":False, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}, \
 #                                           'fatrop':{'tol':1e-6, 'acceptable_tol':1e-4}
 #                                           })
@@ -52,11 +46,12 @@ S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 # blocksqp_opts = {'linsol':'ma27', 'warmstart':False}
 # blocksqp_opts = {}
 # S = cs.nlpsol('S', 'blocksqp', OCprob.NLP, blocksqp_opts)
+
 t0 = time.monotonic()
 out = S(x0=sp, lbx=OCprob.lb_var,ubx=OCprob.ub_var, lbg=OCprob.lb_con, ubg=OCprob.ub_con)
 t1 = time.monotonic()
 stats = S.stats()
-# print(stats['iter_count'])
+
 xi = out['x']
 OCprob.plot(np.array(xi).reshape(-1), dpi=200)
 

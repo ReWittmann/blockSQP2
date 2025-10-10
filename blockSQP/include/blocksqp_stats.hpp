@@ -6,12 +6,24 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
 /**
  * \file blocksqp_stats.hpp
  * \author Dennis Janka
  * \date 2012-2015
  *
  *  Declaration of SQPstats class that records statistics during an SQP run.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
 #ifndef BLOCKSQP_STATS_HPP

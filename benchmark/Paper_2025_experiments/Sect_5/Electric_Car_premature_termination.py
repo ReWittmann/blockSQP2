@@ -14,11 +14,13 @@ import OCP_experiment
 
 import OCProblems
 
-
 ###############################################################################
-OCprob = OCProblems.Electric_Car(nt = 100, integrator = 'RK4', parallel = True)
-
-nPert0 = 1
+OCprob = OCProblems.Electric_Car(
+                    nt = 100, 
+                    integrator = 'RK4', 
+                    parallel = True
+                    )
+nPert0 = 0
 nPertF = 40
 itMax = 400
 ###############################################################################

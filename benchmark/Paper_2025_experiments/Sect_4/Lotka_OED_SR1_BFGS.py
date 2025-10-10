@@ -10,15 +10,21 @@ sys.path += [cD + "/../..", cD + "/../../.."]
 import py_blockSQP
 
 itMax = 250
-step_plots = True
+step_plots = False
 plot_title = False
 
 import OCProblems
-OCprob = OCProblems.Lotka_OED(nt = 100, 
+OCprob = OCProblems.Lotka_OED(
+                    nt = 100, 
                     refine = 1, 
                     parallel = False, 
                     integrator = 'RK4', 
                     )
+
+# Note: Due to randomness in the sparse linear solver, 
+# several runs may be needed to reproduce the exact plots 
+# in the paper (114 total iterations, some runs lead to 150).
+# The overall iteration behavior is unaffected.
 
 
 ################################
@@ -53,7 +59,6 @@ opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
-# QPopts.terminationTolerance = 1e-10
 opts.qpsol_options = QPopts
 ################################
 
@@ -80,27 +85,27 @@ stats = py_blockSQP.SQPstats("./solver_outputs")
 xi_arr = []
 optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 optimizer.init()
-#####################
-if (step_plots):
+################################
+
+ret = int(optimizer.run(1))
+i = 1
+if step_plots:
     OCprob.plot(OCprob.start_point, dpi = 200, it = 0, title=plot_title)
-    ret = int(optimizer.run(1))
     xi = np.array(optimizer.get_xi()).reshape(-1)
-    i = 1
     OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
     while ret == 0 and i < itMax:
         ret = int(optimizer.run(1,1))
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1
-        # Note: Due to randomness, likely in the sparse linear solver, 
-        # several runs may be needed to reproduce the exact plots in the paper.
-        # The general iteration behavior is unaffected.
         if i in (15, 80, 105, 106):
             xi_arr.append(xi)
+        OCprob.plot(xi, dpi=200, title=plot_title)
 else:
-    ret = int(optimizer.run(itMax))
-    xi = np.array(optimizer.get_xi()).reshape(-1)
-OCprob.plot(xi, dpi=200, title=plot_title)
-
+    while ret == 0 and i < itMax:
+        ret = int(optimizer.run(1,1))
+        i += 1
+        if i in (15, 80, 105, 106):
+            xi_arr.append(np.array(optimizer.get_xi()).reshape(-1))
 
 for sol in xi_arr:
     OCprob.plot(sol, dpi=200, title=plot_title)

@@ -1,3 +1,19 @@
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
+/**
+ * \file blocksqp_defs.cpp
+ * \author Reinhold Wittmann
+ * \date 2023-2025
+ *
+ *  A result print utility
+ */
+
 #include "blocksqp_defs.hpp"
 #include <iostream>
 

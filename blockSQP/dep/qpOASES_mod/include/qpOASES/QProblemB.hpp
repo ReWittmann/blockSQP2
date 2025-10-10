@@ -31,6 +31,11 @@
  *	Declaration of the QProblemB class which is able to use the newly
  *	developed online active set strategy for parametric quadratic programming
  *	for problems with (simple) bounds only.
+ * 
+ *  \modifications
+ *   \author Reinhold Wittmann
+ *   \date 2023-2025
+ *   Added C++-20 std::stop_token as a class member and a setter for it.
  */
 
 

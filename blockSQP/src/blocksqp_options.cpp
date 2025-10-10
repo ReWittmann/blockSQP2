@@ -6,14 +6,27 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
 /**
  * \file blocksqp_options.cpp
  * \author Dennis Janka
  * \date 2012-2015
  *
  *  Implementation of SQPoptions class that holds all algorithmic options.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
+ 
 #include "blocksqp_options.hpp"
 #include "blocksqp_qpsolver.hpp"
 #include "blocksqp_defs.hpp"

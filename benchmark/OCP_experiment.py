@@ -441,11 +441,11 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_output = True):
+def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True):
     if not os.path.exists(dirPath):
         os.makedirs(dirPath)
     
-    if print_output:
+    if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "ipopt"
@@ -480,10 +480,10 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
     out.close()
 
 
-def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_output = True, **kwargs):
+def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if not os.path.exists(dirPath):
         os.makedirs(dirPath)
-    if print_output:
+    if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "blockSQP"

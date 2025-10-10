@@ -16,9 +16,12 @@ import OCProblems
 
 
 ###############################################################################
-TSCALE = 500.0
-OCprob = OCProblems.Cushioned_Oscillation_TSCALE(nt = 100, parallel = True, integrator = 'RK4', TSCALE = TSCALE)
-
+OCprob = OCProblems.Cushioned_Oscillation_TSCALE(
+                    nt = 100, 
+                    parallel = True, 
+                    integrator = 'RK4', 
+                    TSCALE = 500.0
+                    )
 nPert0 = 0
 nPertF = 40
 itMax = 400

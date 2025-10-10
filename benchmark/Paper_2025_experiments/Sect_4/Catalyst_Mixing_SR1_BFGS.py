@@ -14,7 +14,8 @@ step_plots = False
 plot_title = False
 
 import OCProblems
-OCprob = OCProblems.Catalyst_Mixing(nt = 100, 
+OCprob = OCProblems.Catalyst_Mixing(
+                    nt = 100, 
                     refine = 1, 
                     parallel = False, 
                     integrator = 'RK4', 

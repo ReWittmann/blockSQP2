@@ -13,84 +13,6 @@ import OCP_experiment
 import OCProblems
 
 
-def opt_SR1_BFGS_seq():
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = 1
-    opts.par_QPs = False
-    opts.automatic_scaling = False
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    opts.BFGS_damping_factor = 0.2
-    return opts
-
-
-def opt_conv_str_1_seq(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = max_conv_QPs
-    opts.conv_strategy = 1
-    opts.par_QPs = False
-    opts.automatic_scaling = False
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    return opts
-
-
-def opt_conv_str_2_seq(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = max_conv_QPs
-    opts.conv_strategy = 2
-    opts.automatic_scaling = False
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    return opts
-
-
-def opt_SR1_BFGS_par():
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = 1
-    opts.par_QPs = True
-    opts.automatic_scaling = False
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    return opts
-
-
-def opt_conv_str_1_par(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = 4
-    opts.conv_strategy = 1
-    opts.par_QPs = True
-    opts.automatic_scaling = False
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    opts.indef_delay = 3
-    return opts
-
-
-def opt_conv_str_2_par(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = max_conv_QPs
-    opts.conv_strategy = 2
-    opts.par_QPs = True
-    opts.automatic_scaling = False
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    opts.indef_delay = 3
-    return opts
-
-
-def opt_conv_str_2_par_scale(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
-    opts.max_conv_QPs = max_conv_QPs
-    opts.conv_strategy = 2
-    opts.par_QPs = True
-    opts.automatic_scaling = True
-    opts.max_filter_overrides = 0
-    opts.conv_kappa_max = 8.0
-    opts.indef_delay = 3
-    return opts
-
-
 Examples = [
             OCProblems.Batch_Reactor,
             OCProblems.Cart_Pendulum,
@@ -109,15 +31,6 @@ Examples = [
             OCProblems.Tubular_Reactor,
             OCProblems.Lotka_OED,
             ]
-
-
-opt1 = opt_SR1_BFGS_seq()
-opt2 = opt_conv_str_1_seq()
-opt3 = opt_conv_str_2_seq()
-
-opt4 = opt_conv_str_2_par()
-opt5 = opt_conv_str_2_par()
-opt5.automatic_scaling = True
 
 #SR1_BFGS
 opt_SR1_BFGS = py_blockSQP.SQPoptions()
@@ -143,6 +56,7 @@ opt_CS2.max_conv_QPs = 4
 opt_CS2.conv_strategy = 2
 opt_CS2.max_filter_overrides = 0
 
+#Select option sets to test for
 Experiments = [
                (opt_SR1_BFGS, "SR1-BFGS"),
                # (opt_CS0, "Convexification strategy 0"),
@@ -153,13 +67,20 @@ Experiments = [
 
 plot_folder = cD + "/out_blockSQP_experiments"
 
+#Choose perturbed start points to test for,
+#modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
 nPert0 = 0
 nPertF = 40
+
+#Write results to a file?
+file_output = True
+
+
+#Run all example problems for all option sets for perturbed start points
 dirPath = plot_folder
 if not os.path.exists(dirPath):
     os.makedirs(dirPath)
-print_output = True
-if print_output:
+if file_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
     sep = "" if dirPath[-1] == "/" else "/"
     pref = "blockSQP"
@@ -167,9 +88,9 @@ if print_output:
     out = open(filePath, 'w')
 else:
     out = OCP_experiment.out_dummy()
+
 titles = [EXP_name for _, EXP_name in Experiments]
 OCP_experiment.print_heading(out, titles)
-
 for OCclass in Examples:        
     OCprob = OCclass(nt = 100, integrator = 'RK4', parallel = True)
     itMax = 200

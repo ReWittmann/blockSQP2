@@ -6,12 +6,26 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
+ 
 /**
  * \file blocksqp_matrix.hpp
  * \author Dennis Janka, based on VPLAN's matrix.h by Stefan Koerkel
  * \date 2012-2015
  *
  *  Declaration of Matrix and SymMatrix classes.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
+ *  Additional methods, sparse Matrix classes, LT_Block_Matrix class
  */
 
 #ifndef BLOCKSQP_MATRIX_HPP

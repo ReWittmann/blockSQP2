@@ -2,13 +2,11 @@ import numpy as np
 import os
 import sys
 import time
-import copy
 try:
     cD = os.path.dirname(os.path.abspath(__file__))
 except:
     cD = os.getcwd()
 sys.path += [cD + "/../..", cD + "/../../.."]
-
 import py_blockSQP
 import matplotlib.pyplot as plt
 
@@ -17,7 +15,8 @@ step_plots = True
 plot_title = True
 
 import OCProblems
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+OCprob = OCProblems.Lotka_Volterra_Fishing(
+                    nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4'

@@ -1,7 +1,7 @@
 /*
- * blockSQP -- Sequential quadratic programming for problems with
- *             block-diagonal Hessian matrix.
- * Copyright (C) 2012-2015 by Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
  *
  * Licensed under the zlib license. See LICENSE for more details.
  */
@@ -9,7 +9,7 @@
 /**
  * \file blocksqp_scaling.cpp
  * \author Reinhold Wittmann
- * \date 2012-2015
+ * \date 2023-2025
  *
  *  Implementation of scaling heuristics
  *

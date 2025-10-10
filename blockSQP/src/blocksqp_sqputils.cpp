@@ -6,14 +6,25 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
 /**
  * \file blocksqp_SQPutils.cpp
  * \author Reinhold Wittmann
- * \date 2012-2015
+ * \date 2023-2025
  *
- *  Utility methods of the SQPmethod class
+ *  Utility methods of the SQPmethod class based on
+ *  blocksqp_main.cpp by Dennis Janka
  *
  */
+
+ 
 
 
  #include "blocksqp_iterate.hpp"
@@ -141,7 +152,7 @@ bool SQPmethod::calcOptTol(){
     vars->cNorm  = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     vars->cNormS = vars->cNorm /( 1.0 + lInfVectorNorm( vars->xi ) );
 
-    //TODO complementarity. Has not made a difference in practice so far.
+    //TODO complementarity. Has not caused issues in our experiments.
     /*
     double comp_error = 0;
     double ctol = 1e-5;

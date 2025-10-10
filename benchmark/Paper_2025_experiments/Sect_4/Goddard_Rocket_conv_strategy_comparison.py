@@ -23,10 +23,10 @@ opt_SR1_BFGS.max_filter_overrides = 0
 opt_SR1_BFGS.BFGS_damping_factor = 0.2
 
 #Convexification strategy 0
-opt_CS0 = py_blockSQP.SQPoptions()
-opt_CS0.max_conv_QPs = 4
-opt_CS0.conv_strategy = 0
-opt_CS0.max_filter_overrides = 0
+# opt_CS0 = py_blockSQP.SQPoptions()
+# opt_CS0.max_conv_QPs = 4
+# opt_CS0.conv_strategy = 0
+# opt_CS0.max_filter_overrides = 0
 
 #Convexification strategy 1
 opt_CS1 = py_blockSQP.SQPoptions()
