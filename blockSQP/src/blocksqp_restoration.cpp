@@ -1271,7 +1271,14 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     int ind_1 = parent->nnz;
     int ind_2 = 0;
     int ind_3 = parent->nVar;
-
+    
+    //B: Jacobian of true constraints (not (continuity-) conditions)
+    //C: Jacobian of (continuity-) conditions
+    //Create restoration Jacobian from B and C, adding slacks only for B:
+    //[B I]
+    //[C 0]
+    //Matrix row may not be sorted according to B anc C, 
+    //so iterate over constraint blocks corresponding to B
     for (int i = 0; i < parent_cond->num_cblocks; i++){
         if (!parent_cond->cblocks[i].removed){
             for (int j = 0; j < parent_cond->cblocks[i].size; j++){

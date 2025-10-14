@@ -621,6 +621,7 @@ py::class_<blockSQP::Sparse_Matrix>(m, "Sparse_Matrix")
     .def_property("NZ", [](blockSQP::Sparse_Matrix &M)->double_pointer_interface{double_pointer_interface nonzeros; nonzeros.size = M.colind[M.n]; nonzeros.ptr = M.nz.get(); return nonzeros;}, nullptr)
     .def_property("ROW", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface row; row.size = M.colind[M.n]; row.ptr = M.row.get(); return row;}, nullptr)
     .def_property("COLIND", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface colind; colind.size = M.n + 1; colind.ptr = M.colind.get(); return colind;}, nullptr)
+    .def_property("nnz", [](blockSQP::Sparse_Matrix &M)->int{return M.colind[M.n];}, nullptr)
     ;
 
 py::class_<blockSQP::SQPoptions>(m, "SQPoptions")

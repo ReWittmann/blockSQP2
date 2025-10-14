@@ -7,12 +7,7 @@ except:
     cD = os.getcwd()
 sys.path += [cD + "/../..", cD + "/../../.."]
 import time
-
 import py_blockSQP
-
-itMax = 100
-step_plots = True
-plot_title = True
 
 import OCProblems
 OCprob = OCProblems.Three_Tank_Multimode(
@@ -21,7 +16,7 @@ OCprob = OCProblems.Three_Tank_Multimode(
                     parallel = True, 
                     integrator = 'RK4'
                     )
-
+itMax = 100
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
@@ -96,7 +91,6 @@ ret = optimizer.run(100)
 xi = np.array(optimizer.get_xi()).reshape(-1)
 OCprob.plot(xi, dpi=200)
 
-print("Optimality and feasibility error without additional steps: ", optimizer.vars.tol, ", ", optimizer.vars.cNorm, "\n")
 
 #Enable new termination features
 opts.max_extra_steps = 10
@@ -111,5 +105,6 @@ xi_accurate = np.array(optimizer2.get_xi()).reshape(-1)
 OCprob.plot(xi_accurate,dpi=200)
 
 time.sleep(0.1)
+print("Optimality and feasibility error without additional steps: ", optimizer.vars.tol, ", ", optimizer.vars.cNorm, "\n")
 print("Optimality and feasibility error with additional steps: ", optimizer2.vars.tol, ", ", optimizer2.vars.cNorm, "\n")
 

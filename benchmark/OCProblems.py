@@ -2621,7 +2621,7 @@ class Supermarket_Refrigeration(OCProblem):
         plt.show()
         plt.close()
         
-    
+#TODO fix problem formulation (maybe also on mintoc)
 class Three_Tank_Multimode(OCProblem):
     default_params = {'T':12, 'c1':1, 'c2':2, 'c3':0.8, 'k1':2, 'k2':3, 'k3':1, 'k4':3}
     def build_problem(self):
@@ -2637,9 +2637,9 @@ class Three_Tank_Multimode(OCProblem):
         w1,w2,w3 = cs.vertsplit(u)
         dt = cs.MX.sym('dt')
         
-        ode_rhs = cs.vertcat(-cs.sqrt(x1) + c1*w1+c2*w2 - w3*cs.sqrt(c3*x3),
+        ode_rhs = cs.vertcat(-cs.sqrt(x1) + c1*w1+c2*w2 - w3*cs.sqrt(c3*x1),
                               cs.sqrt(x1) - cs.sqrt(x2),
-                              cs.sqrt(x2) - cs.sqrt(x3) + w3*cs.sqrt(c3*x3)
+                              cs.sqrt(x2) - cs.sqrt(x3) + w3*cs.sqrt(c3*x1)
                               )
         
         quad = k1*(x2-k2)**2 + k3*(x3-k4)**2
