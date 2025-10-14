@@ -1,3 +1,19 @@
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
+/**
+ * \file blocksqp_defs.cpp
+ * \author Reinhold Wittmann
+ * \date 2023-2025
+ *
+ *  A result print utility
+ */
+
 #include "blocksqp_defs.hpp"
 #include <iostream>
 
@@ -32,8 +48,11 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
             case SQPresult::restoration_failure:
                 std::cout << colPrefix + "\nRESTORATION ERROR" + colSuffix + "\n";
                 break;
-                case SQPresult::linesearch_failure:
+            case SQPresult::linesearch_failure:
                 std::cout << colPrefix + "\nLINESEARCH ERROR" + colSuffix + "\n";
+                break;
+            case SQPresult::sensitivity_eval_failure:
+                std::cout << colPrefix + "\nSENSITIVITY EVALUATION ERROR" + colSuffix + "\n";
                 break;
             default:
                 std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL" + colSuffix + "\n";

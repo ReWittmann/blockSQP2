@@ -2,13 +2,11 @@ import numpy as np
 import os
 import sys
 import time
-import copy
 try:
     cD = os.path.dirname(os.path.abspath(__file__))
 except:
     cD = os.getcwd()
 sys.path += [cD + "/../..", cD + "/../../.."]
-
 import py_blockSQP
 import matplotlib.pyplot as plt
 
@@ -17,7 +15,8 @@ step_plots = True
 plot_title = True
 
 import OCProblems
-OCprob = OCProblems.Lotka_Volterra_Fishing(nt = 100, 
+OCprob = OCProblems.Lotka_Volterra_Fishing(
+                    nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4'
@@ -137,9 +136,9 @@ xi = np.array(optimizer4.get_xi()).reshape(-1)
 x1,x2 = OCprob.get_state_arrays(xi)
 u = OCprob.get_control_plot_arrays(xi)
 fig, ax = plt.subplots(dpi=200)
-ax.plot(OCprob.time_grid, x1, 'g-.', label = '$x_1$')
-ax.plot(OCprob.time_grid, x2, 'b--', label = '$x_2$')
-ax.step(OCprob.time_grid_ref, u/10, 'r-', label = r'$u\cdot 0.1$')
+ax.plot(OCprob.time_grid, x1, 'tab:green', linestyle='-.', label = '$x_1$')
+ax.plot(OCprob.time_grid, x2, 'tab:blue', linestyle='--', label = '$x_2$')
+ax.step(OCprob.time_grid_ref, u/10, 'tab:red', linestyle='-', label = r'$u\cdot 0.1$')
 ax.legend(fontsize='large')
 ax.set_xlabel('t', fontsize = 17.5)
 ax.xaxis.set_label_coords(1.015,-0.006)
@@ -166,9 +165,9 @@ xi = np.array(optimizer5.get_xi()).reshape(-1)
 x1,x2 = OCprob.get_state_arrays(xi)
 u = OCprob.get_control_plot_arrays(xi)
 fig, ax = plt.subplots(dpi=200)
-ax.plot(OCprob.time_grid, x1, 'g-.', label = r'$x_1$')
-ax.plot(OCprob.time_grid, x2, 'b--', label = r'$x_2$')
-ax.step(OCprob.time_grid_ref, u/100, 'r-', label = r'$u \cdot 0.01$')
+ax.plot(OCprob.time_grid, x1, 'tab:green', linestyle='-.', label = '$x_1$')
+ax.plot(OCprob.time_grid, x2, 'tab:blue', linestyle='--', label = '$x_2$')
+ax.step(OCprob.time_grid_ref, u/100, 'tab:red', linestyle='-', label = r'$u\cdot 0.01$')
 ax.legend(fontsize='large')
 ax.set_xlabel('t', fontsize = 17.5)
 ax.xaxis.set_label_coords(1.015,-0.006)

@@ -1,3 +1,21 @@
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
+/**
+ * \file blocksqp_qpsolver.hpp
+ * \author Reinhold Wittmann
+ * \date 2023-2025
+ *
+ *  Declaration of abstract interface base classes and subclasses
+ *  for calling quadratic program solvers
+ *  
+ */
+
 #ifndef BLOCKSQP_QPSOLVER_HPP
 #define BLOCKSQP_QPSOLVER_HPP
 

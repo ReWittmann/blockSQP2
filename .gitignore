@@ -28,3 +28,11 @@ build/
 .build/
 install/
 blockSQP/examples/bin/
+
+manual.bbl
+manual.aux
+manual.blg
+manual.log
+manual.synctex.gz
+manual.out
+manual.toc

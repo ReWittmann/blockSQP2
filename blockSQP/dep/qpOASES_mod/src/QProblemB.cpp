@@ -30,6 +30,18 @@
  *
  *	Implementation of the QProblemB class which is able to use the newly
  *	developed online active set strategy for parametric quadratic programming.
+ * 
+ *  \modifications
+ *   \author Reinhold Wittmann
+ *   \date 2023-2025
+ *   Modified and extended interface to sparse linear solver MUMPS, 
+ *   added interface to sparse linear solver SPRAL.
+ * 
+ *  \modifications
+ *   \author Reinhold Wittmann
+ *   \date 2023-2025
+ *   Added a setter for a C++-20 std::stop_token and a check for
+ *   whether a stop has been requested.
  */
 
 

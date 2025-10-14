@@ -1,10 +1,19 @@
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
 /**
  * \file blocksqp_qpsolver.cpp
  * \author Reinhold Wittmann
- * \date 2024-
+ * \date 2023-2025
  *
- *  Implementation of interfaces to third party qp solvers
- *
+ *  Implementation of abstract interface base classes and subclasses
+ *  for calling quadratic program solvers
+ *  
  */
 
 
@@ -629,6 +638,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel == 2){
             *dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp.get());
             ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()));
+            //ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qp.get()));
         }
         else{
             *qpCheck = *qp;

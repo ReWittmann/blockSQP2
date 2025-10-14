@@ -14,12 +14,12 @@ step_plots = True
 plot_title = False
 
 import OCProblems
-OCprob = OCProblems.Electric_Car(nt = 100, 
+OCprob = OCProblems.Electric_Car(
+                    nt = 100, 
                     refine = 1, 
                     parallel = True, 
                     integrator = 'RK4', 
                     )
-
 
 ################################
 opts = py_blockSQP.SQPoptions()
@@ -53,7 +53,6 @@ opts.qpsol = 'qpOASES'
 QPopts = py_blockSQP.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
-# QPopts.terminationTolerance = 1e-10
 opts.qpsol_options = QPopts
 ################################
 

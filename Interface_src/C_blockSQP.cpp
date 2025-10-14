@@ -1,10 +1,21 @@
-/**
- * \file blockSQP_julbind.cpp
- * \author Reinhold Wittmann
- * \date 2024-
+/*
+ * C_blockSQP -- A C interface to the blockSQP nonlinear 
+                  solver developed by Dennis Janka and extended by
+                  Reinhold Wittmann
+ * Copyright (C) 2022-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
  *
- * C interface for the blockSQP nonlinear programming solver
+ * Licensed under the zlib license. See LICENSE for more details.
  */
+
+/**
+ * \file C_blockSQP.cpp
+ * \author Reinhold Wittmann
+ * \date 2025
+ *
+ * Implementation of a C interface to the blockSQP 
+ * nonlinear solver.
+ */
+
 
 #include "blocksqp_method.hpp"
 #include "blocksqp_condensing.hpp"
@@ -315,6 +326,9 @@ CDLEXP void SQPoptions_set_qpsol(void *ptr, int val){
     else
         QPS = QPsolvers::unset;
     static_cast<SQPoptions *>(ptr)->qpsol = QPS;
+}
+CDLEXP void SQPoptions_set_indef_delay(void *ptr, int val){
+    static_cast<SQPoptions *>(ptr)->indef_delay = val;
 }
 
 // SQPstats

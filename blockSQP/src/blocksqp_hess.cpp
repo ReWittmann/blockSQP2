@@ -6,6 +6,14 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
 /**
  * \file blocksqp_hess.cpp
  * \author Dennis Janka
@@ -13,8 +21,12 @@
  *
  *  Implementation of methods of SQPmethod class associated with
  *  computation of Hessian approximations.
- *
+ *  
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
+
 
 #include "blocksqp_iterate.hpp"
 #include "blocksqp_options.hpp"
@@ -221,7 +233,8 @@ void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int op
             break;
         case 2: //Oren-Luenberger
             scale = vars->deltaGammaMat(iBlock, dpos) / fmax(vars->deltaNormSqMat(iBlock, dpos)*param->initial_hess_scale, myEps);
-            if (scale < 0) scale *= -1;
+            if (scale < 0){scale *= -1;}
+            //if (scale < 0){scale = 1.0;}
             scale = fmin(scale, 1.0);
             break;
         case 3: //Geometric mean of 1 and 2
@@ -230,7 +243,8 @@ void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int op
             break;
         case 4: //First COL sizing, = OL sizing with different bounds
             scale = vars->deltaGammaMat(iBlock, dpos) / fmax(vars->deltaNormSqMat(iBlock, dpos)*param->initial_hess_scale, myEps);
-            if (scale < 0) scale *= -1;
+            if (scale < 0){scale *= -1;}
+            //if (scale < 0){scale = 1.0;}
             scale = fmax(fmin(scale, 1.0), param->OL_eps);
             break;
         default:

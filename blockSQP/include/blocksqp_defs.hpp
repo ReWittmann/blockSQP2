@@ -6,12 +6,25 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
+ 
 /**
  * \file blocksqp_defs.hpp
  * \author Dennis Janka
  * \date 2012-2015
  *
  *  Declaration of all constants and inclusion of standard header files.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
 #ifndef BLOCKSQP_DEFS_HPP
@@ -42,6 +55,7 @@ enum class SQPresult{
     qp_failure = -4,
     eval_failure = -5,
     misc_error = -10,
+    sensitivity_eval_failure = -100
 };
 //Colored print output when exiting with  return print_RES(RES::__)
 SQPresult print_SQPresult(SQPresult rs, int print_level = 2);

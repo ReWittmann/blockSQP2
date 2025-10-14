@@ -6,13 +6,26 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
 /**
  * \file blocksqp_problemspec.cpp
  * \author Dennis Janka
  * \date 2012-2015
  *
  *  Implementation of problem-independent methods of ProblemSpec class.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
+
 
 #include "blocksqp_problemspec.hpp"
 
@@ -34,7 +47,7 @@ void Problemspec::evaluate( const Matrix &xi, double *objval, Matrix &constr, in
     evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, jacNzDummy, jacIndRowDummy, jacIndColDummy, hessDummy, dmode, info);
 
     // If sparse version is not implemented, try dense version
-    if (info) evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, constrJacDummy, hessDummy, dmode, info);
+    if (*info) evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, constrJacDummy, hessDummy, dmode, info);
 }
 
 

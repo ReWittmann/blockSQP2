@@ -19,70 +19,6 @@ plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 
-class CountCallback(cs.Callback):
-    def __init__(self, name, nx, ng, np):
-        cs.Callback.__init__(self)
-        self.it = -1
-        self.prim_vars = cs.DM([])
-        self.nx = nx
-        self.ng = ng
-        self.np = np
-        self.construct(name, {})
-
-    
-    def get_n_in(self):
-        return cs.nlpsol_n_out()
-
-    def get_n_out(self):
-        return 1
-
-    def get_name_in(self, i):
-        return cs.nlpsol_out(i)
-
-    def get_name_out(self, i):
-        return "ret"
-
-    def get_sparsity_in(self, i):
-        n = cs.nlpsol_out(i)
-        if n == 'f':
-            return cs.Sparsity.scalar()
-        elif n in ('x', 'lam_x'):
-            return cs.Sparsity.dense(self.nx)
-        elif n in ('g', 'lam_g'):
-            return cs.Sparsity.dense(self.ng)
-        else:
-            return cs.Sparsity(0, 0)
-    
-    def eval(self, arg):
-        self.it += 1
-        return [0] 
-    
-
-# def perturbStartPoint(OCP : OCProblems.OCProblem, IND : int, SP : np.array):
-#     if (isinstance(OCP, (OCProblems.Goddard_Rocket, OCProblems.Electric_Car, OCProblems.Hang_Glider, OCProblems.Fullers, OCProblems.Tubular_Reactor, OCProblems.Cart_Pendulum))):
-#         val = OCP.get_stage_control(SP, IND)
-#         OCP.set_stage_control(SP, IND, val - 0.1)
-    
-#     #For catalyst mixing, Lotka (OED) and cushioned oscillation
-#     if (isinstance(OCP, (OCProblems.Lotka_Volterra_Fishing, OCProblems.Catalyst_Mixing, OCProblems.Lotka_OED, OCProblems.Cushioned_Oscillation, OCProblems.Egerstedt_Standard, OCProblems.Particle_Steering, OCProblems.Time_Optimal_Car))):
-#         OCP.set_stage_control(SP, IND, 0.1)
-    
-#     #For hanging chain
-#     if (isinstance(OCP, (OCProblems.Hanging_Chain, OCProblems.Van_der_Pol_Oscillator_3))):
-#         val = OCP.get_stage_control(SP, IND)
-#         OCP.set_stage_control(SP, IND, val + 0.1)
-    
-#         #For batch reactor
-#     if (isinstance(OCP, OCProblems.Batch_Reactor)):
-#         OCP.set_stage_control(SP, IND, 300.)
-
-#     #For batch distillation
-#     if (isinstance(OCP, OCProblems.Batch_Distillation)):
-#         OCP.set_stage_control(SP, IND, 1.5)
-    
-#     if (isinstance(OCP, OCProblems.Three_Tank_Multimode)):
-#         OCP.set_stage_control(SP, IND, [0.5, 0.25, 0.25])
-
 def create_prob_cond(OCprob : OCProblems.OCProblem):
     vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
     cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
@@ -123,8 +59,6 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
     N_secs = []
     type_sol = []
     for j in range(nPert0,nPertF):
-        # start_it = copy.copy(OCprob.start_point)
-        # perturbStartPoint(OCprob, j, start_it)
         start_it = OCprob.perturbed_start_point(j)
         
         prob, cond, HOLD = create_prob_cond(OCprob)
@@ -133,26 +67,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
             prob.cond = cond
         
         prob.complete()
-
-
-        # prob_unscaled = prob
-        # prob = py_blockSQP.scaled_Problemspec(prob)
-        # scale = py_blockSQP.double_array(OCprob.nVar)
-        # scale_arr = np.array(scale, copy = False)
-        # scale_arr[:] = 1.0
-        # # for i in range(OCprob.ntS + 1):
-        # #     OCprob.set_stage_state(scale_arr, i, [0.00001,1.0,0.00001,0.00001,0.1])
-        # # for i in range(OCprob.ntS):
-        # #     OCprob.set_stage_control(scale_arr, i, [0.01, 1.0, 1.0])
-        # # for i in range(OCprob.ntS):
-        # #     OCprob.set_stage_param(scale_arr, i, [10.0])
-        # # for i in range(OCprob.ntS):
-        # #     OCprob.set_stage_control(scale_arr, i, [0.1])
-        # prob.arr_set_scale(scale)
-
-
-        stats = py_blockSQP.SQPstats("./solver_outputs")
-        
+        stats = py_blockSQP.SQPstats("./solver_outputs")        
         t0 = time.monotonic()
         optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
         optimizer.init()
@@ -168,33 +83,32 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
             type_sol.append(-1)    
     return N_SQP, N_secs, type_sol
 
-def ipopt_perturbed_starts(OCprob : OCProblems.OCProblem, ipopts : dict, nPert0, nPertF, itMax = 200):
+
+def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, arg_opts : dict, nPert0, nPertF, itMax = 200):
     NLP = OCprob.NLP
-    counter = CountCallback('counter', OCprob.NLP['x'].size1(), OCprob.NLP['g'].size1(), 0)
-    opts = {'iteration_callback': counter}
-    opts.update({'ipopt': ipopts})
-    S = cs.nlpsol('S', 'ipopt', NLP, opts)
+    opts = arg_opts
     N_SQP = []
     N_secs = []
     type_sol = []
     for j in range(nPert0, nPertF):
-        counter.it = -1
-        # start_it = copy.copy(OCprob.start_point)
-        # perturbStartPoint(OCprob, j, start_it)
-        
+        S = cs.nlpsol('S', plugin, NLP, opts)
         start_it = OCprob.perturbed_start_point(j)
         
         t0 = time.monotonic()
         out = S(x0=start_it, lbx=OCprob.lb_var,ubx=OCprob.ub_var, lbg=OCprob.lb_con, ubg=OCprob.ub_con)
         t1 = time.monotonic()
-        N_SQP.append(counter.it)
-        if counter.it == itMax:
-            type_sol.append(0)
-        else:
-            type_sol.append(1)
+        stats = S.stats()
+        if plugin == 'ipopt':
+            N_SQP.append(stats['iter_count'])
+        elif plugin == 'worhp':
+            N_SQP.append(stats['n_call_nlp_grad_f'] - 1)
+        elif plugin == 'blocksqp':
+            N_SQP.append(stats['n_call_nlp_grad_f'] - 1)
+        elif plugin == 'fatrop':
+            N_SQP.append(stats['iterations_count'])
+        type_sol.append(int(stats['success']))
         N_secs.append(t1 - t0)
     return N_SQP, N_secs, type_sol
-
 
 
 def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None):
@@ -211,9 +125,9 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
 
     EXP_N_secs_mu = [sum(EXP_N_secs_clean[i])/len(EXP_N_secs_clean[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs_clean[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs_clean[i]))**(0.5) for i in range(n_EXP)]
-
-    #Care, doen't work for numbers smaller than 0.0001, representation becomes *e-***
-    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
+    
+    
+    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
 
     ccodemp = {-1: 'r', 0:'y', 1:'g'}
     cmap = [[ccodemp[v] for v in EXP_type_sol[i]] for i in range(n_EXP)]
@@ -237,14 +151,18 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
         ax_it.set_xlabel('location of perturbation', size = labelsize)
-        ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
+      
+        
         ax_it.set_xticks(xticks)
         
         ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs[i], c = cmap[i])
         ax_time.set_ylabel("solution time in seconds", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
-        ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_time.set_xticks(xticks)
 
     plt.show()
@@ -267,9 +185,8 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     EXP_N_SQP_sigma = [(sum((np.array(EXP_N_SQP[i]) - EXP_N_SQP_mu[i])**2)/len(EXP_N_SQP[i]))**(0.5) for i in range(n_EXP)]
     EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
-
-    #Care, doen't work for numbers smaller than 0.0001, representation becomes *e-***
-    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
+    
+    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
 
     ###############################################################################
     titlesize = 23
@@ -290,7 +207,8 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
         ax_it.set_xlabel('location of perturbation', size = labelsize)
-        ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
         
@@ -298,7 +216,9 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
-        ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
+        
         ax_time.set_xticks(xticks)
         ax_time.tick_params(labelsize = labelsize - 1)
         
@@ -341,9 +261,8 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
     EXP_N_secs_mu = [sum(EXP_N_secs_clean[i])/len(EXP_N_secs_clean[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs_clean[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs_clean[i]))**(0.5) for i in range(n_EXP)]
-
-    #Care, doen't work for numbers smaller than 0.0001, representation becomes *e-***
-    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]    
+    
+    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]    
     ###############################################################################
     titlesize = 23
     axtitlesize = 19
@@ -363,14 +282,19 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     for i in range(n_EXP):
         ax_it, ax_time = subfigs[i].subplots(nrows=1,ncols=2)
         subfigs[i].suptitle(titles[i], size = titlesize)
-        ax_it.scatter(EXP_grid_sol[i], EXP_N_SQP_sol[i], c = 'g', marker = 'o', label = "success")
-        ax_it.scatter(EXP_grid_part[i], EXP_N_SQP_part[i], c = 'y', marker = 'v', label = "partial success")
-        ax_it.scatter(EXP_grid_fail[i], EXP_N_SQP_fail[i], c = 'r', marker = 'x', label = "failure")
+        # ax_it.scatter(EXP_grid_sol[i], EXP_N_SQP_sol[i], c = 'g', marker = 'o', label = "success")
+        # ax_it.scatter(EXP_grid_part[i], EXP_N_SQP_part[i], c = 'y', marker = 'v', label = "partial success")
+        # ax_it.scatter(EXP_grid_fail[i], EXP_N_SQP_fail[i], c = 'r', marker = 'x', label = "failure")
+        ax_it.scatter(EXP_grid_sol[i], EXP_N_SQP_sol[i], c = 'tab:green', marker = 'o', label = "success")
+        ax_it.scatter(EXP_grid_part[i], EXP_N_SQP_part[i], c = 'tab:olive', marker = 'v', label = "partial success")
+        ax_it.scatter(EXP_grid_fail[i], EXP_N_SQP_fail[i], c = 'tab:red', marker = 'x', label = "failure")
+
 
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
         ax_it.set_xlabel('location of perturbation', size = labelsize)
-        ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
         ax_it.legend(fontsize = 'x-large')
@@ -382,7 +306,8 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
-        ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_time.tick_params(labelsize = labelsize - 1)
         ax_time.set_xticks(xticks)
     if not isinstance(dirPath, str):
@@ -395,6 +320,88 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
         plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
+
+
+def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
+    n_xticks = 10
+    tdist = round((nPertF - nPert0)/n_xticks)
+    tdist += (tdist==0)
+    xticks = np.arange(nPert0, nPertF + tdist, tdist)
+    ###############################################################################
+    def F(x,r):
+        if r > 0:
+            return x
+        else:
+            return 0.00001    
+    EXP_N_SQP_S = [[F(EXP_N_SQP[i][j], EXP_type_sol[i][j]) for j in range(nPertF - nPert0)] for i in range(n_EXP)]
+    EXP_N_secs_S = [[F(EXP_N_secs[i][j], EXP_type_sol[i][j]) for j in range(nPertF - nPert0)] for i in range(n_EXP)]
+
+    EXP_N_SQP_mu = [sum(EXP_N_SQP[i])/len(EXP_N_SQP[i]) for i in range(n_EXP)]
+    EXP_N_SQP_sigma = [(sum((np.array(EXP_N_SQP[i]) - EXP_N_SQP_mu[i])**2)/len(EXP_N_SQP[i]))**(0.5) for i in range(n_EXP)]
+    EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
+    EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
+    
+    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
+
+    ###############################################################################
+    titlesize = 24
+    axtitlesize = 23
+    labelsize = 22
+    
+    # fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
+    
+    fig, ax = plt.subplots(nrows = n_EXP, ncols = 2, constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 2.5 + 2.5*(n_EXP - 1)))
+    
+    if isinstance(suptitle, str):
+        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
+    for i in range(n_EXP):
+        ax_it, ax_time = ax[i,:]
+        
+        ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP_S[i])#, c = cmap[i])
+        # ax_it.set_ylabel('SQP iterations', size = labelsize)
+        ax_it.set_ylabel(titles[i], size = labelsize)
+        
+        ax_it.set_ylim(bottom = 0)
+        
+        if i == n_EXP - 1:
+            ax_it.set_xlabel('location of perturbation', size = labelsize)
+        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
+        
+        # TTL = r'$\footnotesize\mu = ' + trunc_float(EXP_N_SQP_mu[i], 1) + r'\ \sigma = ' + trunc_float(EXP_N_SQP_sigma[i], 1) + '$'
+        # if i == 0:
+        #     TTL = 'SQP iterations\n' + TTL
+        # ax_it.set_title(TTL, size = axtitlesize)
+        if i == 0:
+            ax_it.set_title('SQP iterations', size = axtitlesize)
+            
+        
+        ax_it.set_xticks(xticks)
+        ax_it.tick_params(labelsize = labelsize - 1)
+        
+        ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs_S[i])#, c = cmap[i])
+        # ax_time.set_ylabel("solution time [s]", size = labelsize)
+        ax_time.set_ylim(bottom = 0)
+        if i == n_EXP - 1:
+            ax_time.set_xlabel("location of perturbation", size = labelsize)
+        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
+        if i == 0:
+            ax_time.set_title('solution time [s]', size = axtitlesize)# + r'$\mu = ' + trunc_float(EXP_N_secs_mu[i], 1) + r'\ \sigma = ' + trunc_float(EXP_N_secs_sigma[i], 1) + '$', size = axtitlesize)
+        ax_time.set_xticks(xticks)
+        ax_time.tick_params(labelsize = labelsize - 1)
+        
+        
+    if not isinstance(dirPath, str):
+        plt.show()
+    else:
+        if not os.path.exists(dirPath):
+            os.makedirs(dirPath)
+        date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
+        name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
+        sep = "" if dirPath[-1] == "/" else "/"
+        pref = "" if savePrefix is None else savePrefix
+        
+        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
+
 
 
 def print_heading(out, EXP_names : list[str]):
@@ -418,7 +425,8 @@ def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
     trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
     out.write(name[:25].ljust(27))
     for i in range(n_EXP):
-        out.write((trunc_float(EXP_N_SQP_mu[i],1) + ",").ljust(10) + (trunc_float(EXP_N_SQP_sigma[i],1) + ";").ljust(11) + (trunc_float(EXP_N_secs_mu[i],1) + "s,").ljust(10) + (trunc_float(EXP_N_secs_sigma[i],1) + "s").ljust(11))
+        # out.write((trunc_float(EXP_N_SQP_mu[i],1) + ",").ljust(10) + (trunc_float(EXP_N_SQP_sigma[i],1) + ";").ljust(11) + (trunc_float(EXP_N_secs_mu[i],1) + "s,").ljust(10) + (trunc_float(EXP_N_secs_sigma[i],1) + "s").ljust(11))
+        out.write((f"{EXP_N_SQP_mu[i]:.2f}" + ",").ljust(10) + (f"{EXP_N_SQP_sigma[i]:.2f}" + ";").ljust(11) + (f"{EXP_N_secs_mu[i]:.2f}" + "s,").ljust(10) + (f"{EXP_N_secs_sigma[i]:.2f}" + "s").ljust(11))
         if i < n_EXP - 1:
             out.write("|".ljust(5))
     out.write("\n")
@@ -433,11 +441,11 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_output = True):
+def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True):
     if not os.path.exists(dirPath):
         os.makedirs(dirPath)
     
-    if print_output:
+    if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "ipopt"
@@ -453,15 +461,13 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
     for OCclass in Examples:        
         OCprob = OCclass(nt=100, integrator='RK4', parallel = True)
         itMax = 200
-        ipopts_base = {'max_iter':itMax}
+        # ipopts_base = {'max_iter':itMax}
         EXP_N_SQP = []
         EXP_N_secs = []
         EXP_type_sol = []
         n_EXP = 0
         for EXP_opts, EXP_name in Experiments:
-            ipopts = dict(ipopts_base)
-            ipopts.update(EXP_opts)
-            ret_N_SQP, ret_N_secs, ret_type_sol = ipopt_perturbed_starts(OCprob, ipopts, nPert0, nPertF, itMax = itMax)
+            ret_N_SQP, ret_N_secs, ret_type_sol = casadi_solver_perturbed_starts('ipopt', OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
             EXP_N_SQP.append(ret_N_SQP)
             EXP_N_secs.append(ret_N_secs)
             EXP_type_sol.append(ret_type_sol)
@@ -474,10 +480,10 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
     out.close()
 
 
-def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, print_output = True, **kwargs):
+def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if not os.path.exists(dirPath):
         os.makedirs(dirPath)
-    if print_output:
+    if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         sep = "" if dirPath[-1] == "/" else "/"
         pref = "blockSQP"

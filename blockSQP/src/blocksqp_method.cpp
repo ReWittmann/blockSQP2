@@ -6,12 +6,21 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
 /**
  * \file blocksqp_method.cpp
  * \author Reinhold Wittmann
  * \date 2025-
  *
- *  Constructors and helper methods of SQPmethod class
+ *  Constructors and helper methods of SQPmethod class,
+ *  based blocksqp_main.cpp by Dennis Janka
  *
  */
 

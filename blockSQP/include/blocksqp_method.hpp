@@ -6,12 +6,25 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
+ 
 /**
  * \file blocksqp_method.hpp
  * \author Dennis Janka
  * \date 2012-2015
  *
  *  Declaration of blockSQP's central SQPmethod class.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
 #ifndef BLOCKSQP_METHOD_HPP
@@ -104,9 +117,9 @@ class SQPmethod{
         /////////////////////////////////NEW
         /// Resolve options, iteration state and call parameters and dispatch the appropriate solve[*]QP_* method. 
         virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        virtual int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
-        virtual int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Sequentially try to solve increasingly convexified QPs. 
@@ -121,11 +134,11 @@ class SQPmethod{
         
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
-        virtual void computeNextHessian( int idx, int maxQP );
+        void computeNextHessian( int idx, int maxQP );
         /// Compute a convexified hessian and store it in vars->hess2, set hess to hess2
-        virtual void computeConvexHessian();
+        void computeConvexHessian();
         /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
-        virtual void setIdentityHessian();
+        void setIdentityHessian();
 
 
         // Filter line search, restoration phase and associated heuristics

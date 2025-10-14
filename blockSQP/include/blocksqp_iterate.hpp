@@ -6,6 +6,15 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
+ 
 /**
  * \file blocksqp_iterate.hpp
  * \author Dennis Janka
@@ -13,6 +22,10 @@
  *
  *  Declaration of SQPiterate class that holds all variables that are
  *  updated during one SQP iteration.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
 #ifndef BLOCKSQP_ITERATE_HPP

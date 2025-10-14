@@ -1,3 +1,19 @@
+/*
+ * blockSQP extensions -- Extensions for the blockSQP nonlinear
+                          solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
+/**
+ * \file blocksqp_mumps.hpp
+ * \author Reinhold Wittmann
+ * \date 2023-2025
+ *
+ * Implementation of functions for loading the MUMPS sparse linear solver
+ */
+
 #ifdef SOLVER_MUMPS
 
 #include "blocksqp_load_mumps.hpp"

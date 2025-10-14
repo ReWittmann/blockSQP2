@@ -6,14 +6,25 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+ 
 /**
  * \file blocksqp_SQPutils.cpp
  * \author Reinhold Wittmann
- * \date 2012-2015
+ * \date 2023-2025
  *
- *  Utility methods of the SQPmethod class
+ *  Utility methods of the SQPmethod class based on
+ *  blocksqp_main.cpp by Dennis Janka
  *
  */
+
+ 
 
 
  #include "blocksqp_iterate.hpp"
@@ -141,10 +152,34 @@ bool SQPmethod::calcOptTol(){
     vars->cNorm  = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     vars->cNormS = vars->cNorm /( 1.0 + lInfVectorNorm( vars->xi ) );
 
+    //TODO complementarity. Has not caused issues in our experiments.
+    /*
+    double comp_error = 0;
+    double ctol = 1e-5;
+    for (int i = 0; i < prob->nVar; i++){
+        if (prob->ub_var(i) - prob->lb_var(i) < ctol){}
+        else if (vars->xi(i) < prob->lb_var(i) + ctol)
+            comp_error += fmax(-vars->lambda(i), 0);
+        else if (vars->xi(i) > prob->ub_var(i) - ctol)
+            comp_error += fmax(vars->lambda(i), 0);
+        else 
+            comp_error += abs(vars->lambda(i));
+    }
+    for (int i = 0; i < prob->nCon; i++){
+        if (prob->ub_con(i) - prob->lb_con(i) < ctol){}
+        else if (vars->constr(i) < prob->lb_con(i) + ctol)
+            comp_error += fmax(-vars->lambda(prob->nVar + i), 0);
+        else if (vars->constr(i) > prob->ub_con(i) - ctol)
+            comp_error += fmax(vars->lambda(prob->nVar + i), 0);
+        else 
+            comp_error += abs(vars->lambda(prob->nVar + i));
+    }
+    std::cout << "Comp error = " << comp_error << "\n";
+    */
+    
     if (vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol)
         return true;
-    else
-        return false;
+    return false;
 }
 
 

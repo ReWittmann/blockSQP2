@@ -6,6 +6,14 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
 /**
  * \file blocksqp_glob.cpp
  * \author Dennis Janka
@@ -13,8 +21,12 @@
  *
  *  Implementation of methods of SQPmethod class associated with the
  *  enable_linesearch strategy.
- *
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
+
 
 #include "blocksqp_iterate.hpp"
 #include "blocksqp_options.hpp"
@@ -41,7 +53,7 @@ void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double
 
     // Set new xi by accepting the current trial step
     for(k=0; k<vars->xi.M(); k++){
-
+        
         //TrialXi was already set in bounds, set the step in bounds as well
         // if (alpha * vars->deltaXi(k) < prob->lb_var(k) - vars->xi(k)){
         if (alpha * deltaXi(k) < prob->lb_var(k) - vars->xi(k)){
@@ -563,13 +575,13 @@ int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmetho
 
 int SQPmethod::feasibilityRestorationHeuristic(){
     stats->nRestHeurCalls++;
-
+    
     int info, k;
     Matrix trial_constr;
     double obj_trial, cNormTrial;
-
+    
     info = 0;
-
+    
     // Call problem specific heuristic to reduce constraint violation.
     // For shooting methods that means setting consistent values for shooting nodes by one forward integration.
     for( k=0; k<prob->nVar; k++ ) // input: last successful step
@@ -577,43 +589,43 @@ int SQPmethod::feasibilityRestorationHeuristic(){
     prob->reduceConstrVio( vars->trialXi, &info );
     if( info )// If an error occured in restoration heuristics, abort
         return 1;
-
+    
     // Compute objective and constraints at the new (hopefully feasible) point
     trial_constr.Dimension(prob->nCon).Initialize(0.0);
     prob->evaluate(vars->trialXi, &obj_trial, trial_constr, &info);
-
+    
     stats->nFunCalls++;
     cNormTrial = lInfConstraintNorm(vars->trialXi, trial_constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     if (info != 0 || obj_trial < prob->objLo || obj_trial > prob->objUp || !(obj_trial == obj_trial) || !(cNormTrial == cNormTrial))
         return 1;
-
+    
     // Is the new point acceptable for the filter?
     if (pairInFilter(cNormTrial, obj_trial)){
         std::cout << "New point is in the filter\n";
         // point is in the taboo region, restoration heuristic not successful!
         return 1;
     }
-
+    
     // If no error occured in the integration all shooting variables now
     // have the values obtained by a single shooting integration.
     // This is done instead of a Newton-like step in the current SQP iteration
-
+    
     vars->alpha = 1.0;
     vars->nSOCS = 0;
-
+    
     // reset reduced step counter
     vars->reducedStepCount = 0;
-
+    
     // Reset lambda
     vars->lambda.Initialize( 0.0 );
     vars->lambdaQP.Initialize( 0.0 );
-
+    
     // Compute the "step" taken by closing the continuity conditions
     for (k = 0; k < prob->nVar; k++){
         vars->deltaXi(k) = vars->trialXi(k) - vars->xi(k);
         vars->xi(k) = vars->trialXi(k);
     }
-
+    
     return 0;
 }
 

@@ -6,6 +6,14 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
 /**
  * \file blocksqp_restoration.cpp
  * \author Dennis Janka
@@ -13,8 +21,13 @@
  *
  *  Implementation of RestorationProblem class that describes a
  *  minimum l_2-norm NLP.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
-
+ 
+ 
 #include "blocksqp_restoration.hpp"
 #include "blocksqp_matrix.hpp"
 #include <cmath>
@@ -1258,7 +1271,14 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     int ind_1 = parent->nnz;
     int ind_2 = 0;
     int ind_3 = parent->nVar;
-
+    
+    //B: Jacobian of true constraints (not (continuity-) conditions)
+    //C: Jacobian of (continuity-) conditions
+    //Create restoration Jacobian from B and C, adding slacks only for B:
+    //[B I]
+    //[C 0]
+    //Matrix row may not be sorted according to B anc C, 
+    //so iterate over constraint blocks corresponding to B
     for (int i = 0; i < parent_cond->num_cblocks; i++){
         if (!parent_cond->cblocks[i].removed){
             for (int j = 0; j < parent_cond->cblocks[i].size; j++){

@@ -6,14 +6,28 @@
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
+/*
+ * blockSQP extensions -- Extensions and modifications for the 
+                          blockSQP nonlinear solver by Dennis Janka
+ * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ *
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
 /**
  * \file blocksqp_general_purpose.cpp
  * \author Dennis Janka
  * \date 2012-2015
  *
  *  Implementation of general purpose routines for matrix and vector computations.
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
+ 
+ 
 #include "blocksqp_general_purpose.hpp"
 
 namespace blockSQP
