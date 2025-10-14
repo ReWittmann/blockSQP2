@@ -315,7 +315,7 @@ void SQPiterate::restore_iterate(){
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
+/*
 SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond):
         SQPiterate(prob, param){
     //Wrap sparse jacobian array
@@ -341,7 +341,7 @@ SCQP_correction_iterate::SCQP_correction_iterate(Problemspec* prob, SQPoptions* 
     deltaXi_save.Dimension(prob->nVar);
     lambdaQP_save.Dimension(prob->nVar + prob->nCon);
 }
-
+*/
 
 
 } // namespace blockSQP

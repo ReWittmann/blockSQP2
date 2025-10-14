@@ -128,6 +128,16 @@ CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool a
     for (int k = 0; k < cond->condensed_num_hessblocks; k++){
         hess_cond[k].Dimension(cond->condensed_hess_block_sizes[k]);
     }
+    
+    if (cond->add_dep_bounds == 0){
+        corrections = std::make_unique<Matrix[]>(cond->num_targets); 
+        for (int i = 0; i < cond->num_targets; i++){
+            corrections[i].Dimension(cond->targets_data[i].n_dep);
+        }
+        h_corr.Dimension(cond->condensed_num_vars);
+        lb_A_corr.Dimension(cond->condensed_num_cons);
+        ub_A_corr.Dimension(cond->condensed_num_cons);
+    }
 }
 CQPsolver::CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond):
     CQPsolver(arg_CQPsol.release(), arg_cond, true){}
@@ -172,20 +182,31 @@ void CQPsolver::set_hess(SymMatrix *const hess, bool pos_def, double regularizat
 int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     if (!hess_updated && !h_updated && !A_updated){
         cond->SOC_condense(h_qp, lb_A, ub_A, h_cond, lb_A_cond, ub_A_cond);
+        inner_QPsol->set_lin(h_cond);
+        inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
     }
-    else if (hess_updated && !h_updated && !A_updated && !bounds_updated)
+    else if (hess_updated && !h_updated && !A_updated && !bounds_updated){
         cond->new_hessian_condense(hess_qp.get(), h_cond, hess_cond.get());
+        inner_QPsol->set_lin(h_cond);
+        inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
+    }
     else{
         cond->full_condense(h_qp, sparse_A_qp, hess_qp.get(), lb_x, ub_x, lb_A, ub_A, 
             h_cond, sparse_A_cond, hess_cond.get(), lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+        inner_QPsol->set_lin(h_cond);
+        inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
+        inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
+        inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
     }
     
     h_updated = false; hess_updated = false; A_updated = false; bounds_updated = false;
     
+    /*
     inner_QPsol->set_lin(h_cond);
     inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
     inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
     inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    */
     
     int QPret = inner_QPsol->solve(xi_cond, lambda_cond);
     if (QPret > 0) return QPret;
@@ -195,20 +216,33 @@ int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 void CQPsolver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){
-    if (!hess_updated && !h_updated && !A_updated)
+    if (!hess_updated && !h_updated && !A_updated){
         cond->SOC_condense(h_qp, lb_A, ub_A, h_cond, lb_A_cond, ub_A_cond);
-    else if (hess_updated && !h_updated && !A_updated && !bounds_updated)
+        inner_QPsol->set_lin(h_cond);
+        inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    }
+    else if (hess_updated && !h_updated && !A_updated && !bounds_updated){
         cond->new_hessian_condense(hess_qp.get(), h_cond, hess_cond.get());
-    else
+        inner_QPsol->set_lin(h_cond);
+        inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
+    }
+    else{
         cond->full_condense(h_qp, sparse_A_qp, hess_qp.get(), lb_x, ub_x, lb_A, ub_A, 
             h_cond, sparse_A_cond, hess_cond.get(), lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+        inner_QPsol->set_lin(h_cond);
+        inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
+        inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
+        inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    }
     
     h_updated = false; hess_updated = false; A_updated = false; bounds_updated = false;
-            
+    
+    /*
     inner_QPsol->set_lin(h_cond);
     inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
     inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
     inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    */
     
     std::promise<int> QP_result_cond_p;
     std::future<int> QP_result_cond_f = QP_result_cond_p.get_future();
@@ -230,8 +264,138 @@ int CQPsolver::get_QP_it(){return inner_QPsol->get_QP_it();}
 double CQPsolver::get_solutionTime(){return inner_QPsol->get_solutionTime();}
 
 
+int CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
+    int max_correction_steps = 6;
+    double dep_bound_tolerance = 1e-7;
+    
+    int ind_1, ind_2, ind, vio_count, QP_result;
+    double xi_s, max_dep_bound_violation;
+    
+    //deltaXi_corr = vars->deltaXi;
+    //lambdaQP_corr = vars->lambdaQP;
 
+    //Reset correction vectors
+    for (int tnum = 0; tnum < cond->num_targets; tnum++){
+        corrections[tnum].Initialize(0.);
+    }
+    
+    //If a variable is being corrected and not at a bounds, reduce correction
+    //If a variable violates a bound, add to its correction term
+    for (int k = 0; k < max_correction_steps; k++){
+        ind_1 = 0;
+        vio_count = 0;
+        max_dep_bound_violation = 0;
 
+        for (int i = 0; i < cond->num_vblocks; i++){
+            if (cond->vblocks[i].dependent){
+                for (int j = 0; j < cond->vblocks[i].size; j++){
+                    ind = ind_1 + j;
+                    xi_s = xi(ind) + deltaXi_corr(ind);
+                    if (xi_s < lb_var(ind) - dep_bound_tolerance || xi_s > ub_var(ind) + dep_bound_tolerance){
+                        vio_count++;
+                        
+                        //Optional: Calculate maximum dep bound violation
+                        if (lb_var(ind) - xi_s > max_dep_bound_violation)
+                            max_dep_bound_violation = lb_var(ind) - xi_s;
+                        else if (xi_s - ub_var(ind) > max_dep_bound_violation)
+                            max_dep_bound_violation = xi_s - ub_var(ind);
+                    }
+                }
+            }
+            ind_1 += cond->vblocks[i].size;
+        }
+
+        if (vio_count == 0)
+            return 0;
+        
+        std::cout << "Bounds violated by " << vio_count << " dependent variables, calculating correction vectors\n";
+        std::cout << "Max dep bound violation is " << max_dep_bound_violation << "\n";
+        
+        for (int tnum = 0; tnum < cond->num_targets; tnum++){
+            
+            //Add difference between dependent state values from QP solution and integration for target tnum
+            ind_1 = 0;
+            ind_2 = cond->vranges[cond->targets[tnum].first_free];
+            
+            for (int i = cond->targets[tnum].first_free; i < cond->targets[tnum].vblock_end; i++){
+                if (cond->vblocks[i].dependent){
+                    for (int j = 0; j < cond->vblocks[i].size; j++){
+                        xi_s = xi(ind_2 + j) + deltaXi_corr(ind_2 + j);
+                        
+                        //Optional: Reduce corrections if is strictly within bounds
+                        if (corrections[tnum](ind_1 + j) > 0 && xi_s > lb_var(ind_2 + j)){
+                            corrections[tnum](ind_1 + j) -= xi_s - lb_var(ind_2 + j);
+                            if (corrections[tnum](ind_1 + j) < 0) corrections[tnum](ind_1 + j) = 0;
+                        }
+                        else if (corrections[tnum](ind_1 + j) < 0 && xi_s < ub_var(ind_2 + j)){
+                            corrections[tnum](ind_1 + j) -= xi_s - ub_var(ind_2 + j);
+                            if (corrections[tnum](ind_1 + j) > 0) corrections[tnum](ind_1 + j) = 0;
+                        }
+                        
+                        if (xi_s < lb_var(ind_2 + j) - dep_bound_tolerance){
+                            corrections[tnum](ind_1 + j) += lb_var(ind_2 + j) - xi_s;
+                        }
+                        else if (xi_s > ub_var(ind_2 + j) + dep_bound_tolerance){
+                            corrections[tnum](ind_1 + j) += ub_var(ind_2 + j) - xi_s;
+                        }
+                    }
+                    ind_1 += cond->vblocks[i].size;
+                }
+                ind_2 += cond->vblocks[i].size;
+            }
+        }
+
+        //Condense the QP, adding the correction to g = Gu + g
+        //cond->correction_condense(c_vars->gradObj, c_vars->delta_lb_con, c_vars->delta_ub_con, corrections, c_vars->corrected_h, c_vars->corrected_lb_con, c_vars->corrected_ub_con);
+        cond->correction_condense(h_qp, lb_A, ub_A, corrections.get(), h_corr, lb_A_corr, ub_A_corr);
+        
+        inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_corr, ub_A_corr);
+        inner_QPsol->set_lin(h_corr);
+        
+        inner_QPsol->set_timeLimit(0);
+        static_cast<QPsolver*>(inner_QPsol)->recordTime(false);
+        
+        std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
+        QP_result = inner_QPsol->solve(xi_cond, lambda_cond);
+        std::cout << "QP_result is " << QP_result << "\n";
+        std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
+        std::cout << "Solved QP with added corrections in " << duration_cast<milliseconds>(T1 - T0) << "\n";
+        
+        if (!QP_result)
+            cond->recover_correction_var_mult(xi_cond, lambda_cond, corrections.get(), deltaXi_corr, lambdaQP_corr);
+        else
+            return 1;
+    }
+    return 0;
+}
+
+int CQPsolver::correction_solve(Matrix &deltaXi, Matrix &lambdaQP){
+    if (!hess_updated && !h_updated && !A_updated){
+        cond->correction_condense(h_qp, lb_A, ub_A, corrections.get(), h_corr, lb_A_corr, ub_A_corr);
+        inner_QPsol->set_lin(h_corr);
+        inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_corr, ub_A_corr);
+    }
+    else throw(std::runtime_error("CQPsolver: correction_solve called after hess, linear term or constraint matrix was changed"));
+    
+    bounds_updated = true;
+    
+    /*
+    inner_QPsol->set_lin(h_cond);
+    inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
+    inner_QPsol->set_hess(hess_cond.get(), convex_QP, regF);
+    inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    */
+    
+    int QPret = inner_QPsol->solve(xi_cond, lambda_cond);
+    if (QPret > 0) return QPret;
+    
+    cond->recover_correction_var_mult(xi_cond, lambda_cond, corrections.get(), deltaXi, lambdaQP);
+    return QPret;
+}
+
+//int CQPsolver::SOC_bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
+    //TODO
+//}
 
 
 

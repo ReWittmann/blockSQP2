@@ -1175,7 +1175,7 @@ int SCQP_correction_method::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
             vio_count = 0;
             max_dep_bound_violation = 0;
             xi_s = c_vars->xi + deltaXi;
-
+            
             for (int i = 0; i < cond->num_vblocks; i++){
                 if (cond->vblocks[i].dependent){
                     for (int j = 0; j < cond->vblocks[i].size; j++){
@@ -1183,7 +1183,7 @@ int SCQP_correction_method::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
                         if (xi_s(ind) < prob->lb_var(ind) - param->dep_bound_tolerance || xi_s(ind) > prob->ub_var(ind) + param->dep_bound_tolerance){
                             vio_count++;
                             found_direction = false;
-
+                            
                             //Calculate maximum dep bound violation
                             if (prob->lb_var(ind) - xi_s(ind) > max_dep_bound_violation){
                                 max_dep_bound_violation = prob->lb_var(ind) - xi_s(ind);
@@ -1204,17 +1204,17 @@ int SCQP_correction_method::solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP){
             }
             std::cout << "Bounds violated by " << vio_count << " dependent variables, calculating correction vectors\n";
             std::cout << "Max dep bound violation is " << max_dep_bound_violation << "\n";
-
+            
             for (int tnum = 0; tnum < cond->num_targets; tnum++){
-
+                
                 //Add difference between dependent state values from QP solution and integration for target tnum
                 ind_1 = 0;
                 ind_2 = cond->vranges[cond->targets[tnum].first_free];
-
+                
                 for (int i = cond->targets[tnum].first_free; i < cond->targets[tnum].vblock_end; i++){
                     if (cond->vblocks[i].dependent){
                         for (int j = 0; j < cond->vblocks[i].size; j++){
-
+                            
                             if (SOC_corrections[tnum](ind_1 + j) > corrections[tnum](ind_1 + j) && xi_s(ind_2 + j) > prob->lb_var(ind_2 + j)){
                                 SOC_corrections[tnum](ind_1 + j) -= xi_s(ind_2 + j) - prob->lb_var(ind_2 + j);
                                 if (SOC_corrections[tnum](ind_1 + j) < corrections[tnum](ind_1 + j)) SOC_corrections[tnum](ind_1 + j) = corrections[tnum](ind_1 + j);
@@ -1372,10 +1372,28 @@ int SCQP_correction_method::bound_correction(Matrix &deltaXi_corr, Matrix &lambd
             return 1;
     }
     return 0;
-}
-    
+}    
 */
 
+
+int bound_correction_method::bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
+    QPsolverBase *correction_QP = param->par_QPs ? sub_QPs_par[vars->QP_num_accepted].get() : sub_QP.get();
+    return static_cast<CQPsolver*>(correction_QP)->bound_correction(vars->xi, prob->lb_var, prob->lb_con, deltaXi_corr, lambdaQP_corr);
+}
+
+
+int bound_correction_method::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
+    QPsolverBase *SOC_QP = param->par_QPs ? sub_QPs_par[vars->QP_num_accepted].get() : sub_QP.get();
+    
+    updateStepBoundsSOC();
+    SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
+
+    int QP_result = SOC_QP->solve(deltaXi, lambdaQP);
+    stats->qpIterations += SOC_QP->get_QP_it();
+    if (QP_result > 0) return QP_result;
+    
+    return static_cast<CQPsolver*>(SOC_QP)->bound_correction(vars->xi, prob->lb_var, prob->lb_con, deltaXi, lambdaQP);
+}
 
 } // namespace blockSQP
 

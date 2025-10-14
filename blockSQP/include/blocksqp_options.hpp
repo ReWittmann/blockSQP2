@@ -156,7 +156,7 @@ class SQPoptions{
     
     //SQPmethod subclass options, outsource into SQPoptions subclass if they become too many
     int max_bound_refines = 3;              ///< Options for condensed QPs
-    int max_correction_steps = 5;           ///< How many additional QPs with bound correction added to dependent variables should be solved
+    int max_correction_steps = 6;           ///< How many additional QPs with bound correction added to dependent variables should be solved
     double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
     
     //For experimental purposes

@@ -173,6 +173,11 @@ class CQPsolver : public QPsolverBase{
     //Flags indicating which data was updates, may avoid unnecessary work
     bool h_updated, A_updated, bounds_updated, hess_updated;
     
+    //
+    std::unique_ptr<Matrix[]> corrections;
+    //std::unique_ptr<Matrix[]> SOC_corretions;
+    Matrix h_corr, lb_A_corr, ub_A_corr;
+    
     CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own = false);
     CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond);
     ~CQPsolver();
@@ -198,6 +203,12 @@ class CQPsolver : public QPsolverBase{
     //Statistics
     virtual int get_QP_it();
     virtual double get_solutionTime();
+    
+    //Correction
+    int bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    
+    int correction_solve(Matrix &deltaXi, Matrix &lambdaQP);
+    //int SOC_bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
     
 };
 

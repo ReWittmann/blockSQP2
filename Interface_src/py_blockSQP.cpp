@@ -907,11 +907,11 @@ py::class_<blockSQP::SCQPmethod, blockSQP::SQPmethod>(m, "SCQPmethod")
 py::class_<blockSQP::SCQP_bound_method, blockSQP::SCQPmethod>(m, "SCQP_bound_method")
     .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
     ;
-
-py::class_<blockSQP::SCQP_correction_method, blockSQP::SCQPmethod>(m, "SCQP_correction_method")
-    .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
-    ;
 */
+py::class_<blockSQP::bound_correction_method, blockSQP::SQPmethod>(m, "bound_correction_method")
+    .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*>())
+    ;
+
 
 py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 	.def_readonly("obj", &blockSQP::SQPiterate::obj)
@@ -951,7 +951,7 @@ py::class_<blockSQP::RestorationProblem, blockSQP::Problemspec>(m, "RestorationP
         ;
     
     
-    
+/*
 py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
 	.def_readonly("condensed_Jacobian", &blockSQP::SCQPiterate::condensed_Jacobian)
 	.def_readonly("condensed_lb_var", &blockSQP::SCQPiterate::condensed_lb_var)
@@ -959,7 +959,8 @@ py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
 	.def_readonly("condensed_lb_con", &blockSQP::SCQPiterate::condensed_lb_con)
 	.def_readonly("condensed_ub_con", &blockSQP::SCQPiterate::condensed_ub_con)
 	;
-
+*/
+    
 //Condensing classes and structs
 py::class_<blockSQP::vblock>(m, "vblock")
     .def(py::init<int, bool>())
@@ -1060,14 +1061,14 @@ py::class_<condensing_args>(m, "condensing_args")
 
 
 py::class_<blockSQP::TC_restoration_Problem, blockSQP::Problemspec>(m, "TC_restoration_Problem")
-    .def(py::init<blockSQP::Problemspec*, blockSQP::Condenser*, const blockSQP::Matrix&, double, double>())
+    .def(py::init<blockSQP::Problemspec*, const blockSQP::Matrix&, double, double>())
     .def_readonly("nVar", &blockSQP::TC_restoration_Problem::nVar)
     .def_readonly("nCon", &blockSQP::TC_restoration_Problem::nCon)
     .def_readwrite("xi_ref", &blockSQP::TC_restoration_Problem::xi_ref)
     ;
 
 py::class_<blockSQP::TC_feasibility_Problem, blockSQP::Problemspec>(m, "TC_feasibility_Problem")
-    .def(py::init<blockSQP::Problemspec*, blockSQP::Condenser*>())
+    .def(py::init<blockSQP::Problemspec*>())
     .def_readonly("nVar", &blockSQP::TC_feasibility_Problem::nVar)
     .def_readonly("nCon", &blockSQP::TC_feasibility_Problem::nCon)
 	.def_readwrite("nnz", &blockSQP::TC_feasibility_Problem::nnz)

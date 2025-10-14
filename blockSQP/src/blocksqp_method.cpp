@@ -249,5 +249,12 @@ SCQP_correction_method::~SCQP_correction_method(){
 */
 
 
+bound_correction_method::bound_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics):
+    SQPmethod(problem, parameters, statistics){
+        if (prob->cond == nullptr) throw std::invalid_argument("bound_correction_method invoked for problem with no condenser!");
+        if (prob->cond->add_dep_bounds > 0) throw std::invalid_argument("bound_correction_method: Condenser adds dependent variable bounds!");
+    }
+
+
 
 }

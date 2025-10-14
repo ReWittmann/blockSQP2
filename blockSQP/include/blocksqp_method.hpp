@@ -63,7 +63,7 @@ class SQPmethod{
         
         // Objects for feasibility restoration
         //Feasibility restoration problem
-        std::unique_ptr<abstractRestorationProblem> rest_prob;
+        std::unique_ptr<RestorationProblemBase> rest_prob;
         std::unique_ptr<SQPoptions>  rest_param;
         std::unique_ptr<SQPstats>    rest_stats;
         std::unique_ptr<SQPmethod>   rest_method;
@@ -176,7 +176,7 @@ class SQPmethod{
         /// Start feasibility restoration phase (solve NLP)
         virtual int feasibilityRestorationPhase();
         /// Main loop of restoration phase - check acceptability of the filter after each step
-        int innerRestorationPhase(abstractRestorationProblem *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
+        int innerRestorationPhase(RestorationProblemBase *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
 
@@ -261,27 +261,28 @@ class SCQP_bound_method : public SCQPmethod{
     virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 };
 
+*/
 
-class SCQP_correction_method : public SCQPmethod{
+class bound_correction_method : public SQPmethod{
     public:
-    Matrix *corrections;
-    Matrix *SOC_corrections;
+    //Matrix *corrections;
+    //Matrix *SOC_corrections;
 
 
-    SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    virtual ~SCQP_correction_method();
+    //SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
+    //virtual ~SCQP_correction_method();
+    
+    bound_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics);
 
     // condensed QP solution methods incorporating QP resolves with added corrections
-    virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-    virtual int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+    int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
 
     // filterLineSearch that calls modified SOC from above 
     virtual int filterLineSearch();
     // feasiblity restoration phase that calls the correction method.
     virtual int feasibilityRestorationPhase();
 };
-
-*/
 
 } // namespace blockSQP
 

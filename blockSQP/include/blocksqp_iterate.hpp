@@ -195,7 +195,7 @@ class SQPiterate{
 };
 
 
-
+/*
 class SCQPiterate : public SQPiterate{
     public:
     //Wrapper object for sparse jacobian arrays, need it to invoke condensing
@@ -231,7 +231,7 @@ public:
     Matrix lambdaQP_save;
     SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond);
 };
-
+*/
 
 
 } // namespace blockSQP

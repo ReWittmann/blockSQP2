@@ -45,7 +45,7 @@ namespace blockSQP
 
 // Base for restoration problem, requires methods to restore original iterates from restoration iterates. 
 // Allows variable layouts for original and slack variables
-class abstractRestorationProblem : public Problemspec{
+class RestorationProblemBase : public Problemspec{
     public:
     Problemspec *parent;
     //Update the reference point if it enters into the restoration problem
@@ -59,7 +59,7 @@ class abstractRestorationProblem : public Problemspec{
 };
 
 
-class RestorationProblem : public abstractRestorationProblem{
+class RestorationProblem : public RestorationProblemBase{
     public:
         Matrix xi_ref;
         Matrix diagScale;
@@ -191,7 +191,7 @@ public:
 */
 
 
-class TC_restoration_Problem: public abstractRestorationProblem{
+class TC_restoration_Problem: public RestorationProblemBase{
     public:
     Condenser *parent_cond;
     Matrix xi_ref;
@@ -212,7 +212,7 @@ class TC_restoration_Problem: public abstractRestorationProblem{
     int *jac_orig_colind = nullptr;
 
     public:
-    TC_restoration_Problem(Problemspec *parent_Problem, Condenser *parent_CND, const Matrix &xi_Reference, double param_rho, double param_zeta);
+    TC_restoration_Problem(Problemspec *parent_Problem, const Matrix &xi_Reference, double param_rho, double param_zeta);
     virtual ~TC_restoration_Problem();
 
     void update_xi_ref(const Matrix &xiReference);
@@ -250,7 +250,7 @@ public:
     int *jac_orig_row = nullptr;
     int *jac_orig_colind = nullptr;
 
-    TC_feasibility_Problem(Problemspec *parent_Problem, Condenser *parent_CND);
+    TC_feasibility_Problem(Problemspec *parent_Problem);
     virtual ~TC_feasibility_Problem();
 
     virtual void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
