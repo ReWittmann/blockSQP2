@@ -263,20 +263,17 @@ class SCQP_bound_method : public SCQPmethod{
 
 */
 
+//Experimental; minimalistic bound correction strategy for 
+//  when all dependent variable bounds are "implicit" bounds
+//      i.e. bounds arising from the underlying ODE/DAE model
 class bound_correction_method : public SQPmethod{
     public:
-    //Matrix *corrections;
-    //Matrix *SOC_corrections;
-
-
-    //SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    //virtual ~SCQP_correction_method();
-    
+    //Defers to SQPmethod constructor and only performs some sanity checks
     bound_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics);
 
     // condensed QP solution methods incorporating QP resolves with added corrections
-    int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
     int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
     // filterLineSearch that calls modified SOC from above 
     virtual int filterLineSearch();

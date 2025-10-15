@@ -808,7 +808,7 @@ int bound_correction_method::filterLineSearch(){
     cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
 
     // Backtracking line search
-    for(k = 0; k<param->max_linesearch_steps; k++){
+    for (k = 0; k < param->max_linesearch_steps; k++){
         //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
         /*
         if (k > 3 && !vars->conv_qp_solved){
@@ -827,7 +827,7 @@ int bound_correction_method::filterLineSearch(){
         if (k == 0){
             deltaXi_save = vars->deltaXi;
             lambdaQP_save = vars->lambdaQP;
-
+            
             info = bound_correction(vars->deltaXi, vars->lambdaQP);
             
             //If model bound correction failed for indefinite Hessian, resolve with convex Hessian and try again

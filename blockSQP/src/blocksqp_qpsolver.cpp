@@ -305,8 +305,10 @@ int CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, const Ma
             ind_1 += cond->vblocks[i].size;
         }
 
-        if (vio_count == 0)
+        if (vio_count == 0){
+            std::cout << "All dependent variable bounds are fulfilled\n" << std::flush;
             return 0;
+        }
         
         std::cout << "Bounds violated by " << vio_count << " dependent variables, calculating correction vectors\n";
         std::cout << "Max dep bound violation is " << max_dep_bound_violation << "\n";

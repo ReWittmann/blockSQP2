@@ -1571,6 +1571,9 @@ TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): par
         lb_con(i) = parent->lb_con(i);
         ub_con(i) = parent->ub_con(i);
     }
+    
+    cond = create_restoration_Condenser(parent_cond);
+    vblocks = cond->vblocks;
 }
 
 
@@ -1579,6 +1582,7 @@ TC_feasibility_Problem::~TC_feasibility_Problem(){
     delete[] jac_orig_row;
     delete[] jac_orig_colind;
     delete[] blockIdx;
+    delete cond;
 }
 
 
