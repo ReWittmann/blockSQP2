@@ -37,11 +37,7 @@ namespace blockSQP{
 
 
 SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
-
-
-
     ///Allocate memory for variables that are updated during optimization:
-    
     // current iterate
     xi.Dimension(prob->nVar).Initialize(0.0);
 
@@ -59,18 +55,6 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     gradLagrange.Dimension( prob->nVar ).Initialize( 0.0 );
 
     ///Allocate constraint jacobian and hessian approximation, either as dense or sparse matrices
-    /*
-    if (!param->sparse){
-        constrJac.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
-        jacNz = nullptr;
-        jacIndRow = nullptr;
-        jacIndCol = nullptr;
-    }
-    else{
-        jacNz = std::make_unique<double[]>(prob->nnz);
-        jacIndRow = std::make_unique<int[]>(prob->nnz);
-        jacIndCol = std::make_unique<int[]>(prob->nVar + 1);
-    }*/
     if (!param->sparse) constrJac.Dimension(prob->nCon, prob->nVar).Initialize(0.0);
     else sparse_constrJac.Dimension(prob->nCon, prob->nVar, prob->nnz);
     
@@ -242,26 +226,7 @@ SQPiterate::SQPiterate( const SQPiterate &iter ){
 
     constrJac = iter.constrJac;
     sparse_constrJac = iter.sparse_constrJac;
-    
-    /*
-    if (iter.jacNz != nullptr){
-        int nVar = xi.M();
-        int nnz = iter.jacIndCol[nVar];
-
-        jacNz = std::make_unique<double[]>(nnz);
-        for(int i = 0; i < nnz; i++)
-            jacNz[i] = iter.jacNz[i];
-
-        jacIndRow = std::make_unique<int[]>(nnz);
-        for (int i = 0; i < nnz; i++)
-            jacIndRow[i] = iter.jacIndRow[i];
-
-        jacIndCol = std::make_unique<int[]>(nVar + 1);
-        for (int i = 0; i <= nVar; i++)
-            jacIndCol[i] = iter.jacIndCol[i];
-    }
-    */
-    
+        
     hess = nullptr;
 }
 
@@ -313,35 +278,6 @@ void SQPiterate::restore_iterate(){
         scaled_prob->set_scale(scaleFactors_save.get());
     }
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/*
-SCQPiterate::SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser *cond):
-        SQPiterate(prob, param){
-    //Wrap sparse jacobian array
-    //Jacobian = Sparse_Matrix(prob->nCon, prob->nVar, prob->nnz, jacNz.get(), jacIndRow.get(), jacIndCol.get(), false);
-    
-    //Allocate solution of condensed QP
-    deltaXi_cond.Dimension(cond->condensed_num_vars);
-    lambdaQP_cond.Dimension(cond->condensed_num_vars + cond->condensed_num_cons);
-
-    condensed_hess = std::make_unique<SymMatrix[]>(cond->condensed_num_hessblocks);
-    condensed_hess_2 = std::make_unique<SymMatrix[]>(cond->condensed_num_hessblocks);
-}
-
-SCQPiterate::~SCQPiterate(){}
-
-
-SCQP_correction_iterate::SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond): 
-        SCQPiterate(prob, param, cond){
-    corrected_h.Dimension(cond->condensed_num_vars);
-    corrected_lb_con.Dimension(cond->condensed_num_vars);
-    corrected_ub_con.Dimension(cond->condensed_num_vars);
-
-    deltaXi_save.Dimension(prob->nVar);
-    lambdaQP_save.Dimension(prob->nVar + prob->nCon);
-}
-*/
 
 
 } // namespace blockSQP

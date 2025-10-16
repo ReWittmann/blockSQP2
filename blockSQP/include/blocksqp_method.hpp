@@ -224,44 +224,7 @@ class SQPmethod{
         void scaling_heuristic();
 };
 
-////////////////////////////////////////////////////////////
 
-//Sequential Condensed Quadratic Programming method
-
-/*
-class SCQPmethod : public SQPmethod{
-    public:
-    Condenser *cond;
-    
-    //Condenser for restoration problem
-    std::unique_ptr<Condenser> rest_cond;
-
-    SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    SCQPmethod();
-    virtual ~SCQPmethod();
-
-    // QP solution methods incorporating the condensing step
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-    virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-
-    // Restoration phase with slack variables omitted for dependency constraints (continuity conditions in multiple shooting) 
-    virtual int feasibilityRestorationPhase();
-
-    // Convexification strategy for condensed Hessians
-    void convexify_condensed(SymMatrix *condensed_hess, int idx, int maxQP);
-};
-
-
-class SCQP_bound_method : public SCQPmethod{
-    public:
-    SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-
-    // condensed QP solution methods incorporating QP resolves with violated bounds added
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-    virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-};
-
-*/
 
 //Experimental; minimalistic bound correction strategy for 
 //  when all dependent variable bounds are "implicit" bounds
@@ -275,9 +238,9 @@ class bound_correction_method : public SQPmethod{
     int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
     int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
-    // filterLineSearch that calls modified SOC from above 
+    // filterLineSearch that applies bound correction to the full step
     virtual int filterLineSearch();
-    // feasiblity restoration phase that calls the correction method.
+    // feasiblity restoration phase also uses the bound_correction_method and the TC_restoration_problem
     virtual int feasibilityRestorationPhase();
 };
 

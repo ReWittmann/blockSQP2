@@ -502,18 +502,10 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         blockIdx = prob->cond->condensed_blockIdx;
     }
     
-    /*
-    load_mumps_libs(N_QP);
-    for (int i = 0; i < N_QP; i++){
-        QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
-        if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
-        QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
-    }
-    */
     
     load_mumps_libs(N_QP - 1);
     for (int i = 0; i < N_QP - 1; i++){
-        QPsol = new threadsafe_qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
+        QPsol = new qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
         if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
         QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
     }
@@ -656,7 +648,7 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
 //This flag is added in the patched qpOASES version, a runtime error is thrown if this class is attempted to be constructed with an unpatched version.
 #ifdef SOLVER_MUMPS
     #ifdef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
-        threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
+        qpOASES_MUMPS_solver::qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
                                                                         int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
                                                 qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
             if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel != 2)
@@ -669,7 +661,7 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
             init_QP_common(blockIdx);    
         }
     #else
-        threadsafe_qpOASES_MUMPS_solver::threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
+        qpOASES_MUMPS_solver::qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
                                                                         int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
                                                 qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
             throw NotImplementedError("Using qpOASES with MUMPS in parallel requires the patched version");

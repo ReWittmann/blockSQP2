@@ -213,18 +213,13 @@ class CQPsolver : public QPsolverBase{
 };
 
 
-
-
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
-
-//QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
-
 QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param);
 QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
 
+//Create N_QP QPsolver instances for parallel solution of QPs. If N_QP is left at -1 it infers N_QP as param->max_conv_QPs + 1
 std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
-
 
 
 //QP solver implementations
@@ -278,13 +273,17 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         int get_QP_it();
     };
     
+    
     //For using qpOASES with MUMPS. Mumps is meant to be loaded by the caller several times,
-    //such that the loaded modules are thread safe (e.g. via dlmopen on linux).
-    //Then different instances of this class will be threadsafe between each other.
+    //such that the loaded module handles are thread safe (MUMPS by default isn't),
+    //(e.g. via dlmopen on linux, loading different copies of the module on windows etc.).
+    //Then, a pointer to the dmumps_c single-interface function of MUMPS must be passed
+    //Different instances of this class will then be threadsafe between each other.
+    //See src/ext/dmumps_c_cyn.cpp and blocksqp_load_mumps.hpp/cpp
     #ifdef SOLVER_MUMPS
-        class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
+        class qpOASES_MUMPS_solver : public qpOASES_solver{
             public:
-            threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
+            qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
         };
     #endif
 #endif
@@ -297,8 +296,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         GRBEnv *env;
         GRBModel *model;
         GRBVar* QP_vars;
-        //GRBConstr* QP_vars_lb;
-        //GRBConstr* QP_vars_ub;
+        
         GRBConstr* QP_cons_lb;
         GRBConstr* QP_cons_ub;
 

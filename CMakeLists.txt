@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.18)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Please use out of source build:
@@ -14,12 +14,7 @@ project(BlockSQP
 set(CMAKE_CXX_STANDARD 20)
 enable_language(Fortran)
 
-#include(CheckIPOSupported)
-#check_ipo_supported()
-#set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-
 #Static linking to avoid having to copy dll(-path)s.
-#
 if(WIN32)
 	if(NOT MSVC)
 		message(FATAL_ERROR "This CMakeLists supports building on windows only with MSVC and intel oneAPI fortran")
@@ -66,7 +61,7 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 #############################################################
 
-set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/qpOASES_mod)
+set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/modded_qpOASES)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
@@ -87,7 +82,6 @@ add_library(qpOASES STATIC
 	)
 
 #MUMPS LINEAR SOLVER
-#
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS BLAS::BLAS)
 IF(UNIX)
@@ -116,14 +110,11 @@ FetchContent_Declare(
 	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
 	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
 )
-FetchContent_GetProperties(qpos)
-if(NOT qpos_POPULATED)
-	FetchContent_MakeAvailable(qpos)
-endif()
+FetchContent_MakeAvailable(qpos)
 
 add_library(qpOASES STATIC
 	${qpos_SOURCE_DIR}/src/Matrices.cpp          
-	${CMAKE_CURRENT_SOURCE_DIR}/modded_external/SparseSolver.cpp
+	${qpos_SOURCE_DIR}/src/SparseSolver.cpp
 	${qpos_SOURCE_DIR}/src/Bounds.cpp             
 	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
 	${qpos_SOURCE_DIR}/src/SQProblem.cpp
@@ -176,30 +167,9 @@ ENDIF()
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include
 )
-# target_link_libraries(qpOASES PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libcoinhsl.so /path/to/libmetis.a /path/to/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
-target_link_libraries(qpOASES PUBLIC /home/reinhold/LIB/coinhsl-solvers/libcoinhsl.so /home/reinhold/LIB/install/lib/libmetis.a /home/reinhold/LIB/install/lib/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
+# target_link_libraries(qpOASES PUBLIC /path/to/libcoinhsl.so /path/to/libmetis.a /path/to/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
 ]]
 
-
-
-#SPRAL LINEAR SOLVER
-## Requires setting environment variables export OMP_CANCELLATION=TRUE and OMP_PROC_BIND=TRUE before every run, see SRPAL readme
-#[[
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
-target_compile_definitions(qpOASES PRIVATE SOLVER_SPRAL __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3)
-IF(UNIX AND NOT APPLE)
-   target_compile_definitions(qpOASES PRIVATE LINUX)
-ELSEIF(WIN32)
-    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
-ENDIF()
-
-target_include_directories(qpOASES
-	PUBLIC	${qpOASES_MODDED_DIR}/include /path/to/.../spral/include
-)
-target_link_libraries(qpOASES PUBLIC /path/to/.../libspral.so dl)
-]]
 
 
 #As of right now, there are no export specifications ( __declspec((dllexport)), __attribute__((visibility("default"))) )
@@ -248,7 +218,7 @@ target_link_libraries(blockSQP PUBLIC qpOASES) #Important: If qpOASES is built w
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
 
-#Shared mumps library/libraries for dynamic loading in a threadsafe way (dlmopen on linux, LoadLibraryA on multiple copies on windows, tough luck if you are on MAC)
+#Shared mumps library/libraries for dynamic loading in a threadsafe way (dlmopen on linux, LoadLibraryA on multiple copies on windows, tough luck on mac)
 if (UNIX AND NOT APPLE)
 	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 	set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
@@ -270,19 +240,7 @@ if (UNIX AND NOT APPLE)
 					${LIBPATH}
 		)
 	endfunction()
-elseif(WIN32)
-	#[[
-	foreach(i RANGE 0 7)
-		add_library(dmumps_c_dyn_${i} SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
-		set_target_properties(dmumps_c_dyn_${i} PROPERTIES 
-				LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
-				ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
-				RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
-		target_link_libraries(dmumps_c_dyn_${i} PRIVATE MUMPS::MUMPS)
-		target_compile_definitions(dmumps_c_dyn_${i} PRIVATE WINDOWS)
-	endforeach()
-	]]
-	
+elseif(WIN32)	
 	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
 	set_target_properties(dmumps_c_dyn PROPERTIES 
 		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
@@ -290,20 +248,7 @@ elseif(WIN32)
 		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
 	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
 	target_compile_definitions(dmumps_c_dyn PRIVATE WINDOWS)
-	
-	#[[
-	function(maybe_copy_mumps_libs LIBPATH)
-		foreach(i RANGE 0 7)
-			set(mumps_lib dmumps_c_dyn_${i})
-			add_custom_command(TARGET ${mumps_lib} POST_BUILD
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-						${CMAKE_SOURCE_DIR}/blockSQP/bin/${mumps_lib}.dll
-						${LIBPATH}
-			)
-		endforeach()
-	endfunction()
-	]]
-	
+		
 	function(maybe_copy_mumps_libs LIBPATH)
 		foreach(i RANGE 0 7)
 			set(mumps_copy dmumps_c_dyn_${i})

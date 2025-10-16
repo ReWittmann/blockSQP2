@@ -195,45 +195,6 @@ class SQPiterate{
 };
 
 
-/*
-class SCQPiterate : public SQPiterate{
-    public:
-    //Wrapper object for sparse jacobian arrays, need it to invoke condensing
-    Sparse_Matrix Jacobian;
-
-    Matrix condensed_h;
-    Sparse_Matrix condensed_Jacobian;
-    std::unique_ptr<SymMatrix[]> condensed_hess;
-    Matrix condensed_lb_var;
-    Matrix condensed_ub_var;
-    Matrix condensed_lb_con;
-    Matrix condensed_ub_con;
-
-    //Condensed fallback hessian
-    std::unique_ptr<SymMatrix[]> condensed_hess_2;
-
-    //Solutions of condensed QP
-    Matrix deltaXi_cond;
-    Matrix lambdaQP_cond;
-
-    SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser* cond);
-    virtual ~SCQPiterate();
-
-};
-
-class SCQP_correction_iterate : public SCQPiterate{
-public:
-    Matrix corrected_h;
-    Matrix corrected_lb_con;
-    Matrix corrected_ub_con;
-    
-    Matrix deltaXi_save;    //Backup to restore original step if correction yields no full step
-    Matrix lambdaQP_save;
-    SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond);
-};
-*/
-
-
 } // namespace blockSQP
 
 #endif

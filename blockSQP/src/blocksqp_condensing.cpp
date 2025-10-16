@@ -452,7 +452,7 @@ Condenser *Condenser::layout_copy(const Condenser *cond){
     return new Condenser(cond->vblocks, cond->num_vblocks, cond->cblocks, cond->num_cblocks, cond->hess_block_sizes, cond->num_hessblocks, cond->targets, cond->num_targets, cond->add_dep_bounds);
 }
 
-void Condenser::print_debug(){
+void Condenser::print_info(){
     std::cout<< "num_targets: " << num_targets << "\n";
     std::cout<< "num_vars: " << num_vars << "\n";
     std::cout<< "num_cons: " << num_cons << "\n";

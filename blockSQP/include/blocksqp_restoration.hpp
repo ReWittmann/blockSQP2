@@ -112,114 +112,49 @@ class RestorationProblem : public RestorationProblemBase{
         virtual void recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig);
 };
 
-/*
-class condensable_Restoration_Problem: public Problemspec{
-public:
-    Problemspec *parent;
-    Condenser *parent_cond;
-
-    Matrix xi_ref;
-    Matrix diagScale;
-
-    double zeta;
-    double rho;
-
-    Matrix constr_orig;
-    double *jac_orig_nz = nullptr;
-    int *jac_orig_row = nullptr;
-    int *jac_orig_colind = nullptr;
 
 
+// True-Constraint restoration Problem:
+//    Solve an NLP 
+//        min_x,u,s ||s||_2^2 + ||Su||_2^2
+//        s.t. lb_g <= g(x,u) - s <= ub_g
+//             C(x,u) = 0
 
-public:
-    condensable_Restoration_Problem(Problemspec *parent_Problem, Condenser *parent_cond, const Matrix &xi_Reference);
-    ~condensable_Restoration_Problem();
+//    where x are dependent variables (states in multiple-shooting),
+//    u are free variables, and C(x,u) = 0 are x - defining conditions
+//    (continuity/matching conditions in multiple-shooting)
 
-    /// Set initial values for xi and lambda, may also set matrix for linear constraints (sparse version)
-    virtual void initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol);
-
-    /// Evaluate all problem functions and their derivatives (sparse version)
-    virtual void evaluate(const Matrix &xi, const Matrix &lambda,
-                           double *objval, Matrix &constr,
-                           Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                           SymMatrix *&hess, int dmode, int *info);
-
-
-    void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
-    void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
-    void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig, double &lambda_step_norm);
-
-};
-
-
-class feasibility_Problem: public Problemspec{
-public:
-    Problemspec *parent;
-    Condenser *parent_cond;
-    Matrix constr_orig;
-    double *jac_orig_nz = nullptr;
-    int *jac_orig_row = nullptr;
-    int *jac_orig_colind = nullptr;
-
-    feasibility_Problem(Problemspec *parent_Problem, Condenser *parent_cond);
-    ~feasibility_Problem();
-
-    virtual void initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol);
-
-    virtual void evaluate(const Matrix &xi, const Matrix &lambda,
-                            double *objval, Matrix &constr,
-                           Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                           SymMatrix *&hess, int dmode, int *info);
-
-    void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
-    void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
-
-};
-*/
-
-
-/* True-Constraint restoration Problem:
-    Solve an NLP min square(||s||_2) + square(||Su||_2)
-        s.t. lb_g <= g(x,u) - s <= ub_g
-             C(x,u) = 0
-
-    where x are dependent variables (states in multiple-shooting),
-    u are free variables, and C(x,u) = 0 are x - defining conditions
-    (continuity conditions in multiple-shooting)
-
-    Only "true" constraints are relaxed.
-*/
-
+//    Only "true" constraints lb_g <= g(x,u) <= ub_g are relaxed via the slack variables s.
 
 class TC_restoration_Problem: public RestorationProblemBase{
     public:
     Condenser *parent_cond;
     Matrix xi_ref;
     Matrix diagScale;
-
+    
     //Submatrix for parent evaluation
     Matrix xi_parent;
     //Submatrix containing slack variables
     Matrix slack;
-
+    
     double rho;
     double zeta;
-
+    
     Matrix constr_orig;
     
     double *jac_orig_nz = nullptr;
     int *jac_orig_row = nullptr;
     int *jac_orig_colind = nullptr;
-
+    
     public:
     TC_restoration_Problem(Problemspec *parent_Problem, const Matrix &xi_Reference, double param_rho, double param_zeta);
     virtual ~TC_restoration_Problem();
-
+    
     void update_xi_ref(const Matrix &xiReference);
-
+    
     /// Set initial values for xi and lambda, may also set matrix for linear constraints (sparse version)
     virtual void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-
+    
     /// Evaluate all problem functions and their derivatives (sparse version)
     virtual void evaluate(const Matrix &xi, const Matrix &lambda,
                            double *objval, Matrix &constr,
@@ -230,9 +165,6 @@ class TC_restoration_Problem: public RestorationProblemBase{
 
     virtual void recover_xi(const Matrix &xi_rest, Matrix &xi_orig);
     virtual void recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig);
-
-    //void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
-    //void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig, double &lambda_step_norm);
 };
 
 //Utility method to create a condenser for TC_restoration/feasibility_problem from a condenser for the parent problem. 
@@ -249,19 +181,17 @@ public:
     double *jac_orig_nz = nullptr;
     int *jac_orig_row = nullptr;
     int *jac_orig_colind = nullptr;
-
+    
     TC_feasibility_Problem(Problemspec *parent_Problem);
     virtual ~TC_feasibility_Problem();
-
+    
     virtual void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-
+    
     virtual void evaluate(const Matrix &xi, const Matrix &lambda,
                             double *objval, Matrix &constr,
                            Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
                            SymMatrix *hess, int dmode, int *info);
-
-    //void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
-    //void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
+    
     virtual void reduceConstrVio(Matrix &xi, int *info);
 };
 

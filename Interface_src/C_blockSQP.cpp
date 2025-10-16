@@ -287,15 +287,15 @@ CDLEXP void SQPoptions_set_hess_regularization_factor(void *ptr, double val){
 CDLEXP void SQPoptions_set_max_SOC(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->max_SOC = val;
 }
-CDLEXP void SQPoptions_set_max_bound_refines(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_bound_refines = val;
-}
-CDLEXP void SQPoptions_set_max_correction_steps(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_correction_steps = val;
-}
-CDLEXP void SQPoptions_set_dep_bound_tolerance(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->dep_bound_tolerance = val;
-}
+//CDLEXP void SQPoptions_set_max_bound_refines(void *ptr, int val){
+//    static_cast<SQPoptions *>(ptr)->max_bound_refines = val;
+//}
+//CDLEXP void SQPoptions_set_max_correction_steps(void *ptr, int val){
+//    static_cast<SQPoptions *>(ptr)->max_correction_steps = val;
+//}
+//CDLEXP void SQPoptions_set_dep_bound_tolerance(void *ptr, double val){
+//    static_cast<SQPoptions *>(ptr)->dep_bound_tolerance = val;
+//}
 CDLEXP void SQPoptions_set_qpsol_options(void *ptr, QPsolver_options *QPopts){
     static_cast<SQPoptions *>(ptr)->qpsol_options = QPopts;
 }
@@ -533,8 +533,8 @@ CDLEXP void delete_Condenser(void *ptr){
     delete static_cast<Condenser *>(ptr);
 }
 
-CDLEXP void Condenser_print_debug(void *ptr){
-    static_cast<Condenser *>(ptr)->print_debug();
+CDLEXP void Condenser_print_info(void *ptr){
+    static_cast<Condenser *>(ptr)->print_info();
 }
 
 CDLEXP void Condenser_full_condense(void *ptr, void *Matrix_grad_obj, void *Sparse_Matrix_constr_jac, void *SymMatrix_array_hess, void *Matrix_lb_var, void *Matrix_ub_var, void *Matrix_lb_con, void *Matrix_ub_con, void *Matrix_condensed_grad_obj, void *Sparse_Matrix_condensed_constr_jac, void *SymMatrix_array_condensed_hess, void *Matrix_condensed_lb_var, void *Matrix_condensed_ub_var, void *Matrix_condensed_lb_con, void *Matrix_condensed_ub_con){

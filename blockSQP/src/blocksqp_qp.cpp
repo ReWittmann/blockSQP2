@@ -414,6 +414,7 @@ int SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         }
         
         // Wait several times, check if QPs are solved, terminate all that are more convexified.
+        // The simpler approach above seemed sufficient, so we use it instead
         /*
         else{
             int Nt = 4, k_QP_acc = maxQP - 1;
@@ -505,9 +506,9 @@ int SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
 }
 
 
-//////////////////
-//Sublass method//
-//////////////////
+///////////////////
+//Sublass methods//
+///////////////////
 
 int bound_correction_method::bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
     QPsolverBase *correction_QP = param->par_QPs ? sub_QPs_par[vars->QP_num_accepted].get() : sub_QP.get();

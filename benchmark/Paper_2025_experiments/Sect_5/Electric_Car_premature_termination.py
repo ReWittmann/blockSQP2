@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 import os
 import sys
 try:
@@ -7,9 +7,9 @@ except:
     cD = os.getcwd()
 sys.path += [cD + "/../..", cD + "/../../.."]
 import py_blockSQP
-import matplotlib.pyplot as plt
-import time
-import copy
+# import matplotlib.pyplot as plt
+# import time
+# import copy
 import OCP_experiment
 
 import OCProblems

@@ -284,9 +284,9 @@ void SQPmethod::printInfo( int printLevel )
         strcpy( qpString, "sparse, Schur complement approach" );
     */
     
-    if (param->sparse == 0)
+    if (!param->sparse)
         strcpy( qpString, "dense, reduced Hessian factorization" );
-    else if (param->sparse == 1){
+    else{
         if (param->qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(param->qpsol_options)->sparsityLevel == 2)
             strcpy( qpString, "sparse, Schur complement approach" );
         else

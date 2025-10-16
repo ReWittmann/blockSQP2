@@ -65,14 +65,14 @@ class SQPstats{
         int nTotalSkippedUpdates;
         double averageSizingFactor;  ///< average value (over all blocks) of COL sizing factor
         PATHSTR outpath;             ///< path where log files are stored
-
+        
         FILE *progressFile;          ///< save stats for each SQP step
         FILE *updateFile;            ///< print update sequence (SR1/BFGS) to file
         FILE *primalVarsFile;        ///< primal variables for every SQP iteration
         FILE *dualVarsFile;          ///< dual variables for every SQP iteration
         FILE *jacFile;               ///< Jacobian of one iteration
         FILE *hessFile;              ///< Hessian of one iteration
-
+        
         //Progress
         //double obj_progress;
         

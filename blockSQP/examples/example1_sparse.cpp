@@ -136,14 +136,6 @@ void MyProblem::convertJacobian( const Matrix &constrJac, double *jacNz, int *ja
             for( i=0; i<nCon; i++ )
                 if( fabs( constrJac( i, j ) < myInf ) )
                     nnz++;
-		/*
-        if( jacNz != NULL ) delete[] jacNz;
-        if( jacIndRow != NULL ) delete[] jacIndRow;
-
-        jacNz = new double[nnz];
-        jacIndRow = new int[nnz + (nVar+1)];
-        jacIndCol = jacIndRow + nnz;
-        */
     }
     else
     {
@@ -340,10 +332,7 @@ int main(int argc, const char* argv[]){
     printf("\nHessian approximation at the solution:\n");
     for( int i=0; i<meth->vars->nBlocks; i++ )
         meth->vars->hess[i].Print();
-    //printf("\nFallback Hessian at the solution:\n");
-    //for( int i=0; i<meth->vars->nBlocks; i++ )
-        //meth->vars->hess2[i].Print();
-
+    
     // Clean up
     delete prob;
     delete stats;

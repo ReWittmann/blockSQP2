@@ -25,6 +25,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+using namespace std::chrono;
 #include <string>
 #include "blocksqp_options.hpp"
 #include "blocksqp_method.hpp"
@@ -86,6 +87,8 @@ typedef T_array<blockSQP::condensing_target> condensing_targets;
 typedef T_array<blockSQP::SymMatrix> SymMat_array;
 
 
+
+//For testing condensing from python
 class condensing_args{
 public:
     blockSQP::Matrix grad_obj;
@@ -104,17 +107,17 @@ public:
     blockSQP::Matrix condensed_lb_con;
     blockSQP::Matrix condensed_ub_con;
 
-    blockSQP::Matrix delta_Xi;
-    blockSQP::Matrix delta_Lambda;
+    blockSQP::Matrix deltaXi;
+    blockSQP::Matrix lambdaQP;
 
-    blockSQP::Matrix delta_Xi_cond;
-    blockSQP::Matrix delta_Lambda_cond;
-    blockSQP::Matrix delta_Xi_rest;
-    blockSQP::Matrix delta_Lambda_rest;
-
+    blockSQP::Matrix deltaXi_cond;
+    blockSQP::Matrix lambdaQP_cond;
+    blockSQP::Matrix deltaXi_rest;
+    blockSQP::Matrix lambdaQP_rest;
+    
     blockSQP::Condenser *C;
-
-
+    
+    
     void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nVar,
                                  double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
         int iBlock, count, colCountTotal, rowOffset, i, j;
@@ -180,59 +183,47 @@ public:
     }
 
 
-    void solve_QPs(){
-        double a = 0;
-        for (int i = 0; i < condensed_Jacobian.colind[condensed_Jacobian.n]; i++){
-            a += condensed_Jacobian.nz[i];
-        }
-        std::cout << "Sum on nonzeros in condensed_Jacobian is " << a << "\n";
-
+    void solve_QPs(){        
         blockSQP::Sparse_Matrix red_con_jac = condensed_Jacobian;
         blockSQP::Matrix red_lb_con = condensed_lb_con;
         blockSQP::Matrix red_ub_con = condensed_ub_con;
-
-        std::cout << "con_jac.nnz = " << con_jac.colind[con_jac.n] << ", con_jac.m = " << con_jac.m << ", con_jac.n = " << con_jac.n << "\n";
-
+        
         qpOASES::SQProblem* qp;
         qpOASES::SQProblem* qp_cond;
         qpOASES::returnValue ret;
         qpOASES::returnValue ret_cond;
-
+        
         qpOASES::Matrix *A_qp;
         qpOASES::Matrix *A_qp_cond;
         qpOASES::SymmetricMatrix *H;
         qpOASES::SymmetricMatrix *H_cond;
-
+        
         double *hess_nz = nullptr;
         int *hess_row = nullptr;
         int *hess_colind = nullptr;
         int *hess_loind = nullptr;
-
+        
         double *hess_cond_nz = nullptr;
         int *hess_cond_row = nullptr;
         int *hess_cond_colind = nullptr;
         int *hess_cond_loind = nullptr;
-
+        
         qp = new qpOASES::SQProblemSchur( con_jac.n, con_jac.m, qpOASES::HST_UNKNOWN, 50 );
         qp_cond = new qpOASES::SQProblemSchur( red_con_jac.n, red_con_jac.m, qpOASES::HST_UNKNOWN, 50 );
-
+        
         A_qp = new qpOASES::SparseMatrix(con_jac.m, con_jac.n,
                     con_jac.row.get(), con_jac.colind.get(), con_jac.nz.get());
         A_qp_cond = new qpOASES::SparseMatrix(red_con_jac.m, red_con_jac.n,
                     red_con_jac.row.get(), red_con_jac.colind.get(), red_con_jac.nz.get());
-
-
+        
         convertHessian(1.0e-15, hess.ptr, hess.size, con_jac.n, hess_nz, hess_row, hess_colind, hess_loind);
         convertHessian(1.0e-15, condensed_hess.ptr, C->condensed_num_hessblocks, red_con_jac.n, hess_cond_nz, hess_cond_row, hess_cond_colind, hess_cond_loind);
-        std::cout << "converted Hessians\n";
-
-
+        
         H = new qpOASES::SymSparseMat(con_jac.n, con_jac.n, hess_row, hess_colind, hess_nz);
         dynamic_cast<qpOASES::SymSparseMat*>(H)->createDiagInfo();
         H_cond = new qpOASES::SymSparseMat(red_con_jac.n, red_con_jac.n, hess_cond_row, hess_cond_colind, hess_cond_nz);
         dynamic_cast<qpOASES::SymSparseMat*>(H_cond)->createDiagInfo();
-
-
+        
         double *g = grad_obj.array;
         double *lb = lb_var.array;
         double *ub = ub_var.array;
@@ -240,7 +231,7 @@ public:
         double *ubA = ub_con.array;
         double cpu_time = 600;
         int max_it = 10000000;
-
+        
         double *g_cond = condensed_h.array;
         double *lb_cond = condensed_lb_var.array;
         double *ub_cond = condensed_ub_var.array;
@@ -248,7 +239,7 @@ public:
         double *ubA_cond = red_ub_con.array;
         double cpu_time_cond = 600;
         int max_it_cond = 10000000;
-
+        
         qpOASES::Options opts;
         opts.enableInertiaCorrection = qpOASES::BT_FALSE;
         opts.enableEqualities = qpOASES::BT_TRUE;
@@ -258,44 +249,51 @@ public:
         opts.epsLITests =  2.2204e-08;
         qp->setOptions(opts);
         qp_cond->setOptions(opts);
-
-
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
+        
+        
+        steady_clock::time_point begin = steady_clock::now();
+        
         ret = qp->init(H, g, A_qp, lb, ub, lbA, ubA, max_it, &cpu_time);
-        std::cout << "Solver of uncondensed QP returned, ret is " << ret << "\n";
-
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        std::cout << "Finished solution of uncondensed QP in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms\n";
-
-
-        begin = std::chrono::steady_clock::now();
-
+        if (ret != qpOASES::SUCCESSFUL_RETURN){
+            std::cout << "Could not solve the QP\n";
+            return;
+        }
+        
+        steady_clock::time_point end = steady_clock::now();
+        std::cout << "Solving the QP took " << duration_cast<milliseconds>(end - begin) << "\n";
+        if (ret_cond != qpOASES::SUCCESSFUL_RETURN){
+            std::cout << "Could not solve the condensed QP\n";
+            return;
+        }
+        
+        begin = steady_clock::now();
+        
         ret_cond = qp_cond->init(H_cond, g_cond, A_qp_cond, lb_cond, ub_cond, lbA_cond, ubA_cond, max_it_cond, &cpu_time_cond);
-        std::cout << "Solver of condensed QP returned, ret is " << ret_cond << "\n";
-
-        end = std::chrono::steady_clock::now();
-        std::cout << "Finished solution of condensed QP in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms\n";
-
-
-        delta_Xi.Dimension(con_jac.n, 1);
-        delta_Xi.Initialize(0.);
-        delta_Lambda.Dimension(con_jac.n + con_jac.m, 1);
-        delta_Lambda.Initialize(0.);
-
-        delta_Xi_cond.Dimension(red_con_jac.n, 1);
-        delta_Xi_cond.Initialize(0.);
-        delta_Lambda_cond.Dimension(red_con_jac.n + red_con_jac.m,1);
-        delta_Lambda_cond.Initialize(0.);
-
-        qp->getPrimalSolution(delta_Xi.array);
-        qp->getDualSolution(delta_Lambda.array);
-
-        qp_cond->getPrimalSolution(delta_Xi_cond.array);
-        qp_cond->getDualSolution(delta_Lambda_cond.array);
-
-        C->recover_var_mult(delta_Xi_cond, delta_Lambda_cond, delta_Xi_rest, delta_Lambda_rest);
-
+        
+        end = steady_clock::now();
+        if (C->add_dep_bounds == 2)
+            std::cout << "Solving the condensed QP with implicit bounds took " << duration_cast<milliseconds>(end - begin) << "\n";
+        else if (C->add_dep_bounds == 0)
+            std::cout << "Solving the condensed QP without implicit bounds took " << duration_cast<milliseconds>(end - begin) << "\n";
+        
+        deltaXi.Dimension(con_jac.n, 1);
+        deltaXi.Initialize(0.);
+        lambdaQP.Dimension(con_jac.n + con_jac.m, 1);
+        lambdaQP.Initialize(0.);
+        
+        deltaXi_cond.Dimension(red_con_jac.n, 1);
+        deltaXi_cond.Initialize(0.);
+        lambdaQP_cond.Dimension(red_con_jac.n + red_con_jac.m,1);
+        lambdaQP_cond.Initialize(0.);
+        
+        qp->getPrimalSolution(deltaXi.array);
+        qp->getDualSolution(lambdaQP.array);
+        
+        qp_cond->getPrimalSolution(deltaXi_cond.array);
+        qp_cond->getDualSolution(lambdaQP_cond.array);
+        
+        C->recover_var_mult(deltaXi_cond, lambdaQP_cond, deltaXi_rest, lambdaQP_rest);
+        
         delete qp;
         delete qp_cond;
         delete A_qp;
@@ -308,7 +306,7 @@ public:
         delete[] hess_cond_row;
     }
 };
-
+//
 
 
 struct Prob_Data{
@@ -628,7 +626,6 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def(py::init<>())
 	.def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)()>(&blockSQP::SQPoptions::optionsConsistency))
     .def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)(blockSQP::Problemspec*)>(&blockSQP::SQPoptions::optionsConsistency))
-    .def("reset", &blockSQP::SQPoptions::reset)
 	.def_readwrite("print_level",&blockSQP::SQPoptions::print_level)
 	.def_readwrite("result_print_color",&blockSQP::SQPoptions::result_print_color)
 	.def_readwrite("debug_level",&blockSQP::SQPoptions::debug_level)
@@ -667,9 +664,9 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("max_conv_QPs",&blockSQP::SQPoptions::max_conv_QPs)
 	.def_readwrite("reg_factor", &blockSQP::SQPoptions::reg_factor)
 	.def_readwrite("max_SOC",&blockSQP::SQPoptions::max_SOC)
-	.def_readwrite("max_bound_refines", &blockSQP::SQPoptions::max_bound_refines)
-	.def_readwrite("max_correction_steps", &blockSQP::SQPoptions::max_correction_steps)
-	.def_readwrite("dep_bound_tolerance", &blockSQP::SQPoptions::dep_bound_tolerance)
+	//.def_readwrite("max_bound_refines", &blockSQP::SQPoptions::max_bound_refines)
+	//.def_readwrite("max_correction_steps", &blockSQP::SQPoptions::max_correction_steps)
+	//.def_readwrite("dep_bound_tolerance", &blockSQP::SQPoptions::dep_bound_tolerance)
 	.def_readwrite("max_filter_overrides", &blockSQP::SQPoptions::max_filter_overrides)
 	.def_readwrite("conv_tau_H", &blockSQP::SQPoptions::conv_tau_H)
 	.def_readwrite("conv_kappa_0", &blockSQP::SQPoptions::conv_kappa_0)
@@ -1008,13 +1005,16 @@ py::class_<blockSQP::Condenser>(m, "Condenser")
         [](vblock_array &v_arr, cblock_array &c_arr, int_array &hess_sizes, condensing_targets &c_targets, int add_dep_bounds) -> blockSQP::Condenser*
         {return new blockSQP::Condenser(v_arr.ptr, v_arr.size, c_arr.ptr, c_arr.size, hess_sizes.ptr, hess_sizes.size, c_targets.ptr, c_targets.size, add_dep_bounds);}),
         py::arg("vBlocks"), py::arg("cBlocks"), py::arg("hBlocks"), py::arg("Targets"), py::arg("add_dep_bounds") = 2, py::return_value_policy::take_ownership)
-    .def("print_debug", &blockSQP::Condenser::print_debug)
+    .def("print_info", &blockSQP::Condenser::print_info)
     .def("condense_args", [](blockSQP::Condenser &C, condensing_args &args) -> void{
             args.C = &C;
             args.condensed_hess.resize(C.condensed_num_hessblocks);
+            steady_clock::time_point T0 = steady_clock::now();
             C.full_condense(args.grad_obj, args.con_jac, args.hess.ptr, args.lb_var, args.ub_var, args.lb_con, args.ub_con,
                 args.condensed_h, args.condensed_Jacobian, args.condensed_hess.ptr, args.condensed_lb_var, args.condensed_ub_var, args.condensed_lb_con, args.condensed_ub_con
             );
+            steady_clock::time_point T1 = steady_clock::now();
+            std::cout << "Condensing took " << duration_cast<milliseconds>(T1 - T0) << "\n";
             args.condensed_hess.size = C.condensed_num_hessblocks;
             return;})
     .def_readonly("num_hessblocks", &blockSQP::Condenser::num_hessblocks)
@@ -1050,12 +1050,12 @@ py::class_<condensing_args>(m, "condensing_args")
     .def_readonly("condensed_ub_var", &condensing_args::condensed_ub_var)
     .def_readonly("condensed_lb_con", &condensing_args::condensed_lb_con)
     .def_readonly("condensed_ub_con", &condensing_args::condensed_ub_con)
-    .def_readonly("delta_Xi", &condensing_args::delta_Xi)
-    .def_readonly("delta_Lambda", &condensing_args::delta_Lambda)
-    .def_readonly("delta_Xi_cond", &condensing_args::delta_Xi_cond)
-    .def_readonly("delta_Lambda_cond", &condensing_args::delta_Lambda_cond)
-    .def_readonly("delta_Xi_rest", &condensing_args::delta_Xi_rest)
-    .def_readonly("delta_Lambda_rest", &condensing_args::delta_Lambda_rest)
+    .def_readonly("deltaXi", &condensing_args::deltaXi)
+    .def_readonly("lambdaQP", &condensing_args::lambdaQP)
+    .def_readonly("deltaXi_cond", &condensing_args::deltaXi_cond)
+    .def_readonly("lambdaQP_cond", &condensing_args::lambdaQP_cond)
+    .def_readonly("deltaXi_rest", &condensing_args::deltaXi_rest)
+    .def_readonly("lambdaQP_rest", &condensing_args::lambdaQP_rest)
     .def("solve_QPs", &condensing_args::solve_QPs)
     ;
 

@@ -128,33 +128,30 @@ class Problemspec{
         virtual void printInfo(){};
 };
 
+//Wrap a Problemspec into a scalable version of itself
 class scaled_Problemspec: public Problemspec{
 public:
-
     Problemspec *unscaled_prob;
-
+    
     std::unique_ptr<double[]> scaling_factors;
     Matrix xi_unscaled;
-
+    
     scaled_Problemspec(Problemspec *UNSCprob);
     ~scaled_Problemspec();
-
+    
     //Set scaling factors
     void set_scale(const double *const scaleFacs);
     //Apply scaling factors, multiplies to current scaling factors
     void rescale(const double *const scaleFacs);
-
-
+    
     void initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac);
     void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-
+    
     void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info);
     void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info);
     void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info);
-
+    
     void reduceConstrVio(Matrix &xi, int* info);
-
-
 };
 
 
