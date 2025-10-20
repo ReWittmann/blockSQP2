@@ -356,9 +356,9 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
-        info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
+        QPresult infoQP = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
             
-        if (info != 0)
+        if (infoQP != QPresult::success)
             return false; // Could not solve QP, abort SOC
 
         // Set new SOC trial point
@@ -821,18 +821,18 @@ int bound_correction_method::filterLineSearch(){
         dfTdeltaXi = 0.0;
         for(int i = 0; i < nVar; i++)
             dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
-
+        
         //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
         //work with a different variable 
         if (k == 0){
             deltaXi_save = vars->deltaXi;
             lambdaQP_save = vars->lambdaQP;
             
-            info = bound_correction(vars->deltaXi, vars->lambdaQP);
+            QPresult infoQP = bound_correction(vars->deltaXi, vars->lambdaQP);
             
             //If model bound correction failed for indefinite Hessian, resolve with convex Hessian and try again
-            if (info > 0 && !vars->conv_qp_solved){
-                if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
+            if (infoQP != QPresult::success && !vars->conv_qp_solved){
+                if (solveQP(vars->deltaXi, vars->lambdaQP, 1) != QPresult::success) return 1;
                 else{k = 0; alpha = 1.0;}
             }
         }
@@ -841,11 +841,11 @@ int bound_correction_method::filterLineSearch(){
             vars->deltaXi = deltaXi_save;
             vars->lambdaQP = lambdaQP_save;
         }
-
+        
         // Compute new trial point and truncate any bound violation
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
-
+            
             if (vars->trialXi(i) < prob->lb_var(i)){
                 vars->trialXi(i) = prob->lb_var(i);
             }
@@ -853,14 +853,14 @@ int bound_correction_method::filterLineSearch(){
                 vars->trialXi(i) = prob->ub_var(i);
             }
         }
-
+        
         // Compute objective and at ||constr(trialXi)||_1 at trial point
         prob->evaluate( vars->trialXi, &objTrial, vars->trialConstr, &info );
         stats->nFunCalls++;
-
+        
         //cNormTrial = l1ConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
         cNormTrial = lInfConstraintNorm( vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
-
+        
         // Reduce step if evaluation fails, if lower bound is violated or if objective is NaN
         if(info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
             // evaluation error, reduce stepsize
@@ -880,7 +880,7 @@ int bound_correction_method::filterLineSearch(){
                 continue;
             }
         }
-
+        
         // Check sufficient decrease, case I:
         // If we are (almost) feasible and a "switching condition" is satisfied
         // require sufficient progress in the objective instead of bi-objective condition
@@ -909,7 +909,7 @@ int bound_correction_method::filterLineSearch(){
                 }
             }
         }
-
+        
         // Check sufficient decrease, case II:
         // Bi-objective (filter) condition
         if (cNormTrial < (1.0 - param->gammaTheta) * cNorm || objTrial < vars->obj - param->gammaF * cNorm){
@@ -928,11 +928,11 @@ int bound_correction_method::filterLineSearch(){
             }
         }
     }// backtracking steps
-
+    
     // No step could be found by the line search
     if( k == param->max_linesearch_steps )
         return 1;
-
+    
     // Augment the filter if switching condition or Armijo condition does not hold
     if( dfTdeltaXi >= 0 )
         augmentFilter( cNormTrial, objTrial );

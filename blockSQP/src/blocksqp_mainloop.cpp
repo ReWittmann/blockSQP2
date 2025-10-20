@@ -59,7 +59,8 @@ void SQPmethod::init(){
 
 
 SQPresult SQPmethod::run(int maxIt, int warmStart){
-    int it = 0, infoQP = 0, infoEval = 0;
+    int it = 0, infoEval = 0;
+    QPresult infoQP = QPresult::undef;
     bool skipLineSearch = false;
     bool hasConverged = false;
     //int whichDerv = param->exact_hess;
@@ -114,17 +115,17 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
         
         // infoQP == 0 ~ success
-        if (infoQP == 1){
+        if (infoQP == QPresult::time_it_limit_reached){
             bool qpError = true;
             
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-            if (infoQP){
+            if (infoQP != QPresult::success){
                 std::cout << "QP solution failed again, try to reduce constraint violation\n";
                 skipLineSearch = true;
                 
                 if (vars->steptype < 2){
-                    qpError = feasibilityRestorationHeuristic();
+                    qpError = bool(feasibilityRestorationHeuristic());
                     if (!qpError){
                         vars->steptype = 2;
                         std::cout << "Success\n";
@@ -135,7 +136,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 
                 if (qpError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                     std::cout << "Start feasibility restoration phase\n";
-                    qpError = feasibilityRestorationPhase();
+                    qpError = bool(feasibilityRestorationPhase());
                     vars->steptype = 3;
                 }
                 
@@ -146,18 +147,18 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             else vars->steptype = 1;
         }
-        else if (infoQP == 2 || infoQP > 3){
+        else if (infoQP == QPresult::indef_unbounded || infoQP == QPresult::other_error){
             std::cout << "***QP error. Solve again with identity matrix.***\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-            if (infoQP){
+            if (infoQP != QPresult::success){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
-                printf("InfoQP is %d\n", infoQP);
+                std::cout << "InfoQP is " << infoQP << "\n";
                 return print_SQPresult(SQPresult::qp_failure, param->result_print_color);
             }
             else vars->steptype = 1;
         }
-        else if (infoQP == 3){
+        else if (infoQP == QPresult::infeasible){
             // 3.) QP infeasible, try to restore feasibility
             int feasError = 1;
             skipLineSearch = true; // don't do line search with restoration step
@@ -225,7 +226,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 if (lsError && !vars->conv_qp_solved){
                     std::cout << "filterLineSearch failed, try again with fallback Hessian\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
-                    if (infoQP == 0) lsError = bool(filterLineSearch());
+                    if (infoQP == QPresult::success) lsError = bool(filterLineSearch());
                     if (!lsError) vars->steptype = 0;
                 }
                 
@@ -266,7 +267,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 if (lsError && vars->steptype != 1){
                     std::cout << "***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-                    if (infoQP == 0) lsError = bool(filterLineSearch());
+                    if (infoQP == QPresult::success) lsError = bool(filterLineSearch());
                     if (!lsError) vars->steptype = 1;
                 }
 

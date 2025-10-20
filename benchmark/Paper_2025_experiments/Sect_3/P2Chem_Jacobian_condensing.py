@@ -111,7 +111,7 @@ cond_nobounds.condense_args(cond_args_nobounds)
 
 #Optional: Solve both QPs and compare solution (-times)
 sys.stdout.flush()
-print("Solving the full QP and condensed QP (without implicit bounds), this may take up to half a minute...")
+print("Solving the full QP and condensed QP (without implicit bounds), this may take up to half a minute ...")
 sys.stdout.flush()
 time.sleep(0.01)
 cond_args_nobounds.solve_QPs()
@@ -135,7 +135,7 @@ cond_bounds.condense_args(cond_args_bounds)
 
 #Optional: Solve both QPs and compare solution (-times)
 sys.stdout.flush()
-print("Solving the full QP and condensed QP (with implicit bounds), this may take up to half a minute...")
+print("Solving the full QP and condensed QP (with implicit bounds), this may take up to half a minute ...")
 sys.stdout.flush()
 time.sleep(0.01)
 cond_args_bounds.solve_QPs()
@@ -194,13 +194,14 @@ for j in range(n_cond_2):
 J_cond_B_coo = coo_matrix((nz_cond_2, (row_cond_2, col_cond_2)), shape=(m_cond_2,n_cond_2))
 
 
-
+#Full constraint matrix
 plt.rcParams["text.usetex"] = True
 fig, ax = plt.subplots(dpi = 200, figsize = (12*0.65, 9*0.65))
 ax.spy(J_full_coo, markersize = 0.05)
 ax.tick_params(labelsize = 'x-large')
 plt.show()
 
+#Condensed constraint matrix with no implicit bounds
 fig, ax = plt.subplots(dpi = 200, figsize = (12*0.55, 9*0.55))
 ax.spy(J_cond_NB_coo, markersize = 0.05)
 ax.set_xticks(np.array([0,1737]))
@@ -208,6 +209,7 @@ ax.set_yticks(np.array([0,1844]))
 ax.tick_params(labelsize = 'x-large')
 plt.show()
 
+#Condensed constraint matrix with included implicit bounds
 fig, ax = plt.subplots(dpi = 200, figsize = (12*0.75, 9*0.75))
 ax.spy(J_cond_B_coo, markersize = 0.05)
 ax.set_xticks(np.array([0,1737]))

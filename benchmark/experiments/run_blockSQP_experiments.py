@@ -31,6 +31,7 @@ Examples = [
             OCProblems.Tubular_Reactor,
             OCProblems.Lotka_OED,
             ]
+OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
 #SR1_BFGS
 opt_SR1_BFGS = py_blockSQP.SQPoptions()
@@ -56,12 +57,18 @@ opt_CS2.max_conv_QPs = 4
 opt_CS2.conv_strategy = 2
 opt_CS2.max_filter_overrides = 0
 
+opt_full = py_blockSQP.SQPoptions()
+opt_full.max_conv_QPs = 4
+opt_full.conv_strategy = 2
+opt_full.automatic_scaling = True
+
 #Select option sets to test for
 Experiments = [
-               (opt_SR1_BFGS, "SR1-BFGS"),
+               # (opt_SR1_BFGS, "SR1-BFGS"),
                # (opt_CS0, "Convexification strategy 0"),
-               (opt_CS1, "conv. str. 1"),
-               (opt_CS2, "conv. str. 2")
+               # (opt_CS1, "conv. str. 1"),
+               # (opt_CS2, "conv. str. 2")
+               (opt_full, "opt_full")
                ]
 
 
@@ -109,6 +116,6 @@ for OCclass in Examples:
     ###############################################################################
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = None, dirPath = dirPath, savePrefix = "blockSQP")
+        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP")
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

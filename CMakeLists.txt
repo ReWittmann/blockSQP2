@@ -202,11 +202,15 @@ if (UNIX)
 		target_compile_definitions(blockSQP PUBLIC LINUX)
 	endif()
 	target_compile_options(blockSQP PRIVATE 
+		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
 		-O3
-		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized)
+		# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
+		)
+	
 elseif(WIN32)
 	target_compile_definitions(blockSQP PUBLIC WINDOWS)
 endif()
+
 
 
 set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin

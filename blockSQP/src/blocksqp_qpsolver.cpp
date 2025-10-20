@@ -34,10 +34,29 @@ using namespace std::chrono;
 
 namespace blockSQP{
 
+
+std::ostream& operator<<(std::ostream &os, QPresult qpres){
+    switch (qpres){
+        case QPresult::undef:
+            os << "\"undefined\""; break;
+        case QPresult::success:
+            os << "\"success\""; break;
+        case QPresult::time_it_limit_reached:
+            os << "\"time/it limit exceeded\""; break;
+        case QPresult::indef_unbounded:
+            os << "\"definiteness condition violated or unbounded\""; break;
+        case QPresult::infeasible:
+            os << "\"infeasibility\""; break;
+        default:
+            os << "\"other error\"";
+    }
+	return os;
+}
+
 QPsolverBase::~QPsolverBase(){}
 
 void QPsolverBase::set_hotstart_point(QPsolverBase *hot_QP){return;};
-void QPsolverBase::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){QP_result.set_value(solve(deltaXi, lambdaQP));}
+void QPsolverBase::solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP){QP_result.set_value(solve(deltaXi, lambdaQP));}
 
 
 //QPsolver base class implemented methods
@@ -179,7 +198,7 @@ void CQPsolver::set_hess(SymMatrix *const hess, bool pos_def, double regularizat
     hess_updated = true;
 }
 
-int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
+QPresult CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     if (!hess_updated && !h_updated && !A_updated){
         cond->SOC_condense(h_qp, lb_A, ub_A, h_cond, lb_A_cond, ub_A_cond);
         inner_QPsol->set_lin(h_cond);
@@ -208,14 +227,14 @@ int CQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
     */
     
-    int QPret = inner_QPsol->solve(xi_cond, lambda_cond);
-    if (QPret > 0) return QPret;
+    QPresult QPret = inner_QPsol->solve(xi_cond, lambda_cond);
+    if (QPret != QPresult::success) return QPret;
     
     cond->recover_var_mult(xi_cond, lambda_cond, deltaXi, lambdaQP);
     return QPret;
 }
 
-void CQPsolver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){
+void CQPsolver::solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP){
     if (!hess_updated && !h_updated && !A_updated){
         cond->SOC_condense(h_qp, lb_A, ub_A, h_cond, lb_A_cond, ub_A_cond);
         inner_QPsol->set_lin(h_cond);
@@ -244,12 +263,12 @@ void CQPsolver::solve(std::stop_token stopRequest, std::promise<int> QP_result, 
     inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
     */
     
-    std::promise<int> QP_result_cond_p;
-    std::future<int> QP_result_cond_f = QP_result_cond_p.get_future();
-    int QP_result_cond;
+    std::promise<QPresult> QP_result_cond_p;
+    std::future<QPresult> QP_result_cond_f = QP_result_cond_p.get_future();
+    QPresult QP_result_cond;
     inner_QPsol->solve(stopRequest, std::move(QP_result_cond_p), xi_cond, lambda_cond);
     QP_result_cond = QP_result_cond_f.get();
-    if (QP_result_cond > 0){
+    if (QP_result_cond != QPresult::success){
         QP_result.set_value(QP_result_cond); 
         return;
     }
@@ -264,16 +283,17 @@ int CQPsolver::get_QP_it(){return inner_QPsol->get_QP_it();}
 double CQPsolver::get_solutionTime(){return inner_QPsol->get_solutionTime();}
 
 
-int CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
+QPresult CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
     int max_correction_steps = 6;
     double dep_bound_tolerance = 1e-7;
     
-    int ind_1, ind_2, ind, vio_count, QP_result;
+    int ind_1, ind_2, ind, vio_count;
+    QPresult QP_result;
     double xi_s, max_dep_bound_violation;
     
     //deltaXi_corr = vars->deltaXi;
     //lambdaQP_corr = vars->lambdaQP;
-
+    
     //Reset correction vectors
     for (int tnum = 0; tnum < cond->num_targets; tnum++){
         corrections[tnum].Initialize(0.);
@@ -307,7 +327,7 @@ int CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, const Ma
 
         if (vio_count == 0){
             std::cout << "All dependent variable bounds are fulfilled\n" << std::flush;
-            return 0;
+            return QPresult::success;
         }
         
         std::cout << "Bounds violated by " << vio_count << " dependent variables, calculating correction vectors\n";
@@ -363,21 +383,21 @@ int CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, const Ma
         std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
         std::cout << "Solved QP with added corrections in " << duration_cast<milliseconds>(T1 - T0) << "\n";
         
-        if (!QP_result)
+        if (QP_result == QPresult::success)
             cond->recover_correction_var_mult(xi_cond, lambda_cond, corrections.get(), deltaXi_corr, lambdaQP_corr);
         else
-            return 1;
+            return QPresult::other_error;
     }
-    return 0;
+    return QPresult::success;
 }
 
-int CQPsolver::correction_solve(Matrix &deltaXi, Matrix &lambdaQP){
+QPresult CQPsolver::correction_solve(Matrix &deltaXi, Matrix &lambdaQP){
     if (!hess_updated && !h_updated && !A_updated){
         cond->correction_condense(h_qp, lb_A, ub_A, corrections.get(), h_corr, lb_A_corr, ub_A_corr);
         inner_QPsol->set_lin(h_corr);
         inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_corr, ub_A_corr);
     }
-    else throw(std::runtime_error("CQPsolver: correction_solve called after hess, linear term or constraint matrix was changed"));
+    else throw std::runtime_error("CQPsolver: correction_solve called after hess, linear term or constraint matrix was changed");
     
     bounds_updated = true;
     
@@ -388,8 +408,8 @@ int CQPsolver::correction_solve(Matrix &deltaXi, Matrix &lambdaQP){
     inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
     */
     
-    int QPret = inner_QPsol->solve(xi_cond, lambda_cond);
-    if (QPret > 0) return QPret;
+    QPresult QPret = inner_QPsol->solve(xi_cond, lambda_cond);
+    if (QPret != QPresult::success) return QPret;
     
     cond->recover_correction_var_mult(xi_cond, lambda_cond, corrections.get(), deltaXi, lambdaQP);
     return QPret;
@@ -554,48 +574,6 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     }
     
     init_QP_common(blockIdx);
-    
-    //Owned
-    /*
-    A_qp = nullptr;
-    H_qp = nullptr;
-
-    lb = std::make_unique<double[]>(nVar);
-    ub = std::make_unique<double[]>(nVar);
-    lbA = std::make_unique<double[]>(nCon);
-    ubA = std::make_unique<double[]>(nCon);
-
-    h_qp = std::make_unique<double[]>(nVar);
-    A_qp_nz = nullptr;
-    A_qp_row = nullptr;
-    A_qp_colind = nullptr;
-    
-    if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
-        int hess_nzCount = 0;
-        for (int i = 0; i < n_QP_hessblocks; i++){
-            hess_nzCount += (blockIdx[i+1] - blockIdx[i])*(blockIdx[i+1] - blockIdx[i]);
-        }
-        //Allocate enough memory to support all structurally nonzero elements being nonzero.
-        hess_nz = std::make_unique<double[]>(hess_nzCount);
-        hess_row = std::make_unique<int[]>(hess_nzCount);
-        hess_colind = std::make_unique<int[]>(n_QP_var + 1);
-        hess_loind = std::make_unique<int[]>(n_QP_var + 1);
-    }
-    else hess_nz = std::make_unique<double[]>(nVar*nVar);
-    
-    //Options
-    opts.enableEqualities = qpOASES::BT_TRUE;
-    opts.initialStatusBounds = qpOASES::ST_INACTIVE;
-    switch(static_cast<const qpOASES_options*>(Qparam)->printLevel){
-        case 0: opts.printLevel = qpOASES::PL_NONE;     break;
-        case 1: opts.printLevel = qpOASES::PL_LOW;      break;
-        case 2: opts.printLevel = qpOASES::PL_MEDIUM;   break;
-        case 3: opts.printLevel = qpOASES::PL_HIGH;     break;
-    }
-    opts.numRefinementSteps = 2;
-    opts.epsLITests =  2.2204e-08;
-    opts.terminationTolerance = static_cast<const qpOASES_options*>(Qparam)->terminationTolerance;
-    */
 }
 
 void qpOASES_solver::init_QP_common(int *blockIdx){
@@ -645,7 +623,7 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
                                         
 
 
-//This flag is added in the patched qpOASES version, a runtime error is thrown if this class is attempted to be constructed with an unpatched version.
+//This flag is added in the modified qpOASES version, a runtime error is thrown if this class is attempted to be constructed with an unmodified version.
 #ifdef SOLVER_MUMPS
     #ifdef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
         qpOASES_MUMPS_solver::qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
@@ -757,7 +735,7 @@ void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
     return;
 }
 
-int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
+QPresult qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     double QPtime;
 
     if (convex_QP)  opts.enableInertiaCorrection = qpOASES::BT_TRUE;
@@ -821,7 +799,7 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         QP_it += 1;
         *qpSave = *qp;
         //std::cout << "QP could be solved, qpOASES ret is 0\n";
-        return 0;
+        return QPresult::success;
     }
     
     *qp = *qpSave;
@@ -830,25 +808,25 @@ int qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         QP_it = 1;
     
     if( ret == qpOASES::RET_MAX_NWSR_REACHED )
-        return 1;
+        return QPresult::time_it_limit_reached;
     else if( ret == qpOASES::RET_HESSIAN_NOT_SPD ||
              ret == qpOASES::RET_HESSIAN_INDEFINITE ||
              ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS ||
              ret == qpOASES::RET_QP_UNBOUNDED ||
              ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS ){
-        return 2;}
+        return QPresult::indef_unbounded;}
     else if( ret == qpOASES::RET_INIT_FAILED_INFEASIBILITY ||
              ret == qpOASES::RET_QP_INFEASIBLE ||
              ret == qpOASES::RET_HOTSTART_STOPPED_INFEASIBILITY ){
-        return 3;}
-    return 4;
+        return QPresult::infeasible;}
+    return QPresult::other_error;
 }
 
-void qpOASES_solver::solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP){    
+void qpOASES_solver::solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP){    
     #ifdef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
         qp->set_stop_token(std::move(stopRequest));
     #endif
-    int inner_QP_result = solve(deltaXi, lambdaQP);
+    QPresult inner_QP_result = solve(deltaXi, lambdaQP);
     QP_result.set_value(inner_QP_result);
 }
 
@@ -1011,8 +989,16 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         if (!skip_timeRecord) recordTime(model->get(GRB_DoubleAttr_Runtime));
         else skip_timeRecord = false;
 
-        return 0;
+        return QPresult::success;
     }
+    else if (ret == 3)
+        return QPresult::infeasible;
+    else if (ret == 4)
+        return QPresult::indef_unbounded;
+    else if (ret == 7 || ret == 9 || ret == 16)
+        return QPresult::time_it_limit_reached;
+    return QPresult::other_error;
+    /*
     else if (ret == 3)
         return 3;
     else if (ret == 4)
@@ -1020,6 +1006,7 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     else if (ret == 7 || ret == 9 || ret == 16)
         return 1;
     return 4;
+    */
 }
 
 
@@ -1123,7 +1110,7 @@ void qpalm_solver::set_hess(SymMatrix *const hess, bool pos_def, double regulari
     return;
 }
 
-int qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
+QPresult qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     data.set_Q(Q);
     data.q = q;
     data.set_A(A);
@@ -1160,9 +1147,9 @@ int qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         if (!skip_timeRecord) recordTime(info.run_time);
         else skip_timeRecord = false;
 
-        return 0;
+        return QPresult::success;
     }
-    return 4;
+    return QPresult::other_error;
 }
 
 int qpalm_solver::get_QP_it(){return info.iter;};

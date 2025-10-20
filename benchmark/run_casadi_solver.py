@@ -19,7 +19,6 @@ ipopts['tol'] = 1e-6
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax
 
-OCprob.integrate_full(OCprob.start_point)
 sp = OCprob.start_point
 S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 

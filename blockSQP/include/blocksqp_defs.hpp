@@ -61,14 +61,6 @@ enum class SQPresult{
 SQPresult print_SQPresult(SQPresult rs, int print_level = 2);
 
 
-enum class QPresult{
-    success = 0,
-    time_it_limit_reached,
-    indef_unbounded,
-    infeasible,
-    other_error
-};
-
 class NotImplementedError : public std::logic_error{
 public:
     NotImplementedError(std::string info) : std::logic_error("Missing implementation of " + info){}

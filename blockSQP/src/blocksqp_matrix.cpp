@@ -39,12 +39,10 @@
 #else
     #include "cblas.h"
 #endif
-#define MATRIX_DEBUG
+//#define MATRIX_DEBUG      //Do bounds and dimension checking when performing matrix operations
 
 namespace blockSQP
 {
-
-//#define MATRIX_DEBUG
 
 void Error( const char *F )
 {

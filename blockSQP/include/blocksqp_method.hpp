@@ -116,10 +116,15 @@ class SQPmethod{
         
         /////////////////////////////////NEW
         /// Resolve options, iteration state and call parameters and dispatch the appropriate solve[*]QP_* method. 
-        virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
-        int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        //int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        
+        virtual QPresult solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        QPresult solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        QPresult solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        QPresult solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Sequentially try to solve increasingly convexified QPs. 
@@ -130,7 +135,9 @@ class SQPmethod{
         //virtual int solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
-        virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        //virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        
+        virtual QPresult solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
@@ -235,8 +242,10 @@ class bound_correction_method : public SQPmethod{
     bound_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics);
 
     // condensed QP solution methods incorporating QP resolves with added corrections
-    int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
-    int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+    //int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    //int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+    QPresult bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    QPresult solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
     // filterLineSearch that applies bound correction to the full step
     virtual int filterLineSearch();

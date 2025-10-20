@@ -48,6 +48,16 @@ using namespace std::chrono;
 
 namespace blockSQP{
 
+enum class QPresult{
+    undef = -1,
+    success,
+    time_it_limit_reached,
+    indef_unbounded,
+    infeasible,
+    other_error
+};
+std::ostream& operator<<(std::ostream& os, QPresult qpres);
+
 
 //QP solver interface
 class QPsolverBase{
@@ -60,7 +70,7 @@ class QPsolverBase{
     virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind) = 0;
     //Set hessian and pass on whether hessian is supposedly positive definite
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
-
+    
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
     virtual void set_use_hotstart(bool use_hom) = 0;
     
@@ -73,10 +83,10 @@ class QPsolverBase{
     
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    virtual QPresult solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     //Overload for calling with a jthread.
     //virtual int solve(std::stop_token stopRequest, bool *hasFinished, Matrix &deltaXi, Matrix &lambdaQP);
-    virtual void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
+    virtual void solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
 };
 
 
@@ -139,7 +149,7 @@ class QPsolver : public QPsolverBase{
     
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    virtual QPresult solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
     virtual void set_use_hotstart(bool use_hom);
@@ -194,8 +204,8 @@ class CQPsolver : public QPsolverBase{
 
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP);
-    virtual void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
+    virtual QPresult solve(Matrix &deltaXi, Matrix &lambdaQP);
+    virtual void solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
     void set_use_hotstart(bool use_hom);
@@ -205,9 +215,9 @@ class CQPsolver : public QPsolverBase{
     virtual double get_solutionTime();
     
     //Correction
-    int bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    QPresult bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
     
-    int correction_solve(Matrix &deltaXi, Matrix &lambdaQP);
+    QPresult correction_solve(Matrix &deltaXi, Matrix &lambdaQP);
     //int SOC_bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
     
 };
@@ -267,9 +277,9 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_hotstart_point(QPsolverBase *hot_QP);
         void set_hotstart_point(qpOASES_solver *hot_QP);
         
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+        QPresult solve(Matrix &deltaXi, Matrix &lambdaQP);
         //int solve(std::stop_token stopRequest, bool *hasFinished, int *result, Matrix &deltaXi, Matrix &lambdaQP);
-        void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
+        void solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
         int get_QP_it();
     };
     
@@ -314,7 +324,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+        QP_result solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
         //double get_solutionTime();
@@ -344,7 +354,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+        QP_result solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
     };
