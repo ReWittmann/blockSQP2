@@ -7,8 +7,8 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
+ * blockSQP 2 -- Extensions and modifications for the 
+                          blockSQP nonlinear programming solver by Dennis Janka
  * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
  *
  * Licensed under the zlib license. See LICENSE for more details.
@@ -25,7 +25,7 @@
  *  \author Reinhold Wittmann
  *  \date 2023-2025
  */
- 
+
 #include "blocksqp_iterate.hpp"
 #include "blocksqp_options.hpp"
 #include "blocksqp_stats.hpp"

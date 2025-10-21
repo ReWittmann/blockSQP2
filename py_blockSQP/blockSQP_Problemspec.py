@@ -1,5 +1,5 @@
 
-# py_blockSQP -- A python interface to the blockSQP nonlinear 
+# py_blockSQP -- A python interface to the blockSQP nonlinear programming
 #                solver developed by Dennis Janka and extended by
 #                Reinhold Wittmann
 # Copyright (C) 2022-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
@@ -12,7 +12,7 @@
 # \date 2022-2025
 #
 # Implementation of a python interface to the blockSQP 
-# nonlinear solver - Python side problem specification
+# nonlinear program solver - Python side problem specification
 
 
 import numpy as np

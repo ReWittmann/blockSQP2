@@ -4,6 +4,7 @@ This is a modified version of the blockSQP nonlinear program solver that include
 Copyright (c) 2024-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 
+
 #Build requirements
 1. A Fortran compiler, e.g. gfortran
 2. A C++-20 compatible C++ compiler, e.g. g++-14

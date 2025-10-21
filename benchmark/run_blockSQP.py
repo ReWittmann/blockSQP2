@@ -21,7 +21,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
-                                            #problem specific parameters
+                                            #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 
 itMax = 200                                 #max number of steps

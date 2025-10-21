@@ -57,6 +57,7 @@ opt_CS2.max_conv_QPs = 4
 opt_CS2.conv_strategy = 2
 opt_CS2.max_filter_overrides = 0
 
+#Full structure exploitation
 opt_full = py_blockSQP.SQPoptions()
 opt_full.max_conv_QPs = 4
 opt_full.conv_strategy = 2

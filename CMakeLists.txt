@@ -6,13 +6,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   {make -C build } OR {cmake --build build}")
 endif()
 
-project(BlockSQP    
+project(BlockSQP_2    
 	DESCRIPTION "Sequential quadratic programming for problems with block-diagonal Hessian matrix."
-	HOMEPAGE_URL https://github.com/djanka2/blockSQP
-    	LANGUAGES CXX
+	#HOMEPAGE_URL https://github.com/djanka2/blockSQP
+	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP_2
+    LANGUAGES CXX
 )
 set(CMAKE_CXX_STANDARD 20)
-enable_language(Fortran)
+enable_language(Fortran)	#For MUMPS linear solver
 
 #Static linking to avoid having to copy dll(-path)s.
 if(WIN32)
@@ -61,7 +62,7 @@ set(BUILD_SHARED_LIBS OFF)
 FetchContent_MakeAvailable(CMAKEMUMPS)
 #############################################################
 
-set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/modded_qpOASES)
+set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/modified_qpOASES)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp

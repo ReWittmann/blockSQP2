@@ -1,4 +1,15 @@
-#Collection of optimal control problems implemented using casadi.
+# \file OCProblems.cpp
+# \author Reinhold Wittmann
+# \date 2024-2025
+#
+# Collection of optimal control problems implemented using casadi,
+# emplying a helper base class for multiple shooting parametrization.
+# 
+# The problems originate from various sources, most notably
+#  Dolan, E. D., Moré, J. J., & Munson, T. S. (2004). Benchmarking optimization software with COPS 3.0 (No. ANL/MCS-TM-273). Argonne National Lab., Argonne, IL (US).
+#  Sager, S. (2005). Numerical methods for mixed-integer optimal control problems. Tönning: Der Andere Verlag.
+#  mintoc.de
+# among others.
 
 import numpy as np
 import casadi as cs
@@ -3855,6 +3866,7 @@ class Cart_Pendulum(OCProblem):
     
     param_set_1 = {'u_max': 30, 'lambda_u': 0.5}
     param_set_2 = {'u_max': 15, 'lambda_u': 0.05}
+    param_set_3 = {'u_max': 30, 'lambda_u': 0.05} #causes blockSQP to run into local optimum, ipopts central path leads to likely global optimum
     
     def build_problem(self):
         M, m, l, g, u_max, lambda_u = (self.model_params[key] for key in ['M','m','l','g','u_max','lambda_u'])

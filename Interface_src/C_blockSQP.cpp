@@ -1,5 +1,5 @@
 /*
- * C_blockSQP -- A C interface to the blockSQP nonlinear 
+ * C_blockSQP -- A C interface to the blockSQP nonlinear programming
                   solver developed by Dennis Janka and extended by
                   Reinhold Wittmann
  * Copyright (C) 2022-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
@@ -13,7 +13,8 @@
  * \date 2025
  *
  * Implementation of a C interface to the blockSQP 
- * nonlinear solver.
+ * nonlinear programming solver. This is also
+ * used for the Julia interface.
  */
 
 
@@ -287,15 +288,6 @@ CDLEXP void SQPoptions_set_hess_regularization_factor(void *ptr, double val){
 CDLEXP void SQPoptions_set_max_SOC(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->max_SOC = val;
 }
-//CDLEXP void SQPoptions_set_max_bound_refines(void *ptr, int val){
-//    static_cast<SQPoptions *>(ptr)->max_bound_refines = val;
-//}
-//CDLEXP void SQPoptions_set_max_correction_steps(void *ptr, int val){
-//    static_cast<SQPoptions *>(ptr)->max_correction_steps = val;
-//}
-//CDLEXP void SQPoptions_set_dep_bound_tolerance(void *ptr, double val){
-//    static_cast<SQPoptions *>(ptr)->dep_bound_tolerance = val;
-//}
 CDLEXP void SQPoptions_set_qpsol_options(void *ptr, QPsolver_options *QPopts){
     static_cast<SQPoptions *>(ptr)->qpsol_options = QPopts;
 }

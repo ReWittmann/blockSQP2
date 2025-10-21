@@ -1,5 +1,5 @@
 /*
- * py_blockSQP -- A python interface to the blockSQP nonlinear 
+ * py_blockSQP -- A python interface to the blockSQP nonlinear programming
                   solver developed by Dennis Janka and extended by
                   Reinhold Wittmann
  * Copyright (C) 2022-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
@@ -13,7 +13,7 @@
  * \date 2022-2025
  *
  * Implementation of a python interface to the blockSQP 
- * nonlinear solver - C++ side part
+ * nonlinear programming solver - C++ side part
  */
 
 
@@ -896,15 +896,8 @@ py::class_<blockSQP::SQPmethod>(m, "SQPmethod")
     .def("arr_apply_rescaling", [](blockSQP::SQPmethod &M, double_array *arr){if (M.param->automatic_scaling){M.apply_rescaling(arr->ptr);} return;})
     .def("dec_nquasi", [](blockSQP::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
-/*
-py::class_<blockSQP::SCQPmethod, blockSQP::SQPmethod>(m, "SCQPmethod")
-    .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
-    ;
 
-py::class_<blockSQP::SCQP_bound_method, blockSQP::SCQPmethod>(m, "SCQP_bound_method")
-    .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*, blockSQP::Condenser*>())
-    ;
-*/
+
 py::class_<blockSQP::bound_correction_method, blockSQP::SQPmethod>(m, "bound_correction_method")
     .def(py::init<blockSQP::Problemspec*, blockSQP::SQPoptions*, blockSQP::SQPstats*>())
     ;
@@ -944,19 +937,8 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
 
 py::class_<blockSQP::RestorationProblem, blockSQP::Problemspec>(m, "RestorationProblem")
         .def(py::init<blockSQP::Problemspec*, blockSQP::Matrix&, double, double>())
-        //.def("__init__", [](Problemform* P, blockSQP::Matrix& M, double d1, double d2){return new RestorationProblem(P, M, d1, d2);})
         ;
-    
-    
-/*
-py::class_<blockSQP::SCQPiterate, blockSQP::SQPiterate>(m, "SCQPiterate")
-	.def_readonly("condensed_Jacobian", &blockSQP::SCQPiterate::condensed_Jacobian)
-	.def_readonly("condensed_lb_var", &blockSQP::SCQPiterate::condensed_lb_var)
-	.def_readonly("condensed_ub_var", &blockSQP::SCQPiterate::condensed_ub_var)
-	.def_readonly("condensed_lb_con", &blockSQP::SCQPiterate::condensed_lb_con)
-	.def_readonly("condensed_ub_con", &blockSQP::SCQPiterate::condensed_ub_con)
-	;
-*/
+
     
 //Condensing classes and structs
 py::class_<blockSQP::vblock>(m, "vblock")
