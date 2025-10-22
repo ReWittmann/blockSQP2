@@ -1,5 +1,7 @@
-New build specifications and interfaces to the blockSQP solver by Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>, see blockSQP/LICENSE.txt
-Copyright (c) 2022- Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
+	      for blockSQP, the nonlinear programming solver by Dennis Janka.
+Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+
 
 (zlib license):
 

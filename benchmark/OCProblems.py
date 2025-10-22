@@ -3,13 +3,13 @@
 # \date 2024-2025
 #
 # Collection of optimal control problems implemented using casadi,
-# emplying a helper base class for multiple shooting parametrization.
+# employing a helper base class for multiple shooting parametrization.
 # 
 # The problems originate from various sources, most notably
 #  Dolan, E. D., Moré, J. J., & Munson, T. S. (2004). Benchmarking optimization software with COPS 3.0 (No. ANL/MCS-TM-273). Argonne National Lab., Argonne, IL (US).
 #  Sager, S. (2005). Numerical methods for mixed-integer optimal control problems. Tönning: Der Andere Verlag.
 #  mintoc.de
-# among others.
+#  ...
 
 import numpy as np
 import casadi as cs

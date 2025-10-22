@@ -1,5 +1,5 @@
-blockSQP 2 -- Condensing, convexification strategies, scaling heuristics, 
-              refactorings and more for the blockSQP solver by Dennis Janka.
+blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
+	      for blockSQP, the nonlinear programming solver by Dennis Janka.  
 Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 The original license (zlib license) is preserved.

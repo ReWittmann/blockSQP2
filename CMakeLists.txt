@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.20)
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "Please use out of source build:
@@ -7,8 +7,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 endif()
 
 project(BlockSQP_2    
-	DESCRIPTION "Sequential quadratic programming for problems with block-diagonal Hessian matrix."
-	#HOMEPAGE_URL https://github.com/djanka2/blockSQP
+	DESCRIPTION "Extensions and modifications for blockSQP, the nonlinear programming solver by Dennis Janka"
 	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP_2
     LANGUAGES CXX
 )
@@ -345,7 +344,7 @@ if(JULIA_INTERFACE)
 	if(UNIX)
 		target_compile_options(blockSQP_jl PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
-					-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
+					-fvisibility=hidden
 					-O3
 					)
 	endif()
