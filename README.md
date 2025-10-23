@@ -47,7 +47,8 @@ The binaries are placed into /blockSQP/lib or /blockSQP/bin, /py_blockSQP and /b
 ##Examples and documentation
 
 ###Python interface requirements
-The py_blockSQP requires numpy, running the Python scripts additionally requires casadi and matplotlib. The project was tested for numpy2.3.2, casadi3.7.1 and matplotlib3.10.5.
+The py_blockSQP requires numpy, running the Python scripts additionally requires casadi and matplotlib. The project was tested for numpy 2.3.2, casadi 3.7.1 and matplotlib 3.10.5.  
+In addition, some plot functions require LaTeX to be available on the system.
 
 ##Testing and benchmarking
 Run benchmark/run_blockSQP.py to confirm the solver was built correctly.  

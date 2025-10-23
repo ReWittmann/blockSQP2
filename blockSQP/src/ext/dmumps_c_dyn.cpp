@@ -7,7 +7,7 @@
  */
 
 /**
- * \file dmumps_c_dyn.hpp
+ * \file dmumps_c_dyn.cpp
  * \author Reinhold Wittmann
  * \date 2025
  *

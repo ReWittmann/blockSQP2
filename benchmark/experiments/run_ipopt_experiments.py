@@ -5,11 +5,11 @@
 # Licensed under the zlib license. See LICENSE for more details.
 
 
-# \file run_blockSQP_experiments.py
+# \file run_ipopt_experiments.py
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Script to benchmark casadi NLP solvers on several problems 
+# Script to benchmark the NLP solver ipopt several problems 
 # for perturbed start points for different options.
 
 import os

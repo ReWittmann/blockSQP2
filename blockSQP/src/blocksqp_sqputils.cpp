@@ -15,7 +15,7 @@
  */
  
 /**
- * \file blocksqp_SQPutils.cpp
+ * \file blocksqp_sqputils.cpp
  * \author Reinhold Wittmann
  * \date 2023-2025
  *

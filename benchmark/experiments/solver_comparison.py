@@ -19,6 +19,7 @@ try:
 except:
     cD = os.getcwd()
 sys.path += [cD + "/..", cD + "/../.."]
+import copy
 import py_blockSQP
 import datetime
 import OCP_experiment
@@ -26,29 +27,35 @@ import OCProblems
 
 #RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD + "/out_blockSQP_ipopt"
+dirPath = cD + "/out_ipopt_blockSQP"
+
+file_prefix = "ipopt_blockSQP"
+
+nPert0 = 0
+nPertF = 40
 
 #Problems
 Examples = [
             OCProblems.Batch_Reactor,
             OCProblems.Cart_Pendulum,
-            # OCProblems.Catalyst_Mixing,
-            # OCProblems.Cushioned_Oscillation,
-            # OCProblems.Egerstedt_Standard,
-            # OCProblems.Electric_Car,
-            # OCProblems.Goddard_Rocket,
-            # OCProblems.Hang_Glider,
-            # OCProblems.Hanging_Chain,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Particle_Steering,
-            # OCProblems.Quadrotor_Helicopter,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Time_Optimal_Car,
-            # OCProblems.Tubular_Reactor,
-            # OCProblems.Lotka_OED,
+            OCProblems.Catalyst_Mixing,
+            OCProblems.Cushioned_Oscillation,
+            OCProblems.Egerstedt_Standard,
+            OCProblems.Electric_Car,
+            OCProblems.Goddard_Rocket,
+            OCProblems.Hang_Glider,
+            OCProblems.Hanging_Chain,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Particle_Steering,
+            OCProblems.Quadrotor_Helicopter,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Time_Optimal_Car,
+            OCProblems.Tubular_Reactor,
+            OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
+#Experiments ~ Options + names
 
 ipopt_Experiments = [
                      # ({'hessian_approximation': 'limited-memory', 'tol': 1e-6}, 'ipopt, limited-memory'),
@@ -82,16 +89,13 @@ blockSQP_Experiments = [
                         ]
 
 ######################################
-nPert0 = 0
-nPertF = 40
 
 if not os.path.exists(dirPath):
     os.makedirs(dirPath)
 
 date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
 sep = "" if dirPath[-1] == "/" else "/"
-pref = "casadi_WORHP"
-filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+filePath = dirPath + sep + file_prefix + "_it_" + date_app + ".txt"
 
 out = open(filePath, 'w')
 
@@ -112,8 +116,13 @@ for OCclass in Examples:
     EXP_type_sol = []
     n_EXP = 0
     for EXP_opts, EXP_name in ipopt_Experiments:
-        ipopts = dict(ipopts_base)
-        ipopts.update(EXP_opts)
+        ipopts = copy.deepcopy(EXP_opts)
+        try:
+            ipopts['ipopt']['max_iter'] = itMax
+        except KeyError:
+            ipopts['ipopt'] = {'max_iter':itMax}
+        # ipopts = dict(ipopts_base)
+        # ipopts.update(EXP_opts)
         ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('ipopt', OCprob, ipopts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
@@ -147,6 +156,6 @@ for OCclass in Examples:
     ###############################################################################
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "WORHP")
+        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = file_prefix)
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

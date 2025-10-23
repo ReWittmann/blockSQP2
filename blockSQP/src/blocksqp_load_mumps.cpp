@@ -7,7 +7,7 @@
  */
 
 /**
- * \file blocksqp_mumps.hpp
+ * \file blocksqp_mumps.cpp
  * \author Reinhold Wittmann
  * \date 2023-2025
  *

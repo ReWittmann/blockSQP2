@@ -1,9 +1,16 @@
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
 # \file OCProblems.cpp
 # \author Reinhold Wittmann
 # \date 2024-2025
 #
 # Collection of optimal control problems implemented using casadi,
 # employing a helper base class for multiple shooting parametrization.
+# Used for testing and benchmarking py_blockSQP
 # 
 # The problems originate from various sources, most notably
 #  Dolan, E. D., Moré, J. J., & Munson, T. S. (2004). Benchmarking optimization software with COPS 3.0 (No. ANL/MCS-TM-273). Argonne National Lab., Argonne, IL (US).
