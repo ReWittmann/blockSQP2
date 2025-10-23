@@ -15,7 +15,7 @@ import OCProblems
 #Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Van_der_Pol_Oscillator_3(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -33,7 +33,7 @@ start = OCprob.start_point                  #Start point for problem, can use, e
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
-opts.max_QP_secs = 10.0
+opts.max_QP_secs = 20.0
 
 opts.max_conv_QPs = 4                       #max number of additional QPs per SQP iteration including fallback Hess QP
 opts.conv_strategy = 2                      #Convexification strategy, 2 requires passing vblocks

@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP 2 -- Extensions and modifications for the 
-                          blockSQP nonlinear programming solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -58,7 +58,12 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
     
     if (problem->cond != nullptr && !block_hess)
         throw ParameterError("Condenser passed, but block updates not enabled");
-        
+    
+    if (block_hess == 2)
+        throw ParameterError("Passing only the last exact Hessian block is disabled in this version");
+    if ((problem->nBlocks < 1 || block_hess == 0) && exact_hess > 0)
+        throw ParameterError("Using exact Hessian for now requires passing blockIdx to Problemspec and enabling block updates through SQPoptions");
+    
     optionsConsistency();
 }
 

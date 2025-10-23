@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP 2 -- Extensions and modifications for the 
-                          blockSQP nonlinear programming solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -42,16 +42,12 @@ void RestorationProblemBase::update_xi_ref(const Matrix &xiReference){return;}
 RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
     parent = parentProblem;
     
-    n_vblocks = parent->n_vblocks + 1;
-    vblocks = new vblock[parent->n_vblocks + 1];
-    std::copy(parent->vblocks, parent->vblocks + parent->n_vblocks, vblocks);
-    vblocks[parent->n_vblocks] = vblock(parent->nCon, false);
-    
-    /*
-    xiRef.Dimension( parent->nVar ).Initialize(0.);
-    for(int i=0; i<parent->nVar; i++)
-        xiRef( i ) = xiReference( i );
-    */
+    if (parent->n_vblocks > 0){
+        n_vblocks = parent->n_vblocks + 1;
+        vblocks = new vblock[parent->n_vblocks + 1];
+        std::copy(parent->vblocks, parent->vblocks + parent->n_vblocks, vblocks);
+        vblocks[parent->n_vblocks] = vblock(parent->nCon, false);
+    }
     
     xi_ref = xiReference;
 
@@ -61,12 +57,21 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
     nnz = parent->nnz + parent->nCon;
 
     /* Block structure: One additional block for every slack variable */
-    nBlocks = parent->nBlocks+nCon;
-    blockIdx = new int[nBlocks+1];
-    for(int i = 0; i < parent->nBlocks + 1; i++)
-        blockIdx[i] = parent->blockIdx[i];
-    for(int i = parent->nBlocks + 1; i<nBlocks + 1; i++)
-        blockIdx[i] = blockIdx[i-1] + 1;
+    if (parent->nBlocks > 0){
+        nBlocks = parent->nBlocks+nCon;
+        blockIdx = new int[nBlocks+1];
+        for (int i = 0; i < parent->nBlocks + 1; i++)
+            blockIdx[i] = parent->blockIdx[i];
+        for (int i = parent->nBlocks + 1; i < nBlocks + 1; i++)
+            blockIdx[i] = blockIdx[i-1] + 1;
+    }
+    else{
+        nBlocks = 1 + nCon;
+        blockIdx = new int[nBlocks + 1];
+        blockIdx[0] = 0; blockIdx[1] = parent->nVar;
+        for (int i = 2; i < nBlocks + 1; i++)
+            blockIdx[i] = blockIdx[i-1] + 1;
+    }
 
     /* Set bounds */
     objLo = 0.0;

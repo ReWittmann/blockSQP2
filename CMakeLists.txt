@@ -304,7 +304,7 @@ if(PYTHON_INTERFACE)
 	FetchContent_Declare(
 		PYBIND11
 		GIT_REPOSITORY https://github.com/pybind/pybind11.git
-		GIT_TAG a2e59f0e7065404b44dfe92a28aca47ba1378dc4	#2.13.6
+		GIT_TAG a2e59f0e7065404b44dfe92a28aca47ba1378dc4	#2.13.6; feel free to update to a later version
 	)
 	FetchContent_MakeAvailable(PYBIND11)
 	

@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP 2 -- Extensions and modifications for the 
-                          blockSQP nonlinear programming solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
@@ -61,13 +61,12 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     //Allocate Hessian data
     int maxblocksize;
     // Set nBlocks structure according to if we use block updates or not
-    if (param->block_hess == 0 || prob->nBlocks == 1){
+    if (param->block_hess == 0 || prob->nBlocks <= 1){
         nBlocks = 1;
         blockIdx = std::make_unique<int[]>(2);
         blockIdx[0] = 0;
         blockIdx[1] = prob->nVar;
         maxblocksize = prob->nVar;
-        //param->exact_hess = 0;
     }
     else if (param->block_hess == 2 && prob->nBlocks > 1){
         // hybrid strategy: 1 block for constraints, 1 for objective

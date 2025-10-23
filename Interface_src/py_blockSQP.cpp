@@ -190,8 +190,8 @@ public:
         
         qpOASES::SQProblem* qp;
         qpOASES::SQProblem* qp_cond;
-        qpOASES::returnValue ret;
-        qpOASES::returnValue ret_cond;
+        qpOASES::returnValue ret = qpOASES::TERMINAL_LIST_ELEMENT;
+        qpOASES::returnValue ret_cond = qpOASES::TERMINAL_LIST_ELEMENT;
         
         qpOASES::Matrix *A_qp;
         qpOASES::Matrix *A_qp_cond;
@@ -360,12 +360,15 @@ public:
             Cpp_Data.constrJac.tflag = 1;
         }
         
-        Cpp_Data.hess_arr.size = nBlocks;
-        double_pointer_interface *h_arrays = new double_pointer_interface[nBlocks];
-        for (int j = 0; j < nBlocks; j++){
-            h_arrays[j].size = ((blockIdx[j+1] - blockIdx[j]) * (blockIdx[j+1] - blockIdx[j] + 1))/2 ;
+        if (nBlocks > 0){
+            Cpp_Data.hess_arr.size = nBlocks;
+            double_pointer_interface *h_arrays = new double_pointer_interface[nBlocks];
+            for (int j = 0; j < nBlocks; j++){
+                h_arrays[j].size = ((blockIdx[j+1] - blockIdx[j]) * (blockIdx[j+1] - blockIdx[j] + 1))/2 ;
+            }
+            Cpp_Data.hess_arr.ptr = h_arrays;
         }
-        Cpp_Data.hess_arr.ptr = h_arrays;
+        
         Cpp_Data.info = 0;
     }
     
