@@ -2,3 +2,6 @@
 	path = blocksqp.jl
 	url = https://kosinus.math.uni-magdeburg.de/mathopt/software/blocksqp.jl.git
 	branch = RWittmann_update
+[submodule "blockSQP.jl"]
+	path = blockSQP.jl
+	url = https://github.com/ReWittmann/blockSQP.jl.git

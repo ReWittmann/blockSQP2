@@ -351,9 +351,9 @@ if(JULIA_INTERFACE)
 	endif()
 	set_target_properties(blockSQP_jl PROPERTIES 
 			PREFIX lib
-			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
-			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blocksqp.jl/bin
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP.jl/bin
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP.jl/bin
 	)
-	maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blocksqp.jl/bin)
+	maybe_copy_mumps_libs(${CMAKE_SOURCE_DIR}/blockSQP.jl/bin)
 endif()
 
