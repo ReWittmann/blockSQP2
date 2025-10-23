@@ -1,3 +1,16 @@
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file run_blockSQP.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to invoke py_blockSQP for an example problem.
+
 import numpy as np
 import os
 import sys
@@ -15,7 +28,7 @@ import OCProblems
 #Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Van_der_Pol_Oscillator_3(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator

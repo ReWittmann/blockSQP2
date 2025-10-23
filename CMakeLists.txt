@@ -308,7 +308,7 @@ if(PYTHON_INTERFACE)
 	)
 	FetchContent_MakeAvailable(PYBIND11)
 	
-	pybind11_add_module(py_blockSQP Interface_src/py_blockSQP.cpp)
+	pybind11_add_module(py_blockSQP py_blockSQP/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
 	
 	if(UNIX)
@@ -333,11 +333,12 @@ if(PYTHON_INTERFACE)
 endif()
 
 
+#Build C interface to complete blockSQP.jl
 option(JULIA_INTERFACE "build julia interface" ON)
 set(CXXWRAP_PATH "" CACHE STRING "Path to CxxWrap artifact libcxxwrap-julia (default: empty)")
 
 if(JULIA_INTERFACE)
-	add_library(blockSQP_jl SHARED Interface_src/C_blockSQP.cpp)
+	add_library(blockSQP_jl SHARED C_blockSQP/C_blockSQP.cpp)
 	target_link_libraries(blockSQP_jl PUBLIC blockSQP)
 	
 	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)

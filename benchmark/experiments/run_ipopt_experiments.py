@@ -1,3 +1,17 @@
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file run_blockSQP_experiments.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to benchmark casadi NLP solvers on several problems 
+# for perturbed start points for different options.
+
 import os
 import sys
 try:

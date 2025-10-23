@@ -1,5 +1,15 @@
-# Helper functions to run optimal control experiments for perturbed start points
-# with different parameters. Includes functions to print and plot the results.
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file OCP_experiment.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Helper functions for benchmarking py_blockSQP and casadi NLP solvers
 
 import os
 import sys

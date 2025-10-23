@@ -1,6 +1,9 @@
-blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
+**blockSQP 2** -- Condensing, convexification strategies, scaling heuristics and more  
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for blockSQP, the nonlinear programming solver by Dennis Janka.  
 Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>  
+
+Part of blockSQP 2 is **py_blockSQP** -- A python interface to blockSQP 2,  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; the nonlinear programming solver based on blockSQP by Dennis Janka.
 
 ###Licensing
 blockSQP 2 preserves the zlib license of blockSQP, see LICENSE.txt and blockSQP/LICENSE.txt.  

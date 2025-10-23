@@ -9,7 +9,7 @@
 /**
  * \file dmumps_c_dyn.hpp
  * \author Reinhold Wittmann
- * \date 2023-2025
+ * \date 2025
  *
  * Wrapper for dynamic loading of the sparse linear solver MUMPS
  */
