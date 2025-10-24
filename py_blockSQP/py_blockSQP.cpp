@@ -251,30 +251,33 @@ public:
         
         
         steady_clock::time_point begin = steady_clock::now();
-        
         ret = qp->init(H, g, A_qp, lb, ub, lbA, ubA, max_it, &cpu_time);
+        steady_clock::time_point end = steady_clock::now();
+        
         if (ret != qpOASES::SUCCESSFUL_RETURN){
             std::cout << "Could not solve the QP\n";
             return;
         }
+        else{
+            std::cout << "Solving the QP took " << duration_cast<milliseconds>(end - begin) << "\n";
+        }
+
         
-        steady_clock::time_point end = steady_clock::now();
-        std::cout << "Solving the QP took " << duration_cast<milliseconds>(end - begin) << "\n";
+        begin = steady_clock::now();
+        ret_cond = qp_cond->init(H_cond, g_cond, A_qp_cond, lb_cond, ub_cond, lbA_cond, ubA_cond, max_it_cond, &cpu_time_cond);
+        end = steady_clock::now();
+        
         if (ret_cond != qpOASES::SUCCESSFUL_RETURN){
             std::cout << "Could not solve the condensed QP\n";
             return;
         }
-        
-        begin = steady_clock::now();
-        
-        ret_cond = qp_cond->init(H_cond, g_cond, A_qp_cond, lb_cond, ub_cond, lbA_cond, ubA_cond, max_it_cond, &cpu_time_cond);
-        
-        end = steady_clock::now();
-        if (C->add_dep_bounds == 2)
-            std::cout << "Solving the condensed QP with implicit bounds took " << duration_cast<milliseconds>(end - begin) << "\n";
-        else if (C->add_dep_bounds == 0)
-            std::cout << "Solving the condensed QP without implicit bounds took " << duration_cast<milliseconds>(end - begin) << "\n";
-        
+        else{
+            if (C->add_dep_bounds == 2)
+                std::cout << "Solving the condensed QP with implicit bounds took " << duration_cast<milliseconds>(end - begin) << "\n";
+            else if (C->add_dep_bounds == 0)
+                std::cout << "Solving the condensed QP without implicit bounds took " << duration_cast<milliseconds>(end - begin) << "\n";
+        }
+            
         deltaXi.Dimension(con_jac.n, 1);
         deltaXi.Initialize(0.);
         lambdaQP.Dimension(con_jac.n + con_jac.m, 1);

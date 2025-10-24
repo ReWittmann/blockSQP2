@@ -19,7 +19,6 @@ import time
 
 itMax = 1000
 
-
 OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,
                     refine = 1,

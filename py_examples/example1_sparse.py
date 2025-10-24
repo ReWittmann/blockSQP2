@@ -4,14 +4,13 @@
 # 
 # Licensed under the zlib license. See LICENSE for more details.
 
-
-import os
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path.append(cD + "/..")
+    cD = Path.cwd()
+sys.path += [str(cD.parent)]
 
 import py_blockSQP as blockSQP
 import numpy as np

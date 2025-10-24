@@ -1,11 +1,10 @@
-import os
 import sys
-
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/../..", cD + "/../../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parents[1]), str(cD.parents[2])]
 
 import py_blockSQP
 import OCP_experiment
@@ -50,7 +49,7 @@ Experiments = [
                (opt_CS2_scale, "Conv. str. 2, automatic scaling")
                ]
 
-plot_folder = cD + "/out_scaling_comparison"
+plot_folder = cD / Path("out_scaling_comparison")
 
 
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\

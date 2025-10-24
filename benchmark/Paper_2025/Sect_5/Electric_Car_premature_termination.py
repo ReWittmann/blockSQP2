@@ -1,17 +1,12 @@
-# import numpy as np
-import os
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/../..", cD + "/../../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parents[1]), str(cD.parents[2])]
 import py_blockSQP
-# import matplotlib.pyplot as plt
-# import time
-# import copy
 import OCP_experiment
-
 import OCProblems
 
 ###############################################################################
@@ -63,7 +58,7 @@ ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, op
 EXP_N_SQP = [ret_N_SQP]
 EXP_N_secs = [ret_N_secs]
 EXP_type_sol = [ret_type_sol]
-OCP_experiment.plot_varshape(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD + "/out_Electric_Car")
+OCP_experiment.plot_varshape(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD / Path("out_Electric_Car"))
 
 
 #New termination features enabled, no extra steps since we dont need extra accuracy for this experiment.
@@ -75,5 +70,5 @@ ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, op
 EXP_N_SQP = [ret_N_SQP]
 EXP_N_secs = [ret_N_secs]
 EXP_type_sol = [ret_type_sol]
-OCP_experiment.plot_varshape(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD + "/out_Electric_Car")
+OCP_experiment.plot_varshape(1, nPert0, nPertF, [None], EXP_N_SQP, EXP_N_secs, EXP_type_sol, dirPath = cD / Path("out_Electric_Car"))
 

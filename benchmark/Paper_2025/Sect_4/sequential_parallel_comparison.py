@@ -1,16 +1,24 @@
-import os
 import sys
-
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/../..", cD + "/../../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parents[1]), str(cD.parents[2])]
 
 import py_blockSQP
 import OCP_experiment
 import OCProblems
 
+#Note: On Linux, ensure the scaling governor is set to "performance"
+#      and that python actually uses multiple cores - running this
+#      script from Spyder resulted in only one CPU core being used.
+#      Running from the command line is recommended.
+
+# The scaling governor can be set via
+#   sudo cpupower frequency-set -g performance
+# and checked via
+#   cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
 
 Examples = [
             OCProblems.Batch_Reactor,
@@ -49,7 +57,7 @@ Experiments = [
                (opt_CS2_par, "Conv. str. 2, parallel")
                ]
 
-plot_folder = cD + "/out_sequential_parallel_comparison"
+plot_folder = cD / Path("out_sequential_parallel_comparison")
 
 
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\

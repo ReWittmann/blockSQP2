@@ -1,18 +1,19 @@
 import numpy as np
 import time
-import os
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path.append(cD + '/../../..')
+    cD = Path.cwd()
+sys.path += [str(cD.parents[2])]
+
 import matplotlib.pyplot as plt
 from scipy.sparse import coo_matrix
 import py_blockSQP
 
 
-structure_data = np.load(cD + '/structure_data.npz')
+structure_data = np.load(cD / Path('structure_data.npz'))
 
 vblock_sizes = structure_data['vblock_sizes']
 vblock_dependencies = structure_data['vblock_dependencies']
@@ -52,7 +53,7 @@ def identity_S(n, scale = 1.0):
         M[i,i] = scale
     return M
 
-prob_vectors = np.load(cD + '/prob_vectors.npz')
+prob_vectors = np.load(cD / Path('prob_vectors.npz'))
 
 lb_var = prob_vectors['lb_var'].reshape(-1)
 ub_var = prob_vectors['ub_var'].reshape(-1)
@@ -72,7 +73,7 @@ np.array(M_lb_con, copy = False)[:,0] = lb_con
 np.array(M_ub_con, copy = False)[:,0] = ub_con
 np.array(M_grad_obj, copy = False)[:,0] = grad_obj
 
-Jacobian = np.load(cD + '/Jacobian.npz')
+Jacobian = np.load(cD / Path('Jacobian.npz'))
 
 nnz = int(Jacobian['nnz'])
 m = int(Jacobian['m'])

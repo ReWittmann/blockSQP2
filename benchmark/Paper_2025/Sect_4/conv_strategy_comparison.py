@@ -1,11 +1,10 @@
-import os
 import sys
-
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/../..", cD + "/../../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parents[1]), str(cD.parents[2])]
 
 import py_blockSQP
 import OCP_experiment
@@ -55,7 +54,7 @@ Experiments = [
                (opt_CS2, "Convexification strategy 2")
                ]
 
-plot_folder = cD + "/out_conv_strategy_comparison"
+plot_folder = cD / Path("out_conv_strategy_comparison")
 
 OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
                                         plot_folder,\

@@ -1,12 +1,11 @@
-import os
 import sys
-import datetime
-
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/..", cD + "/../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parents[1]), str(cD.parents[2])]
+import datetime
 
 import py_blockSQP
 import OCP_experiment
@@ -47,23 +46,21 @@ Experiments = [
                (opt_CS2, "conv. str. 2")
                ]
 
-plot_folder = cD + "/out_blockSQP_experiments"
+plot_folder = cD / Path("out_Goddard_conv_strategy")
 nPert0 = 0
 nPertF = 40
 dirPath = plot_folder
-if not os.path.exists(dirPath):
-    os.makedirs(dirPath)
+dirPath.mkdir(parents = True, exist_ok = True)
 print_output = True
 if print_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-    sep = "" if dirPath[-1] == "/" else "/"
     pref = "blockSQP"
-    filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+    filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
     out = open(filePath, 'w')
 else:
     out = OCP_experiment.out_dummy()
 titles = [EXP_name for _, EXP_name in Experiments]
-
+OCP_experiment.print_heading(out, titles)
 for OCclass in Examples:        
     OCprob = OCclass(nt = 100, integrator = 'RK4', parallel = True)
     itMax = 200
@@ -83,4 +80,5 @@ for OCclass in Examples:
     OCP_experiment.plot_successful_small(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = None, dirPath = dirPath, savePrefix = "blockSQP")
+    OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

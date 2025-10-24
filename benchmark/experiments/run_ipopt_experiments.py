@@ -12,13 +12,13 @@
 # Script to benchmark the NLP solver ipopt several problems 
 # for perturbed start points for different options.
 
-import os
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent)]
 import OCP_experiment
 import OCProblems
 

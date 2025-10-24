@@ -12,15 +12,24 @@
 # Script to benchmark py_blockSQP on several problems 
 # for perturbed start points for different options
 
-import os
-import sys
 import datetime
-
+import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/..", cD + "/../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent), str(cD.parents[1])]
+
+# import os
+# import sys
+# import datetime
+
+# try:
+#     cD = os.path.dirname(os.path.abspath(__file__))
+# except:
+#     cD = os.getcwd()
+# sys.path += [cD + "/..", cD + "/../.."]
 
 import py_blockSQP
 import OCP_experiment
@@ -29,21 +38,21 @@ import OCProblems
 
 Examples = [
             OCProblems.Batch_Reactor,
-            OCProblems.Cart_Pendulum,
-            OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
-            OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
-            OCProblems.Hang_Glider,
-            OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Time_Optimal_Car,
-            OCProblems.Tubular_Reactor,
-            OCProblems.Lotka_OED,
+            # OCProblems.Cart_Pendulum,
+            # OCProblems.Catalyst_Mixing,
+            # OCProblems.Cushioned_Oscillation,
+            # OCProblems.Egerstedt_Standard,
+            # OCProblems.Electric_Car,
+            # OCProblems.Goddard_Rocket,
+            # OCProblems.Hang_Glider,
+            # OCProblems.Hanging_Chain,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Quadrotor_Helicopter,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Time_Optimal_Car,
+            # OCProblems.Tubular_Reactor,
+            # OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -87,7 +96,7 @@ Experiments = [
                ]
 
 
-plot_folder = cD + "/out_blockSQP_experiments"
+plot_folder = cD / Path("out_blockSQP_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
@@ -100,13 +109,11 @@ file_output = True
 
 #Run all example problems for all option sets for perturbed start points
 dirPath = plot_folder
-if not os.path.exists(dirPath):
-    os.makedirs(dirPath)
+dirPath.mkdir(parents = True, exist_ok = True)
 if file_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-    sep = "" if dirPath[-1] == "/" else "/"
     pref = "blockSQP"
-    filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+    filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
     out = open(filePath, 'w')
 else:
     out = OCP_experiment.out_dummy()

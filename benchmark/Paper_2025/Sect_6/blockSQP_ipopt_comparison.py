@@ -1,10 +1,10 @@
-import os
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/../..", cD + "/../../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parents[1]), str(cD.parents[2])]
 import py_blockSQP
 import copy
 import datetime
@@ -13,7 +13,7 @@ import OCProblems
 
 #RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD + "/out_blockSQP_ipopt_comparison_RK4"
+dirPath = cD / Path("out_blockSQP_ipopt_comparison_RK4")
 
 #Range for applying perturbations to initial discretized controls
 nPert0 = 0
@@ -74,14 +74,12 @@ blockSQP_Experiments = [
 
 
 #Run the experiments
-if not os.path.exists(dirPath):
-    os.makedirs(dirPath)
+dirPath.mkdir(parents = True, exist_ok = True)
 
 #Create an open file to write results into
 date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-sep = "" if dirPath[-1] == "/" else "/"
 pref = "blockSQP_ipopt"
-filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
 out = open(filePath, 'w')
 
 

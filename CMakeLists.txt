@@ -22,14 +22,13 @@ if(WIN32)
 	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
 	add_compile_options(/MT)
 
-
-	#set(BLA_VENDOR Intel10_64lp_seq)
+	set(BLA_STATIC ON)
+	set(BLA_VENDOR Intel10_64lp_seq)
 endif()
 
 #Uncomment to manually find blas, also uncomment BLA_VENDOR Intel... above
 #[[
 set(BLA_STATIC ON)
-set(BLA_THREAD SEQ)
 set(BLA_VENDOR Intel10_64lp_seq)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -38,16 +37,28 @@ message(STATUS "BLAS_LIBRARIES = ${BLAS_LIBRARIES}")
 message(STATUS "BLAS_LINKER_FLAGS = ${BLAS_LINKER_FLAGS}")
 message(STATUS "LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
 
+#NOTE: Set LAPACK_LIBRARY beforehand to force CMakeMumps to use that LAPACK_LIBRARY. Dont forget to link BLAS
 set(BLAS_LIBRARY ${BLAS_LIBRARIES})
 set(LAPACK_LIBRARY ${LAPACK_LIBRARIES})
 ]]
 
-#NOTE: Set LAPACK_LIBRARY beforehand to force CMakeMumps to use that LAPACK_LIBRARY. Dont forget to link BLAS
+
+find_package(BLAS REQUIRED)
+message(STATUS "BLAS_FOUND = ${BLAS_FOUND}")
+message(STATUS "BLAS_LIBRARIES = ${BLAS_LIBRARIES}")
+message(STATUS "BLAS_LINKER_FLAGS = ${BLAS_LINKER_FLAGS}")
+find_package(LAPACK REQUIRED)
+message(STATUS "LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
+message(STATUS "LAPACK_LINKER_FLAGS = ${LAPACK_LINKER_FLAGS}")
+set(BLAS_LIBRARY ${BLAS_LIBRARIES})
+set(LAPACK_LIBRARY ${LAPACK_LIBRARIES})
+
 include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
 	GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
+	#GIT_TAG e583b83d41823759c83403217d9e3713eedc60e4
 )
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
@@ -57,6 +68,7 @@ set(BUILD_SINGLE OFF)
 if(WIN32)
 	set(MUMPS_find_static ON)
 	set(MUMPS_openmp OFF)
+	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} /Os)
 else()
 	set(MUMPS_find_static OFF)
 	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
@@ -92,7 +104,7 @@ add_library(qpOASES STATIC
 
 #MUMPS LINEAR SOLVER
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)# BLAS::BLAS)
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS) #LAPACK::LAPACK BLAS::BLAS) #
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
 	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)

@@ -12,13 +12,14 @@
 # Script to compare casadi NLP solvers and py_blockSQP on 
 # several problems for perturbed start points for different options.
 
-import os
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/..", cD + "/../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent), str(cD.parents[1])]
+
 import copy
 import py_blockSQP
 import datetime
@@ -27,7 +28,7 @@ import OCProblems
 
 #RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD + "/out_ipopt_blockSQP"
+dirPath = cD / Path("out_ipopt_blockSQP")
 
 file_prefix = "ipopt_blockSQP"
 
@@ -90,13 +91,9 @@ blockSQP_Experiments = [
 
 ######################################
 
-if not os.path.exists(dirPath):
-    os.makedirs(dirPath)
-
+dirPath.mkdir(parents = True, exist_ok = True)
 date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-sep = "" if dirPath[-1] == "/" else "/"
-filePath = dirPath + sep + file_prefix + "_it_" + date_app + ".txt"
-
+filePath = dirPath / Path(file_prefix + "_it_" + date_app + ".txt")
 out = open(filePath, 'w')
 
 
