@@ -15,11 +15,13 @@ import numpy as np
 import os
 import sys
 import time
+
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent)]
 
 import py_blockSQP
 import OCProblems
@@ -28,7 +30,7 @@ import OCProblems
 #Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator

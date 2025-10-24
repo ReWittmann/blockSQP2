@@ -21,9 +21,16 @@ if(WIN32)
 	endif()
 	set(INTEL_STATIC_LINK_FLAGS "-static-intel")
 	add_compile_options(/MT)
+
+
+	#set(BLA_VENDOR Intel10_64lp_seq)
 endif()
 
-
+#Uncomment to manually find blas, also uncomment BLA_VENDOR Intel... above
+#[[
+set(BLA_STATIC ON)
+set(BLA_THREAD SEQ)
+set(BLA_VENDOR Intel10_64lp_seq)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 message(STATUS "BLAS_FOUND = ${BLAS_FOUND}")
@@ -33,6 +40,7 @@ message(STATUS "LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
 
 set(BLAS_LIBRARY ${BLAS_LIBRARIES})
 set(LAPACK_LIBRARY ${LAPACK_LIBRARIES})
+]]
 
 #NOTE: Set LAPACK_LIBRARY beforehand to force CMakeMumps to use that LAPACK_LIBRARY. Dont forget to link BLAS
 include(FetchContent)
@@ -48,6 +56,7 @@ set(BUILD_SINGLE OFF)
 
 if(WIN32)
 	set(MUMPS_find_static ON)
+	set(MUMPS_openmp OFF)
 else()
 	set(MUMPS_find_static OFF)
 	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
@@ -83,7 +92,7 @@ add_library(qpOASES STATIC
 
 #MUMPS LINEAR SOLVER
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS BLAS::BLAS)
+target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)# BLAS::BLAS)
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
 	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
@@ -255,11 +264,12 @@ elseif(WIN32)
 		
 	function(maybe_copy_mumps_libs LIBPATH)
 		foreach(i RANGE 0 7)
-			set(mumps_copy dmumps_c_dyn_${i})
+			set(mumps_copy ${LIBPATH}/dmumps_c_dyn_${i}.dll)
 			add_custom_command(TARGET dmumps_c_dyn POST_BUILD
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different
-						${CMAKE_SOURCE_DIR}/blockSQP/bin/${mumps_copy}.dll
-						${LIBPATH}
+						${CMAKE_SOURCE_DIR}/blockSQP/bin/dmumps_c_dyn.dll
+						${mumps_copy}
+				COMMENT "Copying dmumps_c_dyn\n"
 			)
 		endforeach()
 	endfunction()
