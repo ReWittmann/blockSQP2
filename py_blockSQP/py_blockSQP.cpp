@@ -491,12 +491,14 @@ public:
     void set_blockIdx(py::array_t<int> arr){
         py::buffer_info buff = arr.request();
         nBlocks = buff.size - 1;
+        delete[] blockIdx;
         blockIdx = new int[buff.size];
         std::copy((int*)buff.ptr, (int*)buff.ptr + buff.size, blockIdx);
     }
     
     void set_vblocks(vblock_array &VB){
         n_vblocks = VB.size;
+        delete[] vblocks;
         vblocks = new blockSQP::vblock[n_vblocks];
         for (int i = 0; i < n_vblocks; i++){
             vblocks[i] = VB.ptr[i];

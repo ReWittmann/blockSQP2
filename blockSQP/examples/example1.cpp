@@ -9,6 +9,10 @@
 #include "blocksqp_method.hpp"
 #include <limits>
 
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
 namespace blockSQP
 {
 
@@ -346,5 +350,7 @@ int main(int argc, const char* argv[]){
     delete stats;
     delete opts;
     delete meth;
+
+    _CrtDumpMemoryLeaks();
 }
 

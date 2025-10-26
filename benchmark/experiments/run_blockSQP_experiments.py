@@ -21,16 +21,6 @@ except:
     cD = Path.cwd()
 sys.path += [str(cD.parent), str(cD.parents[1])]
 
-# import os
-# import sys
-# import datetime
-
-# try:
-#     cD = os.path.dirname(os.path.abspath(__file__))
-# except:
-#     cD = os.getcwd()
-# sys.path += [cD + "/..", cD + "/../.."]
-
 import py_blockSQP
 import OCP_experiment
 import OCProblems
@@ -38,21 +28,21 @@ import OCProblems
 
 Examples = [
             OCProblems.Batch_Reactor,
-            # OCProblems.Cart_Pendulum,
-            # OCProblems.Catalyst_Mixing,
-            # OCProblems.Cushioned_Oscillation,
-            # OCProblems.Egerstedt_Standard,
-            # OCProblems.Electric_Car,
-            # OCProblems.Goddard_Rocket,
-            # OCProblems.Hang_Glider,
-            # OCProblems.Hanging_Chain,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Particle_Steering,
-            # OCProblems.Quadrotor_Helicopter,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Time_Optimal_Car,
-            # OCProblems.Tubular_Reactor,
-            # OCProblems.Lotka_OED,
+            OCProblems.Cart_Pendulum,
+            OCProblems.Catalyst_Mixing,
+            OCProblems.Cushioned_Oscillation,
+            OCProblems.Egerstedt_Standard,
+            OCProblems.Electric_Car,
+            OCProblems.Goddard_Rocket,
+            OCProblems.Hang_Glider,
+            OCProblems.Hanging_Chain,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Particle_Steering,
+            OCProblems.Quadrotor_Helicopter,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Time_Optimal_Car,
+            OCProblems.Tubular_Reactor,
+            OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -86,13 +76,21 @@ opt_full.max_conv_QPs = 4
 opt_full.conv_strategy = 2
 opt_full.automatic_scaling = True
 
+opt_dense = py_blockSQP.SQPoptions()
+opt_dense.hess_approx = 2
+opt_dense.sizing = 4
+QPopts = py_blockSQP.qpOASES_options()
+QPopts.sparsityLevel = 2
+opt_dense.qpsol_options = QPopts
+
 #Select option sets to test for
 Experiments = [
                # (opt_SR1_BFGS, "SR1-BFGS"),
                # (opt_CS0, "Convexification strategy 0"),
                # (opt_CS1, "conv. str. 1"),
-               # (opt_CS2, "conv. str. 2")
-               (opt_full, "opt_full")
+               # (opt_CS2, "conv. str. 2"),
+               (opt_full, "opt_full"),
+               # (opt_dense, "opt_dense")
                ]
 
 
