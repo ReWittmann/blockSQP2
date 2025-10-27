@@ -25,11 +25,13 @@ Each license applies to the respective package, and any statement in it regardin
 4. BLAS and LAPACK, likely to be already installed on Linux systems.
 
 ## Building
-Build by calling:  
+In the command line, navigate to this folder and invoke  
 &nbsp;&nbsp; `cmake -B .build ${OPTIONS}`  
 &nbsp;&nbsp; `cmake --build .build`
 
 ### General build options
+These are general CMake options, it is usually not necessary to set them manually.
+
 1. `-DCMAKE_Fortran_COMPILER=...` - choose the Fortran compiler
 2. `-DCMAKE_C_COMPILER=...` - choose the C compiler
 3. `-DCMAKE_CXX_COMPILER=...` - choose the C++ compiler
@@ -40,15 +42,15 @@ Build by calling:
 2. `-DPYTHON_INTERPRETER= (/PATH/TO/PYTHON_EXECUTABLE)` - optional, choose python interpreter to build for
 3. `-DJULIA_INTERFACE= (ON/OFF)` - build blocksqp.jl from the C interface, default ON
 
-See README_WINDOWS.md on how to build for windows with MSVC and intel Fortran.
+See README_WINDOWS.md for details on how to build for Windows with mingW.
 
 ### Binaries
-The binaries are placed into /blockSQP/lib or /blockSQP/bin, /py_blockSQP and /blocksqp.jl/bin. 
+The binaries are placed into /blockSQP/lib or /blockSQP/bin, /py_blockSQP and /blocksqp.jl/bin, as required for py_blockSQP and blockSQP.jl.
 
 ## Examples and documentation
 
 ### Python interface requirements
-The py_blockSQP requires numpy, running the Python scripts additionally requires casadi and matplotlib. The project was tested for numpy 2.3.2, casadi 3.7.1 and matplotlib 3.10.5.  
+py_blockSQP requires numpy, running the Python scripts additionally requires casadi and matplotlib. The project was tested for numpy 2.3.2, casadi 3.7.1 and matplotlib 3.10.5.  
 In addition, some plot functions require LaTeX to be available on the system.
 
 ### Testing and benchmarking
@@ -60,6 +62,5 @@ The script benchmark/experiments/run_blockSQP_experiments.py can be used to benc
 ### C++ and Julia examples
 C++ examples are located in blockSQP/examples, the example executables are placed into blockSQP/examples/bin.  
 
-If blockSQP.jl was built, Julia examples are located at blocksqp.jl/scripts.  
-Tests can be run after installing the dependencies specified in the project.toml
-
+If blockSQP.jl was fetched and built, Julia examples are located at blocksqp.jl/scripts.  
+blockSQP.jl should function like any typical Julia package.
