@@ -15,14 +15,14 @@ When building this project with CMake, the following dependencies are downloaded
 2. MUMPS-CMake build system <https://github.com/scivision/mumps> (MIT license)  
 3. pybind11 <https://github.com/pybind/pybind11> (custom license)  
   
-Each license applies to the respective package, and any statement in it regarding compiled code applies to binary files produced by this projects build system that include that compiled code. In addition, BLAS and LAPACK libraries may be linked to or included, e.g. OpenBLAS (BSD-3-Clause license) <https://github.com/OpenMathLib/OpenBLAS.
+Each license applies to the respective package, and any statement in it regarding compiled code applies to binary files produced by this projects build system that include that compiled code. In addition, BLAS and LAPACK libraries will be linked to or included, e.g. OpenBLAS (BSD-3-Clause license) <https://github.com/OpenMathLib/OpenBLAS>.
 
 
 ### Build requirements
-1. A Fortran compiler, e.g. gfortran
-2. A C++-20 compatible C++ compiler, e.g. g++-14
-3. The CMake build system <https://cmake.org/>
-4. A build system backend (GNU make, Ninja build)
+1. Fortran, C and C++-20 compilers, e.g. gfortran, gcc, g++-14
+2. The CMake build system <https://cmake.org/>
+3. A build system backend (GNU make, Ninja build)
+4. BLAS and LAPACK, likely to be already installed on Linux systems.
 
 ## Building
 Build by calling:  
@@ -31,8 +31,9 @@ Build by calling:
 
 ### General build options
 1. `-DCMAKE_Fortran_COMPILER=...` - choose the Fortran compiler
-2. `-DCMAKE_CXX_COMPILER=...` - choose the C++ compiler
-3. `-G` ("Unix Makefiles" / Ninja) - choose the build system backend
+2. `-DCMAKE_C_COMPILER=...` - choose the C compiler
+3. `-DCMAKE_CXX_COMPILER=...` - choose the C++ compiler
+4. `-G` ("Unix Makefiles" / Ninja) - choose the build system backend
 
 ### blockSQP build options
 1. `-DPYTHON_INTERFACE= (ON/OFF)` - build py_blockSQP, default ON
