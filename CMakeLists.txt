@@ -248,21 +248,12 @@ if (UNIX AND NOT APPLE)
 	target_compile_options(dmumps_c_dyn PRIVATE -O3 -fvisibility=hidden)
 
 	function(copy_dynamic_libraries_to LIBPATH)
-		#[[
-		set(mumps_lib dmumps_c_dyn)
-		add_custom_command(TARGET ${mumps_lib} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different
-					${CMAKE_SOURCE_DIR}/blockSQP/bin/lib${mumps_lib}.so
-					${LIBPATH}
-		)
-		]]
-
 		set(MUMPS_COPY_TARGET MCT_${COPY_COUNTER})
 		MATH(EXPR COPY_COUNTER_LOCAL "${COPY_COUNTER} + 1")
 		set(COPY_COUNTER ${COPY_COUNTER_LOCAL} PARENT_SCOPE)
 
 		add_custom_target(${MUMPS_COPY_TARGET} ALL
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/blockSQP/bin/dmumps_c_dyn.so ${LIBPATH}
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/blockSQP/bin/libdmumps_c_dyn.so ${LIBPATH}
 			COMMENT "Copying dynamic libraries\n"
 		)
 
