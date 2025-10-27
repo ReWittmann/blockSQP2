@@ -262,11 +262,7 @@ if (UNIX AND NOT APPLE)
 		set(COPY_COUNTER ${COPY_COUNTER_LOCAL} PARENT_SCOPE)
 
 		add_custom_target(${MUMPS_COPY_TARGET} ALL
-<<<<<<< HEAD
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/blockSQP/bin/libdmumps_c_dyn.so ${LIBPATH}
-=======
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/blockSQP/bin/dmumps_c_dyn.so ${LIBPATH}
->>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
 			COMMENT "Copying dynamic libraries\n"
 		)
 
