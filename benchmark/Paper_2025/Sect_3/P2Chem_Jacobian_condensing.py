@@ -110,7 +110,7 @@ cond_args_nobounds.ub_con = M_ub_con
 #Condense a QP to obtain the condensed jacobian
 cond_nobounds.condense_args(cond_args_nobounds)
 
-# Optional: Solve both QPs and compare the solution (-times)
+#Optional: Solve both QPs and compare solution (-times)
 sys.stdout.flush()
 print("Solving the full QP and condensed QP (without implicit bounds), this may take up to half a minute ...")
 sys.stdout.flush()
@@ -134,7 +134,7 @@ cond_args_bounds.ub_con = M_ub_con
 #Condense with condenser that includes dependent variable bounds
 cond_bounds.condense_args(cond_args_bounds)
 
-#Optional: Solve both QPs and compare the solution (-times)
+#Optional: Solve both QPs and compare solution (-times)
 sys.stdout.flush()
 print("Solving the full QP and condensed QP (with implicit bounds), this may take up to half a minute ...")
 sys.stdout.flush()

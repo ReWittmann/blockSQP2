@@ -65,8 +65,7 @@ template <typename T> class T_array{
     public:
     T_array(): size(0), ptr(nullptr){}
     T_array(int size_): size(size_), ptr(new T[size_]){} //Causes linker warning -Walloc-size-larger-than=
-    T_array(const T_array& arr): size(arr.size){ptr = new T[size]; std::copy(arr.ptr, arr.ptr + arr.size, ptr);}
-    T_array &operator=(const T_array& arr){delete[] ptr; size = arr.size; ptr = new T[size]; std::copy(arr.ptr, arr.ptr + arr.size, ptr); return *this;}
+
     ~T_array(){
         delete[] ptr;
     }
@@ -1005,7 +1004,7 @@ py::class_<blockSQP::Condenser>(m, "Condenser")
             );
             steady_clock::time_point T1 = steady_clock::now();
             std::cout << "Condensing took " << duration_cast<milliseconds>(T1 - T0) << "\n";
-            //args.condensed_hess.size = C.condensed_num_hessblocks;
+            args.condensed_hess.size = C.condensed_num_hessblocks;
             return;})
     .def_readonly("num_hessblocks", &blockSQP::Condenser::num_hessblocks)
     .def_readonly("num_vars", &blockSQP::Condenser::num_vars)
