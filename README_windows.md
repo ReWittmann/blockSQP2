@@ -2,7 +2,7 @@ blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and mor
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for blockSQP, the nonlinear programming solver by Dennis Janka.  
 Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>  
 
-## Configuration for Building BlockSQP on Windows
+## Configuration for building blockSQP 2 on Windows
 
 The following configuration is known to work for building blockSQP 2 on Windows.
 
@@ -28,6 +28,6 @@ blockSQP.jl does not require Julia to be installed. Julia 1.10 is recommended fo
 In the command line, navigate to the blockSQP_2 folder and run the commands  
 `cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBLAS_DIR=*`  
 `cmake --build build`  
-with `*` being the path to the OpenBLAS installation folder.  
+with `*` being the path to the OpenBLAS installation folder containing bin, include and lib folders.  
 
 See README.md for build options.
