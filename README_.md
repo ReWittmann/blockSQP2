@@ -15,14 +15,10 @@ When building this project with CMake, the following dependencies are downloaded
 2. MUMPS-CMake build system <https://github.com/scivision/mumps> (MIT license)  
 3. pybind11 <https://github.com/pybind/pybind11> (custom license)  
   
-Each license applies to the respective package, and any statement in it regarding compiled code applies to binary files produced by this projects build system that include that compiled code. In addition, BLAS and LAPACK libraries may be linked to or included, e.g. OpenBLAS (BSD-3-Clause license) <https://github.com/OpenMathLib/OpenBLAS.
+Each license applies to the respective package, and any statement in it regarding compiled code applies to binary files produced by this projects build system that include that compiled code.
 
 
-<<<<<<< HEAD
-### Build requirements
-=======
 # Build requirements
->>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
 1. A Fortran compiler, e.g. gfortran
 2. A C++-20 compatible C++ compiler, e.g. g++-14
 3. The CMake build system <https://cmake.org/>
@@ -54,11 +50,7 @@ The binaries are placed into /blockSQP/lib or /blockSQP/bin, /py_blockSQP and /b
 The py_blockSQP requires numpy, running the Python scripts additionally requires casadi and matplotlib. The project was tested for numpy 2.3.2, casadi 3.7.1 and matplotlib 3.10.5.  
 In addition, some plot functions require LaTeX to be available on the system.
 
-<<<<<<< HEAD
-### Testing and benchmarking
-=======
 ## Testing and benchmarking
->>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
 Run benchmark/run_blockSQP.py to confirm the solver was built correctly.  
 Edit the script to select various example problems and options.  
 
@@ -67,6 +59,6 @@ The script benchmark/experiments/run_blockSQP_experiments.py can be used to benc
 ### C++ and Julia examples
 C++ examples are located in blockSQP/examples, the example executables are placed into blockSQP/examples/bin.  
 
-If blockSQP.jl was built, Julia examples are located at blocksqp.jl/scripts.  
+If blockSQP.jl was built, julia examples are located at blocksqp.jl/scripts.  
 Tests can be run after installing the dependencies specified in the project.toml
 

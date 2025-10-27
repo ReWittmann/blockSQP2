@@ -25,7 +25,9 @@ import numpy as np
 import time
 import datetime
 import matplotlib.pyplot as plt
-plt.rcParams["text.usetex"] = True
+import shutil
+if shutil.which("latex") is not None:
+    plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 
@@ -203,7 +205,10 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        if shutil.which("latex") is not None:
+            fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        else:
+            fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     
     if n_EXP == 1:
@@ -232,17 +237,14 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     if not isinstance(dirPath, Path):
         plt.show()
     else:
-        # if not os.path.exists(dirPath):
-        #     os.makedirs(dirPath)
         dirPath.mkdir(parents = True, exist_ok = True)
         
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
-        # sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
         
-        # plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
         plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
+    plt.close()
 
 def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
     if isinstance(dirPath, str):
@@ -285,7 +287,10 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        if shutil.which("latex") is not None:
+            fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        else:
+            fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     if n_EXP == 1:
         subfigs = (subfigs,)
@@ -328,6 +333,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         # sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
         plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
+    plt.close()
 
 
 def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
@@ -360,7 +366,10 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
     fig, ax = plt.subplots(nrows = n_EXP, ncols = 2, constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 2.5 + 2.5*(n_EXP - 1)))
     
     if isinstance(suptitle, str):
-        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
+        if shutil.which("latex") is not None:
+            fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
+        else:
+            fig.suptitle(suptitle, fontsize = titlesize, fontweight = 'bold')
     for i in range(n_EXP):
         ax_it, ax_time = ax[i,:]
         ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP_S[i])
@@ -392,6 +401,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
         pref = "" if savePrefix is None else savePrefix
         
         plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
+    plt.close()
 
 
 

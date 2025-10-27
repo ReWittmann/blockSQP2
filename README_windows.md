@@ -8,27 +8,26 @@ The following configuration is known to work for building blockSQP 2 on Windows.
 
 ### Requirements:
 - CMake build system (<https://cmake.org/download/>).
-- Ninja build system backend (<https://github.com/ninja-build/ninja/releases>). Make sure the executable it is in the search path, adapt "PATH" in the environment variables or later add -DCMAKE_MAKE_PROGRAM=/PATH/TO/ninja.exe in the build step
-- MSVC C++ compiler (included in Visual Studio Community 2022)
-- Intel Fortran compiler and intel oneMKL from the intel oneAPI HPC Toolkit (<https://www.intel.com/content/www/us/en/developer/tools/oneapi/hpc-toolkit-download.html>)
+- Ninja build system backend (<https://github.com/ninja-build/ninja/releases>). Make sure the executable it is in the search path i.e. add it to "Path" in the environment variables or later add -DCMAKE_MAKE_PROGRAM=/PATH/TO/ninja.exe in the build step  
+- The mingw- gcc, g++ and gfortran compilers from <https://www.mingw-w64.org/>. The x86_64-15.2.0-release-posix-seh-ucrt-rt_v13-rev0 variant from <https://github.com/niXman/mingw-builds-binaries/releases> is recommended. 
+Make sure the folder "bin" inside the mingw64 folder is in the path by again modifying the "Path" environment variable.  
+- OpenBLAS <https://github.com/OpenMathLib/OpenBLAS>. The 32 bit integer version is required. Either download OpenBLAS-*-x64.zip from the github releases or build from source via the commands
+cmake -B build -G Ninja -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=PATH/TO/OpenBLAS/INTALL
+-cmake --build build --target install  
+
+Note: A build using MSVC, Intel ifx and MKL is possible, but suffered from strong memory leaks.  
+
 
 #### Python and Julia interfaces
-Download Python from (<https://www.python.org/downloads/>), guaranteed to include required libpython.dll
+Download Python from (<https://www.python.org/downloads/>). It should include the required libpython.dll and enable it being found. Microsoft store Python installations may result in libpython.dll not being found.
 
-### Steps:
-1. Activate the Intel oneAPI command prompt for Visual Studio 2022:  
-    Run `setvars.bat` located in:
-     ```
-     C:\Program Files (x86)\Intel\oneAPI
-     ```  
-    Search for intel oneAPI command prompt and run it.
-   
-2. Navigate to this folder and run CMake with the following commands:
+blockSQP.jl does not require Julia to be installed. Julia 1.10 is recommended for testing and using it.
 
-    ```  
-    cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release [options]  
-    
-    cmake --build build  
-    ```
 
-3. See README.md for build options.
+### Building:
+In the command line, navigate to the blockSQP_2 folder and run the commands  
+&nbsp;&nbsp;&nbsp;&nbsp cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBLAS_DIR=[*]  
+&nbsp;&nbsp;&nbsp;&nbsp cmake --build build  
+[*] must be the path to the OpenBLAS folder.  
+
+See README.md for build options.

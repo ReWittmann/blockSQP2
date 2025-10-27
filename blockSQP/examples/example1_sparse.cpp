@@ -178,7 +178,7 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol )
 {   
     Matrix constrDummy, gradObjDummy, constrJac;
-    SymMatrix *hessDummy;
+    SymMatrix *hessDummy = nullptr;
     double objvalDummy;
     int info;
 
@@ -194,7 +194,7 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacI
     evaluate( xi, lambda, &objvalDummy, constrDummy, gradObjDummy, constrJac, hessDummy, 1, &info );
 
     // allocate sparse Jacobian structures
-    convertJacobian( constrJac, jacNz, jacIndRow, jacIndCol, 1 );
+    convertJacobian( constrJac, jacNz, jacIndRow, jacIndCol, 0 );
 }
 
 /*
