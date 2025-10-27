@@ -1,0 +1,813 @@
+\RequirePackage[l2tabu, orthodox]{nag}		% detailed warnings and complaints
+\documentclass[	11pt,
+				a4paper,
+				abstract=true,
+				twoside=true,
+				bibliography=totoc, 
+				headinclude=true,
+				footinclude=false]{scrartcl}
+
+%\newif\iftwoSide\twoSidetrue
+\newif\iftwoSide\twoSidefalse
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{scrhack}						% KOMA script fixes
+\usepackage{amsmath}						% essential AMS packages
+\usepackage{amsthm}							% essential AMS packages
+\usepackage{amssymb}						% essential AMS packages
+\usepackage{mathtools}						% extensions for amsmath
+\usepackage{xcolor}							% easy color specification
+\usepackage{graphicx}						% handling of includegraphics
+\usepackage{longtable}						% tables with pagebreaks
+\usepackage{booktabs}						% lines in tables
+\usepackage[ngerman,english]{babel}			% letztgenannte Sprache ist Default
+\usepackage{csquotes}						% ensure that quotation marks are set correct according to language
+\usepackage{ellipsis}						% corrects whitespace around \dots{}
+\usepackage{fixltx2e}						% patches for Latex
+\usepackage{geometry}						% page layout
+%FONT
+\usepackage{mathptmx}							% Times (serif default)
+\usepackage[scaled=.90]{helvet}					% Helvetica (sans serif default)
+\DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}	% use standard mathcal font
+\renewcommand*\ttdefault{txtt}					% TXTT monospace
+\usepackage{microtype}							% better spacing (might be font-dependent!)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+%	LISTINGS PACKAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\usepackage{listings}						% for displaying source code
+\lstdefinestyle{myC}{
+   belowcaptionskip=1\baselineskip,
+   breaklines=true,
+   frame=L,
+   xleftmargin=\parindent,
+   language=C,
+   showstringspaces=false,
+   basicstyle=\footnotesize\ttfamily\upshape,
+   identifierstyle=\ttfamily\upshape,
+   commentstyle=\rmfamily\itshape,
+   stringstyle=\ttfamily\itshape,
+   keywordstyle=\ttfamily\upshape\bfseries,
+%   identifierstyle=\color{blue},
+%   commentstyle=\itshape\color{purple!40!black},
+%   stringstyle=\color{orange},
+%   keywordstyle=\bfseries\color{green!40!black},
+}
+\lstdefinestyle{myFort}{
+   belowcaptionskip=1\baselineskip,
+   breaklines=true,
+   frame=L,
+   xleftmargin=\parindent,
+   language=[90]Fortran,
+   showstringspaces=false,
+   basicstyle=\footnotesize\ttfamily\upshape,
+   identifierstyle=\ttfamily\upshape,
+   commentstyle=\rmfamily\itshape,
+   stringstyle=\ttfamily\itshape,
+   keywordstyle=\ttfamily\upshape\bfseries,
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+%	ALGORITHMS PACKAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\usepackage[boxruled]{algorithm2e}			% algorithm environment
+\SetAlgoLined								% algorithm layout with vertical lines
+\DontPrintSemicolon							% don't print semicolon at line end
+\makeatletter								% badboxes for boxruled algorithms
+\renewcommand{\algocf@caption@boxruled}{%
+  \hrule
+  \hbox to \hsize{%
+    \vrule\hskip-0.4pt
+    \vbox{   
+       \vskip\interspacetitleboxruled%
+       \unhbox\algocf@capbox\hfill
+       \vskip\interspacetitleboxruled
+       }%
+     \hskip-0.4pt\vrule%
+   }\nointerlineskip%
+}%
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+%	SETTINGS AND LAYOUT OPTIONS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+
+%	KOMA layout options
+\setkomafont{disposition}{\bfseries}	% headlines bold with serifs
+\raggedbottom					% allow different page heights (fixed distance between paragraphs)
+\setcounter{tocdepth}{2}
+%\pagestyle{headings}
+
+\iftwoSide % equal to DIV 10 with smaller bottom margin
+\KOMAoptions{twoside=true}
+\geometry{a4paper,twoside,left=20mm,top=30mm,right=40mm,bottom=50mm,bindingoffset=10mm,includehead}
+\else % for one-sided version, same margin width left and right
+\KOMAoptions{twoside=false}
+\geometry{a4paper,left=30mm,top=30mm,right=30mm,bottom=50mm,includehead}
+\fi
+
+
+% always include hyperref package as the last package because it conflicts with other packages!
+\usepackage[bookmarks]{hyperref}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+% MY MACROS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+
+% Sets
+\newcommand{\R}{\mathbb{R}}				% real numbers
+\newcommand{\N}{\mathbb{N}}				% natural numbers
+\newcommand{\Id}{\mathbb{I}}			% identity
+\newcommand{\A}{\mathcal{A}}			% active set
+\newcommand{\F}{\mathcal{F}}			% filter
+\renewcommand{\S}{\mathcal{S}}			% stable active set (``set S'')
+\newcommand{\Ws}{\mathcal{W}}			% QP working set
+
+% Optimization
+\renewcommand{\L}{\mathcal{L}}
+\newcommand{\asit}{\nu}
+%\newcommand{\asit}{\iota}
+\newcommand{\st}{\textup{s.t.}}
+
+% Command
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}	% w scaled lines
+\newcommand{\normn}[1]{\lVert#1\rVert}				% w/o scaled lines
+\newcommand{\abs}[1]{\left\lvert#1\right\rvert}		% w scaled lines
+\newcommand{\absn}[1]{\lvert#1\rvert}				% w/o scaled lines
+\DeclareMathOperator{\diag}{diag}
+
+% Software
+\newcommand{\vplan}{VPLAN}
+\newcommand{\muse}{\texttt{muse}}
+\newcommand{\qpOASES}{\texttt{qpOASES}}
+\newcommand{\blockSQP}{\texttt{blockSQP}}
+\newcommand{\method}{\texttt{SQPmethod}}
+\newcommand{\Cmethod}{\texttt{SCQPmethod}}
+\newcommand{\options}{\texttt{SQPoptions}}
+\newcommand{\stats}{\texttt{SQPstats}}
+\newcommand{\problem}{\texttt{Problemspec}}
+\newcommand{\myproblem}{\texttt{MyProblem}}
+\newcommand{\init}{\texttt{initialize}}
+\newcommand{\evaluate}{\texttt{evaluate}}
+\newcommand{\reduce}{\texttt{reduceConstrVio}}
+\newcommand{\heu}{r}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+% END HEADER
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+
+
+\title{[WIP] Updated \blockSQP\ user's manual}
+\subtitle{Based on \blockSQP\ manual by Dennis Janka}
+\author{Reinhold Wittmann}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\clearpage
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{Introduction}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\blockSQP\ is a sequential quadratic programming method for finding local solutions
+of nonlinear, nonconvex optimization problems of the form
+\begin{subequations}\label{eq:nlp}
+\begin{align}
+\min_{x\in\R^{n}}\ &\varphi(x) \\
+\st\ & b_{\ell} \leq \begin{bmatrix} x\\c(x)\end{bmatrix} \leq b_{u}.
+\end{align}
+\end{subequations}
+It is particularly suited for
+---but not limited to---problems whose Hessian matrix has block-diagonal
+structure such as problems arising from direct multiple shooting
+parameterizations of optimal control or optimum experimental design problems.
+
+\blockSQP\ has been developed around the quadratic programming solver
+\qpOASES~\cite{Ferreau2013} to solve the quadratic subproblems. Gradients of the objective
+and the constraint functions must be supplied by the user. The constraint Jacobian may be given in sparse or dense format. 
+Second derivatives are approximated by a combination of SR1 and BFGS updates. 
+Global convergence is promoted by the filter line search of Waechter and Biegler~\cite{Waechter2005b,Waechter2005}
+that can also handle indefinite Hessian approximations.
+
+The method is described in detail in \cite[Chapters 6--8]{Janka2015}. These chapters are largely self-contained. The notation used throughout this manual is the same as in~\cite{Janka2015}. A publication~\cite{Janka2015b} is currently under review.
+
+\blockSQP\ is published under the very permissive zlib free software license which should allow you to use the software wherever you need. The full license text can be found at the end of this document.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{Building \blockSQP\ }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\blockSQP\ currently consists of three parts.
+\begin{itemize}
+\item The C++ source files including the C++ interface.
+\item The python interface.
+\item The julia interface.
+\end{itemize}
+The python and julia interfaces are built separately from the C++ interface and depend on it.\\
+\subsection{Building the C++ package}
+ \blockSQP\ is built from the source files in the src directory. The following dependencies need to be linked.
+\begin{itemize}
+\item a BLAS library.
+\item a QP solver.
+\end{itemize}
+\textbf{Linking a QP solver}\\
+In addition to linking the shared/ static binary of a QP solver, the preprocessor flag QPSOLVER\_[QP solver name (capital letters)] needs to be set. Currently available are
+\begin{itemize}
+	\item \qpOASES\ [convex and nonconvex QPs, dense and sparse matrices]
+	\item gurobi [convex QPs, dense and sparse matrices]
+	\item qpalm [convex QPs, poor performance for nonconvex QPs, dense and sparse matrices]
+\end{itemize}
+thoug gurobi and qpalm are experimental. \qpOASES\ is required if sparse nonconvex QPs are to be solved. In this case qpOASES itself requires a sparse linear solver such as \texttt{MA57} from \texttt{HSL} or \texttt{MUMPS}. See the respective manuals of the QP solvers.
+~\\~\\
+\textbf{Building with qpOASES and MUMPS for parallel QP solution}\\
+The MUMPS sparse linear solver is \textbf{NOT THREADSAFE}. 
+
+\subsection{Interfaces to other languages}
+\textbf{Python.} The python interface code is located in a separate folder of the same name. It requires the pybind11 library, whose headers need to be in the include path and which itself requires the python headers. The pybind11 documentation recommends using CMake to build the python module. Setting PYTHON\_EXECUTABLE to a path to a python interpreter before using find\_package(pybind11) allows specifying the python environment to build for. pybind11\_DIR can be set to the path to the pybind11 cmake files to ensure the right pybind11 installation is found.\\~\\
+\textbf{Julia.} The julia interface code similarly depends on the libcxxwrap-julia  library on the C++ side and the corresponding CxxWrap.jl library on the julia side. Using CMake is again recommended for building.\\~\\
+As an alternative, the julia interface can be built on blockSQP\_jll from binaryBuilder.jl via the blockSQP.jl [TODO MAKE AVAILABLE] package.
+\subsection{Building via CMake}
+Most QP solvers, as well as the used interface libraries provide CMake project files. A \mbox{CMakeLists.txt} build specification is provided for blockSQP that takes care of most of the above build requirements. In addition, separate \mbox{CMakeLists.txt} templates are provided for each of the C++ package, the python interface and the julia interface.\\
+The default build downloads \texttt{MUMPS} \cite{amestoy2000mumps} to build \qpOASES\ (\url{https://projects.coin-or.org/qpOASES}) with it. It is the users responsibility to ensure they are eligible to download and use \texttt{MUMPS}. The user needs to specify whether the python and julia interface should be built via the arguments -DPYTHON\_INTERFACE=ON / -DJULIA\_INTERFACE=ON. In addition, they can provide the path to the python interpreter that should be built for (-DPYTHON\_INTERPRETER=...). A path to the CxxWrap library CMake files needs to be provided to build the julia interface (-DCXXWRAP\_PATH=...).\\
+See the \texttt{readme.md} for further details.
+%
+%
+%\begin{enumerate}
+%\item Download and install qpOASES release 3.2.0 from \url{https://projects.coin-or.org/qpOASES} according to the \qpOASES\ user's manual.
+%
+%	Alternatively, check out revision 155 from the \qpOASES\ subversion repository that is located at \url{https://projects.coin-or.org/svn/qpOASES/trunk/}. For best performance it is strongly recommended to install the sparse solver \texttt{MA57} from HSL as described in the \qpOASES\ user's manual, Sec. 2.2.
+%\item In the \blockSQP\ main directory, open \texttt{makefile} and set \texttt{QPOASESDIR} to the correct location of the \qpOASES\ installation.
+%\item Compile \blockSQP\ by calling \texttt{make}. This should produce a shared library \texttt{libblockSQP.so} in  \texttt{lib/}, as well as executable example problems in the \texttt{examples/} folder.
+%\end{enumerate}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{Setting up a problem}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+A nonlinear programming problem (NLP) of the form \eqref{eq:nlp} is characterized by the following information that must be provided by the user:
+\begin{itemize}
+\item The number of variables, $n$,
+\item the number of constraints, $m$,
+\item the objective function, $\varphi:\R^{n}\longrightarrow\R$,
+\item the constraint function, $c:\R^{n}\longrightarrow\R^{m}$,
+\item and lower and upper bounds for the variables and constraints, $b_{\ell}$ and $b_{u}$.
+\end{itemize}
+In addition, \blockSQP\ requires the evaluation of the
+\begin{itemize}
+\item objective gradient, $\nabla \varphi(x)\in\R^{n}$, and the
+\item constraint Jacobian, $\nabla c(x)\in\R^{m\times n}$.
+\end{itemize}
+Optionally, the following can be provided for optimal performance of \blockSQP:
+\begin{itemize}
+\item In the case of a block-diagonal Hessian, a partition of the variables $x$ corresponding to the diagonal blocks,
+\item a function $r$ to compute a point $x$ where a reduced infeasibility can be expected, $\heu:\R^{n}\longrightarrow\R^{n}$,
+\item a partition of $x$ into free and dependent blocks, e.g. controls and dependent stage states.\\
+($\rightarrow$ Array of \texttt{vblocks}, see \ref{CONDENSER_SECT})
+\end{itemize}
+
+%---------------------------------------------------------------------72
+\subsection{Sparsity format}\label{SPARSITY_FORMAT_SECT}
+%---------------------------------------------------------------------72
+The functions \init\ and \evaluate\ can be implemented as sparse or dense, the option \texttt{sparse\_mode} controls which are used.\\~\\
+In \blockSQP, we work with the column-compressed storage format (Harwell--Boeing format). There, a sparse matrix is stored as follows:
+\begin{itemize}
+\item an array of nonzero elements \texttt{double jacNz[nnz]}, where \texttt{nnz} is the number of nonzero elements,
+\item an array of row indices \texttt{int jacIndRow[nnz]} for all nonzero elements, and
+\item an array of starting indices of the columns \texttt{int jacIndCol[nVar+1]}.
+\end{itemize}
+For the matrix
+\begin{align*}
+\begin{pmatrix}
+1 & 0 & 7 & 3 \\
+2 & 0 & 0 & 0 \\
+0 & 5 & 0 & 3 \\
+\end{pmatrix}
+\end{align*}
+the column-compressed format is as follows:
+\lstset{style=myC}
+\begin{lstlisting}
+nnz=6;
+jacNz[0]=1.0;
+jacNz[1]=2.0;
+jacNz[2]=5.0;
+jacNz[3]=7.0;
+jacNz[4]=3.0;
+jacNz[5]=3.0;
+
+jacIndRow[0]=0;
+jacIndRow[1]=1;
+jacIndRow[2]=2;
+jacIndRow[3]=0;
+jacIndRow[4]=0;
+jacIndRow[5]=2;
+
+jacIndCol[0]=0;
+jacIndRow[1]=2;
+jacIndRow[2]=3;
+jacIndRow[3]=4;
+jacIndRow[4]=6;
+\end{lstlisting}
+In \texttt{examples/example1.cc}, \init\ and \evaluate\ are implemented both sparse and dense using a generic conversion routine that converts a dense matrix (given as \texttt{Matrix}) into a sparse matrix in column-compressed format.
+
+Note that the sparsity pattern is not allowed to change during the optimization. That means you may only omit elements of the constraint Jacobian that are \emph{structurally} zero, i.e., that can never be nonzero regardless of the current value of \texttt{xi}. On the other hand, \texttt{jacNz} may also contain zero values from time to time, depending on the current value of \texttt{xi}.
+
+
+\subsection{The C++ interface}
+\blockSQP\ is written in C++ and uses an object-oriented programming paradigm. The method itself is implemented in a class \method. Furthermore, \blockSQP\ provides a basic class \problem\ that is used to specify an NLP of the form~\eqref{eq:nlp}. To solve an NLP, first an instance of \problem\ must be passed to an instance of \method. Then, \method's appropriate methods must be called to start the computation.
+
+In the following, we first describe the \problem\ class and how to implement the mathematical entities mentioned above. 
+Afterwards we describe the necessary methods of the \method\ class that must be called from an appropriate driver routine. Some examples where NLPs are specified using the \problem\ class and then passed to \blockSQP\ via a C++ driver routine can be found in the \texttt{examples/} subdirectory.
+
+
+%---------------------------------------------------------------------72
+\subsubsection{Class \problem}
+%---------------------------------------------------------------------72
+To use the class \problem\ to define an NLP, you must implement a derived class, say \myproblem, where at least the following are implemented:
+\begin{enumerate}
+\item A constructor,
+\item the method \init, for sparse or dense Jacobian,
+\item the method \evaluate, for sparse or dense Jacobian.
+\end{enumerate}
+\blockSQP\ can be used with sparse and dense variants of \qpOASES. Depending on the preferred version (set by the algorithmic option \texttt{sparse\_mode}, see Sec.~\ref{sec:alg-opts}), the constraint Jacobian must be provided in sparse or dense format by the user.\\~\\
+Before passing an instance of \myproblem\ to \blockSQP, the following attributes must be set:
+\begin{enumerate}
+\item \texttt{int nVar} - the number of variables,
+\item \texttt{int nCon} - the number of constraints (linear and nonlinear),
+\item \texttt{int nnz} (optional) - number of nonzeros in sparse constraint Jacobian, not required for dense mode,
+\item \texttt{Matrix lb\_var, ub\_var} - lower and upper bounds for variables,
+\item \texttt{Matrix lb\_con, ub\_con} - lower and upper bounds for constraints,
+\item \texttt{int nBlocks} - the number of diagonal blocks in the Hessian,
+\item \texttt{int* blockIdx} - an array of dimension \texttt{nBlocks+1} with the indices of the partition of the variables that correspond to the diagonal blocks. It is required that \texttt{blockIdx[0]=0} and \texttt{blockIdx[nBlocks]=nVar},
+\item \texttt{vblock *vblocks} (optional) - an array of \texttt{vblock \{int size, bool dependent\}} (\ref{CONDENSER_SECT}) to distinguish free and dependent variables.
+\end{enumerate}
+An bound is specified by setting it to $\pm$ inf where inf is the value of the option inf,\\\texttt{std::numeric\_limits<double>::infinity()} by default.\\~\\
+\textbf{\texttt{Matrix}}\\
+The class \texttt{Matrix} is a simple interface to facilitate maintaining dense matrices, including access to the individual elements (internally stored column major as an array of \texttt{double}). It has the constructor \texttt{Matrix(m,n=1,ldim=-1)} for constructing an $m\times n$ \texttt{Matrix}, elements can be accessed via operator \texttt{(i, j)}.
+%---------------------------------------------------------------------72
+~\\~\\\textbf{Function \init}\\
+%---------------------------------------------------------------------72
+\init\ is called once by \blockSQP\ before the SQP method is started. The dense version takes the following arguments:
+\begin{itemize}
+\item \texttt{Matrix \&xi}, the optimization variables
+\item \texttt{Matrix \&lambda}, the Lagrange multipliers
+\item \texttt{Matrix \&constrJac}, the (dense) constraint Jacobian
+\end{itemize}
+All variables are initialized by zero on input and should be set to the desired starting values on return. In particular, you may set parts of the Jacobian that correspond to purely linear constraints (i.e., that stay constant during optimization) here.
+
+The sparse version of \init\ takes the following arguments:
+\begin{itemize}
+\item \texttt{Matrix \&xi}, the optimization variables
+\item \texttt{Matrix \&lambda}, the Lagrange multipliers
+\item \texttt{double *jacNz}, nonzero elements of constraint Jacobian
+\item \texttt{int *jacIndRow}, row indices of nonzero elements
+\item \texttt{int *jacIndCol}, starting indices of columns
+\end{itemize}
+\texttt{xi} and \texttt{lambda} are initialized by zero and must be set the same as in the dense case. \texttt{jacNz}, \texttt{jacIndRow},\texttt{jacIndCol} are the sparse Jacobian in CCS format \ref{SPARSITY_FORMAT_SECT} and already allocated.\\
+\texttt{jacIndRow} and \texttt{jacIndCol} need to be initialized here and one can initialize parts of \texttt{jacNz} that stay constant. As such, the sparsity structure cannot be changed during the iterations and therefore should include all structurally nonzero elements.
+%---------------------------------------------------------------------72
+~\\~\\\textbf{Function \evaluate}\\
+%---------------------------------------------------------------------72
+Similar to \init, two versions of \evaluate\ exist. \evaluate\ is called repeatedly by \blockSQP\ to evaluate functions and/or derivatives for different \texttt{xi} and \texttt{lambda}. The dense version takes the following arguments:
+\begin{itemize}
+\item \texttt{const Matrix \&xi}, current value of the optimization variables (input)
+\item \texttt{const Matrix \&lambda}, current value of the Lagrange multipliers (input)
+\item \texttt{double *objval}, pointer to objective function value (output)
+\item \texttt{Matrix \&constr}, constraint function values (output)
+\item \texttt{Matrix \&gradObj}, gradient of objective (output)
+\item \texttt{Matrix \&constrJac}, dense constraint Jacobian (output)
+\item \texttt{SymMatrix *hess}, (blockwise) Hessian of the Lagrangian (output)
+\item \texttt{int dmode}, derivative mode (input)
+\item \texttt{int *info}, error flag (output)
+\end{itemize}
+Depending on the value of \texttt{dmode}, the following must be provided by the user:
+\begin{itemize}
+\item \texttt{dmode=0}: compute function values \texttt{objval} and \texttt{constr}
+\item \texttt{dmode=1}: compute function values and first derivatives \texttt{gradObj} and \texttt{constrJac}
+\item \texttt{dmode=2}: compute function values, first derivatives, and Hessian of the Lagrangian for the \emph{last\footnote{\texttt{whichSecondDerv=1} can be useful in a multiple shooting setting: There, the lower right block in the Hessian of the Lagrangian corresponds to the Hessian of the \emph{objective}. See~\cite{Janka2015} how to exploit this for problems of nonlinear optimum experimental design.}} diagonal block, i.e., \texttt{hess[nBlocks-1]}
+\item \texttt{dmode=3}: compute function values, first derivatives, and all blocks of the Hessian of the Lagrangian, i.e., \texttt{hess[0]},$\dots$,\texttt{hess[nBlocks-1]}.
+\end{itemize}
+\texttt{dmode=2} and \texttt{dmode=3} are only relevant if the option \texttt{exact\_hess\_usage} is set to \texttt{1} (last block) or \texttt{2} (full Hessian). The default is \texttt{0}.
+On return, the variable \texttt{info} must be set to \texttt{0} if the evaluation was successful and to a value other that \texttt{0} if the computation was not successful.
+
+In the sparse version of \evaluate, the Jacobian must be evaluated in CCS format instead using the arrays \texttt{jacNz}, \texttt{jacIndRow}, and \texttt{jacIndCol} as described in \ref{SPARSITY_FORMAT_SECT}. Here only \texttt{jacNz} should be set.
+
+%---------------------------------------------------------------------72
+~\\~\\\textbf{Function \reduce}\\
+%---------------------------------------------------------------------72
+Whenever \blockSQP\ encounters an infeasible QP or cannot find a step length that provides sufficient reduction in the constraint violation or the objective, it resorts to a feasibility restoration phase to find a point where the constraint violation is smaller. This is usually achieved by solving an NLP to reduce some norm of the constraint violation. In \blockSQP, a minimum $\ell_{2}$-norm restoration phase is implemented. The restoration phase is usually very expensive: one iteration for the minimum norm NLP is usually more expensive than one iteration for the original NLP! As an alternative, \blockSQP\ provides the opportunity to implement a problem-specific restoration heuristic because sometimes a problem ``knows'' (or has a pretty good idea of) how to reduce its infeasibility\footnote{A prominent example are dynamic optimization problems parameterized by multiple shooting: there, additional continuity constraints for the differential states are introduced that can be violated during the optimization. Whenever \blockSQP\ calls for the restoration phase, the problem can instead try to integrate all states over the \emph{whole} time interval and set the shooting variables such that the violation due to continuity constraints is zero. This is often enough to provide a sufficiently feasible point and the SQP iterations can continue.}
+
+This routine is of course highly problem-dependent. If you are not sure what to do here, just do not implement this method. Otherwise, the method just takes \texttt{xi}, the current value of the (infeasible) point as input and expects it to be mutated to a new point.  In addition, it takes a flag \texttt{info} that must be set indicating if the evaluation was successful, in which case \texttt{info=0}.
+
+\subsubsection{Class \texttt{Condenser}}\label{CONDENSER_SECT}
+[LIKELY SUBJECT TO CHANGE]\\
+The condenser class of blockSQP requires the following structs.
+\begin{itemize}
+\item \texttt{vblock: \{int size, bool dependent\}} corresponds to a block of variables and has a flag to mark dependent variables.
+\item \texttt{cblock: \{int size, bool removed\}} corresponds to a block of constraints and has a flag to mark used-up conditions.
+\item \texttt{condensing\_target: \{int n\_stages, int first\_free, int vblock\_end, int first\_cond, int cblock\_end\}} describes a target structure for condensing. 
+\end{itemize}
+Variables and constraints are partitioned into \texttt{vblocks} and \texttt{cblocks}, with both being given as arrays \texttt{vblocks = vblock*, cblocks = cblock*} of lengths \texttt{n\_vblocks, n\_cblocks}. Multiple shooting leads to a sequence of alternating free and dependend variable blocks. The continuity conditions are a sequence of \texttt{cblocks} with sizes corresponding the the total size of one or several consecutive dependent variable blocks.\\
+\textbf{IMPORTANT:} Right now, the continuity conditions are expected to be implemented in the form $x^{(k+1)} - S(x^{(k)}, u^{(k)}) = 0$. Support for  conditions $S(x^{(k)}, u^{(k)}) - x^{(k+1)}$ may be added in the future.\\~\\
+Each \texttt{condensing\_target} contains start and end indices of the alternating free-dependent variable blocks and \texttt{cblocks} corresponding to the respective continuity conditions. 
+\begin{itemize}
+	\item \texttt{n\_stages} - number of shooting stages 
+	\item \texttt{first\_free} - index of first free variable block that dependent blocks depend on
+	\item \texttt{vblock\_end} - index of the first variables block not dependent or depended upon
+	\item \texttt{first\_cond} - index of the constraint block that 
+	\item \texttt{cblock\_end} - index of the constraint block that 
+\end{itemize}
+The condenser class requires the vblocks, cblocks and targets for construction, in addition to an integer array of the Hessian block sizes. 
+\begin{itemize}
+	\item \texttt{vblock *vblocks, int num\_vblocks}
+	\item \texttt{cblock *cblocks, int num\_cblocks}
+	\item \texttt{int *hsizes, int n\_hsizes}
+	\item \texttt{condensing\_target *targets, int num\_targets}
+	\item \texttt{int add\_dep\_bounds}
+\end{itemize}
+The final argument \texttt{add\_dep\_bounds} determines whether bounds of dependent variables are added as constraints to the condensed QP: 0 - not added, 1 - added, but bounds set to $\pm \infty$, 2 (default) - added.\\~\\
+The method \texttt{full\_condense} can then be called to condense a QP. It takes 7 arguments and 7 equivalent return arguments. They are
+\begin{itemize}
+\item \texttt{Matrix\& grad\_obj} - linear term in the QP
+\item \texttt{Sparse\_Matrix\& constr\_jac} - the sparse constraint Jacobian (see \texttt{blocksqp\_matrix.hpp})
+\item \texttt{SymMatrix* hess} - the array of Hessian blocks
+\item \texttt{Matrix\& lb\_var, ub\_var, lb\_con, ub\_con} - variable and constraint bounds
+\end{itemize}
+This also stores the data necessary to recover the original solution of the specific QP given. 
+The user is expected to solve the condensed QP, then call \texttt{recover\_var\_mult} with the primal-dual condensed QP solution (\texttt{Matrix xi\_cond, lambda\_cond}) and the original QP solution (\texttt{Matrix xi, lambda}) as return arguments. 
+
+%---------------------------------------------------------------------72
+\subsubsection{Class \method\ and \Cmethod}
+%---------------------------------------------------------------------72
+If you have implemented a problem using the \problem\ class you may solve it with \blockSQP\ using a suitable driver program. There, you must include the header file \texttt{blocksqp\_method.hpp} (and of course any other header files that you used to specify your problem).
+An instance of \method\ is created with a constructor that takes the following arguments:
+\begin{itemize}
+\item \texttt{Problemspec *problem}, the NLP, see above
+\item \texttt{SQPoptions *parameters}, an object in which all algorithmic options and parameters are stored
+\item \texttt{SQPstats *statistics}, an object that records certain statistics during the optimization and -- if desired -- outputs some of them in files in a specified directory
+\end{itemize}
+In addition, the \texttt{SCQPmethod} (Sequential Condensed Quadratic Programming) subclass takes an instance of \texttt{Condenser} for the given problem as fourth argument.\\
+~\\
+Instances of the classes \texttt{SQPoptions} and \texttt{SQPstats} must be created before.\\
+\texttt{SQPoptions} uses the default constructor, its fields are detailed below.\\~\\
+\texttt{SQPstats} takes a \text{char*} that describes the directory where output files are created if file output is enabled (\texttt{SQPoptions::debug\_level}).
+~\\~\\
+Once an \method has been created, the NLP can be solved by calling the following.
+\begin{itemize}
+\item \texttt{SQPmethod::init()}: Must be called before . Therein, the user-defined \init\ method of the \problem\ class is called.
+\item \texttt{SQPmethod::run(int maxIt, int warmStart = 0)}: Run the SQP algorithm with the given options for at most \texttt{maxIt} iterations. You may call with \texttt{warmStart=1} to continue the iterations from an earlier call. In particular, the existing Hessian information is re-used. That means that
+\begin{lstlisting}
+SQPmethod* method;
+[...]
+method->run( 2 );
+\end{lstlisting}
+and
+\begin{lstlisting}
+SQPmethod* method;
+[...]
+method->run( 1 );
+method->run( 1, 1 );
+\end{lstlisting}
+yield the same result. It returns an instance of the \texttt{SQPresult} enum class to indicate success (>0), max iteration reached (=0) or failure (<0). See \texttt{blocksqp\_defs.hpp} for all values of \texttt{SQPresult}.
+\item \texttt{SQPmethod::finish()}: Should be called after the last call to \texttt{run} to make sure all output files are closed properly.
+\end{itemize}
+Again, we strongly recommend to study the example in \texttt{examples/example1.cpp}, where all steps are implemented for a simple NLP with block-diagonal Hessian.
+%
+\subsubsection{Retrieving the primal-dual iterate}\label{LAG_DEF_SECT}
+The primal iterate can be retrieved by calling 
+\begin{lstlisting}
+Matrix SQPmethod::get_xi()
+\end{lstlisting}
+or
+\begin{lstlisting}
+void SQPmethod::get_xi(Matrix &xi_hold)
+\end{lstlisting}
+The Lagrange multipliers/dual iterate is retrieved the same way via the methods
+\begin{lstlisting}
+Matrix SQPmethod::get_lambda()
+void SQPmethod::get_lambda(Matrix &lambda_hold)
+\end{lstlisting}
+\textbf{Important:} \blockSQP\ defines the Lagrangian as 
+\begin{equation} L(\xi,\lambda) = f(\xi) - \lambda^Tg(\xi).\end{equation}
+Therefore, strongly active lower bounds are characterized by the associated Lagrange multiplier being $> 0$, strongly active upper bounds by the multiplier being $<0$.
+Compared to optimizers defining the Lagrangian as $L(\xi,\lambda) = f(\xi) + \lambda^Tg(\xi)$, e.g. \texttt{ipopt}\cite{wachter2006implementation}, the multipliers \blockSQP\ returns will have the opposite sign. 
+%%%%%
+\subsection{The python interface}
+The python interface consists of
+\begin{itemize}
+\item The compiled py\_blockSQP.so (py\_blockSQP.cpython-... .so).
+\item The blockSQP.py python-side Problemspec class. 
+\end{itemize}
+They both need to be imported, either directly or through a python \_\_init\_\_.py module specification.
+\begin{lstlisting}
+import numpy as np
+import py_blockSQP
+from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
+\end{lstlisting}
+Like in the C++ interface, problem specification, options and statistics objects need to be created and passes to an SQPmethod.
+\begin{lstlisting}
+opts = py_blockSQP.SQPoptions()
+opts.opttol = 1e-5
+...
+stats = py_blockSQP.SQPstats("./solver/output/path")
+...
+prob = Problemspec() \# blockSQP\_pyProblem()
+\end{lstlisting}
+The following data and function attributes need to be provided.
+\begin{itemize}
+\item nVar [int] - number of optimization variables
+\item nCon [int] - number of constraints
+\item f [np.ndarray[np.float64](nVar, ) $\rightarrow$ float/np.float64/Cdouble] - objective function
+\item grad\_f [np.ndarray[np.float64]](nVar, ) $\rightarrow$ np.ndarray[np.float64](nVar, ) - objective gradient
+\item g [np.ndarray[np.float64]](nVar, ) $\rightarrow$ np.ndarray[np.float64](nCon, ) - constraint function
+\item jac\_g [np.ndarray[np.float64]](nVar, ) $\rightarrow$ np.ndarray[np.float64](nCon, nVar) - constraint Jacobian, only used and required in dense mode
+\end{itemize}
+If sparse derivatives should be used, the option sparseQP must be set $> 0$ and the make\_sparse method has to be called with the following arguments
+\begin{itemize}
+\item jac\_g\_nnz [float] - the number of structural nonzero in the constraint Jacobian
+\item jac\_g\_row [np.ndarray[np.int32], shape = (jac\_g\_nnz,)] - row indices of constraint Jacobian in CCS format
+\item jac\_g\_colind [np.ndarray[np.int32], shape = (nVar + 1,)] - column start indices of constraint Jacobian in CCS format. 
+\end{itemize}
+Finally, the bounds and Hessian block indices should be set by calling the set\_bounds method with
+\begin{itemize}
+\item lb\_var [np.ndarray[np.float64](nVar, )] - lower variable bounds
+\item ub\_var [np.ndarray[np.float64](nVar, )] - upper variable bounds
+\item lb\_con np.ndarray[np.float64](nCar, )] - lower constraint bounds 
+\item ub\_con np.ndarray[np.float64](nCar, )] -upper constraint bounds 
+\end{itemize}
+and set\_blockIndex with hessBlock\_index [np.ndarray[np.int32]]. A feasibility restoration heuristic can be added as the attribute \texttt{continuity\_restoration} mutates an \texttt{np.ndarray} of length \texttt{nVar}.\\~\\
+\textbf{Important:} \texttt{prob.complete()} must be called once all data has been provided to the problem to finalize it. \\~\\
+\blockSQP\ is then called as in the C++ interface
+\begin{lstlisting}
+optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer.init()
+ret = optimizer.run(max_num_iterations)
+optimizer.finish()
+\end{lstlisting}
+The optimizer returns an SQPresult enum class instance to indicate the result of the optimization, as in the C++ interface. It can be converted either to a string to yield 'SQPresult.[name]' or to an integer. The optimal primal and dual variables and be retrieved via
+\begin{lstlisting}
+xi_opt = np.array(optimizer.get_xi()).reshape(-1)
+lam_opt = np.array(optimizer.get_lambda()).reshape(-1)
+\end{lstlisting}
+\textbf{Important:} Mind the sign of the returned multipliers, see Section \ref{LAG_DEF_SECT}. 
+\subsection{The julia interface}
+The julia interface requires the compiled jul\_blockSQP.so binary and the julia side module blockSQP.jl. It similar to the Python interface and accessed in the following way
+\begin{lstlisting}
+using blockSQP
+
+
+prob = blockSQP.jlProblem(Int32(2), Int32(1))
+prob.f = ...
+
+opts = Dict()
+opts["..."] = ...
+
+stats = blockSQP.SQPstats("...")
+
+method = blockSQP.Solver(prob, opts, stats)
+
+blockSQP.init!(meth)
+blockSQP.run!(!, Int32(...), Int32(...))
+blockSQP.finish!(meth)
+
+x_opt = blockSQP.get_primal_solution(meth)
+lam_opt = blockSQP.get_dual_solution(meth)
+\end{lstlisting}
+\textbf{Important:} Mind the sign of the returned multipliers, see Section \ref{LAG_DEF_SECT}.\\~\\
+\text{}[WIP] In the future, \blockSQP\ may also be called through \texttt{Optimization.jl}.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{Options and parameters}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+In this section we describe the most important options that are passed to \blockSQP\ through the \texttt{SQPoptions} class. For the remaining options look into the options.hpp header file. 
+\subsection{Basic options}
+The most important options for users wanting to solve structured problems.
+\begin{longtable}[c]{lll}
+Name 							& Description/possible values									& Default	\\\hline\hline
+%
+\texttt{sparse\_mode}				& Use dense/sparse callbacks 						& False			\\\hline
+%								
+\texttt{exact\_hess\_usage}			& Request exact Hessian in callbacks						& 0			\\
+								& 0: Disabled											& \\
+								& 1: Request last block										& \\
+								& 2: Request all blocks 											&\\\hline
+%
+\texttt{hess\_approximation}		& 						& 1			\\
+								& 0: Scaled identity											& 			\\
+								& 1: SR1													& 			\\
+								& 2: damped BFGS											& 			\\\hline
+%
+\texttt{fallback\_approximation}		& See hess\_approximation, has to be positive definite							& 2			\\\hline
+%
+\texttt{block\_hess}		& enable blockwise updates							& 1			\\
+						& 0: Full space updates								& \\
+						& 1: Partitioned updates* 							& \\
+						& 2: 2 blocks - first n-1 together and last block*			& \\
+						& * requires providing \texttt{blockIdx}				&\\\hline
+%
+\texttt{qpsol}						& Which QP solver should be used											& \texttt{qpOASES}\\
+								& \texttt{C++:} passed as \texttt{QPsolvers::qpOASES}							&\\
+								& \texttt{Python/Julia:} passed as "qpOASES"									&\\\hline
+%
+\texttt{qpsol\_options}				& Options to be passed to the QP solver										&	\\										&  \texttt{C++:} passed as class \texttt{qpOASES\_options}							& \\
+								& \texttt{Python/Julia:} passed as a dict										&\\\hline
+\end{longtable}
+\subsection{qpsol\_options}
+Options to be passed to the QP solver. For \qpOASES\ :
+\begin{longtable}[c]{lll}
+Name 							& Description/possible values									& Default	\\\hline\hline
+%
+\texttt{sparsityLevel}				& Which \qpOASES\ solver class 									& -1			\\
+								& -1: Infer for \texttt{SQPoptions}								&			\\
+								& 0: \texttt{qpOASES::SQProblem}, dense matrices					&			\\
+								& 1: \texttt{qpOASES::SQProblem}, sparse matrices					&			\\
+								& 2: \texttt{qpOASES::SQProblemSchur}, sparse matrices				&			\\ \hline
+& & \\[-0.2cm]
+\textbf{\textrightarrow $\ $ \qpOASES\ manual}					&													& \\ \hline
+\texttt{printLevel}					& Output level of qpOASES										&0			\\ \hline
+\texttt{terminationTolerance}					& 										&1e-10			\\	
+\hline
+\end{longtable}
+See options.hpp for other QP solver's options.
+\subsection{Common algorithmic options}
+\begin{longtable}[c]{lll}
+Name 							& Symbol/Meaning												& Default			\\\hline\hline
+%
+\texttt{opt\_tol}					& $\epsilon_{\textup{opt}}$ 									& 1.0e-6	\\\hline
+%
+\texttt{feas\_tol}			& $\epsilon_{\textup{feas}}$									& 1.0e-6	\\\hline
+%
+\texttt{eps}					& machine precision												& 1.0e-16	\\\hline
+%
+\texttt{inf}					& $\infty$														& \texttt{double($\infty$)}	\\\hline
+%
+\texttt{max\_QP\_it}				& Maximum number of QP iterations per							& 5000		\\
+								& SQP iteration							&			\\\hline
+%
+\texttt{max\_QP\_seconds}				& Maximum time in seconds for \qpOASES\ per						& 10000.0		\\
+								& SQP iteration							&			\\\hline
+\end{longtable}
+
+\subsection{Convexification strategy}
+Regularizing indefinite SR1 or exact Hessians increases the time per SQP iteration, but tends to make the method more consistent. The are quite a few examples that rarely converge with SR1-BFGS but converge fast with SR1 Hessians regularized with scaled identities. The following options configure these \texttt{convexification strategies}.
+\begin{longtable}[c]{lll}
+Name 							& Description/possible values									& Default	\\\hline\hline
+%
+\texttt{conv\_strategy}				& Type of convexification strategy 						& 1			\\
+								& 0: Convex combination between Hessian and fallback		& \\
+								& 1: Add scaled identities								& \\
+								& 2: Add scaled identities for free indices*					& \\
+								& *requires providing \texttt{vblocks}						& \\ \hline
+%								
+\texttt{max\_conv\_QPs}			& Maximum number additional QPs per SQP iteration						& 1			\\
+								& 1: Hessian - fallback				& \\ 
+								& > 1: Hessian - convexified Hessians - fallback								& \\
+\hline
+& & \\[-0.2cm]
+\textbf{Advanced options}					&													& \\ \hline
+\texttt{conv\_tau\_H}				& Tolerance for convexified step acceptance (see paper)		& 2/3\\ \hline
+\texttt{conv\_kappa\_0}			& Initial scale for added identities (see paper [])				& 1/16\\ \hline
+\texttt{conv\_kappa\_max}			& Maximum scale for added identities						& 2.0\\ \hline
+%
+\end{longtable}
+
+
+
+\subsection{Output settings}
+\begin{longtable}[c]{lll}
+Name 							& Description/possible values									& Default	\\\hline\hline
+%
+\texttt{print\_level}				& Amount of onscreen output per iteration						& 1			\\
+								& 0: no output													&			\\
+								& 1: normal output												&			\\
+								& 2: verbose output												&			\\\hline
+%								
+\texttt{result\_print\_color}			& Control output of result at termination					& 2			\\
+								& 0: no output												&			\\
+								& 1: no output color												&			\\
+								& 2: colored output								&			\\\hline
+%
+\texttt{debug\_level}				& Amount of file output per iteration							& 0			\\
+								& 0: no debug output											& 			\\
+								& 1: print one line per iteration to file 						& 			\\
+								& 2: extensive debug output to files (impairs performance)		& 			\\\hline
+\end{longtable}
+
+\subsection{Sizing strategies}
+Oren-Luenberger [], Shanno-Phua [] and centered Oren-Luenberger [] strategies are available for sizing Hessian approximations. 
+\begin{longtable}[c]{lll}
+Name 							& Description/possible values										& Default	\\\hline\hline
+%
+\texttt{initial\_hess\_scale}		& Initial scaling of the Hessian approximation						& 1.0		\\\hline
+%
+\texttt{sizing\_strategy}			& Hessian sizing strategy											& 2			\\
+								& 0: off															&			\\
+								& 1: Shanno-Phua													&			\\
+								& 2: Oren-Luenberger (OL)											&			\\
+								& 3: geometric mean of 1 and 2										&			\\
+								& 4: centered Oren-Luenberger (COL)									&			\\\hline
+%
+\texttt{fallback\_sizing\_strategy}	& fallback Hessian sizing strategy							& 4			\\\hline
+%
+&&\\[-0.2cm]
+\textbf{Advanced options}					&						&\\\hline
+\texttt{COL\_eps}					& COL $\varepsilon$		& 0.1		\\\hline
+%
+\texttt{COL\_tau\_1}				& COL $\tau_1$									& 0.5		\\\hline
+%
+\texttt{COL\_tau\_2}				& COL $\tau_2$									& $10^4$	\\\hline
+%
+\texttt{OL\_eps}					& Oren-Luenberger sizing $\varepsilon$								& $10^{-4}$\\\hline
+\end{longtable}
+
+%---------------------------------------------------------------------72
+\subsection{Filter line search}\label{sec:alg-opts}
+\begin{longtable}[c]{lll}
+Name 								& Description										& Default	\\\hline\hline
+%
+\texttt{enable\_linesearch}			& Enable filter line search							& true		\\\hline
+%
+\texttt{max\_linesearch\_steps}		& Max number of step reductions						& 10		\\\hline
+%
+\texttt{max\_consec\_reduced\_steps}	& Reset Hessian after \# reduced steps		& 8			\\\hline
+%
+\texttt{max\_consec\_skipped\_updates} & Reset Hessian after \# skipped updates			& 100		\\\hline
+%
+\texttt{skip\_first\_linesearch}		& Skip line search on first iteration				& false		\\\hline
+\end{longtable}
+
+\subsection{Advanced termination and line search heuristics}
+\begin{longtable}[c]{lll}
+Name 									& Description															& Default	\\\hline\hline
+%
+\texttt{enable\_premature\_termination}	& Allow early termination with partial success							& false		\\\hline
+%
+\texttt{max\_extra\_steps}				& Max steps after reaching tolerance to refine solution				& 0			\\\hline
+%
+\texttt{max\_filter\_overrides}			& Number of times filter rules can be overridden			& 2			\\\hline
+\end{longtable}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{Output}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+When the algorithm is run, it typically produces one line of output for every iteration. The columns of the output are:
+
+\begin{tabular}[c]{ll}
+Column & Description\\\hline\hline
+%\midrule
+\texttt{it}		&	Number of iteration \\\hline
+\texttt{qpIt}	&	Number of QP iterations for the QP that yielded the accepted step \\\hline
+\texttt{qpIt2}	&	Number of QP iterations for the QPs whose solution was rejected \\\hline
+\texttt{obj}	&	Value of objective \\\hline
+\texttt{feas}	&	Infeasibility \\\hline
+\texttt{opt}	&	Optimality \\\hline
+\texttt{|lgrd|}	&	Maximum norm of Lagrangian gradient \\\hline
+\texttt{|stp|}	&	Maximum norm of step in primal variables \\\hline
+\texttt{|lstp|}	&	Maximum norm of step in dual variables \\\hline
+\texttt{alpha}	&	Steplength \\\hline
+\texttt{nSOCS}	&	Number of second-order correction steps \\\hline
+\texttt{sk}		&	Number of Hessian blocks where the update has been skipped \\\hline
+\texttt{da}		&	Number of Hessian blocks where the update has been damped \\\hline
+\texttt{sca}	&	Value of sizing factor, averaged over all blocks \\\hline
+\texttt{QPr}	&	Number of QPs whose solution was rejected
+\\\hline
+\end{tabular}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{Extending \blockSQP\ }
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\subsection{New methods}
+Due to blockSQPs object oriented design, it is possible to extend the solver by subclassing \texttt{SQPmethod}. The \texttt{SCQPmethod} is such an example that enhances \blockSQP\ by a QP condensing step. Further extensions by adding function calls to the main loop and adding more fields to the \texttt{SQPoptions} class. \blockSQP\ is actively being developed and is continuously made more fine-grained to enhance modularity and extensibility.
+\subsection{Other QP solvers}
+QP solvers are added to \blockSQP\ by subclassing the abstract \texttt{QPsolver} class and filling out its methods. The code should be included based on a preprocessor definition named \texttt{QPSOLVER\_[name of QP solver]} such as the existing \texttt{QPSOLVER\_qpOASES}. In addition, the classes defined in \texttt{options.h} need to be extended to account for the newly available QP solver. The name of the solver should be added to the enum class \texttt{QPsolvers} and a \texttt{QPsolver\_options} subclass should be created to enable passing options to the QP solver. The interfaces to other languages need to updated consistent with the handling of existing QP solvers.
+\bibliographystyle{plain}
+\bibliography{references.bib}
+
+\clearpage
+\appendix
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+\section{License\label{sec:license}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
+This is the full license text (zlib license):
+\begin{verbatim}
+    blockSQP -- Sequential quadratic programming for problems with
+                block-diagonal Hessian matrix.
+    Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
+
+    This software is provided 'as-is', without any express or implied
+    warranty. In no event will the authors be held liable for any
+    damages arising from the use of this software.
+
+    Permission is granted to anyone to use this software for any purpose,
+    including commercial applications, and to alter it and redistribute
+    it freely, subject to the following restrictions:
+
+        1. The origin of this software must not be misrepresented;
+        you must not claim that you wrote the original software.
+        If you use this software in a product, an acknowledgment in the
+        product documentation would be appreciated but is not required.
+
+        2. Altered source versions must be plainly marked as such,
+        and must not be misrepresented as being the original software.
+
+        3. This notice may not be removed or altered from any source
+        distribution.
+\end{verbatim}
+
+\end{document}
+
+

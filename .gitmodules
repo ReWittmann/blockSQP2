@@ -1,0 +1,3 @@
+[submodule "blockSQP.jl"]
+	path = blockSQP.jl
+	url = https://github.com/ReWittmann/blockSQP.jl.git
