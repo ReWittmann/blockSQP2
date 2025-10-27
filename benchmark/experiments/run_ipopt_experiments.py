@@ -47,7 +47,7 @@ Experiments = [
                 ]
 
 
-plot_folder = cD + "/out_ipopt_experiments"
+plot_folder = cD / Path("out_ipopt_experiments")
 OCP_experiment.run_ipopt_experiments(Examples, 
                                      Experiments, 
                                      plot_folder, 
