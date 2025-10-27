@@ -19,7 +19,11 @@ Each license applies to the respective package, and any statement in it regardin
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ### Build requirements
+=======
+# Build requirements
+>>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
 =======
 # Build requirements
 >>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
@@ -55,7 +59,11 @@ The py_blockSQP requires numpy, running the Python scripts additionally requires
 In addition, some plot functions require LaTeX to be available on the system.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ### Testing and benchmarking
+=======
+## Testing and benchmarking
+>>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
 =======
 ## Testing and benchmarking
 >>>>>>> 8ec9280091ae22946b043de0d110c2797171314a

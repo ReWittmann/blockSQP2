@@ -29,6 +29,7 @@ import OCProblems
 Examples = [
             OCProblems.Batch_Reactor,
 <<<<<<< HEAD
+<<<<<<< HEAD
             # OCProblems.Cart_Pendulum,
             OCProblems.Catalyst_Mixing,
             # OCProblems.Cushioned_Oscillation,
@@ -45,6 +46,8 @@ Examples = [
             # OCProblems.Tubular_Reactor,
             # OCProblems.Lotka_OED,
 =======
+=======
+>>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
             OCProblems.Cart_Pendulum,
             OCProblems.Catalyst_Mixing,
             OCProblems.Cushioned_Oscillation,
@@ -60,6 +63,9 @@ Examples = [
             OCProblems.Time_Optimal_Car,
             OCProblems.Tubular_Reactor,
             OCProblems.Lotka_OED,
+<<<<<<< HEAD
+>>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
+=======
 >>>>>>> 8ec9280091ae22946b043de0d110c2797171314a
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
