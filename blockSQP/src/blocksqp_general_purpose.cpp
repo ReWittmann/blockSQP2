@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 

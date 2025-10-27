@@ -1,12 +1,16 @@
+blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
+	      for blockSQP, the nonlinear programming solver by Dennis Janka.  
+Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+
+The original license (zlib license) is preserved.
+
+Original text and license
+=========================
+=========================
+
 blockSQP -- Sequential quadratic programming for problems with
             block-diagonal Hessian matrix.
 Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
-
-
-THIS IS A MODIFIED VERSION THAT DIFFERS FROM THE ORIGINAL SOURCE
-New features by
-    Reinhold Wittmann <reinhold.wittmann@ovgu.de>
-
 
 
 Introduction

@@ -1,18 +1,31 @@
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file run_blockSQP.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to invoke py_blockSQP for an example problem.
+
 import numpy as np
-import os
-import sys
 import time
+import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent)]
 
 import py_blockSQP
 import OCProblems
 
 
-#Note: ImportError: generic_type: ... is an ipython issue with pybind11/boost::python modules, reload the ipython session in case it occurs
+#Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
 OCprob = OCProblems.Lotka_Volterra_Fishing(
@@ -20,7 +33,8 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
-                    N_threads = 4           #number of threads for parallelization
+                    N_threads = 4,          #number of threads for parallelization
+                                            #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 
 itMax = 200                                 #max number of steps
@@ -32,7 +46,7 @@ start = OCprob.start_point                  #Start point for problem, can use, e
 ################################
 opts = py_blockSQP.SQPoptions()
 opts.max_QP_it = 10000
-opts.max_QP_secs = 10.0
+opts.max_QP_secs = 20.0
 
 opts.max_conv_QPs = 4                       #max number of additional QPs per SQP iteration including fallback Hess QP
 opts.conv_strategy = 2                      #Convexification strategy, 2 requires passing vblocks
@@ -68,18 +82,18 @@ opts.qpsol_options = QPopts
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
-cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
-hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
+vblocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
+cblocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
+hblocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
 targets = py_blockSQP.condensing_targets(1)
 for i in range(len(OCprob.vBlock_sizes)):
-    vBlocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
+    vblocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
 for i in range(len(OCprob.cBlock_sizes)):
-    cBlocks[i] = py_blockSQP.cblock(OCprob.cBlock_sizes[i])
+    cblocks[i] = py_blockSQP.cblock(OCprob.cBlock_sizes[i])
 for i in range(len(OCprob.hessBlock_sizes)):
-    hBlocks[i] = OCprob.hessBlock_sizes[i]
+    hblocks[i] = OCprob.hessBlock_sizes[i]
 targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
-cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets, 2)
+cond = py_blockSQP.Condenser(vblocks, cblocks, hblocks, targets, 2)
 
 
 #Define blockSQP Problemspec
@@ -102,8 +116,8 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 #Recommended: Dont pass condenser to activate condensing, 
-#but pass vBlocks to enable conv. str. 2 and automatic scaling
-prob.vblocks = vBlocks
+#but pass vBlocks to enable convexification strategy 2 and automatic scaling
+prob.vblocks = vblocks
 # prob.cond = cond
 
 prob.x_start = start

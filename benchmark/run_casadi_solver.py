@@ -1,3 +1,17 @@
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file run_casadi_solver.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to invoke a solver available through casadi,
+# for comparing the performance to py_blockSQP.
+
 import casadi as cs
 import numpy as np
 import OCProblems
@@ -5,12 +19,12 @@ import time
 
 itMax = 1000
 
-
 OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,
                     refine = 1,
                     parallel = True,
                     integrator = 'RK4',
+                    
                     )
 
 ipopts = dict()
@@ -19,7 +33,6 @@ ipopts['tol'] = 1e-6
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax
 
-OCprob.integrate_full(OCprob.start_point)
 sp = OCprob.start_point
 S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 

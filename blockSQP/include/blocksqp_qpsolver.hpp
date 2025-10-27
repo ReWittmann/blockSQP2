@@ -1,8 +1,8 @@
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -48,6 +48,16 @@ using namespace std::chrono;
 
 namespace blockSQP{
 
+enum class QPresult{
+    undef = -1,
+    success,
+    time_it_limit_reached,
+    indef_unbounded,
+    infeasible,
+    other_error
+};
+std::ostream& operator<<(std::ostream& os, QPresult qpres);
+
 
 //QP solver interface
 class QPsolverBase{
@@ -60,7 +70,7 @@ class QPsolverBase{
     virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind) = 0;
     //Set hessian and pass on whether hessian is supposedly positive definite
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
-
+    
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
     virtual void set_use_hotstart(bool use_hom) = 0;
     
@@ -73,10 +83,10 @@ class QPsolverBase{
     
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    virtual QPresult solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     //Overload for calling with a jthread.
     //virtual int solve(std::stop_token stopRequest, bool *hasFinished, Matrix &deltaXi, Matrix &lambdaQP);
-    virtual void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
+    virtual void solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
 };
 
 
@@ -139,7 +149,7 @@ class QPsolver : public QPsolverBase{
     
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
+    virtual QPresult solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
     virtual void set_use_hotstart(bool use_hom);
@@ -173,6 +183,11 @@ class CQPsolver : public QPsolverBase{
     //Flags indicating which data was updates, may avoid unnecessary work
     bool h_updated, A_updated, bounds_updated, hess_updated;
     
+    //
+    std::unique_ptr<Matrix[]> corrections;
+    //std::unique_ptr<Matrix[]> SOC_corretions;
+    Matrix h_corr, lb_A_corr, ub_A_corr;
+    
     CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own = false);
     CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond);
     ~CQPsolver();
@@ -189,8 +204,8 @@ class CQPsolver : public QPsolverBase{
 
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
-    virtual int solve(Matrix &deltaXi, Matrix &lambdaQP);
-    virtual void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
+    virtual QPresult solve(Matrix &deltaXi, Matrix &lambdaQP);
+    virtual void solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
     void set_use_hotstart(bool use_hom);
@@ -199,21 +214,22 @@ class CQPsolver : public QPsolverBase{
     virtual int get_QP_it();
     virtual double get_solutionTime();
     
+    //Correction
+    QPresult bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    
+    QPresult correction_solve(Matrix &deltaXi, Matrix &lambdaQP);
+    //int SOC_bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    
 };
-
-
 
 
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
-
-//QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, SQPoptions *opts);
-
 QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param);
 QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
 
+//Create N_QP QPsolver instances for parallel solution of QPs. If N_QP is left at -1 it infers N_QP as param->max_conv_QPs + 1
 std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
-
 
 
 //QP solver implementations
@@ -261,19 +277,23 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_hotstart_point(QPsolverBase *hot_QP);
         void set_hotstart_point(qpOASES_solver *hot_QP);
         
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+        QPresult solve(Matrix &deltaXi, Matrix &lambdaQP);
         //int solve(std::stop_token stopRequest, bool *hasFinished, int *result, Matrix &deltaXi, Matrix &lambdaQP);
-        void solve(std::stop_token stopRequest, std::promise<int> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
+        void solve(std::stop_token stopRequest, std::promise<QPresult> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
         int get_QP_it();
     };
     
+    
     //For using qpOASES with MUMPS. Mumps is meant to be loaded by the caller several times,
-    //such that the loaded modules are thread safe (e.g. via dlmopen on linux).
-    //Then different instances of this class will be threadsafe between each other.
+    //such that the loaded module handles are thread safe (MUMPS by default isn't),
+    //(e.g. via dlmopen on linux, loading different copies of the module on windows etc.).
+    //Then, a pointer to the dmumps_c single-interface function of MUMPS must be passed
+    //Different instances of this class will then be threadsafe between each other.
+    //See src/ext/dmumps_c_cyn.cpp and blocksqp_load_mumps.hpp/cpp
     #ifdef SOLVER_MUMPS
-        class threadsafe_qpOASES_MUMPS_solver : public qpOASES_solver{
+        class qpOASES_MUMPS_solver : public qpOASES_solver{
             public:
-            threadsafe_qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
+            qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
         };
     #endif
 #endif
@@ -286,8 +306,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         GRBEnv *env;
         GRBModel *model;
         GRBVar* QP_vars;
-        //GRBConstr* QP_vars_lb;
-        //GRBConstr* QP_vars_ub;
+        
         GRBConstr* QP_cons_lb;
         GRBConstr* QP_cons_ub;
 
@@ -305,7 +324,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+        QP_result solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
         //double get_solutionTime();
@@ -335,7 +354,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
 
-        int solve(Matrix &deltaXi, Matrix &lambdaQP);
+        QP_result solve(Matrix &deltaXi, Matrix &lambdaQP);
 
         int get_QP_it();
     };

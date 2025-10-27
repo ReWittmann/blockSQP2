@@ -9,6 +9,10 @@
 #include "blocksqp_method.hpp"
 #include <limits>
 
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
 namespace blockSQP
 {
 
@@ -18,6 +22,10 @@ static double const myInf = std::numeric_limits<double>::infinity();    ///< Use
  * \brief Example implementation of a derived class of the ProblemSpec base class.
  * \author Dennis Janka
  * \date 2012-2015
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
 class MyProblem : public Problemspec{
@@ -342,5 +350,7 @@ int main(int argc, const char* argv[]){
     delete stats;
     delete opts;
     delete meth;
+
+    _CrtDumpMemoryLeaks();
 }
 

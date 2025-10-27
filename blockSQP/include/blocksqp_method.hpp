@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
@@ -63,7 +63,7 @@ class SQPmethod{
         
         // Objects for feasibility restoration
         //Feasibility restoration problem
-        std::unique_ptr<abstractRestorationProblem> rest_prob;
+        std::unique_ptr<RestorationProblemBase> rest_prob;
         std::unique_ptr<SQPoptions>  rest_param;
         std::unique_ptr<SQPstats>    rest_stats;
         std::unique_ptr<SQPmethod>   rest_method;
@@ -116,10 +116,15 @@ class SQPmethod{
         
         /////////////////////////////////NEW
         /// Resolve options, iteration state and call parameters and dispatch the appropriate solve[*]QP_* method. 
-        virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
-        int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        //int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        
+        virtual QPresult solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        QPresult solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        QPresult solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        QPresult solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Sequentially try to solve increasingly convexified QPs. 
@@ -130,7 +135,9 @@ class SQPmethod{
         //virtual int solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
-        virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        //virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        
+        virtual QPresult solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
@@ -176,7 +183,7 @@ class SQPmethod{
         /// Start feasibility restoration phase (solve NLP)
         virtual int feasibilityRestorationPhase();
         /// Main loop of restoration phase - check acceptability of the filter after each step
-        int innerRestorationPhase(abstractRestorationProblem *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
+        int innerRestorationPhase(RestorationProblemBase *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
 
@@ -224,64 +231,27 @@ class SQPmethod{
         void scaling_heuristic();
 };
 
-////////////////////////////////////////////////////////////
 
-//Sequential Condensed Quadratic Programming method
 
-/*
-class SCQPmethod : public SQPmethod{
+//Experimental; minimalistic bound correction strategy for 
+//  when all dependent variable bounds are "implicit" bounds
+//      i.e. bounds arising from the underlying ODE/DAE model
+class bound_correction_method : public SQPmethod{
     public:
-    Condenser *cond;
-    
-    //Condenser for restoration problem
-    std::unique_ptr<Condenser> rest_cond;
-
-    SCQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    SCQPmethod();
-    virtual ~SCQPmethod();
-
-    // QP solution methods incorporating the condensing step
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-    virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-
-    // Restoration phase with slack variables omitted for dependency constraints (continuity conditions in multiple shooting) 
-    virtual int feasibilityRestorationPhase();
-
-    // Convexification strategy for condensed Hessians
-    void convexify_condensed(SymMatrix *condensed_hess, int idx, int maxQP);
-};
-
-
-class SCQP_bound_method : public SCQPmethod{
-    public:
-    SCQP_bound_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-
-    // condensed QP solution methods incorporating QP resolves with violated bounds added
-    virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-    virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-};
-
-
-class SCQP_correction_method : public SCQPmethod{
-    public:
-    Matrix *corrections;
-    Matrix *SOC_corrections;
-
-
-    SCQP_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics, Condenser *CND);
-    virtual ~SCQP_correction_method();
+    //Defers to SQPmethod constructor and only performs some sanity checks
+    bound_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics);
 
     // condensed QP solution methods incorporating QP resolves with added corrections
-    virtual int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-    virtual int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    //int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    //int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+    QPresult bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    QPresult solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
-    // filterLineSearch that calls modified SOC from above 
+    // filterLineSearch that applies bound correction to the full step
     virtual int filterLineSearch();
-    // feasiblity restoration phase that calls the correction method.
+    // feasiblity restoration phase also uses the bound_correction_method and the TC_restoration_problem
     virtual int feasibilityRestorationPhase();
 };
-
-*/
 
 } // namespace blockSQP
 

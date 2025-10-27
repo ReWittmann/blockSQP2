@@ -7,15 +7,15 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
 /**
- * \file blocksqp_SQPutils.cpp
+ * \file blocksqp_sqputils.cpp
  * \author Reinhold Wittmann
  * \date 2023-2025
  *
@@ -284,9 +284,9 @@ void SQPmethod::printInfo( int printLevel )
         strcpy( qpString, "sparse, Schur complement approach" );
     */
     
-    if (param->sparse == 0)
+    if (!param->sparse)
         strcpy( qpString, "dense, reduced Hessian factorization" );
-    else if (param->sparse == 1){
+    else{
         if (param->qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(param->qpsol_options)->sparsityLevel == 2)
             strcpy( qpString, "sparse, Schur complement approach" );
         else

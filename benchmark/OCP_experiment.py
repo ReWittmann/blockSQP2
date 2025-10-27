@@ -1,13 +1,23 @@
-# Helper functions to run optimal control experiments for perturbed start points
-# with different parameters. Includes functions to print and plot the results.
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
 
-import os
+
+# \file OCP_experiment.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Helper functions for benchmarking py_blockSQP and casadi NLP solvers
+
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/..", cD + "/../examples"]
+    cD = Path.cwd()
+sys.path += [str(cD.parent)]
 
 import OCProblems
 import py_blockSQP
@@ -15,7 +25,9 @@ import numpy as np
 import time
 import datetime
 import matplotlib.pyplot as plt
-plt.rcParams["text.usetex"] = True
+import shutil
+if shutil.which("latex") is not None:
+    plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 
@@ -126,8 +138,6 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
     EXP_N_secs_mu = [sum(EXP_N_secs_clean[i])/len(EXP_N_secs_clean[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs_clean[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs_clean[i]))**(0.5) for i in range(n_EXP)]
     
-    
-    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
 
     ccodemp = {-1: 'r', 0:'y', 1:'g'}
     cmap = [[ccodemp[v] for v in EXP_type_sol[i]] for i in range(n_EXP)]
@@ -151,7 +161,6 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
         ax_it.set_xlabel('location of perturbation', size = labelsize)
-        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
         ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
       
         
@@ -161,13 +170,16 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_time.set_ylabel("solution time in seconds", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
-        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
         ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_time.set_xticks(xticks)
 
     plt.show()
     
-def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
+def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    if isinstance(dirPath, str):
+        print("\n\nWARNING: Passing a pathstring to plot_successful is not recommended, use pathlib.Path instead\n", flush = True)
+        dirPath = Path(dirPath)
+    
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -186,8 +198,6 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
     
-    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
-
     ###############################################################################
     titlesize = 23
     axtitlesize = 20
@@ -195,7 +205,10 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        if shutil.which("latex") is not None:
+            fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        else:
+            fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     
     if n_EXP == 1:
@@ -207,7 +220,6 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
         ax_it.set_xlabel('location of perturbation', size = labelsize)
-        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
         ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
@@ -216,26 +228,28 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
-        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
         ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         
         ax_time.set_xticks(xticks)
         ax_time.tick_params(labelsize = labelsize - 1)
         
         subfigs[i].suptitle(titles[i], size = titlesize)
-    if not isinstance(dirPath, str):
+    if not isinstance(dirPath, Path):
         plt.show()
     else:
-        if not os.path.exists(dirPath):
-            os.makedirs(dirPath)
+        dirPath.mkdir(parents = True, exist_ok = True)
+        
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
-        sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
         
-        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
+        plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
+    plt.close()
 
-def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
+def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    if isinstance(dirPath, str):
+        print("\n\nWARNING: Passing a pathstring to plot_varshape is not recommended, use pathlib.Path instead\n", flush = True)
+        dirPath = Path(dirPath)
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -262,7 +276,6 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
     EXP_N_secs_mu = [sum(EXP_N_secs_clean[i])/len(EXP_N_secs_clean[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs_clean[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs_clean[i]))**(0.5) for i in range(n_EXP)]
     
-    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]    
     ###############################################################################
     titlesize = 23
     axtitlesize = 19
@@ -274,7 +287,10 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        if shutil.which("latex") is not None:
+            fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
+        else:
+            fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
     subfigs = fig.subfigures(nrows=n_EXP, ncols=1)
     if n_EXP == 1:
         subfigs = (subfigs,)
@@ -293,7 +309,6 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
         ax_it.set_xlabel('location of perturbation', size = labelsize)
-        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
         ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
@@ -306,23 +321,25 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
         ax_time.set_xlabel("location of perturbation", size = labelsize)
-        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
         ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_time.tick_params(labelsize = labelsize - 1)
         ax_time.set_xticks(xticks)
-    if not isinstance(dirPath, str):
+    if not isinstance(dirPath, Path):
         plt.show()
     else:
-        if not os.path.exists(dirPath):
-            os.makedirs(dirPath)
+        dirPath.mkdir(parents = True, exist_ok = True)
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
-        sep = "" if dirPath[-1] == "/" else "/"
+        # sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
-        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
+        plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
+    plt.close()
 
 
-def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath = None, savePrefix = None):
+def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    if isinstance(dirPath, str):
+        print("\n\nWARNING: Passing a pathstring to plot_successful_small is not recommended, use pathlib.Path instead\n", flush = True)
+        dirPath = Path(dirPath)
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -341,36 +358,25 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
     EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
     
-    # trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
-
     ###############################################################################
     titlesize = 24
     axtitlesize = 23
     labelsize = 22
     
-    # fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
-    
     fig, ax = plt.subplots(nrows = n_EXP, ncols = 2, constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 2.5 + 2.5*(n_EXP - 1)))
     
     if isinstance(suptitle, str):
-        fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
+        if shutil.which("latex") is not None:
+            fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
+        else:
+            fig.suptitle(suptitle, fontsize = titlesize, fontweight = 'bold')
     for i in range(n_EXP):
         ax_it, ax_time = ax[i,:]
-        
-        ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP_S[i])#, c = cmap[i])
-        # ax_it.set_ylabel('SQP iterations', size = labelsize)
+        ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP_S[i])
         ax_it.set_ylabel(titles[i], size = labelsize)
-        
         ax_it.set_ylim(bottom = 0)
-        
         if i == n_EXP - 1:
             ax_it.set_xlabel('location of perturbation', size = labelsize)
-        # ax_it.set_title(r"$\mu = " + trunc_float(EXP_N_SQP_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_SQP_sigma[i], 1) + "$", size = axtitlesize)
-        
-        # TTL = r'$\footnotesize\mu = ' + trunc_float(EXP_N_SQP_mu[i], 1) + r'\ \sigma = ' + trunc_float(EXP_N_SQP_sigma[i], 1) + '$'
-        # if i == 0:
-        #     TTL = 'SQP iterations\n' + TTL
-        # ax_it.set_title(TTL, size = axtitlesize)
         if i == 0:
             ax_it.set_title('SQP iterations', size = axtitlesize)
             
@@ -378,29 +384,24 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
         
-        ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs_S[i])#, c = cmap[i])
-        # ax_time.set_ylabel("solution time [s]", size = labelsize)
+        ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs_S[i])
         ax_time.set_ylim(bottom = 0)
         if i == n_EXP - 1:
             ax_time.set_xlabel("location of perturbation", size = labelsize)
-        # ax_time.set_title(r"$\mu = " + trunc_float(EXP_N_secs_mu[i], 1) + r"\ \sigma = " + trunc_float(EXP_N_secs_sigma[i], 1) + "$", size = axtitlesize)
         if i == 0:
-            ax_time.set_title('solution time [s]', size = axtitlesize)# + r'$\mu = ' + trunc_float(EXP_N_secs_mu[i], 1) + r'\ \sigma = ' + trunc_float(EXP_N_secs_sigma[i], 1) + '$', size = axtitlesize)
+            ax_time.set_title('solution time [s]', size = axtitlesize)
         ax_time.set_xticks(xticks)
         ax_time.tick_params(labelsize = labelsize - 1)
-        
-        
-    if not isinstance(dirPath, str):
+    if not isinstance(dirPath, Path):
         plt.show()
     else:
-        if not os.path.exists(dirPath):
-            os.makedirs(dirPath)
+        dirPath.mkdir(parents = True, exist_ok = True)
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         name_app = "" if suptitle is None else suptitle.replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")        
-        sep = "" if dirPath[-1] == "/" else "/"
         pref = "" if savePrefix is None else savePrefix
         
-        plt.savefig(dirPath + sep + pref + "_it_s_" + name_app + "_" + date_app)
+        plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
+    plt.close()
 
 
 
@@ -422,10 +423,8 @@ def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
     EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
     
-    trunc_float = lambda num, dg: str(float(num))[0:int(np.ceil(abs(np.log(num + (num == 0))/np.log(10)))) + 2 + dg]
     out.write(name[:25].ljust(27))
     for i in range(n_EXP):
-        # out.write((trunc_float(EXP_N_SQP_mu[i],1) + ",").ljust(10) + (trunc_float(EXP_N_SQP_sigma[i],1) + ";").ljust(11) + (trunc_float(EXP_N_secs_mu[i],1) + "s,").ljust(10) + (trunc_float(EXP_N_secs_sigma[i],1) + "s").ljust(11))
         out.write((f"{EXP_N_SQP_mu[i]:.2f}" + ",").ljust(10) + (f"{EXP_N_SQP_sigma[i]:.2f}" + ";").ljust(11) + (f"{EXP_N_secs_mu[i]:.2f}" + "s,").ljust(10) + (f"{EXP_N_secs_sigma[i]:.2f}" + "s").ljust(11))
         if i < n_EXP - 1:
             out.write("|".ljust(5))
@@ -441,16 +440,16 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True):
-    if not os.path.exists(dirPath):
-        os.makedirs(dirPath)
+def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True):
+    if isinstance(dirPath, str):
+        print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
+        dirPath = Path(dirPath)
+    dirPath.mkdir(parents = True, exist_ok = True)
     
     if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-        sep = "" if dirPath[-1] == "/" else "/"
         pref = "ipopt"
-        filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
-        
+        filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
         out = open(filePath, 'w')
     else:
         out = out_dummy()
@@ -481,13 +480,14 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
 
 
 def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
-    if not os.path.exists(dirPath):
-        os.makedirs(dirPath)
+    if isinstance(dirPath, str):
+        print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
+        dirPath = Path(dirPath)
+    dirPath.mkdir(parents = True, exist_ok = True)
     if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-        sep = "" if dirPath[-1] == "/" else "/"
         pref = "blockSQP"
-        filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+        filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
         out = open(filePath, 'w')
     else:
         out = out_dummy()

@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -34,17 +34,11 @@
 #include <iostream>
 #include <string>
 #include <chrono>
-#ifdef WINDOWS
-    #include "mkl.h"
-#else
-    #include "cblas.h"
-#endif
-#define MATRIX_DEBUG
+#include "cblas.h"
+//#define MATRIX_DEBUG      //Do bounds and dimension checking when performing matrix operations
 
 namespace blockSQP
 {
-
-//#define MATRIX_DEBUG
 
 void Error( const char *F )
 {
@@ -89,8 +83,8 @@ int Matrix::free( void )
     if ( tflag )
         Error("free cannot be called with Submatrix");
 
-    if ( array != NULL )
-        delete[] array;
+    delete[] array;
+    array = nullptr;
 
     return 0;
 }
@@ -762,10 +756,8 @@ int SymMatrix::malloc(void){
 
 
 int SymMatrix::free(){
-    if (array != NULL){
-        delete[] array;
-        array = nullptr;
-    }
+    delete[] array;
+    array = nullptr;
     return 0;
 }
 
@@ -1999,9 +1991,7 @@ const Matrix &LT_Block_Matrix::operator() (int i, int j) const{
 	if (i >= j){
 		return array[i + j*m - (j*(j+1))/2];
 	}
-	else{
-		return Matrix(m_block_sizes[i], n_block_sizes[j]).Initialize(0.);
-	}
+    throw std::invalid_argument("Cannot access upper part of LT_Block_Matrix");
 }
 
 LT_Block_Matrix &LT_Block_Matrix::operator=(const LT_Block_Matrix &M){

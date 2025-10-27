@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
@@ -154,10 +154,10 @@ class SQPoptions{
     int max_QP_it = 5000;                         ///< Maximum number of QP iterations per SQP iteration
     double max_QP_secs = 3600.0;                 ///< Maximum number of seconds per QP solve per SQP iteration
     
-    //SQPmethod subclass options, outsource into SQPoptions subclass if they become too many
-    int max_bound_refines = 3;              ///< Options for condensed QPs
-    int max_correction_steps = 5;           ///< How many additional QPs with bound correction added to dependent variables should be solved
-    double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
+    //Experimental, currently hardcoded
+    //int max_bound_refines = 3;              ///< Options for condensed QPs
+    //int max_correction_steps = 6;           ///< How many additional QPs with bound correction added to dependent variables should be solved
+    //double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
     
     //For experimental purposes
     bool test_opt_1 = false;
@@ -180,7 +180,6 @@ class SQPoptions{
     void optionsConsistency();
     //Set default QP solver options and copy over some options from the SQP options. Assumes options are consistent. Automatically called by optionsConsistency
     void complete_QP_options();
-    void reset();
 };
 
 

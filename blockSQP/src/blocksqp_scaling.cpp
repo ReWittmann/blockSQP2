@@ -1,8 +1,8 @@
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -30,17 +30,17 @@
  namespace blockSQP{
 
 
-//Algorithm 2 from paper, calculate scaling factor for free variables
+//Calculate scaling factor for free variables (Algorithm 2 from paper 2025)
 void SQPmethod::calc_free_variables_scaling(double *ret_SF){
     int nIt, pos, nfree = prob->nVar, ind_1, scfree, scdep, count_delta = 0, count_gamma = 0;
     double bardelta_u, bardelta_x, bargamma_u, bargamma_x, S_u, rgamma = 0., rdelta = 0.;
-
+    
     if (prob->n_vblocks < 1) return;
     nfree = prob->nVar;
     for (int k = 0; k < prob->n_vblocks; k++){
         nfree -= prob->vblocks[k].size*int(prob->vblocks[k].dependent);
     }
-
+    
     nIt = std::min(vars->n_scaleIt, 5);
     for (int j = 0; j < nIt; j++){
         bardelta_u = 0.; bardelta_x = 0.; bargamma_u = 0.; bargamma_x = 0.;
@@ -85,23 +85,7 @@ void SQPmethod::calc_free_variables_scaling(double *ret_SF){
     //If no scaling information was accumulated, rdelta is set to 1.0 => all scaling factors are 1.0
     rdelta = (count_delta > 0) ? std::exp(rdelta/count_delta) : 1.0;
     rgamma = (count_gamma > 0) ? std::exp(rgamma/count_gamma) : 1.0;
-    /*
-    if (param->test_opt_1){
-        S_u = -1.0;
-        if (rgamma > param->test_opt_3){
-            S_u = rgamma/param->test_opt_3;
-        }
-        else if (rgamma < param->test_opt_2){
-            if (rdelta > param->test_opt_2){
-                if (rgamma < 0.1*param->test_opt_2) S_u = 10.0*rgamma;
-                else S_u = std::min(param->test_opt_2, rdelta*rgamma);
-            }
-            else{
-                S_u = rgamma;
-            }
-        }
-    }
-    else{*/
+    
     S_u = -1.0;
     if (rgamma > 10.0){
         S_u = rgamma/10.0;
@@ -115,7 +99,7 @@ void SQPmethod::calc_free_variables_scaling(double *ret_SF){
             S_u = rgamma;
         }
     }
-    //}
+    
     if (S_u > 0){
         vars->vfreeScale *= S_u;
         ind_1 = 0;
@@ -128,7 +112,6 @@ void SQPmethod::calc_free_variables_scaling(double *ret_SF){
             ind_1 += prob->vblocks[k].size;
         }
     }
-
     return;
 }
 

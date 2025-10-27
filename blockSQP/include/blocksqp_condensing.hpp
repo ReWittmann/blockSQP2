@@ -1,8 +1,8 @@
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
@@ -239,7 +239,7 @@ class Condenser{
     //Construct a new Condenser sharing the layout data of an existing condenser.
     static Condenser *layout_copy(const Condenser *CND);
 
-    void print_debug();
+    void print_info();
 
     //Setter of changing how dependent variable bounds are added
     void set_dep_bound_handling(int opt);
@@ -268,7 +268,8 @@ class Condenser{
 
 
 
-    ///BlockSQP specific methods: Condense a positive definite fallback hessian approximation for lifting an indefinite hessian via convex combinations
+    ///Methods for special cases.
+    //They are modded versions of the four primary methods above, so currently there is still a lot of code duplication
 
     //Update condensed QP with a different hessian. This also affects the linear term in the condensed QP.
     void fallback_hessian_condense(const blockSQP::SymMatrix *const hess_2, blockSQP::Matrix &condensed_h_2, blockSQP::SymMatrix *condensed_hess_2);
@@ -281,7 +282,7 @@ class Condenser{
     void single_convex_combination_recover(int tnum, const blockSQP::Matrix &xi_free, const blockSQP::Matrix &mu, const blockSQP::Matrix &lambda, const blockSQP::Matrix &sigma, const double t,
                             blockSQP::Matrix &xi_full, blockSQP::Matrix &nu, blockSQP::Matrix &mu_lambda);
 
-
+    
     //Update condensed QP with a new hessian
     void new_hessian_condense(const blockSQP::SymMatrix *const hess, blockSQP::Matrix &condensed_h, blockSQP::SymMatrix *condensed_hess);
     void single_new_hess_condense(int tnum, const blockSQP::SymMatrix *const sub_hess);

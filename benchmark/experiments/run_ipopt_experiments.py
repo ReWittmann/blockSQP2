@@ -1,10 +1,24 @@
-import os
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file run_ipopt_experiments.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to benchmark the NLP solver ipopt several problems 
+# for perturbed start points for different options.
+
 import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent)]
 import OCP_experiment
 import OCProblems
 
@@ -33,7 +47,7 @@ Experiments = [
                 ]
 
 
-plot_folder = cD + "/out_ipopt_experiments"
+plot_folder = cD / Path("out_ipopt_experiments")
 OCP_experiment.run_ipopt_experiments(Examples, 
                                      Experiments, 
                                      plot_folder, 

@@ -1,3 +1,19 @@
+/*
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
+ * Licensed under the zlib license. See LICENSE for more details.
+ */
+
+/**
+ * \file example_condensing.hpp
+ * \author Reinhold Wittmann
+ * \date 2023-2025
+ *
+ * Example demonstrating the use of QP condensing.
+ */
+
 #include "blocksqp_condensing.hpp"
 #include "qpOASES.hpp"
 #include <iostream>
@@ -80,54 +96,53 @@ void convertHessian(double eps, blockSQP::SymMatrix *&hess_, int nBlocks, int nV
 
 
 int main(){
-
+    
     //Layout information
     blockSQP::vblock *vblocks = new blockSQP::vblock[7];
     vblocks[0] = blockSQP::vblock(1,false);
-
+    
     vblocks[1] = blockSQP::vblock(2,true);
     vblocks[2] = blockSQP::vblock(1,false);
-
+    
     vblocks[3] = blockSQP::vblock(2,true);
     vblocks[4] = blockSQP::vblock(1,false);
-
+    
     vblocks[5] = blockSQP::vblock(2,true);
     vblocks[6] = blockSQP::vblock(1,false);
-
-
+    
+    
     blockSQP::cblock *cblocks = new blockSQP::cblock[4];
     cblocks[0] = blockSQP::cblock(2);
     cblocks[1] = blockSQP::cblock(2);
     cblocks[2] = blockSQP::cblock(2);
     cblocks[3] = blockSQP::cblock(1);
-
+    
     int *hsizes = new int[4]{1,3,3,3};
-
+    
     blockSQP::condensing_target *targets = new blockSQP::condensing_target[1];
     targets[0] = blockSQP::condensing_target(3,0,7,0,3);
-
-    blockSQP::Condenser *C = new blockSQP::Condenser(vblocks, 7, cblocks, 4, hsizes, 4, targets, 1);
-
-
-    C->print_debug();
-
-
+    
+    blockSQP::Condenser *cond = new blockSQP::Condenser(vblocks, 7, cblocks, 4, hsizes, 4, targets, 1);
+    
+    
+    cond->print_info();
+    
+    
     //Uncondensed Problem
     std::unique_ptr<double[]> NZ = std::unique_ptr<double[]>(new double[26]{-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,-2,1,1,-1,1,-1,-2,1,1,1,1,1,1});
     std::unique_ptr<int[]> ROW = std::unique_ptr<int[]>(new int[26]{0,1,6,0,2,6,1,3,6,2,3,6,2,4,6,3,5,6,4,5,6,4,6,5,6,6});
     std::unique_ptr<int[]> COLIND = std::unique_ptr<int[]>(new int[11]{0,3,6,9,12,15,18,21,23,25,26});
-
+    
     blockSQP::Sparse_Matrix con_jac(7, 10, std::move(NZ), std::move(ROW), std::move(COLIND));
-
+    
     std::cout << "A =\n" << con_jac.dense() << "\n";
-
-
+    
+    
     //full_block = 0.25 * ([1,-1,1]*[1,-1,1]^T + [1,1,0]*[1,1,0]^T + [-1,1,2]*[-1,1,2]^T)
     blockSQP::SymMatrix full_block(3);
     full_block(0,0) = 0.75; full_block(1,0) = -0.25; full_block(2,0) = -0.25; full_block(1,1) = 0.75; full_block(2,1) = 0.25; full_block(2,2) = 1.25;
-    //std::cout << "full_block =\n" << full_block << "\n";
-
-
+    
+    
     blockSQP::SymMatrix *hess = new blockSQP::SymMatrix[4];
     hess[0] = identity(1);
     //hess[1] = identity(3);
@@ -136,19 +151,19 @@ int main(){
     hess[1] = full_block;
     hess[2] = full_block;
     hess[3] = full_block;
-
-
+    
+    
     //std::cout << "The quadratic objective is xi^T H xi, with H block-structured with 4 identity-blocks of sizes 1,3,3,3\n";
 	std::cout << "The quadratic objective is xi^T H xi, with H block-structured with 4 blocks, [1] +\n" << full_block << "x3\n";
-
+    
     blockSQP::Matrix grad_obj(10,1);
     grad_obj.Initialize(1.);
-
+    
     blockSQP::Matrix lb_var(10,1);
     blockSQP::Matrix ub_var(10,1);
     blockSQP::Matrix lb_con(7,1);
     blockSQP::Matrix ub_con(7,1);
-
+    
     //default: +-0.3
     lb_var.Initialize(-0.3);
     ub_var.Initialize(0.3);
@@ -156,33 +171,33 @@ int main(){
     ub_con.Initialize(0.1);
     lb_con(6) = -1.9;
     ub_con(6) = 1.9;
-
+    
     std::cout << "c =\n[0.1\n0.1\n0.1\n0.1\n0.1\n0.1]\n";
-
+    
     //Solve uncondensed problem
     qpOASES::SQProblem* qp;
     qpOASES::returnValue ret;
-
+    
     qpOASES::Matrix *A_qp;
     qpOASES::SymmetricMatrix *H;
-
+    
     double *hess_nz = nullptr;
     int *hess_row = nullptr;
     int *hess_colind = nullptr;
     int *hess_loind = nullptr;
-
+    
     qp = new qpOASES::SQProblemSchur( con_jac.n, con_jac.m, qpOASES::HST_UNKNOWN, 50 );
-
+    
     A_qp = new qpOASES::SparseMatrix(con_jac.m, con_jac.n,
                 con_jac.row.get(), con_jac.colind.get(), con_jac.nz.get());
-
+    
     convertHessian(1.0e-15, hess, 4, con_jac.n, hess_nz, hess_row, hess_colind, hess_loind);
     std::cout << "converted Hessians\n";
-
-
+    
+    
     H = new qpOASES::SymSparseMat(con_jac.n, con_jac.n, hess_row, hess_colind, hess_nz);
     dynamic_cast<qpOASES::SymSparseMat*>(H)->createDiagInfo();
-
+    
     double *g = grad_obj.array;
     double *lb = lb_var.array;
     double *ub = ub_var.array;
@@ -190,7 +205,7 @@ int main(){
     double *ubA = ub_con.array;
     double cpu_time = 10000;
     int max_it = 10000;
-
+    
     qpOASES::Options opts;
     opts.enableInertiaCorrection = qpOASES::BT_FALSE;
     opts.enableEqualities = qpOASES::BT_TRUE;
@@ -199,87 +214,66 @@ int main(){
     opts.numRefinementSteps = 2;
     opts.epsLITests =  2.2204e-08;
     qp->setOptions( opts );
-
+    
     ret = qp->init(H, g, A_qp, lb, ub, lbA, ubA, max_it, &cpu_time);
-    std::cout << "Solver of uncondensed QP returned, ret is " << ret << "\n";
-
-/*
-    double *xi_arr = new double[10];
-    double *lambda_arr = new double[16];
-    qp->getPrimalSolution(xi_arr);
-    qp->getDualSolution(lambda_arr);
-
-    //blockSQP::Matrix xi(10,1, xi_arr);
-    //blockSQP::Matrix lambda(6,1, lambda_arr);
-
-    std::cout << "Primal solution of uncondensed QP is\n";
-    for (int i = 0; i<10; i++){
-        std::cout << xi_arr[i] << "\n";
-    }
-    std::cout << "Dual solution of uncondensed QP is\n";
-    for (int i = 0; i<16; i++){
-        std::cout << lambda_arr[i] << "\n";
-    }*/
-
+    
+    
     blockSQP::Matrix xi(10);
     blockSQP::Matrix lambda(17);
     qp->getPrimalSolution(xi.array);
     qp->getDualSolution(lambda.array);
-
-    //std::cout << "Primal solution of uncondensed QP is\n" << xi << "\n";
-    //std::cout << "Dual solution of uncondensed QP is\n" << lambda << "\n";
-
-
+    
+    
     delete qp;
     delete A_qp;
     delete H;
-
-
+    
+    
     //Condense the QP
-    blockSQP::SymMatrix *condensed_hess = new blockSQP::SymMatrix[C->condensed_num_hessblocks];
+    blockSQP::SymMatrix *condensed_hess = new blockSQP::SymMatrix[cond->condensed_num_hessblocks];
     blockSQP::Sparse_Matrix condensed_Jacobian;
     blockSQP::Matrix condensed_h;
     blockSQP::Matrix condensed_lb_var;
     blockSQP::Matrix condensed_ub_var;
     blockSQP::Matrix condensed_lb_con;
     blockSQP::Matrix condensed_ub_con;
-
-    C->full_condense(grad_obj, con_jac, hess, lb_var, ub_var, lb_con, ub_con,
+    
+    cond->full_condense(grad_obj, con_jac, hess, lb_var, ub_var, lb_con, ub_con,
         condensed_h, condensed_Jacobian, condensed_hess, condensed_lb_var, condensed_ub_var, condensed_lb_con, condensed_ub_con
     );
-
-
+    
+    
     std::cout << "Condensed hess =\n" << condensed_hess[0] << "\n";
     std::cout << "Condensed jacobian =\n" << condensed_Jacobian.dense() << "\n";
     std::cout << "Condensed linear form h =\n" << condensed_h << "\n";
     std::cout << "Condensed lb_var =\n" << condensed_lb_var << "\n\ncondensed_ub_var =\n" << condensed_ub_var << "\n";
     std::cout << "Condensed lb_con =\n" << condensed_lb_con << "\n\ncondensed_ub_con =\n" << condensed_ub_con << "\n";
-
-
+    
+    
     //Solve the condensed QP
     qpOASES::SQProblem* qp_cond;
     qpOASES::returnValue ret_cond;
-
+    
     qpOASES::Matrix *A_qp_cond;
     qpOASES::SymmetricMatrix *H_cond;
-
+    
     double *hess_nz_cond = nullptr;
     int *hess_row_cond = nullptr;
     int *hess_colind_cond = nullptr;
     int *hess_loind_cond = nullptr;
-
+    
     qp_cond = new qpOASES::SQProblemSchur( condensed_Jacobian.n, condensed_Jacobian.m, qpOASES::HST_UNKNOWN, 50 );
-
+    
     A_qp_cond = new qpOASES::SparseMatrix(condensed_Jacobian.m, condensed_Jacobian.n,
                 condensed_Jacobian.row.get(), condensed_Jacobian.colind.get(), condensed_Jacobian.nz.get());
-
+    
     convertHessian(1.0e-15, condensed_hess, 1, condensed_Jacobian.n, hess_nz_cond, hess_row_cond, hess_colind_cond, hess_loind_cond);
     std::cout << "converted Hessians\n";
-
-
+    
+    
     H_cond = new qpOASES::SymSparseMat(condensed_Jacobian.n, condensed_Jacobian.n, hess_row_cond, hess_colind_cond, hess_nz_cond);
     dynamic_cast<qpOASES::SymSparseMat*>(H_cond)->createDiagInfo();
-
+    
     double *g_cond = condensed_h.array;
     double *lb_cond = condensed_lb_var.array;
     double *ub_cond = condensed_ub_var.array;
@@ -287,65 +281,51 @@ int main(){
     double *ubA_cond = condensed_ub_con.array;
     double cpu_time_cond = 10000;
     int max_it_cond = 10000;
-
+    
     qp_cond->setOptions( opts );
-
+    
     ret_cond = qp_cond->init(H_cond, g_cond, A_qp_cond, lb_cond, ub_cond, lbA_cond, ubA_cond, max_it_cond, &cpu_time_cond);
     std::cout << "Solver of condensed QP returned, ret is " << ret_cond << "\n";
-
-    /*
-    double *xi_cond_arr = new double[4];
-    double *lambda_cond_arr = new double[10];
-    qp_cond->getPrimalSolution(xi_cond_arr);
-    qp_cond->getDualSolution(lambda_cond_arr);
-
-    blockSQP::Matrix xi_cond(4,1,xi_cond_arr);
-    blockSQP::Matrix lambda_cond(10,1,lambda_cond_arr);
-    */
-
+    
     blockSQP::Matrix xi_cond(4);
     blockSQP::Matrix lambda_cond(11);
     qp_cond->getPrimalSolution(xi_cond.array);
     qp_cond->getDualSolution(lambda_cond.array);
-
+    
     std::cout << "xi_cond=\n" << xi_cond;
     std::cout << "lambda_cond=\n" << lambda_cond;
-
-
+    
+    
     blockSQP::Matrix xi_rest;
     blockSQP::Matrix lambda_rest;
 
-    C->recover_var_mult(xi_cond, lambda_cond, xi_rest, lambda_rest);
+    cond->recover_var_mult(xi_cond, lambda_cond, xi_rest, lambda_rest);
 
     std::cout << "Primal solution of uncondensed QP is\n" << xi << "\n";
     std::cout << "Dual solution of uncondensed QP is\n" << lambda << "\n";
-
+    
     std::cout << "Primal solution of condensed QP after restoration is\n" << xi_rest << "\n";
     std::cout << "Dual solution of condensed QP after restoration is\n" << lambda_rest << "\n";
-
-
+    
+    
     delete qp_cond;
     delete A_qp_cond;
     delete H_cond;
-
-    //##############
-
+    
     delete[] vblocks;
     delete[] cblocks;
     delete[] hsizes;
     delete[] targets;
     delete[] hess;
     delete[] condensed_hess;
-
+    
     delete[] hess_nz;
     delete[] hess_row;
-
+    
     delete[] hess_nz_cond;
     delete[] hess_row_cond;
-
-    delete C;
-
+    
+    delete cond;
     return 0;
-
 }
 

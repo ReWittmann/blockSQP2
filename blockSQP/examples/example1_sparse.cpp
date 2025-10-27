@@ -18,6 +18,10 @@ static double const myInf = std::numeric_limits<double>::infinity();    ///< Use
  * \brief Example implementation of a derived class of the ProblemSpec base class.
  * \author Dennis Janka
  * \date 2012-2015
+ * 
+ * \modifications
+ *  \author Reinhold Wittmann
+ *  \date 2023-2025
  */
 
 class MyProblem : public Problemspec{
@@ -136,14 +140,6 @@ void MyProblem::convertJacobian( const Matrix &constrJac, double *jacNz, int *ja
             for( i=0; i<nCon; i++ )
                 if( fabs( constrJac( i, j ) < myInf ) )
                     nnz++;
-		/*
-        if( jacNz != NULL ) delete[] jacNz;
-        if( jacIndRow != NULL ) delete[] jacIndRow;
-
-        jacNz = new double[nnz];
-        jacIndRow = new int[nnz + (nVar+1)];
-        jacIndCol = jacIndRow + nnz;
-        */
     }
     else
     {
@@ -182,7 +178,7 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol )
 {   
     Matrix constrDummy, gradObjDummy, constrJac;
-    SymMatrix *hessDummy;
+    SymMatrix *hessDummy = nullptr;
     double objvalDummy;
     int info;
 
@@ -198,7 +194,7 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacI
     evaluate( xi, lambda, &objvalDummy, constrDummy, gradObjDummy, constrJac, hessDummy, 1, &info );
 
     // allocate sparse Jacobian structures
-    convertJacobian( constrJac, jacNz, jacIndRow, jacIndCol, 1 );
+    convertJacobian( constrJac, jacNz, jacIndRow, jacIndCol, 0 );
 }
 
 /*
@@ -340,10 +336,7 @@ int main(int argc, const char* argv[]){
     printf("\nHessian approximation at the solution:\n");
     for( int i=0; i<meth->vars->nBlocks; i++ )
         meth->vars->hess[i].Print();
-    //printf("\nFallback Hessian at the solution:\n");
-    //for( int i=0; i<meth->vars->nBlocks; i++ )
-        //meth->vars->hess2[i].Print();
-
+    
     // Clean up
     delete prob;
     delete stats;

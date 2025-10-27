@@ -1,8 +1,8 @@
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -452,7 +452,7 @@ Condenser *Condenser::layout_copy(const Condenser *cond){
     return new Condenser(cond->vblocks, cond->num_vblocks, cond->cblocks, cond->num_cblocks, cond->hess_block_sizes, cond->num_hessblocks, cond->targets, cond->num_targets, cond->add_dep_bounds);
 }
 
-void Condenser::print_debug(){
+void Condenser::print_info(){
     std::cout<< "num_targets: " << num_targets << "\n";
     std::cout<< "num_vars: " << num_vars << "\n";
     std::cout<< "num_cons: " << num_cons << "\n";

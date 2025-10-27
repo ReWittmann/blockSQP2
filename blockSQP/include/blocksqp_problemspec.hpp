@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
@@ -48,7 +48,7 @@ class Problemspec{
         int         nVar = -1;                                          // number of variables
         int         nCon = -1;                                          // number of constraints
         int         nnz = -1;                                           // number of structural nonzero entries of sparse constraint jacobian
-
+        
         double      objLo = std::numeric_limits<double>::infinity();    // lower bound for objective
         double      objUp = std::numeric_limits<double>::infinity();    // upper bound for objective
         Matrix      lb_var;                                             // lower bounds of variables and constraints
@@ -59,7 +59,7 @@ class Problemspec{
         //Metadata
         int         nBlocks = -1;                                       // number of separable blocks of Lagrangian
         int*        blockIdx = nullptr;                                 // [blockwise] index in the variable vector where a block starts
-
+        
         int         n_vblocks = -1;                                     // number of distinct variable blocks of variables
         vblock      *vblocks = nullptr;                                 // variable blocks, containing structure information (free/dependent, ...)
         
@@ -128,33 +128,30 @@ class Problemspec{
         virtual void printInfo(){};
 };
 
+//Wrap a Problemspec into a scalable version of itself
 class scaled_Problemspec: public Problemspec{
 public:
-
     Problemspec *unscaled_prob;
-
+    
     std::unique_ptr<double[]> scaling_factors;
     Matrix xi_unscaled;
-
+    
     scaled_Problemspec(Problemspec *UNSCprob);
     ~scaled_Problemspec();
-
+    
     //Set scaling factors
     void set_scale(const double *const scaleFacs);
     //Apply scaling factors, multiplies to current scaling factors
     void rescale(const double *const scaleFacs);
-
-
+    
     void initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac);
     void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-
+    
     void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info);
     void evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info);
     void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info);
-
+    
     void reduceConstrVio(Matrix &xi, int* info);
-
-
 };
 
 

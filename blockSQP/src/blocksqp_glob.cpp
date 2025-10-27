@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -356,9 +356,9 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
-        info = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
+        QPresult infoQP = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
             
-        if (info != 0)
+        if (infoQP != QPresult::success)
             return false; // Could not solve QP, abort SOC
 
         // Set new SOC trial point
@@ -461,7 +461,7 @@ int SQPmethod::feasibilityRestorationPhase(){
 }
 
 
-int SQPmethod::innerRestorationPhase(abstractRestorationProblem *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
+int SQPmethod::innerRestorationPhase(RestorationProblemBase *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
     int info;
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresult ret;
@@ -789,8 +789,9 @@ int SCQPmethod::feasibilityRestorationPhase(){
     return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
 
+*/
 
-int SCQP_correction_method::filterLineSearch(){
+int bound_correction_method::filterLineSearch(){
 
     double alpha = 1.0;
     double cNorm, cNormTrial, objTrial, dfTdeltaXi;
@@ -798,49 +799,53 @@ int SCQP_correction_method::filterLineSearch(){
     int k, info;
     int nVar = prob->nVar;
 
-    int ind_1, ind_2, ind;
-    double max_dep_bound_violation, xi_s;
+    //int ind_1, ind_2, ind;
+    //double max_dep_bound_violation, xi_s;
+    
+    Matrix deltaXi_save, lambdaQP_save;
 
     // Compute ||constr(xi)|| at old point
     cNorm = lInfConstraintNorm( vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
 
     // Backtracking line search
-    for(k = 0; k<param->max_linesearch_steps; k++){
+    for (k = 0; k < param->max_linesearch_steps; k++){
         //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
+        /*
         if (k > 3 && !vars->conv_qp_solved){
             if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
             else{k = 0; alpha = 1.0;}
         }
+        */
 
         // Compute grad(f)^T * deltaXi (deltaXi being the original step without (second order) corrections)
         dfTdeltaXi = 0.0;
         for(int i = 0; i < nVar; i++)
             dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
-
+        
         //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
-        //work with a different variable (SCQP_correction_iterate*) vars->deltaXi_corr, vars->lambdaQP_corr
+        //work with a different variable 
         if (k == 0){
-            static_cast<SCQP_correction_iterate*>(vars.get())->deltaXi_save = vars->deltaXi;
-            static_cast<SCQP_correction_iterate*>(vars.get())->lambdaQP_save = vars->lambdaQP;
-
-            info = bound_correction(vars->deltaXi, vars->lambdaQP);
-
+            deltaXi_save = vars->deltaXi;
+            lambdaQP_save = vars->lambdaQP;
+            
+            QPresult infoQP = bound_correction(vars->deltaXi, vars->lambdaQP);
+            
             //If model bound correction failed for indefinite Hessian, resolve with convex Hessian and try again
-            if (info && !vars->conv_qp_solved){
-                if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
+            if (infoQP != QPresult::success && !vars->conv_qp_solved){
+                if (solveQP(vars->deltaXi, vars->lambdaQP, 1) != QPresult::success) return 1;
                 else{k = 0; alpha = 1.0;}
             }
         }
         else if (k == 1){
             //Both bound and second order corrections are only tried in the first iteration, restore original step for backtracking line search
-            vars->deltaXi = static_cast<SCQP_correction_iterate*>(vars.get())->deltaXi_save;
-            vars->lambdaQP = static_cast<SCQP_correction_iterate*>(vars.get())->lambdaQP_save;
+            vars->deltaXi = deltaXi_save;
+            vars->lambdaQP = lambdaQP_save;
         }
-
+        
         // Compute new trial point and truncate any bound violation
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
-
+            
             if (vars->trialXi(i) < prob->lb_var(i)){
                 vars->trialXi(i) = prob->lb_var(i);
             }
@@ -848,14 +853,14 @@ int SCQP_correction_method::filterLineSearch(){
                 vars->trialXi(i) = prob->ub_var(i);
             }
         }
-
+        
         // Compute objective and at ||constr(trialXi)||_1 at trial point
         prob->evaluate( vars->trialXi, &objTrial, vars->trialConstr, &info );
         stats->nFunCalls++;
-
+        
         //cNormTrial = l1ConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
         cNormTrial = lInfConstraintNorm( vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
-
+        
         // Reduce step if evaluation fails, if lower bound is violated or if objective is NaN
         if(info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
             // evaluation error, reduce stepsize
@@ -875,7 +880,7 @@ int SCQP_correction_method::filterLineSearch(){
                 continue;
             }
         }
-
+        
         // Check sufficient decrease, case I:
         // If we are (almost) feasible and a "switching condition" is satisfied
         // require sufficient progress in the objective instead of bi-objective condition
@@ -904,7 +909,7 @@ int SCQP_correction_method::filterLineSearch(){
                 }
             }
         }
-
+        
         // Check sufficient decrease, case II:
         // Bi-objective (filter) condition
         if (cNormTrial < (1.0 - param->gammaTheta) * cNorm || objTrial < vars->obj - param->gammaF * cNorm){
@@ -923,11 +928,11 @@ int SCQP_correction_method::filterLineSearch(){
             }
         }
     }// backtracking steps
-
+    
     // No step could be found by the line search
     if( k == param->max_linesearch_steps )
         return 1;
-
+    
     // Augment the filter if switching condition or Armijo condition does not hold
     if( dfTdeltaXi >= 0 )
         augmentFilter( cNormTrial, objTrial );
@@ -939,23 +944,24 @@ int SCQP_correction_method::filterLineSearch(){
     return 0;
 }
 
-int SCQP_correction_method::feasibilityRestorationPhase(){
-    // No Feasibility restoration phase
-    if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
 
+int bound_correction_method::feasibilityRestorationPhase(){
+    // No Feasibility restoration phase
+    if (param->enable_rest == 0) [[unlikely]] throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
+    
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-    int warmStart;
+    bool warmStart = (vars->steptype == 3);
     // Iterate until a point acceptable to the filter is found
-    if (vars->steptype != 3){
-        rest_prob->update_xi_ref(vars->xi);
-        //TODO scaling in restoration phase
-        //rest_prob->n_vblocks = prob->n_vblocks;
-        //rest_prob->vblocks = rest_vblocks;
-
+    if (!warmStart){
+        vars->nRestIt = 0;
+        rest_stats = std::make_unique<SQPstats>(stats->outpath);
+        
+        rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+        
         warmStart = 0;
         vars->nRestIt = 0;
-        rest_method = std::make_unique<SCQP_correction_method>(rest_prob.get(), rest_param.get(), rest_stats.get(), rest_cond.get());
+        rest_method = std::make_unique<bound_correction_method>(rest_prob.get(), rest_param.get(), rest_stats.get());
         rest_method->init();
     }
     else warmStart = 1;
@@ -963,7 +969,7 @@ int SCQP_correction_method::feasibilityRestorationPhase(){
     //Invoke the restoration phase with setup problem and method
     return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
 }
-*/
+
 
 
 } // namespace blockSQP

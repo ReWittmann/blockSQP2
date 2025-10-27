@@ -7,10 +7,10 @@
  */
 
 /*
- * blockSQP extensions -- Extensions and modifications for the 
-                          blockSQP nonlinear solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
  
@@ -68,12 +68,6 @@ class SQPiterate{
         //Constraint jacobian
         Matrix constrJac;                             // full constraint Jacobian (not used in sparse mode)
         Sparse_Matrix sparse_constrJac;               // sparse constraint Jacobian (not used in dense mode)
-        
-        /*
-        std::unique_ptr<double[]> jacNz;              // Constraint Jacobian in CCS form (only used in sparse mode)
-        std::unique_ptr<int[]> jacIndRow;
-        std::unique_ptr<int[]> jacIndCol;
-        */
         
         //Hessian(s), including layout
         int nBlocks;                                   ///< number of diagonal blocks in Hessian
@@ -193,45 +187,6 @@ class SQPiterate{
         void save_iterate();    //Save xi, lambda, tol, cNorm and cNormS
         void restore_iterate(); //Restore the above from save
 };
-
-
-
-class SCQPiterate : public SQPiterate{
-    public:
-    //Wrapper object for sparse jacobian arrays, need it to invoke condensing
-    Sparse_Matrix Jacobian;
-
-    Matrix condensed_h;
-    Sparse_Matrix condensed_Jacobian;
-    std::unique_ptr<SymMatrix[]> condensed_hess;
-    Matrix condensed_lb_var;
-    Matrix condensed_ub_var;
-    Matrix condensed_lb_con;
-    Matrix condensed_ub_con;
-
-    //Condensed fallback hessian
-    std::unique_ptr<SymMatrix[]> condensed_hess_2;
-
-    //Solutions of condensed QP
-    Matrix deltaXi_cond;
-    Matrix lambdaQP_cond;
-
-    SCQPiterate(Problemspec* prob, SQPoptions* param, Condenser* cond);
-    virtual ~SCQPiterate();
-
-};
-
-class SCQP_correction_iterate : public SCQPiterate{
-public:
-    Matrix corrected_h;
-    Matrix corrected_lb_con;
-    Matrix corrected_ub_con;
-    
-    Matrix deltaXi_save;    //Backup to restore original step if correction yields no full step
-    Matrix lambdaQP_save;
-    SCQP_correction_iterate(Problemspec* prob, SQPoptions* param, Condenser* cond);
-};
-
 
 
 } // namespace blockSQP

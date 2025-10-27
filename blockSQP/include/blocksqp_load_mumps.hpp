@@ -1,8 +1,8 @@
 /*
- * blockSQP extensions -- Extensions for the blockSQP nonlinear
-                          solver by Dennis Janka
- * Copyright (C) 2023-2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
- *
+ * blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more
+ *               for blockSQP, the nonlinear programming solver by Dennis Janka.
+ * Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+ * 
  * Licensed under the zlib license. See LICENSE for more details.
  */
 
@@ -14,8 +14,8 @@
  * Declaration functions for loading the sparse linear solver MUMPS
  */
 
-#ifndef BLOCKSQP_PLUGIN_LOADER_HPP
-#define BLOCKSQP_PLUGIN_LOADER_HPP
+#ifndef BLOCKSQP_LOAD_MUMPS_HPP
+#define BLOCKSQP_LOAD_MUMPS_HPP
 
 #ifdef SOLVER_MUMPS
 namespace blockSQP{
@@ -29,4 +29,4 @@ void *get_fptr_dmumps_c(int ID);
 
 
 #endif //SOLVER_MUMPS
-#endif //BLOCKSQP_PLUGIN_LOADER_HPP
+#endif //BLOCKSQP_LOAD_MUMPS_HPP

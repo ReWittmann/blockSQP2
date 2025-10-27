@@ -1,12 +1,25 @@
-import os
-import sys
-import datetime
+# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+#                solver based on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+#
+# Licensed under the zlib license. See LICENSE for more details.
 
+
+# \file run_blockSQP_experiments.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to benchmark py_blockSQP on several problems 
+# for perturbed start points for different options
+
+import datetime
+import sys
+from pathlib import Path
 try:
-    cD = os.path.dirname(os.path.abspath(__file__))
+    cD = Path(__file__).parent
 except:
-    cD = os.getcwd()
-sys.path += [cD + "/..", cD + "/../.."]
+    cD = Path.cwd()
+sys.path += [str(cD.parent), str(cD.parents[1])]
 
 import py_blockSQP
 import OCP_experiment
@@ -31,6 +44,7 @@ Examples = [
             OCProblems.Tubular_Reactor,
             OCProblems.Lotka_OED,
             ]
+OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
 #SR1_BFGS
 opt_SR1_BFGS = py_blockSQP.SQPoptions()
@@ -56,16 +70,31 @@ opt_CS2.max_conv_QPs = 4
 opt_CS2.conv_strategy = 2
 opt_CS2.max_filter_overrides = 0
 
+#Full structure exploitation
+opt_full = py_blockSQP.SQPoptions()
+opt_full.max_conv_QPs = 4
+opt_full.conv_strategy = 2
+opt_full.automatic_scaling = True
+
+opt_dense = py_blockSQP.SQPoptions()
+opt_dense.hess_approx = 2
+opt_dense.sizing = 4
+QPopts = py_blockSQP.qpOASES_options()
+QPopts.sparsityLevel = 2
+opt_dense.qpsol_options = QPopts
+
 #Select option sets to test for
 Experiments = [
-               (opt_SR1_BFGS, "SR1-BFGS"),
+               # (opt_SR1_BFGS, "SR1-BFGS"),
                # (opt_CS0, "Convexification strategy 0"),
-               (opt_CS1, "conv. str. 1"),
-               (opt_CS2, "conv. str. 2")
+               # (opt_CS1, "conv. str. 1"),
+               # (opt_CS2, "conv. str. 2"),
+               (opt_full, "opt_full"),
+               # (opt_dense, "opt_dense")
                ]
 
 
-plot_folder = cD + "/out_blockSQP_experiments"
+plot_folder = cD / Path("out_blockSQP_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
@@ -78,13 +107,11 @@ file_output = True
 
 #Run all example problems for all option sets for perturbed start points
 dirPath = plot_folder
-if not os.path.exists(dirPath):
-    os.makedirs(dirPath)
+dirPath.mkdir(parents = True, exist_ok = True)
 if file_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-    sep = "" if dirPath[-1] == "/" else "/"
     pref = "blockSQP"
-    filePath = dirPath + sep + pref + "_it_" + date_app + ".txt"
+    filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
     out = open(filePath, 'w')
 else:
     out = OCP_experiment.out_dummy()
@@ -109,6 +136,6 @@ for OCclass in Examples:
     ###############################################################################
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = None, dirPath = dirPath, savePrefix = "blockSQP")
+        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP")
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()
