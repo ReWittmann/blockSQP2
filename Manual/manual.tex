@@ -32,6 +32,7 @@
 \DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}	% use standard mathcal font
 \renewcommand*\ttdefault{txtt}					% TXTT monospace
 \usepackage{microtype}							% better spacing (might be font-dependent!)
+\usepackage{url}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
 %	LISTINGS PACKAGE
@@ -141,7 +142,8 @@
 \newcommand{\vplan}{VPLAN}
 \newcommand{\muse}{\texttt{muse}}
 \newcommand{\qpOASES}{\texttt{qpOASES}}
-\newcommand{\blockSQP}{\texttt{blockSQP}}
+\newcommand{\MUMPS}{\texttt{MUMPS}}
+\newcommand{\blockSQP}{\texttt{blockSQP\_2}}
 \newcommand{\method}{\texttt{SQPmethod}}
 \newcommand{\Cmethod}{\texttt{SCQPmethod}}
 \newcommand{\options}{\texttt{SQPoptions}}
@@ -158,7 +160,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
 
 
-\title{[WIP] Updated \blockSQP\ user's manual}
+\title{[\blockSQP\ user's manual}
 \subtitle{Based on \blockSQP\ manual by Dennis Janka}
 \author{Reinhold Wittmann}
 
@@ -185,7 +187,7 @@ parameterizations of optimal control or optimum experimental design problems.
 \blockSQP\ has been developed around the quadratic programming solver
 \qpOASES~\cite{Ferreau2013} to solve the quadratic subproblems. Gradients of the objective
 and the constraint functions must be supplied by the user. The constraint Jacobian may be given in sparse or dense format. 
-Second derivatives are approximated by a combination of SR1 and BFGS updates. 
+Second derivatives may be provided or approximated by a combination of SR1 and BFGS updates. 
 Global convergence is promoted by the filter line search of Waechter and Biegler~\cite{Waechter2005b,Waechter2005}
 that can also handle indefinite Hessian approximations.
 
@@ -199,45 +201,24 @@ The method is described in detail in \cite[Chapters 6--8]{Janka2015}. These chap
 \blockSQP\ currently consists of three parts.
 \begin{itemize}
 \item The C++ source files including the C++ interface.
-\item The python interface.
-\item The julia interface.
+\item The Python interface.
+\item The Julia interface.
 \end{itemize}
-The python and julia interfaces are built separately from the C++ interface and depend on it.\\
-\subsection{Building the C++ package}
+The Python and Julia interfaces are built separately from the C++ interface and depend on it.\\
+\subsection{Building the C++ package}\label{BUILDING_CXX}
  \blockSQP\ is built from the source files in the src directory. The following dependencies need to be linked.
 \begin{itemize}
-\item a BLAS library.
-\item a QP solver.
+\item BLAS, LAPACK (e.g. OpenBLAS \url{https://github.com/OpenMathLib/OpenBLAS})
+%\item a sparse linear solver. Default is \texttt{MUMPS} \url{https://mumps-solver.org/index.php}. The proprietary \texttt{MA57} from \texttt{HSL} offers even higher performance.
+\item a QP solver. Currently, only \qpOASES\ handles nonconvex QPs as needed by \blockSQP.
+\item a sparse linear solver for \qpOASES. Default is \texttt{MUMPS} \url{https://mumps-solver.org/index.php}. The proprietary \texttt{MA57} from \texttt{HSL} offers higher performance.
 \end{itemize}
-\textbf{Linking a QP solver}\\
-In addition to linking the shared/ static binary of a QP solver, the preprocessor flag QPSOLVER\_[QP solver name (capital letters)] needs to be set. Currently available are
-\begin{itemize}
-	\item \qpOASES\ [convex and nonconvex QPs, dense and sparse matrices]
-	\item gurobi [convex QPs, dense and sparse matrices]
-	\item qpalm [convex QPs, poor performance for nonconvex QPs, dense and sparse matrices]
-\end{itemize}
-thoug gurobi and qpalm are experimental. \qpOASES\ is required if sparse nonconvex QPs are to be solved. In this case qpOASES itself requires a sparse linear solver such as \texttt{MA57} from \texttt{HSL} or \texttt{MUMPS}. See the respective manuals of the QP solvers.
-~\\~\\
-\textbf{Building with qpOASES and MUMPS for parallel QP solution}\\
-The MUMPS sparse linear solver is \textbf{NOT THREADSAFE}. 
-
-\subsection{Interfaces to other languages}
-\textbf{Python.} The python interface code is located in a separate folder of the same name. It requires the pybind11 library, whose headers need to be in the include path and which itself requires the python headers. The pybind11 documentation recommends using CMake to build the python module. Setting PYTHON\_EXECUTABLE to a path to a python interpreter before using find\_package(pybind11) allows specifying the python environment to build for. pybind11\_DIR can be set to the path to the pybind11 cmake files to ensure the right pybind11 installation is found.\\~\\
-\textbf{Julia.} The julia interface code similarly depends on the libcxxwrap-julia  library on the C++ side and the corresponding CxxWrap.jl library on the julia side. Using CMake is again recommended for building.\\~\\
-As an alternative, the julia interface can be built on blockSQP\_jll from binaryBuilder.jl via the blockSQP.jl [TODO MAKE AVAILABLE] package.
-\subsection{Building via CMake}
-Most QP solvers, as well as the used interface libraries provide CMake project files. A \mbox{CMakeLists.txt} build specification is provided for blockSQP that takes care of most of the above build requirements. In addition, separate \mbox{CMakeLists.txt} templates are provided for each of the C++ package, the python interface and the julia interface.\\
-The default build downloads \texttt{MUMPS} \cite{amestoy2000mumps} to build \qpOASES\ (\url{https://projects.coin-or.org/qpOASES}) with it. It is the users responsibility to ensure they are eligible to download and use \texttt{MUMPS}. The user needs to specify whether the python and julia interface should be built via the arguments -DPYTHON\_INTERFACE=ON / -DJULIA\_INTERFACE=ON. In addition, they can provide the path to the python interpreter that should be built for (-DPYTHON\_INTERPRETER=...). A path to the CxxWrap library CMake files needs to be provided to build the julia interface (-DCXXWRAP\_PATH=...).\\
-See the \texttt{readme.md} for further details.
+The preprocessor flag ``QPSOLVER\_QPOASES'' needs to be set if \qpOASES\ is used.\\~\\
+\textbf{Loading \MUMPS}\\
+\MUMPS\ is not thread safe. If parallel solution of QPs is to be used with \MUMPS, workarounds need to be enabled. On Linux, a shared library ``libdmumps\_c\_dyn.so'' needs to be built from blockSQP/src/ext/dmumps\_c\_dyn.cpp, which is then loaded in separate namespaces via dlmopen. On Windows, several identical shared libraries ``libdmumps\_c\_dyn\_0.dll, libdmumps\_c\_dyn\_1.dll, ...'' for loading via LoadLibrary need to be built. The  loader code is contained in blockSQP/src/blocksqp\_load\_mumps.cpp and expects the shared libraries to the in the same folder as the executable containing it.  Finally, the preprocessor flag "DMUMPS\_C\_DYN" needs to be set to activate the dynamic loading. In addition, \qpOASES\ SQProblemSchur class constructor needs to be modified to accept a pointer to the \MUMPS\ interface function and set the preprocessor flag ``SQPROBLEMSCHUR\_ENABLE\_PASSTHROUGH'' to. The above is already provided in the included \qpOASES\ version and the CMakeLists.txt, which ensured to shared libraries are copied to the correct location.\\~\\
+Check the README and README\_windows for further build instructions.
 %
 %
-%\begin{enumerate}
-%\item Download and install qpOASES release 3.2.0 from \url{https://projects.coin-or.org/qpOASES} according to the \qpOASES\ user's manual.
-%
-%	Alternatively, check out revision 155 from the \qpOASES\ subversion repository that is located at \url{https://projects.coin-or.org/svn/qpOASES/trunk/}. For best performance it is strongly recommended to install the sparse solver \texttt{MA57} from HSL as described in the \qpOASES\ user's manual, Sec. 2.2.
-%\item In the \blockSQP\ main directory, open \texttt{makefile} and set \texttt{QPOASESDIR} to the correct location of the \qpOASES\ installation.
-%\item Compile \blockSQP\ by calling \texttt{make}. This should produce a shared library \texttt{libblockSQP.so} in  \texttt{lib/}, as well as executable example problems in the \texttt{examples/} folder.
-%\end{enumerate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
 \section{Setting up a problem}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
@@ -336,6 +317,7 @@ Before passing an instance of \myproblem\ to \blockSQP, the following attributes
 \item \texttt{int nBlocks} - the number of diagonal blocks in the Hessian,
 \item \texttt{int* blockIdx} - an array of dimension \texttt{nBlocks+1} with the indices of the partition of the variables that correspond to the diagonal blocks. It is required that \texttt{blockIdx[0]=0} and \texttt{blockIdx[nBlocks]=nVar},
 \item \texttt{vblock *vblocks} (optional) - an array of \texttt{vblock \{int size, bool dependent\}} (\ref{CONDENSER_SECT}) to distinguish free and dependent variables.
+\item \texttt{Condenser *cond} (optional) - a Condenser instance for the problem, see sect. \ref{CONDENSER_SECT} on how to create one.
 \end{enumerate}
 An bound is specified by setting it to $\pm$ inf where inf is the value of the option inf,\\\texttt{std::numeric\_limits<double>::infinity()} by default.\\~\\
 \textbf{\texttt{Matrix}}\\
@@ -396,8 +378,7 @@ Whenever \blockSQP\ encounters an infeasible QP or cannot find a step length tha
 This routine is of course highly problem-dependent. If you are not sure what to do here, just do not implement this method. Otherwise, the method just takes \texttt{xi}, the current value of the (infeasible) point as input and expects it to be mutated to a new point.  In addition, it takes a flag \texttt{info} that must be set indicating if the evaluation was successful, in which case \texttt{info=0}.
 
 \subsubsection{Class \texttt{Condenser}}\label{CONDENSER_SECT}
-[LIKELY SUBJECT TO CHANGE]\\
-The condenser class of blockSQP requires the following structs.
+The condenser class of \blockSQP\ depends the following structs.
 \begin{itemize}
 \item \texttt{vblock: \{int size, bool dependent\}} corresponds to a block of variables and has a flag to mark dependent variables.
 \item \texttt{cblock: \{int size, bool removed\}} corresponds to a block of constraints and has a flag to mark used-up conditions.
@@ -430,10 +411,12 @@ The method \texttt{full\_condense} can then be called to condense a QP. It takes
 \item \texttt{Matrix\& lb\_var, ub\_var, lb\_con, ub\_con} - variable and constraint bounds
 \end{itemize}
 This also stores the data necessary to recover the original solution of the specific QP given. 
-The user is expected to solve the condensed QP, then call \texttt{recover\_var\_mult} with the primal-dual condensed QP solution (\texttt{Matrix xi\_cond, lambda\_cond}) and the original QP solution (\texttt{Matrix xi, lambda}) as return arguments. 
-
+The user is expected to solve the condensed QP, then call \texttt{recover\_var\_mult} with the primal-dual condensed QP solution (\texttt{Matrix xi\_cond, lambda\_cond}) and the original QP solution (\texttt{Matrix xi, lambda}) as return arguments.\\~\\
+\textbf{Passing the condenser to the solver}\\
+Condensing can be activated by setting the cond member of the Problemspec instance to a pointer to it.
+%
 %---------------------------------------------------------------------72
-\subsubsection{Class \method\ and \Cmethod}
+\subsubsection{Class \method\ }
 %---------------------------------------------------------------------72
 If you have implemented a problem using the \problem\ class you may solve it with \blockSQP\ using a suitable driver program. There, you must include the header file \texttt{blocksqp\_method.hpp} (and of course any other header files that you used to specify your problem).
 An instance of \method\ is created with a constructor that takes the following arguments:
@@ -442,7 +425,6 @@ An instance of \method\ is created with a constructor that takes the following a
 \item \texttt{SQPoptions *parameters}, an object in which all algorithmic options and parameters are stored
 \item \texttt{SQPstats *statistics}, an object that records certain statistics during the optimization and -- if desired -- outputs some of them in files in a specified directory
 \end{itemize}
-In addition, the \texttt{SCQPmethod} (Sequential Condensed Quadratic Programming) subclass takes an instance of \texttt{Condenser} for the given problem as fourth argument.\\
 ~\\
 Instances of the classes \texttt{SQPoptions} and \texttt{SQPstats} must be created before.\\
 \texttt{SQPoptions} uses the default constructor, its fields are detailed below.\\~\\
@@ -488,26 +470,25 @@ void SQPmethod::get_lambda(Matrix &lambda_hold)
 Therefore, strongly active lower bounds are characterized by the associated Lagrange multiplier being $> 0$, strongly active upper bounds by the multiplier being $<0$.
 Compared to optimizers defining the Lagrangian as $L(\xi,\lambda) = f(\xi) + \lambda^Tg(\xi)$, e.g. \texttt{ipopt}\cite{wachter2006implementation}, the multipliers \blockSQP\ returns will have the opposite sign. 
 %%%%%
-\subsection{The python interface}
-The python interface consists of
+\subsection{The Python interface}
+The Python interface consists of
 \begin{itemize}
 \item The compiled py\_blockSQP.so (py\_blockSQP.cpython-... .so).
-\item The blockSQP.py python-side Problemspec class. 
+\item The blockSQP.py Python-side Problemspec class. 
 \end{itemize}
-They both need to be imported, either directly or through a python \_\_init\_\_.py module specification.
+They both need to be imported, either directly or through a Python \_\_init\_\_.py module specification.
 \begin{lstlisting}
 import numpy as np
 import py_blockSQP
-from blockSQP_pyProblem import blockSQP_pyProblem as Problemspec
 \end{lstlisting}
 Like in the C++ interface, problem specification, options and statistics objects need to be created and passes to an SQPmethod.
 \begin{lstlisting}
 opts = py_blockSQP.SQPoptions()
-opts.opttol = 1e-5
+opts.opt_tol = 1e-5
 ...
 stats = py_blockSQP.SQPstats("./solver/output/path")
 ...
-prob = Problemspec() \# blockSQP\_pyProblem()
+prob = py_blockSQP\_Problemspec()
 \end{lstlisting}
 The following data and function attributes need to be provided.
 \begin{itemize}
@@ -518,7 +499,7 @@ The following data and function attributes need to be provided.
 \item g [np.ndarray[np.float64]](nVar, ) $\rightarrow$ np.ndarray[np.float64](nCon, ) - constraint function
 \item jac\_g [np.ndarray[np.float64]](nVar, ) $\rightarrow$ np.ndarray[np.float64](nCon, nVar) - constraint Jacobian, only used and required in dense mode
 \end{itemize}
-If sparse derivatives should be used, the option sparseQP must be set $> 0$ and the make\_sparse method has to be called with the following arguments
+If sparse derivatives should be used, the option sparse must left at True and the make\_sparse method has to be called with the following arguments
 \begin{itemize}
 \item jac\_g\_nnz [float] - the number of structural nonzero in the constraint Jacobian
 \item jac\_g\_row [np.ndarray[np.int32], shape = (jac\_g\_nnz,)] - row indices of constraint Jacobian in CCS format
@@ -544,21 +525,31 @@ The optimizer returns an SQPresult enum class instance to indicate the result of
 \begin{lstlisting}
 xi_opt = np.array(optimizer.get_xi()).reshape(-1)
 lam_opt = np.array(optimizer.get_lambda()).reshape(-1)
-\end{lstlisting}
+\end{lstlisting}~\\
+Check the script benchmark/run\_blockSQP.py for an example on how to invoke py\_blockSQP.
 \textbf{Important:} Mind the sign of the returned multipliers, see Section \ref{LAG_DEF_SECT}. 
-\subsection{The julia interface}
-The julia interface requires the compiled jul\_blockSQP.so binary and the julia side module blockSQP.jl. It similar to the Python interface and accessed in the following way
+\subsection{The Julia interface}
+The Julia interface requires the compiled blockSQP\_jl.so/.dll binary and the Julia side module blockSQP.jl. Here, Problemspec is instead named blockSQPProblem and most members need to be passed to the constructor.
 \begin{lstlisting}
 using blockSQP
 
+prob = blockSQP.blockSQPProblem(f,g, grad_f, jac_g,
+                            lb_var, ub_var, lb_con, ub_con,
+                            x0, lambda0, blockIdx = Int32[0, 1, 2])
+blockSQP.make_sparse!(prob, Int32(nnz), jac_g_nz, jac_g_row, jac_g_colind)
 
-prob = blockSQP.jlProblem(Int32(2), Int32(1))
-prob.f = ...
-
-opts = Dict()
-opts["..."] = ...
-
-stats = blockSQP.SQPstats("...")
+QPopts = qpOASES_options(sparsityLevel = 2)
+opts = blockSQPOptions(
+                       maxiters = 100,
+                       opt_tol = 1.0e-12,
+                       feas_tol = 1.0e-12,
+                       enable_linesearch = false,
+                       hess_approx = 1,
+                       fallback_approx = 2,
+                       print_level = 2,
+                       indef_delay = 1
+)
+stats = blockSQP.SQPstats("./")
 
 method = blockSQP.Solver(prob, opts, stats)
 
@@ -570,29 +561,31 @@ x_opt = blockSQP.get_primal_solution(meth)
 lam_opt = blockSQP.get_dual_solution(meth)
 \end{lstlisting}
 \textbf{Important:} Mind the sign of the returned multipliers, see Section \ref{LAG_DEF_SECT}.\\~\\
-\text{}[WIP] In the future, \blockSQP\ may also be called through \texttt{Optimization.jl}.
+%
+%
+An \texttt{Optimization.jl} interface is available, see blockSQP.jl/example\_rosenbrock.jl.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
 \section{Options and parameters}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
-In this section we describe the most important options that are passed to \blockSQP\ through the \texttt{SQPoptions} class. For the remaining options look into the options.hpp header file. 
+In this section we describe the most important options that are passed to \blockSQP\ through the \texttt{SQPoptions} class. Read the \textbf{options.hpp} header file for an always-up-to-date list of available options.  
 \subsection{Basic options}
 The most important options for users wanting to solve structured problems.
 \begin{longtable}[c]{lll}
 Name 							& Description/possible values									& Default	\\\hline\hline
 %
-\texttt{sparse\_mode}				& Use dense/sparse callbacks 						& False			\\\hline
+\texttt{sparse}				& Use dense/sparse callbacks 						& False			\\\hline
 %								
-\texttt{exact\_hess\_usage}			& Request exact Hessian in callbacks						& 0			\\
+\texttt{exact\_hess}			& Request exact Hessian in callbacks						& 0			\\
 								& 0: Disabled											& \\
 								& 1: Request last block										& \\
 								& 2: Request all blocks 											&\\\hline
 %
-\texttt{hess\_approximation}		& 						& 1			\\
+\texttt{hess\_approx}		& 						& 1			\\
 								& 0: Scaled identity											& 			\\
 								& 1: SR1													& 			\\
 								& 2: damped BFGS											& 			\\\hline
 %
-\texttt{fallback\_approximation}		& See hess\_approximation, has to be positive definite							& 2			\\\hline
+\texttt{fallback\_approx}		& See hess\_approximation, has to be positive definite							& 2			\\\hline
 %
 \texttt{block\_hess}		& enable blockwise updates							& 1			\\
 						& 0: Full space updates								& \\
@@ -639,7 +632,7 @@ Name 							& Symbol/Meaning												& Default			\\\hline\hline
 \texttt{max\_QP\_it}				& Maximum number of QP iterations per							& 5000		\\
 								& SQP iteration							&			\\\hline
 %
-\texttt{max\_QP\_seconds}				& Maximum time in seconds for \qpOASES\ per						& 10000.0		\\
+\texttt{max\_QP\_secs}				& Maximum time in seconds for \qpOASES\ per						& 10000.0		\\
 								& SQP iteration							&			\\\hline
 \end{longtable}
 
@@ -663,6 +656,9 @@ Name 							& Description/possible values									& Default	\\\hline\hline
 \texttt{conv\_tau\_H}				& Tolerance for convexified step acceptance (see paper)		& 2/3\\ \hline
 \texttt{conv\_kappa\_0}			& Initial scale for added identities (see paper [])				& 1/16\\ \hline
 \texttt{conv\_kappa\_max}			& Maximum scale for added identities						& 2.0\\ \hline
+\texttt{par\_QPs}			& Enable parallel solution of QPs, requires special build $\rightarrow$ sect. \ref{BUILDING_CXX}.					& False\\ \hline
+\texttt{enable\_QP\_cancellation}			& Terminate long-running QP threads in parallel solution of QPs.					& True\\ \hline
+\texttt{indef\_delay}			& Only use fallback Hessian in first \# iterations					& 3\\ \hline
 %
 \end{longtable}
 
@@ -695,14 +691,14 @@ Name 							& Description/possible values										& Default	\\\hline\hline
 %
 \texttt{initial\_hess\_scale}		& Initial scaling of the Hessian approximation						& 1.0		\\\hline
 %
-\texttt{sizing\_strategy}			& Hessian sizing strategy											& 2			\\
+\texttt{sizing}			& Hessian sizing strategy											& 2			\\
 								& 0: off															&			\\
 								& 1: Shanno-Phua													&			\\
 								& 2: Oren-Luenberger (OL)											&			\\
 								& 3: geometric mean of 1 and 2										&			\\
 								& 4: centered Oren-Luenberger (COL)									&			\\\hline
 %
-\texttt{fallback\_sizing\_strategy}	& fallback Hessian sizing strategy							& 4			\\\hline
+\texttt{fallback\_sizing}	& fallback Hessian sizing strategy							& 4			\\\hline
 %
 &&\\[-0.2cm]
 \textbf{Advanced options}					&						&\\\hline
@@ -771,9 +767,9 @@ Column & Description\\\hline\hline
 \section{Extending \blockSQP\ }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%72
 \subsection{New methods}
-Due to blockSQPs object oriented design, it is possible to extend the solver by subclassing \texttt{SQPmethod}. The \texttt{SCQPmethod} is such an example that enhances \blockSQP\ by a QP condensing step. Further extensions by adding function calls to the main loop and adding more fields to the \texttt{SQPoptions} class. \blockSQP\ is actively being developed and is continuously made more fine-grained to enhance modularity and extensibility.
+Due to blockSQPs object oriented design, it is possible to extend the solver by subclassing \texttt{SQPmethod}. The \textbf{bound\_correction\_method} is such an example. It implements the minimalistic bound correction strategy discussed in the \blockSQP\ paper. Further extensions can be made by adding function calls to the main loop and adding more fields to the \texttt{SQPoptions} class. \blockSQP\ is actively being developed and is continuously made more fine-grained to enhance modularity and extensibility.
 \subsection{Other QP solvers}
-QP solvers are added to \blockSQP\ by subclassing the abstract \texttt{QPsolver} class and filling out its methods. The code should be included based on a preprocessor definition named \texttt{QPSOLVER\_[name of QP solver]} such as the existing \texttt{QPSOLVER\_qpOASES}. In addition, the classes defined in \texttt{options.h} need to be extended to account for the newly available QP solver. The name of the solver should be added to the enum class \texttt{QPsolvers} and a \texttt{QPsolver\_options} subclass should be created to enable passing options to the QP solver. The interfaces to other languages need to updated consistent with the handling of existing QP solvers.
+QP solvers are added to \blockSQP\ by subclassing the abstract \texttt{QPsolver} class and filling out its methods. The code should be included based on a preprocessor definition named \texttt{QPSOLVER\_[name of QP solver]} such as the existing \texttt{QPSOLVER\_qpOASES}. In addition, the classes defined in \texttt{options.h} need to be extended to account for the newly available QP solver. The name of the solver should be added to the enum class \texttt{QPsolvers} and a \texttt{QPsolver\_options} subclass should be created to enable passing options to the QP solver. The interfaces to other languages need to updated consistent with the handling of existing QP solvers. This way, experimental interfaces to \texttt{gurobi} and \texttt{QPALM} are already implemented.
 \bibliographystyle{plain}
 \bibliography{references.bib}
 
@@ -787,6 +783,10 @@ This is the full license text (zlib license):
     blockSQP -- Sequential quadratic programming for problems with
                 block-diagonal Hessian matrix.
     Copyright (c) 2012-2015 Dennis Janka <dennis.janka@iwr.uni-heidelberg.de>
+
+    blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
+   	      for blockSQP, the nonlinear programming solver by Dennis Janka.
+    Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
     This software is provided 'as-is', without any express or implied
     warranty. In no event will the authors be held liable for any
