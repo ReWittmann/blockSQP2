@@ -46,11 +46,11 @@ void SQPmethod::acceptStep(double alpha){
 void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double alpha, int nSOCS){
     int k;
     double lStpNorm;
-
+    
     // Current alpha
     vars->alpha = alpha;
     vars->nSOCS = nSOCS;
-
+    
     // Set new xi by accepting the current trial step
     for(k=0; k<vars->xi.M(); k++){
         
@@ -66,7 +66,7 @@ void SQPmethod::acceptStep(const Matrix &deltaXi, const Matrix &lambdaQP, double
         else{
             vars->deltaXi(k) = alpha * deltaXi(k);
         }
-
+        
         //Trial iterate becomes new iterate
         vars->xi(k) = vars->trialXi(k);
     }
@@ -124,7 +124,7 @@ void SQPmethod::force_accept(const Matrix &deltaXi, const Matrix &lambdaQP, doub
         }
         else iter++;
     }
-
+    
     augmentFilter(vars->cNorm, vars->obj);
     return;
 }
@@ -141,7 +141,7 @@ int SQPmethod::fullstep(){
     double objTrial, cNormTrial;
     int info;
     int nVar = prob->nVar;
-
+    
     // Backtracking line search
     for(int k = 0; k<10; k++){
         // Compute new trial point
@@ -155,7 +155,7 @@ int SQPmethod::fullstep(){
                 vars->trialXi(i) = prob->ub_var(i);
             }
         }
-
+        
         // Compute problem functions at trial point
         prob->evaluate( vars->trialXi, &objTrial, vars->constr, &info );
         stats->nFunCalls++;
@@ -174,7 +174,7 @@ int SQPmethod::fullstep(){
             return 0;
         }
     }// backtracking steps
-
+    
     return 1;
 }
 
@@ -188,13 +188,13 @@ int SQPmethod::fullstep(){
 int SQPmethod::filterLineSearch(){
     double alpha = 1.0;
     double cNorm, cNormTrial(0), objTrial, dfTdeltaXi(0);   //cNormTrial and dfTdeltaXi are initialized to prevent compiler warnings
-
+    
     int k, info;
     int nVar = prob->nVar;
-
+    
     // Compute ||constr(xi)|| at old point
     cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
-
+    
     // Backtracking line search
     for (k = 0; k<param->max_linesearch_steps; k++){
         //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
@@ -203,7 +203,7 @@ int SQPmethod::filterLineSearch(){
             if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
             else{k = 0; alpha = 1.0;}
         }*/
-
+        
         // Compute new trial point and set it in bounds
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
@@ -215,26 +215,26 @@ int SQPmethod::filterLineSearch(){
                 vars->trialXi(i) = prob->ub_var(i);
             }
         }
-
+        
         // Compute grad(f)^T * deltaXi
         dfTdeltaXi = 0.0;
         for (int i = 0; i < nVar; i++)
             dfTdeltaXi += vars->gradObj(i) * vars->deltaXi(i);
-
+        
         // Compute objective and at ||constr(trialXi)||_1 at trial point
         prob->evaluate(vars->trialXi, &objTrial, vars->trialConstr, &info);
         stats->nFunCalls++;
-
+        
         //cNormTrial = l1ConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
         cNormTrial = lInfConstraintNorm(vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
-
+        
         // Reduce step if evaluation fails, if lower bound is violated or if objective is NaN
         if (info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial)){
             // evaluation error, reduce stepsize
             reduceStepsize(&alpha);
             continue;
         }
-
+        
         // Check acceptability to the filter
         if (pairInFilter(cNormTrial, objTrial)){
             // Trial point is in the prohibited region defined by the filter, try second order correction
@@ -245,7 +245,7 @@ int SQPmethod::filterLineSearch(){
                 continue;
             }
         }
-
+        
         // Check sufficient decrease, case I:
         // If we are (almost) feasible and a "switching condition" is satisfied
         // require sufficient progress in the objective instead of bi-objective condition
@@ -272,7 +272,7 @@ int SQPmethod::filterLineSearch(){
                 }
             }
         }
-
+        
         // Check sufficient decrease, case II:
         // Bi-objective (filter) condition
         if (cNormTrial < (1.0 - param->gammaTheta)*cNorm || objTrial < vars->obj - param->gammaF*cNorm){
@@ -289,10 +289,10 @@ int SQPmethod::filterLineSearch(){
             }
         }
     }// backtracking steps
-
+    
     // No step could be found by the line search
     if (k == param->max_linesearch_steps) return 1;
-
+    
     // Augment the filter if switching condition or Armijo condition does not hold
     if (dfTdeltaXi >= 0)
         augmentFilter(cNormTrial, objTrial);
@@ -300,7 +300,7 @@ int SQPmethod::filterLineSearch(){
         augmentFilter(cNormTrial, objTrial);
     else if (objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi)
         augmentFilter(cNormTrial, objTrial);
-
+    
     return 0;
 }
 

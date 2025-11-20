@@ -54,6 +54,9 @@ void SQPmethod::init(){
     else
         prob->initialize(vars->xi, vars->lambda, vars->constrJac);
 
+    calcInitialHessians();
+    vars->hess2_updated = true;
+    
     initCalled = true;
 }
 
@@ -76,8 +79,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     }
     
     if (warmStart == 0 || stats->itCount == 0){
-        calcInitialHessians();
-        vars->hess2_updated = true;
+        //calcInitialHessians();
+        //vars->hess2_updated = true;
         
         // SQP iteration 0
         if (param->sparse)

@@ -942,6 +942,20 @@ py::class_<blockSQP::SQPiterate>(m, "SQPiterate")
             std::cout << vars->hess2[i] << "\n";
         }
     })
+    .def_readonly("hess_num_accepted", &blockSQP::SQPiterate::hess_num_accepted)                   
+    .def_readonly("QP_num_accepted", &blockSQP::SQPiterate::QP_num_accepted)
+    .def("set_hess1", [](blockSQP::SQPiterate &vars, SymMat_array &arr){
+        for (int i = 0; i < vars.nBlocks; i++){
+            vars.hess1[i] = arr.ptr[i];
+        }
+    })
+    .def("set_hess2", [](blockSQP::SQPiterate &vars, SymMat_array &arr){
+        for (int i = 0; i < vars.nBlocks; i++){
+            vars.hess2[i] = arr.ptr[i];
+        }
+    })
+    .def("set_hess1_block", [](blockSQP::SQPiterate &vars, int i, blockSQP::SymMatrix &M){vars.hess1[i] = M;})
+	.def("set_hess2_block", [](blockSQP::SQPiterate &vars, int i, blockSQP::SymMatrix &M){vars.hess2[i] = M;})
 	;
 
 py::class_<blockSQP::RestorationProblem, blockSQP::Problemspec>(m, "RestorationProblem")

@@ -391,8 +391,8 @@ Each \texttt{condensing\_target} contains start and end indices of the alternati
 	\item \texttt{n\_stages} - number of shooting stages 
 	\item \texttt{first\_free} - index of first free variable block that dependent blocks depend on
 	\item \texttt{vblock\_end} - index of the first variables block not dependent or depended upon
-	\item \texttt{first\_cond} - index of the constraint block that 
-	\item \texttt{cblock\_end} - index of the constraint block that 
+	\item \texttt{first\_cond} - index of the first involved constraint block used for condensing
+	\item \texttt{cblock\_end} - end index of the constraint blocks used for condensing
 \end{itemize}
 The condenser class requires the vblocks, cblocks and targets for construction, in addition to an integer array of the Hessian block sizes. 
 \begin{itemize}

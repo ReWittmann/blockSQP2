@@ -223,9 +223,9 @@ void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int op
     double scale;
     double myEps = 1.0e3 * param->eps;
     Matrix gamma;
-
+    
     //TODO: Consider adding condition l1VectorNorm(delta) > tol
-
+    
     switch (option){
         case 1: //Shanno-Phua
             gamma.Submatrix(vars->gammaMat, vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock], 1, vars->blockIdx[iBlock], dpos);
@@ -250,7 +250,7 @@ void SQPmethod::sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int op
         default:
             return;
     }
-
+    
     scale = fmax(scale, myEps);
 
     for (i = 0; i < hess[iBlock].m; i++){
@@ -268,23 +268,23 @@ void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
     double theta, scale, myEps = 1.0e3 * param->eps;
     double deltaNormSq, deltaNormSqOld, deltaGamma, deltaGammaOld, deltaBdelta;
     Matrix delta;
-
+    
     // Get sTs, sTs_, sTy, sTy_ (precalculated) and sTBs
     delta.Submatrix(vars->deltaMat, Bsize, 1, vars->blockIdx[iBlock], dpos);
-
+    
     deltaNormSq = vars->deltaNormSqMat(iBlock, dpos);
     deltaNormSqOld = vars->deltaNormSqOld(iBlock);
     deltaGamma = vars->deltaGammaMat(iBlock, dpos);
     if (hess == vars->hess1.get()) deltaGammaOld = vars->deltaGammaOld(iBlock);
     else deltaGammaOld = vars->deltaGammaOldFallback(iBlock);
-
+    
     deltaBdelta = 0.0;
     for (int i = 0; i < Bsize; i++){
         for (int j = 0; j < Bsize; j++){
             deltaBdelta += delta(i) * hess[iBlock](i, j) * delta(j);
         }
     }
-
+    
     //OL in the first iteration
     theta = fmin(param->COL_tau_1, param->COL_tau_2 * deltaNormSq);
     if (deltaNormSq > myEps && deltaNormSqOld > myEps){
@@ -317,34 +317,34 @@ void SQPmethod::calcHessianUpdate(int updateType, int sizing, SymMatrix *hess){
     int iBlock, nBlocks;
     //Matrix gammai, deltai;
     bool firstIter;
-
+    
     //if objective derv is computed exactly, don't set the last block!
     if (param->exact_hess == 1 && param->block_hess)
         nBlocks = vars->nBlocks - 1;
     else
         nBlocks = vars->nBlocks;
-
+    
     // Statistics: how often is damping active, what is the average COL sizing factor?
     stats->hessDamped = 0;
     stats->averageSizingFactor = 0.0;
-
+    
     for (iBlock = 0; iBlock < nBlocks; iBlock++){
         // Is this the first iteration or the first after a Hessian reset?
         firstIter = (vars->nquasi[iBlock] == 1);
-
+        
         // Sizing before the update
         if (firstIter)
             sizeInitialHessian( vars->dg_pos, iBlock, hess, sizing);
         else if (sizing == 4)
             sizeHessianCOL(vars->dg_pos, iBlock, hess);
-
+        
         // Compute the new update
         // deltaNormOld and deltaGammaOld are set here (damping may be applied)
         if (updateType == 1)
             calcSR1(vars->dg_pos, iBlock, hess);
         else if (updateType == 2)
             calcBFGS(vars->dg_pos, iBlock, hess, true);
-
+        
         // If an update is skipped to often, reset Hessian block
         if(vars->noUpdateCounter[iBlock] > param->max_consec_skipped_updates)
             resetHessian(iBlock, hess);
@@ -356,7 +356,7 @@ void SQPmethod::calcHessianUpdate(int updateType, int sizing, SymMatrix *hess){
     for (int i = 0; i < prob->nVar; i++){
         vars->deltaOld(i) = vars->deltaMat(i, vars->dg_pos);
     }
-
+    
     // statistics: average sizing factor
     stats->averageSizingFactor /= nBlocks;
 }
