@@ -294,6 +294,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
         }
         
+        //modify_step();
+        
         ////////////////////////////////////
         ///PHASE 3: Update iteration data///
         ////////////////////////////////////

@@ -388,10 +388,12 @@ public:
     virtual void update_evals(){};
     virtual void update_simple(){};
     virtual void update_xi(){};
+    virtual void update_lambda(){};
     
     virtual void get_objval(){};
     
     virtual void restore_continuity(){};
+    virtual void call_stepModification(){};
     
     
     void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, blockSQP::Matrix &constrJac) override {
@@ -513,6 +515,15 @@ public:
         restore_continuity();
         *info = Cpp_Data.info;
     }
+    
+    
+    void stepModification(blockSQP::Matrix &trialXi, blockSQP::Matrix &trialLambda, int *info) override {
+        Cpp_Data.xi.ptr = trialXi.array;
+        Cpp_Data.lambda.ptr = trialLambda.array;
+        update_xi(); update_lambda();
+        call_stepModification();
+        *info = Cpp_Data.info;
+    }
 };
 
 
@@ -551,12 +562,20 @@ class Py_Problemform: public Problemform{
         PYBIND11_OVERRIDE(void, Problemform, update_xi,);
     }
     
+    void update_lambda() override {
+        PYBIND11_OVERRIDE(void, Problemform, update_lambda,);
+    }
+    
     void get_objval() override {
         PYBIND11_OVERRIDE(void, Problemform, get_objval,);
     }
     
     void restore_continuity() override {
         PYBIND11_OVERRIDE(void, Problemform, restore_continuity,);
+    }
+    
+    void call_stepModification() override {
+        PYBIND11_OVERRIDE(void, Problemform, call_stepModification,);
     }
 };
 

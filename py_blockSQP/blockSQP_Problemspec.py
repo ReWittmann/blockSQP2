@@ -52,10 +52,15 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
     #Integrate states in an attempt to reduce infeasibility. May prevent resorting to a restoration phase
     _continuity_restoration: typing.Callable[[np.ndarray[np.float64]], np.ndarray[np.float64]]
     
+    #Allows modifying a newly calculated iterate. Any modification will be added to the step that led to this iterate.
+    _stepModification: typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]
+    
     def __init__(self, nVar = 0, nCon = 0):
         py_blockSQP.Problemform.__init__(self)
         self.nVar = nVar
         self.nCon = nCon
+        
+        self._stepModification = None
     
     ##Some setter methods##
     
@@ -101,7 +106,10 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
     def continuity_restoration(self, rest_func):
         self._continuity_restoration = rest_func
         self.rest_cont = True
-
+    
+    def set_stepModification(self, stepM_func : typing.Optional[typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]]):
+        self._stepModification = stepM_func
+    
     ##IMPORTANT: Must be called before passing to SQPmethod##
     #Finalize the the problem specification
     def complete(self):
@@ -180,6 +188,10 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
         self.Data.xi = np.array(self.Cpp_Data.xi, copy = False)
         self.Data.xi.shape = (-1)
     
+    def update_lambda(self):
+        self.Data.lam = np.array(self.Cpp_Data.lam, copy = False)
+        self.Data.lam.shape = (-1)
+    
     def initialize_dense(self):
         self.Data.xi[:] = self.x_start
         self.Data.lam[:] = self.lam_start
@@ -255,5 +267,10 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
             self.Cpp_Data.info = 1
         return
     
+    def call_stepModification(self):
+        self.Cpp_Data.info = 1
+        if self._stepModification is not None:
+            self.Cpp_Data.info = self._stepModification(self.Data.xi, self.Data.lam)
+        return
 
 

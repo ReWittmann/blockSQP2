@@ -203,8 +203,18 @@ void scaled_Problemspec::rescale(const double *const scaleFacs){
     return;
 }
 
-
-
+void scaled_Problemspec::stepModification(Matrix &xi, Matrix &lambda, int *info){
+    for (int i = 0; i < nVar; i++){
+        xi_unscaled(i) = xi(i)/scaling_factors[i];
+    }
+    unscaled_prob->stepModification(xi_unscaled, lambda, info);
+    if (!(*info)){
+        for (int i = 0; i < nVar; i++){
+            xi(i) = xi_unscaled(i)*scaling_factors[i];
+        }
+    }
+    return;
+}
 
 
 

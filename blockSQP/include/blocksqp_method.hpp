@@ -229,6 +229,10 @@ class SQPmethod{
         void calc_free_variables_scaling(double *SF);
         void apply_rescaling(const double *resfactors);
         void scaling_heuristic();
+        
+        //Experimental
+        bool modify_step();     //Callback that allows modifying a newly computed iterate
+                                    //The modifications will be added to the step that led to this iterate.
 };
 
 

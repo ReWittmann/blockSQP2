@@ -123,7 +123,9 @@ class Problemspec{
         virtual void reduceConstrVio( Matrix &xi,       ///< optimization variables
                                       int *info         ///< error flag
                                       ){ *info = 1; };
-
+        
+        virtual void stepModification(Matrix &xi, Matrix &lambda, int *info){*info = 1;};
+        
         /// Print information about the current problem
         virtual void printInfo(){};
 };
@@ -152,6 +154,7 @@ public:
     void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info);
     
     void reduceConstrVio(Matrix &xi, int* info);
+    void stepModification(Matrix &xi, Matrix &lambda, int *info);
 };
 
 
