@@ -579,12 +579,12 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
 void qpOASES_solver::init_QP_common(int *blockIdx){
     A_qp = nullptr;
     H_qp = nullptr;
-
+    
     lb = std::make_unique<double[]>(nVar);
     ub = std::make_unique<double[]>(nVar);
     lbA = std::make_unique<double[]>(nCon);
     ubA = std::make_unique<double[]>(nCon);
-
+    
     h_qp = std::make_unique<double[]>(nVar);
     A_qp_nz = nullptr;
     A_qp_row = nullptr;
@@ -737,14 +737,14 @@ void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
 
 QPresult qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     double QPtime;
-
+    
     if (convex_QP)  opts.enableInertiaCorrection = qpOASES::BT_TRUE;
     else            opts.enableInertiaCorrection = qpOASES::BT_FALSE;
-
+    
     qp->setOptions(opts);
-
+    
     // Other variables for qpOASES
-
+    
     //Set time limit to prevent wasting time on ill conditioned QPs:
     // 0 - limit by 2.5*(average solution time), 2 - limit by custom time, else - limit by maximum time set in options
     if (time_limit_type == 0)
@@ -753,12 +753,12 @@ QPresult qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         QPtime = custom_time_limit;
     else
         QPtime = default_time_limit;
-
+    
     //std::cout << "QPtime = " << QPtime << "\n";
     QP_it = Qparam->max_QP_it;
     qpOASES::SolutionAnalysis solAna;
     qpOASES::returnValue ret;
-
+    
     if ((qp->getStatus() == qpOASES::QPS_HOMOTOPYQPSOLVED ||
          qp->getStatus() == qpOASES::QPS_SOLVED) && use_hotstart){
         if (matrices_changed)
@@ -769,7 +769,7 @@ QPresult qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     else
         ret = qp->init(H_qp.get(), h_qp.get(), A_qp.get(), lb.get(), ub.get(), lbA.get(), ubA.get(), QP_it, &QPtime);
 
-
+    
     if (!convex_QP && ret == qpOASES::SUCCESSFUL_RETURN){
         if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel == 2){
             *dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp.get());
@@ -781,11 +781,11 @@ QPresult qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
             ret = solAna.checkCurvatureOnStronglyActiveConstraints(qpCheck.get());
         }
     }
-
+    
     if (deltaXi.m != nVar) throw std::invalid_argument("QPsolver.solve: Error in argument deltaXi, wrong matrix size");
     if (lambdaQP.m != nVar + nCon) throw std::invalid_argument("QPsolver.solve: Error in argument lambdaQP, wrong matrix size");
-
-
+    
+    
     // Return codes: 0 - success, 1 - took too long/too many steps, 2 definiteness condition violated or QP unbounded, 3 - QP was infeasible, 4 - other error
     if (ret == qpOASES::SUCCESSFUL_RETURN){
         use_hotstart = true;
@@ -803,21 +803,21 @@ QPresult qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     }
     
     *qp = *qpSave;
-        
+    
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
     
-    if( ret == qpOASES::RET_MAX_NWSR_REACHED )
+    if (ret == qpOASES::RET_MAX_NWSR_REACHED)
         return QPresult::time_it_limit_reached;
-    else if( ret == qpOASES::RET_HESSIAN_NOT_SPD ||
+    else if (ret == qpOASES::RET_HESSIAN_NOT_SPD ||
              ret == qpOASES::RET_HESSIAN_INDEFINITE ||
              ret == qpOASES::RET_INIT_FAILED_UNBOUNDEDNESS ||
              ret == qpOASES::RET_QP_UNBOUNDED ||
-             ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS ){
+             ret == qpOASES::RET_HOTSTART_STOPPED_UNBOUNDEDNESS){
         return QPresult::indef_unbounded;}
-    else if( ret == qpOASES::RET_INIT_FAILED_INFEASIBILITY ||
+    else if (ret == qpOASES::RET_INIT_FAILED_INFEASIBILITY ||
              ret == qpOASES::RET_QP_INFEASIBLE ||
-             ret == qpOASES::RET_HOTSTART_STOPPED_INFEASIBILITY ){
+             ret == qpOASES::RET_HOTSTART_STOPPED_INFEASIBILITY){
         return QPresult::infeasible;}
     return QPresult::other_error;
 }

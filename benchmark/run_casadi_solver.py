@@ -24,7 +24,6 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     refine = 1,
                     parallel = True,
                     integrator = 'RK4',
-                    
                     )
 
 ipopts = dict()

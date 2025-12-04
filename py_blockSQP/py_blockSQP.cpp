@@ -20,6 +20,7 @@
 #include <pybind11/operators.h>
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>
+#include <pybind11/native_enum.h>
 #include <tuple>
 #include <iostream>
 #include <fstream>
@@ -649,7 +650,7 @@ py::class_<blockSQP::Sparse_Matrix>(m, "Sparse_Matrix")
     .def_property("COLIND", [](blockSQP::Sparse_Matrix &M)->int_pointer_interface{int_pointer_interface colind; colind.size = M.n + 1; colind.ptr = M.colind.get(); return colind;}, nullptr)
     .def_property("nnz", [](blockSQP::Sparse_Matrix &M)->int{return M.colind[M.n];}, nullptr)
     ;
-
+    
 py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def(py::init<>())
 	.def("optionsConsistency", static_cast<void (blockSQP::SQPoptions::*)()>(&blockSQP::SQPoptions::optionsConsistency))
@@ -669,8 +670,19 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("max_consec_skipped_updates",&blockSQP::SQPoptions::max_consec_skipped_updates)
 	.def_readwrite("max_QP_it",&blockSQP::SQPoptions::max_QP_it)
 	.def_readwrite("block_hess",&blockSQP::SQPoptions::block_hess)
-	.def_readwrite("sizing",&blockSQP::SQPoptions::sizing)
-	.def_readwrite("fallback_sizing",&blockSQP::SQPoptions::fallback_sizing)
+	// .def_readwrite("sizing",&blockSQP::SQPoptions::sizing)
+	// .def_readwrite("fallback_sizing",&blockSQP::SQPoptions::fallback_sizing)
+    
+    .def_property("sizing", 
+        [](blockSQP::SQPoptions &opts){return blockSQP::to_string(opts.sizing);},
+        [](blockSQP::SQPoptions &opts, std::string_view Sname){opts.sizing = blockSQP::Sizings_from_string(Sname);}
+    )
+    .def_property("fallback_sizing", 
+        [](blockSQP::SQPoptions &opts){return blockSQP::to_string(opts.fallback_sizing);},
+        [](blockSQP::SQPoptions &opts, std::string_view Sname){opts.fallback_sizing = blockSQP::Sizings_from_string(Sname);}
+    )
+    
+    
 	.def_readwrite("max_QP_secs",&blockSQP::SQPoptions::max_QP_secs)
 	.def_readwrite("initial_hess_scale",&blockSQP::SQPoptions::initial_hess_scale)
 	.def_readwrite("COL_eps",&blockSQP::SQPoptions::COL_eps)
@@ -681,8 +693,26 @@ py::class_<blockSQP::SQPoptions>(m, "SQPoptions")
 	.def_readwrite("SR1_abstol",&blockSQP::SQPoptions::SR1_abstol)
 	.def_readwrite("SR1_reltol",&blockSQP::SQPoptions::SR1_reltol)
 	.def_readwrite("BFGS_damping_factor",&blockSQP::SQPoptions::BFGS_damping_factor)
-	.def_readwrite("hess_approx",&blockSQP::SQPoptions::hess_approx)
-	.def_readwrite("fallback_approx",&blockSQP::SQPoptions::fallback_approx)
+	// .def_readwrite("hess_approx",&blockSQP::SQPoptions::hess_approx)
+	// .def_readwrite("fallback_approx",&blockSQP::SQPoptions::fallback_approx)
+    // .def_property("hess_approx", 
+    //     [](blockSQP::SQPoptions &opts){return int(opts.hess_approx);},
+    //     [](blockSQP::SQPoptions &opts, int num){opts.hess_approx = blockSQP::Hessians(num);}
+    // )
+    // .def_property("fallback_approx", 
+    //     [](blockSQP::SQPoptions &opts){return int(opts.fallback_approx);},
+    //     [](blockSQP::SQPoptions &opts, int num){opts.fallback_approx = blockSQP::Hessians(num);}
+    // )
+    
+    .def_property("hess_approx", 
+        [](blockSQP::SQPoptions &opts){return blockSQP::to_string(opts.hess_approx);},
+        [](blockSQP::SQPoptions &opts, std::string_view Hname){opts.hess_approx = blockSQP::Hessians_from_string(Hname);}
+    )
+    .def_property("fallback_approx", 
+        [](blockSQP::SQPoptions &opts){return blockSQP::to_string(opts.fallback_approx);},
+        [](blockSQP::SQPoptions &opts, std::string_view Hname){opts.fallback_approx = blockSQP::Hessians_from_string(Hname);}
+    )
+    
 	.def_readwrite("indef_local_only", &blockSQP::SQPoptions::indef_local_only)
 	.def_readwrite("lim_mem",&blockSQP::SQPoptions::lim_mem)
 	.def_readwrite("mem_size",&blockSQP::SQPoptions::mem_size)
@@ -842,7 +872,8 @@ py::class_<Prob_Data>(m,"Prob_Data")
 	.def_readwrite("hess_arr", &Prob_Data::hess_arr)
 	;
 
-py::enum_<blockSQP::SQPresult>(m, "SQPresult")
+// py::enum_<blockSQP::SQPresult>(m, "SQPresult")
+py::native_enum<blockSQP::SQPresult>(m, "SQPresult", "enum.Enum")
     .value("it_finished", blockSQP::SQPresult::it_finished)
     .value("partial_success", blockSQP::SQPresult::partial_success)
     .value("success", blockSQP::SQPresult::success)
@@ -853,6 +884,7 @@ py::enum_<blockSQP::SQPresult>(m, "SQPresult")
     .value("qp_failure", blockSQP::SQPresult::qp_failure)
     .value("eval_failure", blockSQP::SQPresult::eval_failure)
     .value("misc_error", blockSQP::SQPresult::misc_error)
+    .finalize()
     ;
 
 py::class_<blockSQP::Problemspec>(m, "blockSQP_Problemspec_internal");
@@ -1038,8 +1070,7 @@ py::class_<blockSQP::Condenser>(m, "Condenser")
                 args.condensed_h, args.condensed_Jacobian, args.condensed_hess.ptr, args.condensed_lb_var, args.condensed_ub_var, args.condensed_lb_con, args.condensed_ub_con
             );
             steady_clock::time_point T1 = steady_clock::now();
-            std::cout << "Condensing took " << duration_cast<milliseconds>(T1 - T0) << "\n";
-            //args.condensed_hess.size = C.condensed_num_hessblocks;
+            std::cout << "Condensing took " << duration_cast<microseconds>(T1 - T0) << "\n";
             return;})
     .def_readonly("num_hessblocks", &blockSQP::Condenser::num_hessblocks)
     .def_readonly("num_vars", &blockSQP::Condenser::num_vars)

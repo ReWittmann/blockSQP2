@@ -3147,10 +3147,23 @@ class Ocean(OCProblem):
 
 
 class Lotka_OED(OCProblem):
-    default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0, 'fishing':True, 'epsilon': 0.0}
+    default_params = {
+        'tf':12, 
+        'p1':1,
+        'p2':1,
+        'p3':1,
+        'p4':1,
+        'p5':0.4,
+        'p6':0.2,
+        'x_init':[0.5,0.7],
+        'M':4.0,
+        'fishing':True,
+        'epsilon': 0.0,
+        'transform_obj':False
+        }
     def build_problem(self):
         self.set_OCP_data(9, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
-        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon'])
+        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
         
@@ -3176,7 +3189,13 @@ class Lotka_OED(OCProblem):
         self.ODE = {'x': S, 'p':cs.vertcat(dt, C),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
         self.multiple_shooting()
         F11T,F12T,F22T = cs.vertsplit(self.x_eval[6:9,-1])
-        self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
+        
+        obj_expr = (1/(F11T*F22T - F12T*F12T))*(F22T + F11T)
+        if transform_obj:
+            self.set_objective(-obj_expr**-2)
+        else:
+            # self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
+            self.set_objective(obj_expr)
         self.add_constraint(self.q_tf - M, -np.inf, 0.)
         self.build_NLP()
         for i in range(self.ntS):
@@ -3635,7 +3654,7 @@ class Hang_Glider(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        x, dx, y, dy = self.get_state_arrays(xi)
+        x, dx, y, dy = self.get_state_arrays_expanded(xi)
         cL = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0], p])).reshape(-1)
@@ -3643,7 +3662,7 @@ class Hang_Glider(OCProblem):
         plt.figure(dpi=dpi)
         plt.step(time_grid, cL, 'tab:red', label = r'$c_L$')
         plt.plot(time_grid, x/500, 'tab:green', linestyle = '-', label = r'$x/500$')
-        plt.plot(time_grid, (y-900)/100, 'tab:blue', linestyle = '-', label = r'$(y-900)/1000$')
+        plt.plot(time_grid, (y-900)/100, 'tab:blue', linestyle = '-', label = r'$(y-900)/100$')
         plt.plot(time_grid, dx/10, 'tab:green', linestyle = ':', label = r'$v_x/10$')
         plt.plot(time_grid, dy/10, 'tab:blue', linestyle = ':', label = r'$v_y/10$')
         plt.legend(fontsize='large', loc = 'upper right')

@@ -226,10 +226,10 @@ CDLEXP void SQPoptions_set_block_hess(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->block_hess = val;
 }
 CDLEXP void SQPoptions_set_sizing(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->sizing = val;
+    static_cast<SQPoptions *>(ptr)->sizing = Sizings(val);
 }
 CDLEXP void SQPoptions_set_fallback_sizing(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->fallback_sizing = val;
+    static_cast<SQPoptions *>(ptr)->fallback_sizing = Sizings(val);
 }
 CDLEXP void SQPoptions_set_max_QP_secs(void *ptr, double val){
     static_cast<SQPoptions *>(ptr)->max_QP_secs = val;
@@ -256,10 +256,10 @@ CDLEXP void SQPoptions_set_min_damping_quotient(void *ptr, double val){
     static_cast<SQPoptions *>(ptr)->min_damping_quotient = val;
 }
 CDLEXP void SQPoptions_set_hess_approx(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->hess_approx = val;
+    static_cast<SQPoptions *>(ptr)->hess_approx = Hessians(val);
 }
 CDLEXP void SQPoptions_set_fallback_approx(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->fallback_approx = val;
+    static_cast<SQPoptions *>(ptr)->fallback_approx = Hessians(val);
 }
 CDLEXP void SQPoptions_set_indef_local_only(void *ptr, char val){
     static_cast<SQPoptions *>(ptr)->indef_local_only = bool(val);

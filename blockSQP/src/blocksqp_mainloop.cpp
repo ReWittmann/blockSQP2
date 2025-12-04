@@ -410,16 +410,18 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
             // if ((vars->conv_qp_only || stats->itCount <= param->indef_delay) && vars->hess2 != nullptr){
-                if (param->fallback_approx <= 2)
+                // if (param->fallback_approx <= 2)
+                if (is_update(param->fallback_approx))
                     calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
                 if (param->exact_hess < 2){
                     //Calculate/Update first (pos. indefinite) hessian
-                    if (param->hess_approx <= 2 || param->hess_approx > 6)
+                    // if (param->hess_approx <= 2 || param->hess_approx > 6)
+                    if (is_update(param->hess_approx))
                         calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
-                    else if (param->hess_approx == 4)
+                    else if (param->hess_approx == Hessians::finite_diff)
                         calcFiniteDiffHessian(vars->hess1.get());
                 }
                 vars->hess2_updated = false;
@@ -428,15 +430,15 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         else{
             //Vectors deltaXi and gamma need not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
             if (param->exact_hess < 2){
-                if (param->hess_approx <= 2)
+                if (is_update(param->hess_approx))
                     calcHessianUpdate(param->hess_approx, param->sizing, vars->hess1.get());
-                else if (param->hess_approx == 4)
+                else if (param->hess_approx == Hessians::finite_diff)
                     calcFiniteDiffHessian(vars->hess1.get());
             }
 
             //Also update the fallback hessian as we need to update it in every iteration regardless of whether it is needed
             if (vars->hess2 != nullptr){
-                if (param->fallback_approx <= 2)
+                if (is_update(param->fallback_approx))
                     calcHessianUpdate(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }

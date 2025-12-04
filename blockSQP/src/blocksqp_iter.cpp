@@ -87,7 +87,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
             if (blockIdx[iBlock+1] - blockIdx[iBlock] > maxblocksize) maxblocksize = blockIdx[iBlock+1] - blockIdx[iBlock];
         }
     }
-
+    
     // Create one Matrix for one diagonal block in the Hessian
     int Bsize;
     hess1 = std::make_unique<SymMatrix[]>(nBlocks);
@@ -95,16 +95,17 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         Bsize = blockIdx[iBlock+1] - blockIdx[iBlock];
         hess1[iBlock].Dimension(Bsize).Initialize(0.0);
     }
-
+    
     // For SR1 or finite differences, maintain two Hessians
-    if (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6){
+    // if (param->exact_hess > 0 || param->hess_approx == Hessians::SR1 || param->hess_approx == Hessians::finite_diff || param->hess_approx == Hessians::undamped_BFGS){
+    if (is_indefinite(param->hess_approx) || is_indefinite(param->last_block_approx)){
         hess2 = std::make_unique<SymMatrix[]>(nBlocks);
         for (int iBlock = 0; iBlock < nBlocks; iBlock++){
             Bsize = blockIdx[iBlock + 1] - blockIdx[iBlock];
             hess2[iBlock].Dimension(Bsize).Initialize(0.0);
         }
     }
-
+    
     hess_conv = std::make_unique<SymMatrix[]>(nBlocks);
     for (int iBlock = 0; iBlock < nBlocks; iBlock++){
         Bsize = blockIdx[iBlock+1] - blockIdx[iBlock];
@@ -112,64 +113,64 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     }
     //Initialize current Hessian pointer to first Hessian
     hess = hess1.get();
-
+    
     ///Allocate additional variables needed by the algorithm
     int nVar = prob->nVar;
     int nCon = prob->nCon;
-
+    
     //Allocate space for one more delta-gamma pair than mem_size so we don't overwrite the oldest pair directly after a successful QP solve.
     //The linesearch may still fall back to the convex QP, which may require calculating the limited-memory fallback Hessian, which starts at the oldest step.
     dg_nsave = std::max(std::max(int(param->lim_mem)*param->mem_size + 1, int(param->automatic_scaling)*5), 1);
     dg_pos = -1;
-
+    
     deltaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
     gammaMat.Dimension(nVar, dg_nsave).Initialize(0.0);
     deltaNormSqMat.Dimension(nBlocks, dg_nsave).Initialize(0.0);
     deltaGammaMat.Dimension(nBlocks, dg_nsave).Initialize(0.0);
-
+    
     deltaXi.Submatrix( deltaMat, nVar, 1, 0, 0 );
     gamma.Submatrix(gammaMat, nVar, 1, 0, 0);
-
+    
     // For selective sizing: for each block save sTs, sTs_, sTy, sTy_
     deltaNormSqOld.Dimension(nBlocks).Initialize(1.0);
     deltaOld.Dimension(prob->nVar).Initialize(0.0);
     deltaGammaOld.Dimension(nBlocks).Initialize(0.0);
     deltaGammaOldFallback.Dimension(nBlocks).Initialize(0.0);
-
-
+    
+    
     AdeltaXi.Dimension( nCon ).Initialize( 0.0 );
     lambdaQP.Dimension( nVar+nCon ).Initialize( 0.0 );
     trialXi.Dimension( nVar, 1, nVar ).Initialize( 0.0 );
     trialLambda.Dimension(nVar + nCon, 1, nVar + nCon).Initialize(0.0);
     trialConstr.Dimension(nCon, 1).Initialize(0.0);
-
+    
     // bounds for step (sub QP)
     delta_lb_var.Dimension(nVar).Initialize(0.0);
     delta_ub_var.Dimension(nVar).Initialize(0.0);
-
+    
     delta_lb_con.Dimension(nCon).Initialize(0.0);
     delta_ub_con.Dimension(nCon).Initialize(0.0);
-
+    
     // Miscellaneous counters
     nquasi = std::unique_ptr<int[]>(new int[nBlocks]());
     noUpdateCounter = std::make_unique<int[]>(nBlocks);
     for (int iBlock = 0; iBlock < nBlocks; iBlock++) noUpdateCounter[iBlock] = -1;
     nRestIt = 0;
     remaining_filter_overrides = param->max_filter_overrides;
-
+    
     // Flags
     conv_qp_only = param->indef_local_only;
     conv_qp_solved = false;
     hess2_updated = true;
     use_homotopy = true;            
-
+    
     KKT_heuristic_enabled = true;
     KKTerror_save = param->inf; 
     nearSol = false;
     milestone = param->inf;
     solution_found = false;
     n_extra = 0;
-
+    
     // Convexification strategy
     hess_num_accepted = 0;
     QP_num_accepted = 0;
@@ -178,7 +179,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         deltaXi_conv.Dimension(prob->nVar);
         lambdaQP_conv.Dimension(prob->nVar + prob->nCon);
     }
-
+    
     // Scaling heuristic
     if (param->automatic_scaling){
         rescaleFactors = std::make_unique<double[]>(prob->nVar);
@@ -191,7 +192,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     
     //Derived from parameters
     modified_hess_regularizationFactor = param->reg_factor;
-
+    
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;
     
@@ -258,9 +259,10 @@ void SQPiterate::save_iterate(){
     cNormOpt_save = cNorm;
     cNormSOpt_save = cNormS;
     if (scaled_prob){
-        for (int i = 0; i < xi.m; i++){
-            scaleFactors_save[i] = scaled_prob->scaling_factors[i];
-        }
+        std::copy(scaled_prob->scaling_factors.get(), scaled_prob->scaling_factors.get() + xi.m, scaleFactors_save.get());
+        // for (int i = 0; i < xi.m; i++){
+        //     scaleFactors_save[i] = scaled_prob->scaling_factors[i];
+        // }
     }
     it_saved = true;
 }

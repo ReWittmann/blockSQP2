@@ -61,5 +61,91 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
     return rs;
 }
 
+std::string to_string(Hessians hess_kind){
+    switch (hess_kind){
+        case Hessians::scaled_ID:       return "scaled_ID";
+        case Hessians::SR1:             return "SR1";
+        case Hessians::BFGS:            return "BFGS";
+        case Hessians::finite_diff:     return "finite_diff";
+        case Hessians::pos_def_exact:   return "pos_def_exact";
+        case Hessians::undamped_BFGS:   return "undamped_BFGS";
+    }
+    return "";
+}
+
+std::string to_print_string(Hessians hess_kind){
+    switch (hess_kind){
+        case Hessians::scaled_ID:       return "Scaled ID";
+        case Hessians::SR1:             return "SR1";
+        case Hessians::BFGS:            return "Damped BFGS";
+        case Hessians::finite_diff:     return "Finite differences";
+        case Hessians::pos_def_exact:   return "Pos. def. exact";
+        case Hessians::undamped_BFGS:   return "Undamped BFGS";
+    }
+    return "";
+}
+
+Hessians Hessians_from_string(std::string_view Hname){
+    if (Hname == to_string(Hessians::scaled_ID))
+        return Hessians::scaled_ID;
+    if (Hname == to_string(Hessians::SR1))
+        return Hessians::SR1;
+    if (Hname == to_string(Hessians::BFGS))
+        return Hessians::BFGS;
+    if (Hname == to_string(Hessians::finite_diff))
+        return Hessians::finite_diff;
+    if (Hname == to_string(Hessians::pos_def_exact))
+        return Hessians::pos_def_exact;
+    if (Hname == to_string(Hessians::undamped_BFGS))
+        return Hessians::undamped_BFGS;
+    throw std::invalid_argument(std::string("Hessians_from_string: Name \"") + std::string(Hname) + std::string("\" does not match any available Hessian-approximation"));
+}
+
+
+std::string to_string(Sizings sizing){
+    switch (sizing){
+        case Sizings::NONE:     return "NONE";
+        case Sizings::SP:       return "SP";
+        case Sizings::OL:       return "OL";
+        case Sizings::GM_SP_OL: return "GM_OL_SP";
+        case Sizings::COL:      return "COL";
+    }
+    return "";
+}
+std::string to_string_full(Sizings sizing){
+    switch (sizing){
+        case Sizings::NONE:     return "NONE";
+        case Sizings::SP:       return "Shanno-Phua";
+        case Sizings::OL:       return "Oren-Luenberger";
+        case Sizings::GM_SP_OL: return "Geometric mean of Shanno-Phua and Oren-Luenberger";
+        case Sizings::COL:      return "Centered Oren-Luenberger";
+    }
+    return "";
+}
+std::string to_print_string(Sizings sizing){
+    switch (sizing){
+        case Sizings::NONE:     return "none";
+        case Sizings::SP:       return "SP";
+        case Sizings::OL:       return "OL";
+        case Sizings::GM_SP_OL: return "mean";
+        case Sizings::COL:      return "selective sizing";
+    }
+    return "";
+}
+
+
+Sizings Sizings_from_string(std::string_view Sname){
+    if (Sname == to_string(Sizings::NONE))
+        return Sizings::NONE;
+    if (Sname == to_string(Sizings::SP))
+        return Sizings::SP;
+    if (Sname == to_string(Sizings::OL))
+        return Sizings::OL;
+    if (Sname == to_string(Sizings::GM_SP_OL))
+        return Sizings::GM_SP_OL;
+    if (Sname == to_string(Sizings::COL))
+        return Sizings::COL;
+    throw std::invalid_argument(std::string("Sizings_from_string: Name \"") + std::string(Sname) + std::string("\" does not match any available sizing strategy"));
+}
 
 }

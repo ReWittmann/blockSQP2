@@ -55,10 +55,10 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             for (int i=0; i<vars->hess[vars->nBlocks-1].m; i++)
                 for (int j=i; j<vars->hess[vars->nBlocks-1].m; j++)
                     vars->hess2[vars->nBlocks-1]( i,j ) = vars->hess1[vars->nBlocks-1]( i,j );
-
+        
         // Limited memory: compute fallback update only when needed
         if (param->lim_mem && !vars->hess2_updated){
-            if (param->fallback_approx <= 2){
+            if (is_update(param->fallback_approx)){
                 calcHessianUpdateLimitedMemory_par( param->fallback_approx, param->fallback_sizing, vars->hess2.get());
             }
             vars->hess2_updated = true;
@@ -80,7 +80,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
                     vars->hess_conv[i] = vars->hess1[i];
                 }
             }
-
+            
             //Regularize intermediate Hessian by adding scaled identity
             //idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx == 1));
             idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
@@ -97,7 +97,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
                     vars->hess_conv[i] = vars->hess1[i];
                 }
             }
-
+            
             //Regularize intermediate Hessian by adding scaled identity to free components
             idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
             int ind_b = 0, offset = 0, ind_1 = 0;
@@ -113,14 +113,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
                 }
                 ind_1 += prob->vblocks[k].size;
             }
-        }/*
-        else if (param->conv_strategy == 3){
-            idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
-            for (int k = 0; k < vars->nBlocks; k++){
-                vars->hess_conv[k] = vars->hess1[k] + vars->hess2[k] * idScale;
-            }
-        }*/
-        
+        }
         vars->hess = vars->hess_conv.get();
     }
     else{
@@ -209,12 +202,11 @@ void SQPmethod::updateStepBoundsSOC(){
 
 
 QPresult SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
-    bool QP_loop_active = (
-                          (param->exact_hess > 0 || param->hess_approx == 1 || param->hess_approx == 4 || param->hess_approx == 6 || param->hess_approx > 6)
-                        && stats->itCount > param->indef_delay 
-                        && !vars->conv_qp_only
-                        && hess_type == 0)
-                        ;
+    bool QP_loop_active = ((param->exact_hess > 0 || is_indefinite(param->hess_approx))
+                           && stats->itCount > param->indef_delay 
+                           && !vars->conv_qp_only
+                           && hess_type == 0
+                           );
     if (QP_loop_active){
         if (param->par_QPs) return solveQP_par(deltaXi, lambdaQP);
         return solveQP_seq(deltaXi, lambdaQP);

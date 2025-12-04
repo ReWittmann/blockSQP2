@@ -80,16 +80,16 @@ optimizer.init()
 #####################
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 200, it = 0, title=plot_title)
-    ret = int(optimizer.run(1))
+    ret = optimizer.run(1)
     xi = np.array(optimizer.get_xi()).reshape(-1)
     i = 1
     OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
-    while ret == 0 and i < itMax:
-        ret = int(optimizer.run(1,1))
+    while ret.value == 0 and i < itMax:
+        ret = optimizer.run(1,1)
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1
         OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
 else:
-    ret = int(optimizer.run(itMax))
+    ret = optimizer.run(itMax)
     xi = np.array(optimizer.get_xi()).reshape(-1)
 OCprob.plot(xi, dpi=200, title=plot_title)

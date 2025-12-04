@@ -51,7 +51,6 @@ enum class QPsolvers{
 
 class QPsolver_options;
 
-
 class SQPoptions{
     public:    
     //Constants
@@ -87,16 +86,24 @@ class SQPoptions{
     //Hessian approximation
     int block_hess = 1;                             //0: Full space updates, 1: partitioned updates, 2: 2 blocks: 1 full space update block, 1 objective Hessian block
     int exact_hess = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
-    int hess_approx = 1;                     //0: (Scaled) identity, 1: SR1, 2: damped BFGS, 3: None, 4: finite differences, 5: pos. def user provided (Gauss-Newton etc.), 6: undamped BFGS
-    int fallback_approx = 2;                 //As hess_approx, must be positive definite
+    // int hess_approx = 1;                     //0: (Scaled) identity, 1: SR1, 2: damped BFGS, 3: None, 4: finite differences, 5: pos. def user provided (Gauss-Newton etc.), 6: undamped BFGS
+    Hessians hess_approx = Hessians::SR1;
+    // int fallback_approx = 2;                 //As hess_approx, must be positive definite
+    Hessians fallback_approx = Hessians::BFGS;
+    
+    Hessians last_block_approx = Hessians::last_block_default;      //Can be set either to Hessians::exact or Hessians::pos_def_exact if exact Hessian for last block (e.g. nonlinear Mayer objective) is available
+    // Hessians last_fallback_approx = Hessians::last_block_default; //Maybe in the future if needed
     
     double reg_factor = 0.0;        //Enable further regularization of pos.def. fallback Hessians by adding a scaled identity. Beneficial for some QP solvers
     int indef_delay = 3;            //Dont use indefinite Hessians in the first # steps, value of 3 is recommended when using parallel solution of QPs
     
     //Hessian sizing
     double initial_hess_scale = 1.0;
-    int sizing = 2;                        // Scaling strategy for Hessian approximation (off = 0, 1 = Shanno-Phua, 2 = Oren-Luenberger, 3 = geometric mean of 1 and 2, 4 = centered Oren-Luenberger)
-    int fallback_sizing = 4;               // ' '                 fallback ' '
+    // int sizing = 2;                        // Scaling strategy for Hessian approximation (off = 0, 1 = Shanno-Phua, 2 = Oren-Luenberger, 3 = geometric mean of 1 and 2, 4 = centered Oren-Luenberger)
+    // int fallback_sizing = 4;               // ' '                 fallback ' '
+    Sizings sizing = Sizings::OL;
+    Sizings fallback_sizing = Sizings::COL;
+    
     double COL_eps = 0.1;                           // Centered Oren-Luenberger sizing parameters (see Contreras Tapia paper)
     double COL_tau_1 = 0.5;
     double COL_tau_2 = 1.0e4;

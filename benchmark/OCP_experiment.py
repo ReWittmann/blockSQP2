@@ -67,6 +67,10 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     return prob, cond, HOLD
 
 def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
+    """Run blockSQP on the given problem for start points perturbed at nPert0:nPertF
+    Return a vector of the iteration counts, the solution times in seconds and a vector of return codes
+    indication the success: < 0 - failure, 0 - max it reached, 1 - partial success, > 1 success"""
+
     N_SQP = []
     N_secs = []
     type_sol = []
@@ -97,6 +101,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
 
 
 def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, arg_opts : dict, nPert0, nPertF, itMax = 200):
+    """Same as perturbed_starts, but allows specifying a casadi NLP solver as first argument"""
     NLP = OCprob.NLP
     opts = arg_opts
     N_SQP = []
@@ -124,6 +129,11 @@ def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, 
 
 
 def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -174,8 +184,14 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_time.set_xticks(xticks)
 
     plt.show()
-    
+
+
 def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to plot_successful is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -246,7 +262,13 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
     plt.close()
 
+
 def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to plot_varshape is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -337,6 +359,11 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
 
 def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to plot_successful_small is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -406,6 +433,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
 
 
 def print_heading(out, EXP_names : list[str]):
+    """Prepare new file for later calling print_iterations on out"""
     out.write(" "*27)
     for EXP_name in EXP_names:
         out.write(EXP_name[0:40].ljust(21 + 5 + 21))
@@ -417,6 +445,10 @@ def print_heading(out, EXP_names : list[str]):
     out.write("\n")
     
 def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+    """Print iteration count and solution time - averages and 
+    standard deviations to file, EXP_... being vectors returned by
+    the perburbed_starts functions.
+    """
     n_EXP = len(EXP_N_SQP)
     EXP_N_SQP_mu = [sum(EXP_N_SQP[i])/len(EXP_N_SQP[i]) for i in range(n_EXP)]
     EXP_N_SQP_sigma = [(sum((np.array(EXP_N_SQP[i]) - EXP_N_SQP_mu[i])**2)/len(EXP_N_SQP[i]))**(0.5) for i in range(n_EXP)]
@@ -440,7 +472,7 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True):
+def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -479,7 +511,7 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
     out.close()
 
 
-def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
+def run_blockSQP_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)

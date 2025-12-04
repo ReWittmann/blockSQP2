@@ -86,8 +86,11 @@ void SQPoptions::optionsConsistency(){
     if (qpsol_options != nullptr && qpsol_options->sol != qpsol)
         throw ParameterError("Incorrect QP solver options type given for specified QP solver");
     
+    if (last_block_approx != Hessians::last_block_default && last_block_approx != Hessians::exact && last_block_approx != Hessians::pos_def_exact)
+        throw ParameterError("last_block_approx can only be last_block_default, exact or pos_def_exact");
     //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
-    if (hess_approx == 1 || hess_approx == 4 || exact_hess > 0){
+    //if (hess_approx == Hessians::SR1 || hess_approx == Hessians::finite_diff || exact_hess > 0){
+    if (is_indefinite(hess_approx) || is_indefinite(last_block_approx)){
         if (qpsol == QPsolvers::qpOASES){
             if (qpsol_options == nullptr || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
                 if (!sparse) throw ParameterError("Indefinite Hessians not supported for dense qpOASES (derived from SQPoptions::sparse = 0, as no or default qpOASES_options::sparsityLevel was given)");
@@ -118,14 +121,16 @@ void SQPoptions::optionsConsistency(){
     }
     
     //Ensure a positive definite fallback hessian is available if first hessian approximation is not guaranteed to be positive definite
-    if ((exact_hess > 0 || hess_approx == 1 || hess_approx == 4 || hess_approx == 6) && max_conv_QPs < 1 && !(fallback_approx == 0 || fallback_approx == 2 || fallback_approx == 5)) 
+    // if ((exact_hess > 0 || hess_approx == Hessians::SR1 || hess_approx == Hessians::finite_diff || hess_approx == Hessians::undamped_BFGS) && max_conv_QPs < 1 && !(fallback_approx == Hessians::scaled_ID || fallback_approx == Hessians::BFGS || fallback_approx == Hessians::pos_def_exact)) 
+        // throw ParameterError("Positive definite fallback hessian is needed when Hessian is not positive definite");
+    
+    if ((is_indefinite(hess_approx) || is_indefinite(last_block_approx)) && is_indefinite(fallback_approx))
         throw ParameterError("Positive definite fallback hessian is needed when Hessian is not positive definite");
-
-
-    if (enable_linesearch == 1 && hess_approx == 1 && max_conv_QPs < 1){
+    
+    if (enable_linesearch == 1 && is_indefinite(hess_approx) && max_conv_QPs < 1){
         throw ParameterError("Fallback Hessian QP attempts (max_conv_QPs > 1) are required when using SR1.");
     }
-
+    
     if (lim_mem && mem_size == 0) 
         throw ParameterError("hessMemsize must be greater zero for limited memory quasi newton");
     

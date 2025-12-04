@@ -48,8 +48,8 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     //General restoration options
     rest_param->enable_rest = 0;
     rest_param->lim_mem = 1;
-    rest_param->hess_approx = 2;
-    rest_param->sizing = 2;
+    rest_param->hess_approx = Hessians::BFGS;
+    rest_param->sizing = Sizings::OL;
     rest_param->BFGS_damping_factor = 0.2;
     rest_param->sparse = parent_options->sparse;
     rest_param->max_filter_overrides = 0;
@@ -140,14 +140,11 @@ bool SQPmethod::modify_step(){
     if (info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial))
         return true;
     
-    // Is the new point acceptable for the filter?
     if (pairInFilter(cNormTrial, objTrial)){
         std::cout << "New point is in the filter\n";
-        // point is in the taboo region, restoration heuristic not successful!
         return true;
     }
     
-    // Compute the "step" taken by closing the continuity conditions
     for (int k = 0; k < prob->nVar; k++){
         vars->deltaXi(k) += vars->trialXi(k) - vars->xi(k);
         vars->xi(k) = vars->trialXi(k);

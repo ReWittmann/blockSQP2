@@ -299,12 +299,12 @@ int main(int argc, const char* argv[]){
     opts->feas_tol = 1.0e-12;        
 
     opts->enable_linesearch = false;        // Disable filter line search for this example
-    opts->hess_approx = 2;           // 0: (scaled) identity, 1: SR1, 2: damped BFGS
-    opts->fallback_approx = 2;       // ' ', not needed if hess_approximation is positive definite
+    opts->hess_approx = Hessians::BFGS;           
+    opts->fallback_approx = Hessians::BFGS;       // ' ', not needed if hess_approximation is positive definite
 
-    opts->sizing = 0;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
-    opts->fallback_sizing = 0;     // ' '
-    opts->sparse = 0;                  // Dense matrices for this example
+    opts->sizing = Sizings::NONE;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
+    opts->fallback_sizing = Sizings::NONE;     // ' '
+    opts->sparse = false;                  // Dense matrices for this example
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
     

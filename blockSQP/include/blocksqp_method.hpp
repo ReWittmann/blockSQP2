@@ -71,10 +71,10 @@ class SQPmethod{
         Matrix rest_xi;
         Matrix rest_lambda;
         Matrix rest_lambdaQP;
-
+        
     protected:
         bool                     initCalled = false;  ///< indicates if init() has been called (necessary for run())
-
+        
     public:
         /// Construct a method for a given problem and set of algorithmic options
         SQPmethod( Problemspec *problem, SQPoptions *parameters, SQPstats *statistics );
@@ -102,8 +102,8 @@ class SQPmethod{
         bool calcOptTol();
         /// Set pointer to correct step and Lagrange gradient difference in a limited memory context
         void updateDeltaGammaData();
-
-
+        
+        
         // Solution of quadratic subproblems
         /// Update the bounds on the current step, i.e. the QP variables
         void updateStepBounds();
@@ -146,8 +146,8 @@ class SQPmethod{
         void computeConvexHessian();
         /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
         void setIdentityHessian();
-
-
+        
+        
         // Filter line search, restoration phase and associated heuristics
         /// No enable_linesearch strategy
         int fullstep();
@@ -165,7 +165,7 @@ class SQPmethod{
         void get_xi(Matrix &xi_hold);
         void get_lambda(Matrix &lambda_hold);
         void get_lambdaQP(Matrix &lambdaQP_hold);
-
+        
         /// Reduce stepsize if a step is rejected
         void reduceStepsize( double *alpha );
         /// Determine steplength alpha by a filter based line search similar to IPOPT
@@ -186,33 +186,45 @@ class SQPmethod{
         int innerRestorationPhase(RestorationProblemBase *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
-
-
+        
+        
         // Hessian approximation and sizing
-
+        
         /// Set initial Hessian: Identity matrix
         void calcInitialHessian(SymMatrix *hess);
         void calcInitialHessian(int iBlock, SymMatrix *hess);
         void calcInitialHessians();
         void calcScaledInitialHessian(double scale, SymMatrix *hess);
         void calcScaledInitialHessian(int iBlock, double scale, SymMatrix *hess);
-
+        
         /// Reset Hessian to identity and remove past information on Lagrange gradient and steps
         void resetHessian(SymMatrix *hess);
         /// [blockwise] Reset Hessian to identity and remove past information on Lagrange gradient and steps
         void resetHessian(int iBlock, SymMatrix *hess);
         /// Shortcut method to reset the hessian and the fallback hessian if it is in use
         void resetHessians();
-
+        
         /// Compute current Hessian approximation by finite differences
         int calcFiniteDiffHessian(SymMatrix *hess);
         /// Compute full memory Hessian approximations based on update formulas
-        void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
+        // void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
+        void calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
-        void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
-        void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
-        void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
+        // void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
+        void calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizingType, SymMatrix *hess);
+        // void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
+        // void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
+        void calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess);
+        void par_inner_update_loop(Hessians updateType, Sizings sizingType, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
         
+        inline void calcQN(Hessians updateType, int dpos, int iBlock, SymMatrix *hess){
+            switch (updateType){
+                case Hessians::SR1:           calcSR1(dpos, iBlock, hess);         break;
+                case Hessians::BFGS:          calcBFGS(dpos, iBlock, hess, true);  break;
+                case Hessians::undamped_BFGS: calcBFGS(dpos, iBlock, hess, false); break;
+                default:    ;
+            }
+        }
         //void calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by SR1 update
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
@@ -220,11 +232,13 @@ class SQPmethod{
         void calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping);
 
         /// Oren-Luenberger sizing of initial Hessian
-        void sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int option);
+        // void sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int option);
         /// Centered Oren-Luenberger sizing
+        // void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
+        
+        void sizeInitialHessian(Sizings sizingType, int dpos, int iBlock, SymMatrix *hess);
         void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
-
-
+        
         // Rescaling of the problem (only variables)
         void calc_free_variables_scaling(double *SF);
         void apply_rescaling(const double *resfactors);

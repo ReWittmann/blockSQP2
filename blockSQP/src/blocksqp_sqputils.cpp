@@ -300,62 +300,66 @@ void SQPmethod::printInfo( int printLevel )
         strcpy( globString, "filter line search" );
 
     /* Hessian approximation */
-    if( param->block_hess && (param->hess_approx == 1 || param->hess_approx == 2) )
+    if (param->block_hess && (param->hess_approx == Hessians::SR1 || param->hess_approx == Hessians::BFGS || param->hess_approx == Hessians::undamped_BFGS))
         strcpy( hessString1, "block " );
     else
         strcpy( hessString1, "" );
 
-    if( param->lim_mem && (param->hess_approx == 1 || param->hess_approx == 2) )
+    if (param->lim_mem && (param->hess_approx == Hessians::SR1 || param->hess_approx == Hessians::BFGS || param->hess_approx == Hessians::undamped_BFGS))
         strcat( hessString1, "L-" );
 
     /* Fallback Hessian */
-    if( param->hess_approx == 1 || param->hess_approx == 4 || (param->hess_approx == 6) )
+    if (param->hess_approx == Hessians::SR1 || param->hess_approx == Hessians::finite_diff || (param->hess_approx == Hessians::undamped_BFGS))
     {
         strcpy( hessString2, hessString1 );
 
         /* Fallback Hessian update type */
-        if( param->fallback_approx == 0 )
-            strcat( hessString2, "Id" );
-        else if( param->fallback_approx == 1 )
-            strcat( hessString2, "SR1" );
-        else if( param->fallback_approx == 2 )
-            strcat( hessString2, "BFGS" );
-        else if( param->fallback_approx == 4 )
-            strcat( hessString2, "Finite differences" );
+        // if( param->fallback_approx == 0 )
+        //     strcat( hessString2, "Id" );
+        // else if( param->fallback_approx == 1 )
+        //     strcat( hessString2, "SR1" );
+        // else if( param->fallback_approx == 2 )
+        //     strcat( hessString2, "BFGS" );
+        // else if( param->fallback_approx == 4 )
+        //     strcat( hessString2, "Finite differences" );
+        strcat(hessString2, to_print_string(param->fallback_approx).c_str());
 
         /* Fallback Hessian scaling */
-        if( param->fallback_sizing == 1 )
-            strcat( hessString2, ", SP" );
-        else if( param->fallback_sizing == 2 )
-            strcat( hessString2, ", OL" );
-        else if( param->fallback_sizing == 3 )
-            strcat( hessString2, ", mean" );
-        else if( param->fallback_sizing == 4 )
-            strcat( hessString2, ", selective sizing" );
+        // if( param->fallback_sizing == 1 )
+        //     strcat( hessString2, ", SP" );
+        // else if( param->fallback_sizing == 2 )
+        //     strcat( hessString2, ", OL" );
+        // else if( param->fallback_sizing == 3 )
+        //     strcat( hessString2, ", mean" );
+        // else if( param->fallback_sizing == 4 )
+        //     strcat( hessString2, ", selective sizing" );
+        strcat(strcat(hessString2, ", "), to_print_string(param->fallback_sizing).c_str());
     }
     else
         strcpy( hessString2, "-" );
 
     /* First Hessian update type */
-    if( param->hess_approx == 0 )
-        strcat( hessString1, "Id" );
-    else if( param->hess_approx == 1 )
-        strcat( hessString1, "SR1" );
-    else if( param->hess_approx == 2 )
-        strcat( hessString1, "BFGS" );
-    else if( param->hess_approx == 4 )
-        strcat( hessString1, "Finite differences" );
+    // if( param->hess_approx == 0 )
+    //     strcat( hessString1, "Id" );
+    // else if( param->hess_approx == 1 )
+    //     strcat( hessString1, "SR1" );
+    // else if( param->hess_approx == 2 )
+    //     strcat( hessString1, "BFGS" );
+    // else if( param->hess_approx == 4 )
+    //     strcat( hessString1, "Finite differences" );
+    strcat(hessString1, to_print_string(param->hess_approx).c_str());
 
     /* First Hessian scaling */
-    if( param->sizing == 1 )
-        strcat( hessString1, ", SP" );
-    else if( param->sizing == 2 )
-        strcat( hessString1, ", OL" );
-    else if( param->sizing == 3 )
-        strcat( hessString1, ", mean" );
-    else if( param->sizing == 4 )
-        strcat( hessString1, ", selective sizing" );
-
+    // if( param->sizing == 1 )
+    //     strcat( hessString1, ", SP" );
+    // else if( param->sizing == 2 )
+    //     strcat( hessString1, ", OL" );
+    // else if( param->sizing == 3 )
+    //     strcat( hessString1, ", mean" );
+    // else if( param->sizing == 4 )
+    //     strcat( hessString1, ", selective sizing" );
+    strcat(strcat(hessString1, ", "), to_print_string(param->sizing).c_str());
+    
     printf( "\n+---------------------------------------------------------------+\n");
     printf( "| Starting blockSQP with the following algorithmic settings:    |\n");
     printf( "+---------------------------------------------------------------+\n");

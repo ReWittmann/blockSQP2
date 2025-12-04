@@ -38,7 +38,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 itMax = 200                                 #max number of steps
-step_plots = False                          #plot each iterate?
+step_plots = True                          #plot each iterate?
 plot_title = False                          #Put name of problem in plot?
 
 
@@ -55,10 +55,10 @@ opts.enable_QP_cancellation = True          #Enable cancellation of long running
 opts.indef_delay = 3                        #Only used fallback Hessian in first # iterations
 
 opts.exact_hess = 0                         #0: No second derivatives, 1: Only last Hess. block, 2: Use excact Hessian
-opts.hess_approx = 1                        #1: SR1, 2: damped BFGS
-opts.sizing = 2                             #2: OL sizing, 4: Selective COL sizing
-opts.fallback_approx = 2                    # ''   ''
-opts.fallback_sizing = 4                    # ''   ''
+opts.hess_approx = 'SR1'                    #'SR1'/'BFGS'/'undamped BFGS' (not recommended)
+opts.sizing = 'OL'                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
+opts.fallback_approx = 'BFGS'               # ''   ''
+opts.fallback_sizing = 'COL'                # ''   ''
 opts.BFGS_damping_factor = 1/3
 
 opts.lim_mem = True
@@ -73,11 +73,11 @@ opts.max_extra_steps = 0                    #Extra steps for improved accuracy
 opts.enable_premature_termination = True    #Enable early termination at acceptable tolerance
 opts.max_filter_overrides = 2
 
-opts.qpsol = 'qpOASES'
-QPopts = py_blockSQP.qpOASES_options()
-QPopts.printLevel = 0
-QPopts.sparsityLevel = 2
-opts.qpsol_options = QPopts
+# opts.qpsol = 'qpOASES'
+# QPopts = py_blockSQP.qpOASES_options()
+# QPopts.printLevel = 0                     
+# QPopts.sparsityLevel = 2                  #0-dense QPs, 1-sparse matrices + dense factorizations, 2 (default) - sparse matrices and factorizations
+# opts.qpsol_options = QPopts
 ################################
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
@@ -133,17 +133,17 @@ optimizer.init()
 
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
-    ret = int(optimizer.run(1))
+    ret = optimizer.run(1)
     xi = np.array(optimizer.get_xi()).reshape(-1)
     i = 1
     OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
-    while ret == 0 and i < itMax:
-        ret = int(optimizer.run(1,1))
+    while ret.value == 0 and i < itMax:
+        ret = optimizer.run(1,1)
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1
         OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
 else:
-    ret = int(optimizer.run(itMax))
+    ret = optimizer.run(itMax)
 t1 = time.monotonic()
 xi = np.array(optimizer.get_xi()).reshape(-1)
 OCprob.plot(xi, dpi=200, title=plot_title)
