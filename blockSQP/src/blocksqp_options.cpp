@@ -61,7 +61,7 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
     
     if (block_hess == 2)
         throw ParameterError("Passing only the last exact Hessian block is disabled in this version");
-    if ((problem->nBlocks < 1 || block_hess == 0) && exact_hess > 0)
+    if ((problem->nBlocks < 1 || block_hess == 0) && (is_exact(hess_approx) || is_exact(last_block_approx)))
         throw ParameterError("Using exact Hessian for now requires passing blockIdx to Problemspec and enabling block updates through SQPoptions");
     
     optionsConsistency();
@@ -88,8 +88,8 @@ void SQPoptions::optionsConsistency(){
     
     if (last_block_approx != Hessians::last_block_default && last_block_approx != Hessians::exact && last_block_approx != Hessians::pos_def_exact)
         throw ParameterError("last_block_approx can only be last_block_default, exact or pos_def_exact");
+    
     //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
-    //if (hess_approx == Hessians::SR1 || hess_approx == Hessians::finite_diff || exact_hess > 0){
     if (is_indefinite(hess_approx) || is_indefinite(last_block_approx)){
         if (qpsol == QPsolvers::qpOASES){
             if (qpsol_options == nullptr || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
@@ -115,17 +115,8 @@ void SQPoptions::optionsConsistency(){
             throw ParameterError("Only up to SQPoptions::max_conv_QPs == 7 convexified QPs are supported for parallel solution");
     }
     
-    // If we compute second constraints derivatives then no update or sizing is needed for the first hessian
-    if (exact_hess == 2){
-        std::cout << "Exact Hessian is available, hessUpdate and sizing are ignored\n";
-    }
-    
-    //Ensure a positive definite fallback hessian is available if first hessian approximation is not guaranteed to be positive definite
-    // if ((exact_hess > 0 || hess_approx == Hessians::SR1 || hess_approx == Hessians::finite_diff || hess_approx == Hessians::undamped_BFGS) && max_conv_QPs < 1 && !(fallback_approx == Hessians::scaled_ID || fallback_approx == Hessians::BFGS || fallback_approx == Hessians::pos_def_exact)) 
-        // throw ParameterError("Positive definite fallback hessian is needed when Hessian is not positive definite");
-    
     if ((is_indefinite(hess_approx) || is_indefinite(last_block_approx)) && is_indefinite(fallback_approx))
-        throw ParameterError("Positive definite fallback hessian is needed when Hessian is not positive definite");
+        throw ParameterError("Positive definite fallback Hessian is needed when Hessian is not positive definite");
     
     if (enable_linesearch == 1 && is_indefinite(hess_approx) && max_conv_QPs < 1){
         throw ParameterError("Fallback Hessian QP attempts (max_conv_QPs > 1) are required when using SR1.");
@@ -162,7 +153,7 @@ void SQPoptions::complete_QP_options(){
     //  Infer qpOASES sparsityLevel
     if (qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
         if (!sparse) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
-        else              static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
+        else         static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
     }
 }
 

@@ -241,7 +241,7 @@ void MyProblem::evaluate(const Matrix &xi, const Matrix &lambda, double *objval,
 
 int main(int argc, const char* argv[]){
     using namespace blockSQP;
-    SQPresult ret;
+    SQPresults ret;
     MyProblem *prob;
     SQPmethod *meth;
     SQPoptions *opts;
@@ -295,8 +295,8 @@ int main(int argc, const char* argv[]){
     opts->hess_approx = Hessians::SR1;           
     opts->fallback_approx = Hessians::BFGS;       // ' ', not needed if hess_approximation is positive definite
     
-    opts->sizing = Sizings::NONE;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
-    opts->fallback_sizing = Sizings::NONE;     // ' '
+    opts->sizing = Sizings::None;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
+    opts->fallback_sizing = Sizings::None;     // ' '
     opts->sparse = true;                  // Dense matrices for this example
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
@@ -326,7 +326,7 @@ int main(int argc, const char* argv[]){
     ret = meth->run( 100 );
 
     meth->finish();
-    if ( ret == SQPresult::it_finished)
+    if ( ret == SQPresults::it_finished)
         printf("\033[0;36m***Maximum number of iterations reached.***\n\033[0m");
 
     printf("\nPrimal solution:\n");

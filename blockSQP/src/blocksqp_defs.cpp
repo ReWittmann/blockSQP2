@@ -20,7 +20,7 @@
 
 namespace blockSQP{
 
-SQPresult print_SQPresult(SQPresult rs, int print_level){
+SQPresults print_SQPresult(SQPresults rs, int print_level){
     if (print_level > 0){
         std::string colPrefix;
         std::string colSuffix;
@@ -33,25 +33,25 @@ SQPresult print_SQPresult(SQPresult rs, int print_level){
         }
         
         switch (rs){
-            case SQPresult::partial_success: 
+            case SQPresults::partial_success: 
                 std::cout << colPrefix + "\n***CONVERGENCE PARTIALLY ACHIEVED***" + colSuffix + "\n"; 
                 break;
-            case SQPresult::success:
+            case SQPresults::success:
                 std::cout << colPrefix + "\n***CONVERGENCE ACHIEVED***" + colSuffix + "\n";
                 break;
-            case SQPresult::super_success:
+            case SQPresults::super_success:
                 std::cout << colPrefix + "\n***STRONG CONVERGENCE ACHIEVED***" + colSuffix + "\n";
                 break;
-            case SQPresult::local_infeasibility:
+            case SQPresults::local_infeasibility:
                 std::cout << colPrefix + "\nLOCAL INFEASIBILITY" + colSuffix + "\n";
                 break;
-            case SQPresult::restoration_failure:
+            case SQPresults::restoration_failure:
                 std::cout << colPrefix + "\nRESTORATION ERROR" + colSuffix + "\n";
                 break;
-            case SQPresult::linesearch_failure:
+            case SQPresults::linesearch_failure:
                 std::cout << colPrefix + "\nLINESEARCH ERROR" + colSuffix + "\n";
                 break;
-            case SQPresult::sensitivity_eval_failure:
+            case SQPresults::sensitivity_eval_failure:
                 std::cout << colPrefix + "\nSENSITIVITY EVALUATION ERROR" + colSuffix + "\n";
                 break;
             default:
@@ -67,8 +67,10 @@ std::string to_string(Hessians hess_kind){
         case Hessians::SR1:             return "SR1";
         case Hessians::BFGS:            return "BFGS";
         case Hessians::finite_diff:     return "finite_diff";
+        case Hessians::exact:           return "exact";
         case Hessians::pos_def_exact:   return "pos_def_exact";
         case Hessians::undamped_BFGS:   return "undamped_BFGS";
+        case Hessians::last_block_default: break;
     }
     return "";
 }
@@ -79,8 +81,10 @@ std::string to_print_string(Hessians hess_kind){
         case Hessians::SR1:             return "SR1";
         case Hessians::BFGS:            return "Damped BFGS";
         case Hessians::finite_diff:     return "Finite differences";
+        case Hessians::exact:           return "exact";
         case Hessians::pos_def_exact:   return "Pos. def. exact";
         case Hessians::undamped_BFGS:   return "Undamped BFGS";
+        case Hessians::last_block_default: break;
     }
     return "";
 }
@@ -94,17 +98,21 @@ Hessians Hessians_from_string(std::string_view Hname){
         return Hessians::BFGS;
     if (Hname == to_string(Hessians::finite_diff))
         return Hessians::finite_diff;
+    if (Hname == to_string(Hessians::exact))
+        return Hessians::exact;
     if (Hname == to_string(Hessians::pos_def_exact))
         return Hessians::pos_def_exact;
     if (Hname == to_string(Hessians::undamped_BFGS))
         return Hessians::undamped_BFGS;
+    if (Hname == to_string(Hessians::last_block_default))
+        return Hessians::last_block_default;
     throw std::invalid_argument(std::string("Hessians_from_string: Name \"") + std::string(Hname) + std::string("\" does not match any available Hessian-approximation"));
 }
 
 
 std::string to_string(Sizings sizing){
     switch (sizing){
-        case Sizings::NONE:     return "NONE";
+        case Sizings::None:     return "None";
         case Sizings::SP:       return "SP";
         case Sizings::OL:       return "OL";
         case Sizings::GM_SP_OL: return "GM_OL_SP";
@@ -114,7 +122,7 @@ std::string to_string(Sizings sizing){
 }
 std::string to_string_full(Sizings sizing){
     switch (sizing){
-        case Sizings::NONE:     return "NONE";
+        case Sizings::None:     return "None";
         case Sizings::SP:       return "Shanno-Phua";
         case Sizings::OL:       return "Oren-Luenberger";
         case Sizings::GM_SP_OL: return "Geometric mean of Shanno-Phua and Oren-Luenberger";
@@ -124,7 +132,7 @@ std::string to_string_full(Sizings sizing){
 }
 std::string to_print_string(Sizings sizing){
     switch (sizing){
-        case Sizings::NONE:     return "none";
+        case Sizings::None:     return "none";
         case Sizings::SP:       return "SP";
         case Sizings::OL:       return "OL";
         case Sizings::GM_SP_OL: return "mean";
@@ -135,8 +143,8 @@ std::string to_print_string(Sizings sizing){
 
 
 Sizings Sizings_from_string(std::string_view Sname){
-    if (Sname == to_string(Sizings::NONE))
-        return Sizings::NONE;
+    if (Sname == to_string(Sizings::None))
+        return Sizings::None;
     if (Sname == to_string(Sizings::SP))
         return Sizings::SP;
     if (Sname == to_string(Sizings::OL))

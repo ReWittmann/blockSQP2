@@ -37,11 +37,10 @@ opts.par_QPs = False
 opts.enable_QP_cancellation = False
 opts.indef_delay = 1
 
-opts.exact_hess = 0
-opts.hess_approx = 1
-opts.sizing = 2
-opts.fallback_approx = 2
-opts.fallback_sizing = 4
+opts.hess_approx = 'SR1'
+opts.sizing = 'OL'
+opts.fallback_approx = 'BFGS'
+opts.fallback_sizing = 'COL'
 opts.BFGS_damping_factor = 0.2
 
 opts.lim_mem = True
@@ -86,22 +85,22 @@ optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
 optimizer.init()
 ################################
 
-ret = int(optimizer.run(1))
+ret = optimizer.run(1)
 i = 1
 if step_plots:
     OCprob.plot(OCprob.start_point, dpi = 200, it = 0, title=plot_title)
     xi = np.array(optimizer.get_xi()).reshape(-1)
     OCprob.plot(xi, dpi = 200, it = i, title=plot_title)
-    while ret == 0 and i < itMax:
-        ret = int(optimizer.run(1,1))
+    while ret == py_blockSQP.SQPresults.it_finished and i < itMax:
+        ret = optimizer.run(1,1)
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1
         if i in (15, 80, 105, 106):
             xi_arr.append(xi)
         OCprob.plot(xi, dpi=200, title=plot_title)
 else:
-    while ret == 0 and i < itMax:
-        ret = int(optimizer.run(1,1))
+    while ret == py_blockSQP.SQPresults.it_finished and i < itMax:
+        ret = optimizer.run(1,1)
         i += 1
         if i in (15, 80, 105, 106):
             xi_arr.append(np.array(optimizer.get_xi()).reshape(-1))

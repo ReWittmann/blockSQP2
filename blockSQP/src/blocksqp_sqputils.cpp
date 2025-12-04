@@ -193,14 +193,15 @@ void SQPmethod::set_iterate(const Matrix &xi, const Matrix &lambda, bool resetHe
     vars->lambda = lambda;
     int infoEval;
     if (resetHessian) resetHessians();
-
+    
+    int whichDerv = int(stats->itCount >= param->indef_delay || !is_indefinite(param->hess_approx) || !is_indefinite(param->last_block_approx)) * (is_exact(param->hess_approx) ? 2 : int(is_exact(param->last_block_approx)));
     if (param->sparse)
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+param->exact_hess, &infoEval);
+                        vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get(), vars->hess1.get(), 1+whichDerv, &infoEval);
     else
         prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
-                        vars->constrJac, vars->hess1.get(), 1+param->exact_hess, &infoEval);
-
+                        vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
+    
     //Remove filter entries that dominate the set point
     std::set<std::pair<double,double>>::iterator iter = vars->filter.begin();
     std::set<std::pair<double,double>>::iterator iterToRemove;

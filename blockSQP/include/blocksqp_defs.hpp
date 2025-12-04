@@ -44,7 +44,7 @@ namespace blockSQP{
 
 typedef char PATHSTR[4096];
 
-enum class SQPresult{
+enum class SQPresults{
     it_finished = 0,
     partial_success = 1,
     success = 2,
@@ -58,7 +58,7 @@ enum class SQPresult{
     sensitivity_eval_failure = -100
 };
 //Colored print output when exiting with  return print_RES(RES::__)
-SQPresult print_SQPresult(SQPresult rs, int print_level = 2);
+SQPresults print_SQPresult(SQPresults rs, int print_level = 2);
 
 enum class Hessians : int{
     scaled_ID = 0,
@@ -87,13 +87,16 @@ inline bool is_update(Hessians appr){
 inline bool is_indefinite(Hessians appr){
     return appr == Hessians::SR1 || appr == Hessians::finite_diff || appr == Hessians::exact || appr == Hessians::undamped_BFGS;
 }
+inline bool is_exact(Hessians appr){
+    return appr == Hessians::exact || appr == Hessians::pos_def_exact;
+}
 
 std::string to_string(Hessians hess_kind);
 std::string to_print_string(Hessians hess_kind);
 Hessians Hessians_from_string(std::string_view Hname);
 
 enum class Sizings : int{
-    NONE = 0,
+    None = 0,
     SP = 1,                     //Shanno-Phua sizing
     OL = 2,                     //Oren-Luenberger sizing
     GM_SP_OL = 3,               //Geometric mean of SP and OL

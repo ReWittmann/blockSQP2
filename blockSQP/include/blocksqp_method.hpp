@@ -85,7 +85,7 @@ class SQPmethod{
         /// Initialization, has to be called before run
         void init();
         /// Main Loop of SQP method
-        SQPresult run( int maxIt, int warmStart = 0 );
+        SQPresults run( int maxIt, int warmStart = 0 );
         /// Call after the last call of run, to close output files etc.
         void finish();
         
@@ -121,10 +121,10 @@ class SQPmethod{
         //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
         //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
-        virtual QPresult solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        QPresult solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
-        QPresult solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        QPresult solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+        virtual QPresults solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
+        QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+        QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Sequentially try to solve increasingly convexified QPs. 
@@ -137,7 +137,7 @@ class SQPmethod{
         /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
         //virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
-        virtual QPresult solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
+        virtual QPresults solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
@@ -190,7 +190,12 @@ class SQPmethod{
         
         // Hessian approximation and sizing
         
-        /// Set initial Hessian: Identity matrix
+        //Check whether last block of Hessian/Fallback should not be updated because it is available exactly
+        inline bool skip_last_block(SymMatrix *hess){
+            return ((hess == vars->hess1.get() && vars->last_block_exact) || (hess == vars->hess2.get() && vars->last_fallback_exact));
+        }
+        
+        /// Set initial Hessian: Identity matrix        
         void calcInitialHessian(SymMatrix *hess);
         void calcInitialHessian(int iBlock, SymMatrix *hess);
         void calcInitialHessians();
@@ -262,8 +267,8 @@ class bound_correction_method : public SQPmethod{
     // condensed QP solution methods incorporating QP resolves with added corrections
     //int bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
     //int solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
-    QPresult bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
-    QPresult solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
+    QPresults bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    QPresults solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
     // filterLineSearch that applies bound correction to the full step
     virtual int filterLineSearch();

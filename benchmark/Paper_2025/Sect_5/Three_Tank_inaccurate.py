@@ -28,11 +28,10 @@ opts.par_QPs = True
 opts.enable_QP_cancellation = True
 opts.indef_delay = 3
 
-opts.exact_hess = 0
-opts.hess_approx = 1
-opts.sizing = 2
-opts.fallback_approx = 2
-opts.fallback_sizing = 4
+opts.hess_approx = 'SR1'
+opts.sizing = 'OL'
+opts.fallback_approx = 'BFGS'
+opts.fallback_sizing = 'COL'
 opts.BFGS_damping_factor = 1/3
 
 opts.lim_mem = True

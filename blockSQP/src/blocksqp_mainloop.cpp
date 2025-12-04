@@ -61,21 +61,21 @@ void SQPmethod::init(){
 }
 
 
-SQPresult SQPmethod::run(int maxIt, int warmStart){
+SQPresults SQPmethod::run(int maxIt, int warmStart){
     int it = 0, infoEval = 0;
-    QPresult infoQP = QPresult::undef;
+    QPresults infoQP = QPresults::undef;
     bool skipLineSearch = false;
     bool hasConverged = false;
-    //int whichDerv = param->exact_hess;
     
-    int whichDerv = param->exact_hess*int(stats->itCount >= param->indef_delay || param->exact_hess == 1);
-    // int whichDerv = 0;
+    //int whichDerv = param->exact_hess*int(stats->itCount >= param->indef_delay || param->exact_hess == 1);
+    // int whichDerv = int(stats->itCount >= param->indef_delay)*(is_exact(param->hess_approx) ? 2 : is_exact(param->last_block_approx)); 
+    int whichDerv = int(stats->itCount >= param->indef_delay || !is_indefinite(param->hess_approx) || !is_indefinite(param->last_block_approx)) * (is_exact(param->hess_approx) ? 2 : int(is_exact(param->last_block_approx)));    
     int n_convShift;
 
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         //return -1;
-        return print_SQPresult(SQPresult::misc_error, param->result_print_color);
+        return print_SQPresult(SQPresults::misc_error, param->result_print_color);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
@@ -90,12 +90,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresult::sensitivity_eval_failure, param->result_print_color);
+        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresults::sensitivity_eval_failure, param->result_print_color);
         
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars.get(), param, hasConverged );
-        if (hasConverged) return print_SQPresult(SQPresult::success, param->result_print_color);
+        if (hasConverged) return print_SQPresult(SQPresults::success, param->result_print_color);
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
@@ -105,11 +105,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
     }
 
 
-    for (; it<maxIt; it++){
+    for (; it < maxIt; it++){
         //Enter new iteration
         stats->itCount++;
         
-        whichDerv = param->exact_hess*int(stats->itCount >= param->indef_delay || param->exact_hess == 1);
+        // whichDerv = param->exact_hess*int(stats->itCount >= param->indef_delay || param->exact_hess == 1);
+        whichDerv = int(stats->itCount >= param->indef_delay || !is_indefinite(param->hess_approx) || !is_indefinite(param->last_block_approx)) * (is_exact(param->hess_approx) ? 2 : int(is_exact(param->last_block_approx)));
         /////////////////////////////////////////////
         ///PHASE 1: Solve the quadratic subproblem///
         /////////////////////////////////////////////
@@ -118,12 +119,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
         
         // infoQP == 0 ~ success
-        if (infoQP == QPresult::time_it_limit_reached){
+        if (infoQP == QPresults::time_it_limit_reached){
             bool qpError = true;
             
             std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-            if (infoQP != QPresult::success){
+            if (infoQP != QPresults::success){
                 std::cout << "QP solution failed again, try to reduce constraint violation\n";
                 skipLineSearch = true;
                 
@@ -145,23 +146,23 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 
                 if (qpError){
                     std::cout << "QP error, stop\n";
-                    return print_SQPresult(SQPresult::qp_failure, param->result_print_color);
+                    return print_SQPresult(SQPresults::qp_failure, param->result_print_color);
                 }
             }
             else vars->steptype = 1;
         }
-        else if (infoQP == QPresult::indef_unbounded || infoQP == QPresult::other_error){
+        else if (infoQP == QPresults::indef_unbounded || infoQP == QPresults::other_error){
             std::cout << "***QP error. Solve again with identity matrix.***\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-            if (infoQP != QPresult::success){
+            if (infoQP != QPresults::success){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
                 std::cout << "InfoQP is " << infoQP << "\n";
-                return print_SQPresult(SQPresult::qp_failure, param->result_print_color);
+                return print_SQPresult(SQPresults::qp_failure, param->result_print_color);
             }
             else vars->steptype = 1;
         }
-        else if (infoQP == QPresult::infeasible){
+        else if (infoQP == QPresults::infeasible){
             // 3.) QP infeasible, try to restore feasibility
             int feasError = 1;
             skipLineSearch = true; // don't do line search with restoration step
@@ -185,8 +186,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             }
             
             // If everything failed, abort.
-            if (feasError == 1 || feasError > 2) return print_SQPresult(SQPresult::restoration_failure, param->result_print_color);
-            else if (feasError == 2) return print_SQPresult(SQPresult::local_infeasibility, param->result_print_color);
+            if (feasError == 1 || feasError > 2) return print_SQPresult(SQPresults::restoration_failure, param->result_print_color);
+            else if (feasError == 2) return print_SQPresult(SQPresults::local_infeasibility, param->result_print_color);
         }
 
         /////////////////////////////////////////////////////////////
@@ -198,7 +199,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             // No enable_linesearch strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
-                return print_SQPresult(SQPresult::eval_failure, param->result_print_color);
+                return print_SQPresult(SQPresults::eval_failure, param->result_print_color);
             }
             vars->steptype = 0;
         }
@@ -213,8 +214,8 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->solution_found){
                     vars->restore_iterate();
-                    if (vars->tol <= 1e-2*param->opt_tol && vars->cNormS <= 1e-2*param->feas_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
-                    else return print_SQPresult(SQPresult::success, param->result_print_color);
+                    if (vars->tol <= 1e-2*param->opt_tol && vars->cNormS <= 1e-2*param->feas_tol) return print_SQPresult(SQPresults::super_success, param->result_print_color);
+                    else return print_SQPresult(SQPresults::success, param->result_print_color);
                 }
                 
                 if (vars->KKT_heuristic_enabled){
@@ -229,7 +230,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 if (lsError && !vars->conv_qp_solved){
                     std::cout << "filterLineSearch failed, try again with fallback Hessian\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
-                    if (infoQP == QPresult::success) lsError = bool(filterLineSearch());
+                    if (infoQP == QPresults::success) lsError = bool(filterLineSearch());
                     if (!lsError) vars->steptype = 0;
                 }
                 
@@ -246,12 +247,12 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
                 /*
                 if (lsError && param->enable_premature_termination && vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
-                    return print_SQPresult(SQPresult::partial_success, param->result_print_color);
+                    return print_SQPresult(SQPresults::partial_success, param->result_print_color);
                 */
                 if (lsError && param->enable_premature_termination && vars->it_saved){
                     //A feasible iterate with higher optimality error was saved, restore it and declare partial success
                     vars->restore_iterate();
-                    return print_SQPresult(SQPresult::partial_success, param->result_print_color);
+                    return print_SQPresult(SQPresults::partial_success, param->result_print_color);
                 }
                     
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
@@ -270,7 +271,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 if (lsError && vars->steptype != 1){
                     std::cout << "***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-                    if (infoQP == QPresult::success) lsError = bool(filterLineSearch());
+                    if (infoQP == QPresults::success) lsError = bool(filterLineSearch());
                     if (!lsError) vars->steptype = 1;
                 }
 
@@ -285,7 +286,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 // If everything failed, abort.
                 if (lsError){
                     printf( "***Line search error. Stop.***\n" );
-                    return print_SQPresult(SQPresult::linesearch_failure, param->result_print_color);
+                    return print_SQPresult(SQPresults::linesearch_failure, param->result_print_color);
                 }
             }
             else{
@@ -311,7 +312,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresult::sensitivity_eval_failure, param->result_print_color);
+        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresults::sensitivity_eval_failure, param->result_print_color);
         
         /// Check if converged
         hasConverged = calcOptTol();
@@ -331,15 +332,15 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                     vars->solution_found = true;
                 }
             }
-            else return print_SQPresult(SQPresult::success, param->result_print_color);
+            else return print_SQPresult(SQPresults::success, param->result_print_color);
         }
 
         //Handle extra steps for improved accuracy if requested
         if (vars->solution_found && param->max_extra_steps > 0){
             if (vars->n_extra >= param->max_extra_steps){
                 vars->restore_iterate();
-                if (vars->tol < 1e-2*param->opt_tol && vars->cNormS < 1e-2*param->feas_tol) return print_SQPresult(SQPresult::super_success, param->result_print_color);
-                else return print_SQPresult(SQPresult::success, param->result_print_color);
+                if (vars->tol < 1e-2*param->opt_tol && vars->cNormS < 1e-2*param->feas_tol) return print_SQPresult(SQPresults::super_success, param->result_print_color);
+                else return print_SQPresult(SQPresults::success, param->result_print_color);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
             if (std::max(vars->tol/param->opt_tol, vars->cNormS/param->feas_tol) < std::max(vars->tolOpt_save/param->opt_tol, vars->cNormSOpt_save/param->feas_tol))
@@ -416,26 +417,24 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 vars->hess2_updated = true;
             }
             else{
-                if (param->exact_hess < 2){
+                //if (param->exact_hess < 2){
                     //Calculate/Update first (pos. indefinite) hessian
                     // if (param->hess_approx <= 2 || param->hess_approx > 6)
                     if (is_update(param->hess_approx))
                         calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
                     else if (param->hess_approx == Hessians::finite_diff)
                         calcFiniteDiffHessian(vars->hess1.get());
-                }
+                //}
                 vars->hess2_updated = false;
             }
         }
         else{
             //Vectors deltaXi and gamma need not be updated when previous steps are not stored and can be overwritten. We also don't need to store their current position.
-            if (param->exact_hess < 2){
-                if (is_update(param->hess_approx))
-                    calcHessianUpdate(param->hess_approx, param->sizing, vars->hess1.get());
-                else if (param->hess_approx == Hessians::finite_diff)
-                    calcFiniteDiffHessian(vars->hess1.get());
-            }
-
+            if (is_update(param->hess_approx))
+                calcHessianUpdate(param->hess_approx, param->sizing, vars->hess1.get());
+            else if (param->hess_approx == Hessians::finite_diff)
+                calcFiniteDiffHessian(vars->hess1.get());
+            
             //Also update the fallback hessian as we need to update it in every iteration regardless of whether it is needed
             if (vars->hess2 != nullptr){
                 if (is_update(param->fallback_approx))
@@ -443,7 +442,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
                 vars->hess2_updated = true;
             }
         }
-
+        
         //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
         //if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
         if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > param->indef_delay && !vars->conv_qp_only){
@@ -468,7 +467,7 @@ SQPresult SQPmethod::run(int maxIt, int warmStart){
         skipLineSearch = false;
     }
 
-    return SQPresult::it_finished;
+    return SQPresults::it_finished;
 }
 
 

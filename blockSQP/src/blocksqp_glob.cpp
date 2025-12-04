@@ -356,9 +356,9 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
-        QPresult infoQP = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
+        QPresults infoQP = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
             
-        if (infoQP != QPresult::success)
+        if (infoQP != QPresults::success)
             return false; // Could not solve QP, abort SOC
 
         // Set new SOC trial point
@@ -464,7 +464,7 @@ int SQPmethod::feasibilityRestorationPhase(){
 int SQPmethod::innerRestorationPhase(RestorationProblemBase *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
     int info;
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
-    SQPresult ret;
+    SQPresults ret;
     int maxRestIt = 20;
     double cNormTrial, objTrial, stepsize_sum = 0.;
     
@@ -828,11 +828,11 @@ int bound_correction_method::filterLineSearch(){
             deltaXi_save = vars->deltaXi;
             lambdaQP_save = vars->lambdaQP;
             
-            QPresult infoQP = bound_correction(vars->deltaXi, vars->lambdaQP);
+            QPresults infoQP = bound_correction(vars->deltaXi, vars->lambdaQP);
             
             //If model bound correction failed for indefinite Hessian, resolve with convex Hessian and try again
-            if (infoQP != QPresult::success && !vars->conv_qp_solved){
-                if (solveQP(vars->deltaXi, vars->lambdaQP, 1) != QPresult::success) return 1;
+            if (infoQP != QPresults::success && !vars->conv_qp_solved){
+                if (solveQP(vars->deltaXi, vars->lambdaQP, 1) != QPresults::success) return 1;
                 else{k = 0; alpha = 1.0;}
             }
         }

@@ -179,12 +179,10 @@ void SQPmethod::apply_rescaling(const double *resfactors){
     }
     else{
         //For limited memory, rescale only exact Hessian blocks and all variable/gradient step delta/gamma pairs that are still used for updates
-        if (param->exact_hess > 0){
-            for (int iBlock = (vars->nBlocks - 1)*int(param->exact_hess == 1); iBlock < vars->nBlocks; iBlock++){
-                for (int i = 0; i < vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock]; i++){
-                    for (int j = 0; j <= i; j++){
-                        vars->hess1[iBlock](i,j) /= resfactors[vars->blockIdx[iBlock] + i] * resfactors[vars->blockIdx[iBlock] + j];
-                    }
+        for (int iBlock = vars->nBlocks - (std::max)(vars->nBlocks*int(is_exact(param->hess_approx)), int(is_exact(param->last_block_approx))); iBlock < vars->nBlocks; iBlock++){
+            for (int i = 0; i < vars->blockIdx[iBlock+1] - vars->blockIdx[iBlock]; i++){
+                for (int j = 0; j <= i; j++){
+                    vars->hess1[iBlock](i,j) /= resfactors[vars->blockIdx[iBlock] + i] * resfactors[vars->blockIdx[iBlock] + j];
                 }
             }
         }

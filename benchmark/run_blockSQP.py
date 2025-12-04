@@ -52,10 +52,9 @@ opts.max_conv_QPs = 4                       #max number of additional QPs per SQ
 opts.conv_strategy = 2                      #Convexification strategy, 2 requires passing vblocks
 opts.par_QPs = True                         #Enable parallel solution of QPs
 opts.enable_QP_cancellation = True          #Enable cancellation of long running QP threads
-opts.indef_delay = 3                        #Only used fallback Hessian in first # iterations
+opts.indef_delay = 3                        #Only use fallback Hessian in first # iterations
 
-opts.exact_hess = 0                         #0: No second derivatives, 1: Only last Hess. block, 2: Use excact Hessian
-opts.hess_approx = 'SR1'                    #'SR1'/'BFGS'/'undamped BFGS' (not recommended)
+opts.hess_approx = 'SR1'                  #'SR1'/'BFGS'/'exact'
 opts.sizing = 'OL'                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
 opts.fallback_approx = 'BFGS'               # ''   ''
 opts.fallback_sizing = 'COL'                # ''   ''
@@ -137,7 +136,7 @@ if (step_plots):
     xi = np.array(optimizer.get_xi()).reshape(-1)
     i = 1
     OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
-    while ret.value == 0 and i < itMax:
+    while ret == py_blockSQP.SQPresults.it_finished and i < itMax:
         ret = optimizer.run(1,1)
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1

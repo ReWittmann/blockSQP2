@@ -72,7 +72,10 @@ class SQPiterate{
         //Hessian(s), including layout
         int nBlocks;                                   ///< number of diagonal blocks in Hessian
         std::unique_ptr<int[]> blockIdx;               ///< indices in the variable vector that correspond to diagonal blocks (nBlocks+1)
-
+        
+        bool last_block_exact;
+        bool last_fallback_exact;
+        
         SymMatrix *hess;                               ///< [blockwise] pointer to current Hessian (-approximation) of the Lagrangian
         std::unique_ptr<SymMatrix[]> hess1;            ///< [blockwise] first Hessian approximation
         std::unique_ptr<SymMatrix[]> hess2;            ///< [blockwise] second Hessian approximation (convex)

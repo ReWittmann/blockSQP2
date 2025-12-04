@@ -83,7 +83,7 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
     return opts
 opt1 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
-opt2.exact_hess = 2
+opt2.hess_approx = 'exact'
 blockSQP_Experiments = [
                         (opt1, 'blockSQP, SR1-...-BFGS'),
                         # (opt2, 'blockSQP, exH-...-BFGS')

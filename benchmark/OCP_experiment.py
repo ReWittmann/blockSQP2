@@ -93,8 +93,8 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
         
         N_SQP.append(stats.itCount)
         N_secs.append(t1 - t0)
-        if int(ret) >= 0:
-            type_sol.append(int(ret))
+        if ret.value >= 0:
+            type_sol.append(ret.value)
         else:
             type_sol.append(-1)    
     return N_SQP, N_secs, type_sol

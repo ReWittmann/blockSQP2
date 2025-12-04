@@ -76,12 +76,6 @@ opt_full.max_conv_QPs = 4
 opt_full.conv_strategy = 2
 opt_full.automatic_scaling = True
 
-opt_dense = py_blockSQP.SQPoptions()
-opt_dense.hess_approx = 2
-opt_dense.sizing = 4
-QPopts = py_blockSQP.qpOASES_options()
-QPopts.sparsityLevel = 2
-opt_dense.qpsol_options = QPopts
 
 #Select option sets to test for
 Experiments = [
@@ -90,7 +84,6 @@ Experiments = [
                # (opt_CS1, "conv. str. 1"),
                # (opt_CS2, "conv. str. 2"),
                (opt_full, "opt_full"),
-               # (opt_dense, "opt_dense")
                ]
 
 

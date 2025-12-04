@@ -41,13 +41,9 @@ namespace blockSQP{
 
 
 void SQPmethod::calcInitialHessian(SymMatrix *hess){
-    for (int iBlock=0; iBlock<vars->nBlocks; iBlock++){
-        //if objective derv is computed exactly, don't set the last block!
-        if (!(param->exact_hess == 1 && param->block_hess && iBlock == vars->nBlocks-1)){
-            hess[iBlock].Initialize(0.0);
-            for (int i=0; i<hess[iBlock].m; i++)
-                hess[iBlock]( i, i ) = param->initial_hess_scale;
-        }
+    for (int iBlock = 0; iBlock < vars->nBlocks - int(skip_last_block(hess)); iBlock++){
+        hess[iBlock].Initialize(0.0);
+        for (int i = 0; i < hess[iBlock].m; i++) hess[iBlock](i,i) = param->initial_hess_scale;
     }
 }
 
@@ -66,13 +62,11 @@ void SQPmethod::calcInitialHessians(){
 
 
 void SQPmethod::calcScaledInitialHessian(double scale, SymMatrix *hess){
-    for (int iBlock = 0; iBlock < vars->nBlocks; iBlock++)
-        //if objective derv is computed exactly, don't set the last block!
-        if (!(param->exact_hess == 1 && param->block_hess && iBlock == vars->nBlocks-1)){
-            hess[iBlock].Initialize(0.0);
-            for (int i = 0; i < hess[iBlock].m; i++)
-                hess[iBlock]( i, i ) = scale;
-        }
+    for (int iBlock = 0; iBlock < vars->nBlocks - int(skip_last_block(hess)); iBlock++){
+        hess[iBlock].Initialize(0.0);
+        for (int i = 0; i < hess[iBlock].m; i++)
+            hess[iBlock](i, i) = scale;
+    }
 }
 
 void SQPmethod::calcScaledInitialHessian(int iBlock, double scale, SymMatrix *hess){
@@ -84,13 +78,11 @@ void SQPmethod::calcScaledInitialHessian(int iBlock, double scale, SymMatrix *he
 
 
 void SQPmethod::resetHessian(SymMatrix *hess){
-    for( int iBlock=0; iBlock<vars->nBlocks; iBlock++ )
-        //if objective derv is computed exactly, don't set the last block!
-        if( !(param->exact_hess == 1 && param->block_hess && iBlock == vars->nBlocks - 1) ){
-            vars->noUpdateCounter[iBlock] = -1;
-            vars->nquasi[iBlock] = 0;
-            calcInitialHessian(iBlock, hess);
-        }
+    for (int iBlock = 0; iBlock < vars->nBlocks - int(skip_last_block(hess)); iBlock++){
+        vars->noUpdateCounter[iBlock] = -1;
+        vars->nquasi[iBlock] = 0;
+        calcInitialHessian(iBlock, hess);
+    }
     //Don't use homotopy since changing the hessian to (scaled) identity can drastically change the QP
     vars->use_homotopy = false;
 }
@@ -106,7 +98,6 @@ void SQPmethod::resetHessian(int iBlock, SymMatrix *hess){
         vars->deltaGammaOld( iBlock ) = 0.0;
     }
     else{
-        //vars->deltaNormSqOldFallback( iBlock ) = 1.0;
         vars->deltaGammaOldFallback( iBlock ) = 0.0;
     }
 }
@@ -116,7 +107,6 @@ void SQPmethod::resetHessians(){
     if (vars->hess2 != nullptr) resetHessian(vars->hess2.get());
     return;
 }
-
 
 int SQPmethod::calcFiniteDiffHessian(SymMatrix *hess){
     int iVar, jVar, k, iBlock, maxBlock, info, idx, idx1, idx2;
@@ -315,15 +305,9 @@ void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
 
 
 void SQPmethod::calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMatrix *hess){
-    int iBlock, nBlocks;
-    //Matrix gammai, deltai;
+    int iBlock;
     bool firstIter;
-    
-    //if objective derv is computed exactly, don't set the last block!
-    if (param->exact_hess == 1 && param->block_hess)
-        nBlocks = vars->nBlocks - 1;
-    else
-        nBlocks = vars->nBlocks;
+    int nBlocks = vars->nBlocks - int(skip_last_block(hess));
     
     // Statistics: how often is damping active, what is the average COL sizing factor?
     stats->hessDamped = 0;
@@ -338,13 +322,6 @@ void SQPmethod::calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMa
             sizeInitialHessian(sizingType, vars->dg_pos, iBlock, hess);
         else if (sizingType == Sizings::COL)
             sizeHessianCOL(vars->dg_pos, iBlock, hess);
-        
-        // Compute the new update
-        // deltaNormOld and deltaGammaOld are set here (damping may be applied)
-        // if (updateType == HessApprox::SR1)
-        //     calcSR1(vars->dg_pos, iBlock, hess);
-        // else if (updateType == HessApprox::BFGS)
-        //     calcBFGS(vars->dg_pos, iBlock, hess, true);
         calcQN(updateType, vars->dg_pos, iBlock, hess);
         
         // If an update is skipped to often, reset Hessian block
@@ -364,19 +341,11 @@ void SQPmethod::calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMa
 }
 
 void SQPmethod::calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizingType, SymMatrix *hess){
-    int iBlock, nBlocks;
-    //Matrix smallGamma, smallDelta;
-    //Matrix gammai, deltai;
+    int iBlock;
     int n_updates, pos, posOldest;
-    int hessDamped, hessSkipped;
-    double averageSizingFactor;
-    
-    //if objective derv is computed exactly, don't set the last block!
-    if (param->exact_hess == 1 && param->block_hess)
-        nBlocks = vars->nBlocks - 1;
-    else
-        nBlocks = vars->nBlocks;
-    
+    // int hessDamped, hessSkipped;
+    // double averageSizingFactor;
+    int nBlocks = vars->nBlocks - int(skip_last_block(hess));
     // Statistics: how often is damping active, what is the average COL sizing factor?
     stats->hessDamped = 0;
     stats->hessSkipped = 0;
@@ -395,31 +364,22 @@ void SQPmethod::calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizi
         for (int i = 0; i < n_updates; i++){
             pos = (posOldest + i) % vars->dg_nsave;
             // Save statistics, we want to record them only for the most recent update
-            averageSizingFactor = stats->averageSizingFactor;
-            hessDamped = stats->hessDamped;
-            hessSkipped = stats->hessSkipped;
+            // averageSizingFactor = stats->averageSizingFactor;
+            // hessDamped = stats->hessDamped;
+            // hessSkipped = stats->hessSkipped;
             
             // Selective sizing before the update
             if (sizingType == Sizings::COL && i > 0)
                 sizeHessianCOL(pos, iBlock, hess);
-            
             calcQN(updateType, pos, iBlock, hess);
-            // if (updateType == HessApprox::SR1)
-            //     calcSR1(pos, iBlock, hess);
-            // else if (updateType == HessApprox::BFGS)
-            //     calcBFGS(pos, iBlock, hess, true);
-            // else if (updateType == HessApprox::undamped_BFGS)
-            //     calcBFGS(pos, iBlock, hess, false);
-            
-            stats->nTotalUpdates++;
-            
+            // stats->nTotalUpdates++;
             // Count damping statistics only for the most recent update
-            if (pos != vars->dg_pos){
-                stats->hessDamped = hessDamped;
-                stats->hessSkipped = hessSkipped;
-                if (sizingType == Sizings::COL)
-                    stats->averageSizingFactor = averageSizingFactor;
-            }
+            // if (pos != vars->dg_pos){
+            //     stats->hessDamped = hessDamped;
+            //     stats->hessSkipped = hessSkipped;
+            //     if (sizingType == Sizings::COL)
+            //         stats->averageSizingFactor = averageSizingFactor;
+            // }
             
             //If too many updates are skipped during limited memory update, reset Hessian and restart from next limited memory update
             if (vars->noUpdateCounter[iBlock] > param->max_consec_skipped_updates){
@@ -427,11 +387,10 @@ void SQPmethod::calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizi
                 //If Hessian was reset after the final update, proceed to next block. Sizing of the initial Hessian is still applied in this case
                 iBlock -= 1;
                 std::cout << "Too many updates skipped, resetting limited memory Hessian block\n";
-                goto lim_mem_outer_loop_continue;
+                break;
             }
             vars->deltaNormSqOld(iBlock) = vars->deltaNormSqMat(iBlock, pos);
         }
-        lim_mem_outer_loop_continue:;
     }
     stats->averageSizingFactor /= nBlocks;
     return;
@@ -440,9 +399,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizi
 #define LIM_MEM_N_THREADS 4
 
 void SQPmethod::calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess){
-    //if objective derv is computed exactly, don't set the last block!
-    int nBlocks = (param->exact_hess == 1 && param->block_hess) ? vars->nBlocks - 1 : vars->nBlocks;
-    
+    int nBlocks = vars->nBlocks - int(skip_last_block(hess));
     if (nBlocks < LIM_MEM_N_THREADS){
         calcHessianUpdateLimitedMemory(updateType, sizingType, hess);
         return;
@@ -475,14 +432,6 @@ void SQPmethod::par_inner_update_loop(Hessians updateType, Sizings sizingType, S
             // Selective sizing before the update
             if (sizingType == Sizings::COL && i > 0)
                 sizeHessianCOL(pos, iBlock, hess);
-            
-            // Compute the new update
-            // if (updateType == 1)
-            //     calcSR1(pos, iBlock, hess);
-            // else if (updateType == 2)
-            //     calcBFGS(pos, iBlock, hess, true);
-            // else if (updateType == 7)
-            //     calcBFGS(pos, iBlock, hess, false);
             calcQN(updateType, pos, iBlock, hess);
             
             //If too many updates are skipped during limited memory update, reset Hessian and restart from next limited memory update
@@ -501,16 +450,17 @@ void SQPmethod::par_inner_update_loop(Hessians updateType, Sizings sizingType, S
 
 /*
 void SQPmethod::calcHessianUpdateLimitedMemory_2(int updateType, int sizing, SymMatrix *hess){
-    int iBlock, nBlocks;
+    int iBlock;
     //Matrix smallGamma, smallDelta;
     //Matrix gammai, deltai;
     int  pos, posOldest;
     
     //if objective derv is computed exactly, don't set the last block!
-    if (param->exact_hess == 1 && param->block_hess)
-        nBlocks = vars->nBlocks - 1;
-    else
-        nBlocks = vars->nBlocks;
+    // if (param->exact_hess == 1 && param->block_hess)
+    //     nBlocks = vars->nBlocks - 1;
+    // else
+    //     nBlocks = vars->nBlocks;
+    int nBlocks = vars->nBlocks - int(skip_last_block(hess));
     
     posOldest = (vars->dg_pos - param->mem_size + 1 + vars->dg_nsave) % vars->dg_nsave;
     for (int i = -1; i < param->mem_size; i++){

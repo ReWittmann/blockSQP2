@@ -225,12 +225,35 @@ CDLEXP void SQPoptions_set_max_QP_it(void *ptr, int val){
 CDLEXP void SQPoptions_set_block_hess(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->block_hess = val;
 }
-CDLEXP void SQPoptions_set_sizing(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->sizing = Sizings(val);
+// CDLEXP void SQPoptions_set_sizing(void *ptr, int val){
+//     static_cast<SQPoptions *>(ptr)->sizing = Sizings(val);
+// }
+// CDLEXP void SQPoptions_set_fallback_sizing(void *ptr, int val){
+//     static_cast<SQPoptions *>(ptr)->fallback_sizing = Sizings(val);
+// }
+CDLEXP int SQPoptions_set_sizing(void *ptr, char* val){
+    try{
+        static_cast<SQPoptions *>(ptr)->sizing = Sizings_from_string(std::string(val));
+        return 0;
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return 1;
 }
-CDLEXP void SQPoptions_set_fallback_sizing(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->fallback_sizing = Sizings(val);
+CDLEXP int SQPoptions_set_fallback_sizing(void *ptr, char* val){
+    try{
+        static_cast<SQPoptions *>(ptr)->fallback_sizing = Sizings_from_string(std::string(val));
+        return 0;
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return 1;
 }
+
 CDLEXP void SQPoptions_set_max_QP_secs(void *ptr, double val){
     static_cast<SQPoptions *>(ptr)->max_QP_secs = val;
 }
@@ -255,11 +278,34 @@ CDLEXP void SQPoptions_set_BFGS_damping_factor(void *ptr, double val){
 CDLEXP void SQPoptions_set_min_damping_quotient(void *ptr, double val){
     static_cast<SQPoptions *>(ptr)->min_damping_quotient = val;
 }
-CDLEXP void SQPoptions_set_hess_approx(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->hess_approx = Hessians(val);
+// CDLEXP void SQPoptions_set_hess_approx(void *ptr, int val){
+//     static_cast<SQPoptions *>(ptr)->hess_approx = Hessians(val);
+// }
+// CDLEXP void SQPoptions_set_fallback_approx(void *ptr, int val){
+//     static_cast<SQPoptions *>(ptr)->fallback_approx = Hessians(val);
+// }
+
+CDLEXP int SQPoptions_set_hess_approx(void *ptr, char* val){
+    try{
+        static_cast<SQPoptions *>(ptr)->hess_approx = Hessians_from_string(std::string(val));
+        return 0;
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return 1;
 }
-CDLEXP void SQPoptions_set_fallback_approx(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->fallback_approx = Hessians(val);
+CDLEXP int SQPoptions_set_fallback_approx(void *ptr, char* val){
+    try{
+        static_cast<SQPoptions *>(ptr)->fallback_approx = Hessians_from_string(std::string(val));
+        return 0;
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return 1;
 }
 CDLEXP void SQPoptions_set_indef_local_only(void *ptr, char val){
     static_cast<SQPoptions *>(ptr)->indef_local_only = bool(val);
@@ -270,9 +316,9 @@ CDLEXP void SQPoptions_set_lim_mem(void *ptr, char val){
 CDLEXP void SQPoptions_set_mem_size(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->mem_size = val;
 }
-CDLEXP void SQPoptions_set_exact_hess(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->exact_hess = val;
-}
+// CDLEXP void SQPoptions_set_exact_hess(void *ptr, int val){
+//     static_cast<SQPoptions *>(ptr)->exact_hess = val;
+// }
 CDLEXP void SQPoptions_set_skip_first_linesearch(void *ptr, int val){
     static_cast<SQPoptions *>(ptr)->skip_first_linesearch = val;
 }

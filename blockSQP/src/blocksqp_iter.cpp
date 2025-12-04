@@ -88,6 +88,9 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         }
     }
     
+    last_block_exact = (param->last_block_approx == Hessians::exact || param->last_block_approx == Hessians::pos_def_exact);
+    last_fallback_exact = (param->last_block_approx == Hessians::pos_def_exact);
+    
     // Create one Matrix for one diagonal block in the Hessian
     int Bsize;
     hess1 = std::make_unique<SymMatrix[]>(nBlocks);

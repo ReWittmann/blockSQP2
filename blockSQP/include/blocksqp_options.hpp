@@ -85,7 +85,7 @@ class SQPoptions{
     
     //Hessian approximation
     int block_hess = 1;                             //0: Full space updates, 1: partitioned updates, 2: 2 blocks: 1 full space update block, 1 objective Hessian block
-    int exact_hess = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
+    //int exact_hess = 0;                       //0: No exact Hessian, 1: Exact last Hessian block, 2: Exact complete Hessian
     // int hess_approx = 1;                     //0: (Scaled) identity, 1: SR1, 2: damped BFGS, 3: None, 4: finite differences, 5: pos. def user provided (Gauss-Newton etc.), 6: undamped BFGS
     Hessians hess_approx = Hessians::SR1;
     // int fallback_approx = 2;                 //As hess_approx, must be positive definite
