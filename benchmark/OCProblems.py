@@ -2209,6 +2209,7 @@ class F8_Aircraft(OCProblem):
         for i in range(0, self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_param(self.start_point, i, 5./self.ntS)
+            # self.set_stage_control(self.start_point, i, 1.0)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
     
     def perturbed_start_point(self, ind):
@@ -3209,11 +3210,11 @@ class Lotka_OED(OCProblem):
     
     def plot(self, xi, dpi = None, title = None, it = None):
         u,w1,w2 = self.get_control_plot_arrays(xi)
-        x1, x2, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays(xi)
+        x1, x2, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays_expanded(xi)
         
         fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(self.time_grid, x1, 'tab:olive', linestyle='-.', label = r'$x_1$')
-        ax.plot(self.time_grid, x2, 'tab:cyan', linestyle='-.', label = r'$x_2$')
+        ax.plot(self.time_grid_ref, x1, 'tab:olive', linestyle='-.', label = r'$x_1$')
+        ax.plot(self.time_grid_ref, x2, 'tab:cyan', linestyle='-.', label = r'$x_2$')
         ax.step(self.time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
         ax.step(self.time_grid_ref, w1, 'tab:blue', linestyle=':', label = r'$w_1$')
         ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w_2$')

@@ -188,7 +188,7 @@ int SQPmethod::fullstep(){
 int SQPmethod::filterLineSearch(){
     double alpha = 1.0;
     double cNorm, cNormTrial(0), objTrial, dfTdeltaXi(0);   //cNormTrial and dfTdeltaXi are initialized to prevent compiler warnings
-    
+    // bool armijo_accepted = false;
     int k, info;
     int nVar = prob->nVar;
     
@@ -196,14 +196,7 @@ int SQPmethod::filterLineSearch(){
     cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     
     // Backtracking line search
-    for (k = 0; k<param->max_linesearch_steps; k++){
-        //If indefinite hessian yielded step with small stepsize, retry with step from fallback hessian
-        /*
-        if (k > 3 && !vars->conv_qp_solved){
-            if (solveQP(vars->deltaXi, vars->lambdaQP, 1)) return 1;
-            else{k = 0; alpha = 1.0;}
-        }*/
-        
+    for (k = 0; k<param->max_linesearch_steps; k++){        
         // Compute new trial point and set it in bounds
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
@@ -236,7 +229,7 @@ int SQPmethod::filterLineSearch(){
         }
         
         // Check acceptability to the filter
-        if (pairInFilter(cNormTrial, objTrial)){
+        if (pairInFilter(cNormTrial, objTrial)){std::cout << "Trial point is in the filter, try SOC\n";
             // Trial point is in the prohibited region defined by the filter, try second order correction
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                 break;
@@ -249,13 +242,24 @@ int SQPmethod::filterLineSearch(){
         // Check sufficient decrease, case I:
         // If we are (almost) feasible and a "switching condition" is satisfied
         // require sufficient progress in the objective instead of bi-objective condition
-        if (cNorm <= param->thetaMin){
+        std::cout << "cNorm = " << cNorm << "\n";
+        if (cNorm <= param->thetaMin){std::cout << "Constraint violation is low, check descent\n";
             // Switching condition, part 1: grad(f)^T * deltaXi < 0 ?
-            if (dfTdeltaXi < 0){
+            if (dfTdeltaXi < 0){std::cout << "Step is a descent direction, check switching condition\n";
                 // Switching condition, part 2: alpha * ( - grad(f)^T * deltaXi )**sF > delta * cNorm**sTheta ?
+                std::cout << "dfTdeltaXi = " << dfTdeltaXi << ", cNorm = " << cNorm << "\n";
                 if (alpha*pow((-dfTdeltaXi), param->sF) > param->delta*pow(cNorm, param->sTheta)){
-                    // Switching conditions hold: Require satisfaction of Armijo condition for objective
-                    if (objTrial > vars->obj + param->eta*alpha*dfTdeltaXi){
+                    // Switching conditions holds: Require satisfaction of Armijo condition for objective
+                    std::cout << "Switching condition holds, check armijo condition\n";
+                    std::cout << "objTrial = " << objTrial << ", obj = " << vars->obj << ", eta = " << param->eta << ", alpha = " << alpha << ", dfTdeltaXi = " << dfTdeltaXi << "\n";
+                    if (objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi){
+                        std::cout << "Armijo condition satisfied, step is accepted\n";
+                        // found suitable alpha, stop
+                        acceptStep( alpha );
+                        // armijo_accepted = true;
+                        break;
+                    }
+                    else{std::cout << "Armijo condition violated, try SOC\n";
                         //Armijo condition violated, try second order correction
                         if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                             break;
@@ -263,11 +267,6 @@ int SQPmethod::filterLineSearch(){
                             reduceStepsize(&alpha);
                             continue;
                         }
-                    }
-                    else{
-                        // found suitable alpha, stop
-                        acceptStep( alpha );
-                        break;
                     }
                 }
             }
@@ -280,7 +279,7 @@ int SQPmethod::filterLineSearch(){
             acceptStep(alpha);
             break;
         }
-        else{
+        else{std::cout << "Insufficient progress, try SOC\n";
             // Trial point is dominated by current point, try second order correction
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, false)) break; // SOC yielded suitable alpha, stop
             else{
@@ -294,12 +293,28 @@ int SQPmethod::filterLineSearch(){
     if (k == param->max_linesearch_steps) return 1;
     
     // Augment the filter if switching condition or Armijo condition does not hold
-    if (dfTdeltaXi >= 0)
-        augmentFilter(cNormTrial, objTrial);
-    else if (alpha * pow((-dfTdeltaXi), param->sF) > param->delta*pow(cNorm, param->sTheta))// careful with neg. exponents!
-        augmentFilter(cNormTrial, objTrial);
-    else if (objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi)
-        augmentFilter(cNormTrial, objTrial);
+    // if (dfTdeltaXi >= 0)
+    //     augmentFilter(cNormTrial, objTrial);
+    // else if (alpha * pow((-dfTdeltaXi), param->sF) > param->delta*pow(cNorm, param->sTheta))// careful with neg. exponents!
+    //     augmentFilter(cNormTrial, objTrial);
+    // else if (objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi)
+    //     augmentFilter(cNormTrial, objTrial);
+    
+    if (dfTdeltaXi >= 0){
+        std::cout << "Step is not a descent direction, augment filter\n";
+        // augmentFilter(cNormTrial, objTrial);
+        augmentFilter(cNorm, vars->obj);
+    }
+    else if (alpha * pow((-dfTdeltaXi), param->sF) <= param->delta*pow(cNorm, param->sTheta)){// careful with neg. exponents!
+        std::cout << "Switching condition violated, augment filter\n";
+        // augmentFilter(cNormTrial, objTrial);
+        augmentFilter(cNorm, vars->obj);
+    }
+    else if (objTrial > vars->obj + param->eta*alpha*dfTdeltaXi){
+        std::cout << "Armijo condition violated, augment filter\n";
+        // augmentFilter(cNormTrial, objTrial);
+        augmentFilter(cNorm, vars->obj);
+    }
     
     return 0;
 }
@@ -819,7 +834,7 @@ int bound_correction_method::filterLineSearch(){
 
         // Compute grad(f)^T * deltaXi (deltaXi being the original step without (second order) corrections)
         dfTdeltaXi = 0.0;
-        for(int i = 0; i < nVar; i++)
+        for (int i = 0; i < nVar; i++)
             dfTdeltaXi += vars->gradObj( i ) * vars->deltaXi( i );
         
         //Since the original step vars->deltaXi, vars->lambdaQP may get modified by correction,
@@ -833,7 +848,7 @@ int bound_correction_method::filterLineSearch(){
             //If model bound correction failed for indefinite Hessian, resolve with convex Hessian and try again
             if (infoQP != QPresults::success && !vars->conv_qp_solved){
                 if (solveQP(vars->deltaXi, vars->lambdaQP, 1) != QPresults::success) return 1;
-                else{k = 0; alpha = 1.0;}
+                else{k = -1; alpha = 1.0; continue;}
             }
         }
         else if (k == 1){
@@ -890,9 +905,12 @@ int bound_correction_method::filterLineSearch(){
                 // Switching condition, part 2: alpha * ( - grad(f)^T * deltaXi )**sF > delta * cNorm**sTheta ?
                 if( alpha * pow( (-dfTdeltaXi), param->sF ) > param->delta * pow( cNorm, param->sTheta ) ){
                     // Switching conditions hold: Require satisfaction of Armijo condition for objective
-                    if( objTrial > vars->obj + param->eta*alpha*dfTdeltaXi ){
-                        //Armijo condition violated, try calculating a step with convex QP
-                        std::cout << "Armijo condition violated, try SOC\n";
+                    if( objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi ){
+                        // found suitable alpha, stop
+                        acceptStep( alpha );
+                        break;
+                    }
+                    else{
                         //Armijo condition violated for convex QP, try second order correction
                         if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                             break;
@@ -900,11 +918,6 @@ int bound_correction_method::filterLineSearch(){
                             reduceStepsize(&alpha);
                             continue;
                         }
-                    }
-                    else{
-                        // found suitable alpha, stop
-                        acceptStep( alpha );
-                        break;
                     }
                 }
             }
@@ -934,12 +947,28 @@ int bound_correction_method::filterLineSearch(){
         return 1;
     
     // Augment the filter if switching condition or Armijo condition does not hold
-    if( dfTdeltaXi >= 0 )
-        augmentFilter( cNormTrial, objTrial );
-    else if( alpha * pow( (-dfTdeltaXi), param->sF ) > param->delta * pow( cNorm, param->sTheta ) )// careful with neg. exponents!
-        augmentFilter( cNormTrial, objTrial );
-    else if( objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi )
-        augmentFilter( cNormTrial, objTrial );
+    // if( dfTdeltaXi >= 0 )
+    //     augmentFilter( cNormTrial, objTrial );
+    // else if( alpha * pow( (-dfTdeltaXi), param->sF ) > param->delta * pow( cNorm, param->sTheta ) )// careful with neg. exponents!
+    //     augmentFilter( cNormTrial, objTrial );
+    // else if( objTrial <= vars->obj + param->eta*alpha*dfTdeltaXi )
+    //     augmentFilter( cNormTrial, objTrial );
+    
+    if (dfTdeltaXi >= 0){
+        std::cout << "Step is not a descent direction, augment filter\n";
+        // augmentFilter(cNormTrial, objTrial);
+        augmentFilter(cNorm, vars->obj);
+    }
+    else if (alpha * pow((-dfTdeltaXi), param->sF) <= param->delta*pow(cNorm, param->sTheta)){// careful with neg. exponents!
+        std::cout << "Switching condition violated, augment filter\n";
+        // augmentFilter(cNormTrial, objTrial);
+        augmentFilter(cNorm, vars->obj);
+    }
+    else if (objTrial > vars->obj + param->eta*alpha*dfTdeltaXi){
+        std::cout << "Armijo condition violated, augment filter\n";
+        // augmentFilter(cNormTrial, objTrial);
+        augmentFilter(cNorm, vars->obj);
+    }
 
     return 0;
 }

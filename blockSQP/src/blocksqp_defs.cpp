@@ -79,7 +79,7 @@ std::string to_print_string(Hessians hess_kind){
     switch (hess_kind){
         case Hessians::scaled_ID:       return "Scaled ID";
         case Hessians::SR1:             return "SR1";
-        case Hessians::BFGS:            return "Damped BFGS";
+        case Hessians::BFGS:            return "BFGS";
         case Hessians::finite_diff:     return "Finite differences";
         case Hessians::exact:           return "exact";
         case Hessians::pos_def_exact:   return "Pos. def. exact";

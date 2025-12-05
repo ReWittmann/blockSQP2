@@ -38,10 +38,9 @@ using namespace blockSQP;
 #endif
 
 #define MAXLEN_CBLOCKSQP_ERROR_MESSAGE 1000
-char CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE + 1]; //One char for \0 termination at the end
+char CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE + 1];
 
 CDLEXP char *get_error_message(){
-    //Set null terminator again just in case
     CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
     return CblockSQP_error_message;
 }
@@ -52,25 +51,25 @@ public:
         nVar = NVARS;
         nCon = NCONS;
     };
-
+    
     virtual ~CProblemspec(){
         delete[] blockIdx;
         delete[] vblocks;
     };
-
+    
     // Allocate callbacks (function pointers to global julia functions)
     void (*initialize_dense)(void *closure_pass, double *xi, double *lambda, double *constrJac);
     void (*evaluate_dense)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info);
     void (*evaluate_simple)(void *closure_pass, const double *xi, double *objval, double *constr, int *info);
-
+    
     void (*initialize_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
     void (*evaluate_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info);
-
+    
     void (*restore_continuity)(void *closure_pass, double *xi, int *info);
-
+    
     // Pass-through pointer to a closure of the caller, currently for all callbacks.
     void *closure;
-
+    
     // Invoke callbacks in overridden methods
     virtual void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, blockSQP::Matrix &constrJac){
         (*initialize_dense)(closure, xi.array, lambda.array, constrJac.array);
@@ -79,7 +78,7 @@ public:
     virtual void initialize(blockSQP::Matrix &xi, blockSQP::Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
         (*initialize_sparse)(closure, xi.array, lambda.array, jacNz, jacIndRow, jacIndCol);
     }
-
+    
     virtual void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, blockSQP::Matrix &constrJac, blockSQP::SymMatrix *hess, int dmode, int *info){
         double **hessNz = nullptr;
         if (dmode == 3){
@@ -92,11 +91,11 @@ public:
             hessNz = new double *[nBlocks];
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
-
+        
         (*evaluate_dense)(closure, xi.array, lambda.array, objval, constr.array, gradObj.array, constrJac.array, hessNz, dmode, info);
         delete[] hessNz;
     }
-
+    
     virtual void evaluate(const blockSQP::Matrix &xi, const blockSQP::Matrix &lambda, double *objval, blockSQP::Matrix &constr, blockSQP::Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, blockSQP::SymMatrix *hess, int dmode, int *info){
         double **hessNz = nullptr;
         if (dmode == 3){
@@ -109,7 +108,7 @@ public:
             hessNz = new double *[nBlocks];
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
-
+        
         (*evaluate_sparse)(closure, xi.array, lambda.array, objval, constr.array, gradObj.array, jacNz, jacIndRow, jacIndCol, hessNz, dmode, info);
         delete[] hessNz;
     }
@@ -117,7 +116,7 @@ public:
     virtual void evaluate(const blockSQP::Matrix &xi, double *objval, blockSQP::Matrix &constr, int *info){
         (*evaluate_simple)(closure, xi.array, objval, constr.array, info);
     }
-
+    
     // Optional Methods
     virtual void reduceConstrVio(blockSQP::Matrix &xi, int *info){
         if (restore_continuity != nullptr){

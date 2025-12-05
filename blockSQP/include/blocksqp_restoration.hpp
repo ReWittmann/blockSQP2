@@ -71,11 +71,6 @@ class RestorationProblem : public RestorationProblemBase{
 
         double rho;
         double zeta;
-
-        //double *jacNzOrig;
-        //int *jacIndRowOrig;
-        //int *jacIndColOrig;
-
     public:
         RestorationProblem( Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta);
         virtual ~RestorationProblem();
