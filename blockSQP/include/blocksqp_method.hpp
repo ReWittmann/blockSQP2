@@ -169,7 +169,7 @@ class SQPmethod{
         /// Reduce stepsize if a step is rejected
         void reduceStepsize( double *alpha );
         /// Determine steplength alpha by a filter based line search similar to IPOPT
-        virtual int filterLineSearch();
+        virtual bool filterLineSearch();
         /// Remove all entries from filter
         void initializeFilter();
         /// Is a pair (cNorm, obj) in the current filter?
@@ -271,7 +271,7 @@ class bound_correction_method : public SQPmethod{
     QPresults solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP);
 
     // filterLineSearch that applies bound correction to the full step
-    virtual int filterLineSearch();
+    virtual bool filterLineSearch();
     // feasiblity restoration phase also uses the bound_correction_method and the TC_restoration_problem
     virtual int feasibilityRestorationPhase();
 };

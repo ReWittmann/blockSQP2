@@ -157,7 +157,6 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             if (infoQP != QPresults::success){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
-                std::cout << "InfoQP is " << infoQP << "\n";
                 return print_SQPresult(SQPresults::qp_failure, param->result_print_color);
             }
             else vars->steptype = 1;
@@ -230,7 +229,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 if (lsError && !vars->conv_qp_solved){
                     std::cout << "filterLineSearch failed, try again with fallback Hessian\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
-                    if (infoQP == QPresults::success) lsError = bool(filterLineSearch());
+                    if (infoQP == QPresults::success) lsError = filterLineSearch();
                     if (!lsError) vars->steptype = 0;
                 }
                 
@@ -271,7 +270,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 if (lsError && vars->steptype != 1){
                     std::cout << "***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n";
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
-                    if (infoQP == QPresults::success) lsError = bool(filterLineSearch());
+                    if (infoQP == QPresults::success) lsError = filterLineSearch();
                     if (!lsError) vars->steptype = 1;
                 }
 

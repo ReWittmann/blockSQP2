@@ -38,7 +38,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 itMax = 200                                 #max number of steps
-step_plots = True                          #plot each iterate?
+step_plots = True                           #Plot each iterate?
 plot_title = False                          #Put name of problem in plot?
 
 
@@ -54,7 +54,7 @@ opts.par_QPs = True                         #Enable parallel solution of QPs
 opts.enable_QP_cancellation = True          #Enable cancellation of long running QP threads
 opts.indef_delay = 3                        #Only use fallback Hessian in first # iterations
 
-opts.hess_approx = 'SR1'                  #'SR1'/'BFGS'/'exact'
+opts.hess_approx = 'SR1'                    #'SR1'/'BFGS'/'exact'
 opts.sizing = 'OL'                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
 opts.fallback_approx = 'BFGS'               # ''   ''
 opts.fallback_sizing = 'COL'                # ''   ''
@@ -115,7 +115,7 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 #Recommended: Dont pass condenser to activate condensing, 
-#but pass vBlocks to enable convexification strategy 2 and automatic scaling
+#but pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
 # prob.cond = cond
 
@@ -144,8 +144,9 @@ if (step_plots):
 else:
     ret = optimizer.run(itMax)
 t1 = time.monotonic()
-xi = np.array(optimizer.get_xi()).reshape(-1)
-OCprob.plot(xi, dpi=200, title=plot_title)
+if not step_plots:
+    xi = np.array(optimizer.get_xi()).reshape(-1)
+    OCprob.plot(xi, dpi=200, title=plot_title)
 
 
 time.sleep(0.01)
