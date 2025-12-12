@@ -30,19 +30,19 @@ Examples = [
             OCProblems.Batch_Reactor,
             OCProblems.Cart_Pendulum,
             OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
+            # OCProblems.Cushioned_Oscillation,
             OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
-            OCProblems.Hang_Glider,
-            OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Time_Optimal_Car,
-            OCProblems.Tubular_Reactor,
-            OCProblems.Lotka_OED,
+            # OCProblems.Electric_Car,
+            # OCProblems.Goddard_Rocket,
+            # OCProblems.Hang_Glider,
+            # OCProblems.Hanging_Chain,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Quadrotor_Helicopter,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Time_Optimal_Car,
+            # OCProblems.Tubular_Reactor,
+            # OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -83,7 +83,7 @@ Experiments = [
                # (opt_CS0, "Convexification strategy 0"),
                # (opt_CS1, "conv. str. 1"),
                # (opt_CS2, "conv. str. 2"),
-               (opt_full, "opt_full"),
+               (opt_full, "opt_full_NTP"),
                ]
 
 
