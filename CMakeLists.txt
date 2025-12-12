@@ -295,7 +295,7 @@ elseif(WIN32)
 	if(NOT EXISTS ${GCC_BIN_DIR}/libstdc++-6.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgfortran-5.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgcc_s_seh-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libwinpthread-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libquadmath-0.dll)
 		message(FATAL_ERROR "Could not find one of libstdc++-6.dll, libgfortran.dll, libgcc_s_seh-1.dll, libwinpthread-1.dll, libquadmath-0.dll in ${GCC_BIN_DIR}")
 	endif()
-	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll)
+	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
 	]]
 
 	set(OPENBLAS_BINARY ${OPENBLAS_DIR}/bin/libopenblas.dll)
@@ -320,11 +320,13 @@ elseif(WIN32)
 			)
 		
 		##C/C++/Fortran etc. standard libraries
+		#[[
 		if (STDLIB_BINARIES)
 			list(APPEND COPY_COMMANDS
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STDLIB_BINARIES} ${LIBPATH}
 			)
 		endif()
+		]]
 
 		set(MUMPS_COPY_TARGET MCT_${COPY_COUNTER})
 		MATH(EXPR COPY_COUNTER_LOCAL "${COPY_COUNTER} + 1")
@@ -337,8 +339,52 @@ elseif(WIN32)
 
 		add_dependencies(${MUMPS_COPY_TARGET} dmumps_c_dyn)
 	endfunction()
+
+
+	if(MINGW)
+		execute_process(
+			COMMAND where gcc.exe
+			OUTPUT_VARIABLE GCC_PATH
+			RESULT_VARIABLE GCC_ERROR
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+		if (GCC_ERROR)
+			message(FATAL_ERROR "gcc.exe not found on PATH!")
+		endif()
+
+		string(REPLACE "\r" "" GCC_PATH "${GCC_PATH}")
+		string(REGEX MATCH "^[^\n]*" GCC_PATH "${GCC_PATH}")
+
+		message(STATUS "Found gcc at: ${GCC_PATH}.")
+		get_filename_component(GCC_BIN_DIR "${GCC_PATH}" DIRECTORY)
+	
+		if(NOT EXISTS ${GCC_BIN_DIR}/libstdc++-6.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgfortran-5.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgcc_s_seh-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libwinpthread-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libquadmath-0.dll)
+			message(FATAL_ERROR "Could not find one of libstdc++-6.dll, libgfortran.dll, libgcc_s_seh-1.dll, libwinpthread-1.dll, libquadmath-0.dll in ${GCC_BIN_DIR}")
+		endif()
+		set(MINGW_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
+		message(STATUS "Found MINGW binaries: " ${MINGW_BINARIES})
+
+		function(copy_mingw_libraries_to LIBPATH)
+			set(MINGW_COPY_TARGET MINGW_COPY_${COPY_COUNTER})
+			MATH(EXPR COPY_COUNTER_LOCAL "${COPY_COUNTER} + 1")
+			set(COPY_COUNTER ${COPY_COUNTER_LOCAL} PARENT_SCOPE)
+			set(MINGW_COPY_COMMAND COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_BINARIES} ${LIBPATH})
+
+			add_custom_target(${MINGW_COPY_TARGET} ALL
+							  ${MINGW_COPY_COMMAND}
+							  COMMENT "Copying mingw dynamic standard libraries\n"
+			)
+			add_dependencies(${MINGW_COPY_TARGET} dmumps_c_dyn)
+		endfunction()
+	else()
+		function(copy_mingw_libraries_to LIBPATH)
+		endfunction()
+	endif()
 else()
 	function(copy_dynamic_libraries_to LIBPATH)
+	endfunction()
+
+	function(copy_mingw_libraries_to LIBPATH)
 	endfunction()
 endif()
 
@@ -386,7 +432,7 @@ if(PYTHON_INTERFACE)
 	pybind11_add_module(py_blockSQP py_blockSQP/py_blockSQP.cpp)
 	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
 	
-	if(UNIX)
+	if(UNIX OR MINGW)
 		target_compile_options(py_blockSQP PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
@@ -396,6 +442,7 @@ if(PYTHON_INTERFACE)
 		#Prevent warnings for *_pointer_interface and T_array constructors 
 		#that occur after compiling with -O3. Result of using int instead of size_t, should not cause any problems.
 		target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
+	#[[
 	elseif(MINGW)
 		target_compile_options(py_blockSQP PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
@@ -403,6 +450,7 @@ if(PYTHON_INTERFACE)
 					-O3
 					)
 		target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
+	]]
 	endif()
 	
 	target_link_libraries(py_blockSQP PUBLIC blockSQP)
@@ -416,6 +464,9 @@ if(PYTHON_INTERFACE)
 												 RUNTIME_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
 												 )
 	copy_dynamic_libraries_to(${py_blockSQP_DIR})
+	if(MINGW)
+		copy_mingw_libraries_to(${py_blockSQP_DIR})
+	endif()
 endif()
 
 
