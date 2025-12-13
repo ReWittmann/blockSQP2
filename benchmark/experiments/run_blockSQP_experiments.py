@@ -75,6 +75,7 @@ opt_full = py_blockSQP.SQPoptions()
 opt_full.max_conv_QPs = 4
 opt_full.conv_strategy = 2
 opt_full.automatic_scaling = True
+opt_full.par_QPs = True
 
 
 #Select option sets to test for
