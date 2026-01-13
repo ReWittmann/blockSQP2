@@ -3616,7 +3616,7 @@ class Hang_Glider(OCProblem):
             }
     def build_problem(self):
         x0, y0, ytf, dxbc, dybc, c0, c1, S, rho, cmax, m, g, uC, rC = (self.model_params[key] for key in ['x0', 'y0', 'ytf', 'dxbc', 'dybc', 'c0', 'c1', 'S', 'rho', 'cmax', 'm', 'g', 'uC', 'rC'])
-        self.set_OCP_data(4,1,1,0, [0.,0.,-np.inf,-np.inf], [np.inf,np.inf,np.inf,np.inf], [75/self.ntS], [250/self.ntS], [0], [cmax])
+        self.set_OCP_data(4,1,1,0, [0.,0.,-np.inf,-np.inf], [np.inf,np.inf,np.inf,np.inf], [75/self.ntS], [np.inf], [0], [cmax])
         self.fix_initial_value([x0, dxbc, y0, dybc])
         
         XY = cs.MX.sym('XY', 4)
