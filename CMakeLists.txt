@@ -215,6 +215,7 @@ if (UNIX)
 		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
 		-O3
 		# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
+		# -DMATRIX_DEBUG -O0 -g
 		)
 elseif(WIN32)
 	target_compile_definitions(blockSQP PUBLIC WINDOWS)
@@ -419,7 +420,7 @@ set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface sho
 if(PYTHON_INTERFACE)
 	if (NOT PYTHON_INTERPRETER STREQUAL "")
 		message(STATUS "Using python interpreter ${PYTHON_INTERPRETER}")
-		set (PYTHON_EXECUTABLE ${PYTHON_INTERPRETER})
+		set (Python_EXECUTABLE ${PYTHON_INTERPRETER})
 	endif()
 	
 	FetchContent_Declare(

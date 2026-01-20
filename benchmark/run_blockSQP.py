@@ -28,7 +28,7 @@ import OCProblems
 #Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Hang_Glider(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -37,7 +37,7 @@ OCprob = OCProblems.Hang_Glider(
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 
-itMax = 200                                 #max number of steps
+itMax = 1                                 #max number of steps
 step_plots = False                           #Plot each iterate?
 plot_title = False                          #Put name of problem in plot?
 
