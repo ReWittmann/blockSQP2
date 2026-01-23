@@ -833,7 +833,7 @@ class Lotka_Volterra_Fishing_MAYER(OCProblem):
     default_params = {'c0':0.4, 'c1':0.2, 'x_init':[0.5,0.7], 't0':0., 'tf':12.}
     
     def build_problem(self):
-        self.set_OCP_data(3,0,1,0,[0,0,0],[np.inf, np.inf, np.inf],[],[],[0],[1])
+        self.set_OCP_data(3,0,1,0,[0,0,-np.inf],[np.inf, np.inf, np.inf],[],[],[0],[1])
         self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init']+[0])
         
@@ -854,7 +854,7 @@ class Lotka_Volterra_Fishing_MAYER(OCProblem):
             self.set_stage_state(self.start_point, i, self.model_params['x_init'] + [i/100 * 2.4])
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0])
-        self.integrate_full(self.start_point)    
+        # self.integrate_full(self.start_point)    
         
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)

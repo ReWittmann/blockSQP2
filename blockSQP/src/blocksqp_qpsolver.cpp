@@ -34,23 +34,39 @@ using namespace std::chrono;
 
 namespace blockSQP{
 
-
-std::ostream& operator<<(std::ostream &os, QPresults qpres){
-    switch (qpres){
+std::string to_string(QPresults qpres){
+    switch(qpres){
         case QPresults::undef:
-            os << "\"undefined\""; break;
+            return "undefined";
         case QPresults::success:
-            os << "\"success\""; break;
+            return "success";
         case QPresults::time_it_limit_reached:
-            os << "\"time/it limit exceeded\""; break;
+            return "time/it_limit_exceeded";
         case QPresults::indef_unbounded:
-            os << "\"definiteness condition violated or unbounded\""; break;
+            return "definiteness condition violated or unbounded";
         case QPresults::infeasible:
-            os << "\"infeasibility\""; break;
-        default:
-            os << "\"other error\"";
+            return "infeasibility";
+        default:;
     }
-	return os;
+    return "other error";
+}
+std::ostream& operator<<(std::ostream &os, QPresults qpres){
+    return os << "\"" << to_string(qpres) << "\"";
+    // switch (qpres){
+    //     case QPresults::undef:
+    //         os << "\"undefined\""; break;
+    //     case QPresults::success:
+    //         os << "\"success\""; break;
+    //     case QPresults::time_it_limit_reached:
+    //         os << "\"time/it limit exceeded\""; break;
+    //     case QPresults::indef_unbounded:
+    //         os << "\"definiteness condition violated or unbounded\""; break;
+    //     case QPresults::infeasible:
+    //         os << "\"infeasibility\""; break;
+    //     default:
+    //         os << "\"other error\"";
+    // }
+	// return os;
 }
 
 QPsolverBase::~QPsolverBase(){}
@@ -605,12 +621,14 @@ void qpOASES_solver::init_QP_common(int *blockIdx){
     
     //Options
     opts.enableEqualities = qpOASES::BT_TRUE;
+    // opts.boundTolerance = 1.0e-8;
+    opts.boundTolerance = 1e2*qpOASES::EPS;
     opts.initialStatusBounds = qpOASES::ST_INACTIVE;
     switch(static_cast<const qpOASES_options*>(Qparam)->printLevel){
         case 0: opts.printLevel = qpOASES::PL_NONE;     break;
         case 1: opts.printLevel = qpOASES::PL_LOW;      break;
         case 2: opts.printLevel = qpOASES::PL_MEDIUM;   break;
-        case 3: opts.printLevel = qpOASES::PL_HIGH;     break;
+        default: opts.printLevel = qpOASES::PL_HIGH;    break;
     }
     opts.numRefinementSteps = 2;
     opts.epsLITests =  2.2204e-08;
@@ -665,6 +683,13 @@ void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Ma
             ub[i] = ub_x(i);
         else
             ub[i] = 1e20;
+        
+        //Workaround for qpOASES failing of a variable has equal upper and lower bounds with equalities enabled
+        if (opts.enableEqualities && ub[i] - lb[i] < opts.boundTolerance){
+            double bound_shift = opts.boundTolerance + 2*qpOASES::EPS - (ub[i] - lb[i]);
+            lb[i] -= (std::max)(0.55*bound_shift, lb[i]*1e-14); 
+            ub[i] += (std::max)(0.55*bound_shift, ub[i]*1e-14);
+        }
     }
     for (int i = 0; i < nCon; i++){
         if (lb_A(i) > -Qparam->inf)
@@ -754,7 +779,6 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     else
         QPtime = default_time_limit;
     
-    //std::cout << "QPtime = " << QPtime << "\n";
     QP_it = Qparam->max_QP_it;
     qpOASES::SolutionAnalysis solAna;
     qpOASES::returnValue ret;
@@ -798,12 +822,10 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
         QP_it += 1;
         *qpSave = *qp;
-        //std::cout << "QP could be solved, qpOASES ret is 0\n";
         return QPresults::success;
     }
     
     *qp = *qpSave;
-    
     if (ret == qpOASES::RET_SETUP_AUXILIARYQP_FAILED)
         QP_it = 1;
     

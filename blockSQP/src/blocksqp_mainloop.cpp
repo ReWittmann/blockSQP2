@@ -152,7 +152,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             else vars->steptype = 1;
         }
         else if (infoQP == QPresults::indef_unbounded || infoQP == QPresults::other_error){
-            std::cout << "***QP error. Solve again with identity matrix.***\n";
+            std::cout << "***QP error " << infoQP << ". Solve again with identity matrix.***\n";
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
             if (infoQP != QPresults::success){
                 // If there is still an error, terminate.

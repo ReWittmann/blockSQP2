@@ -56,6 +56,7 @@ enum class QPresults{
     infeasible,
     other_error
 };
+std::string to_string(QPresults qpres);
 std::ostream& operator<<(std::ostream& os, QPresults qpres);
 
 
