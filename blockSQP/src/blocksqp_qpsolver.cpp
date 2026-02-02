@@ -622,7 +622,7 @@ void qpOASES_solver::init_QP_common(int *blockIdx){
     //Options
     opts.enableEqualities = qpOASES::BT_TRUE;
     // opts.boundTolerance = 1.0e-8;
-    opts.boundTolerance = 1e2*qpOASES::EPS;
+    opts.boundTolerance = 1e4*qpOASES::EPS;
     opts.initialStatusBounds = qpOASES::ST_INACTIVE;
     switch(static_cast<const qpOASES_options*>(Qparam)->printLevel){
         case 0: opts.printLevel = qpOASES::PL_NONE;     break;

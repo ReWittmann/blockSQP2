@@ -28,7 +28,7 @@ import OCProblems
 #Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -38,7 +38,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 itMax = 200                                 #max number of steps
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
 plot_title = False                          #Put name of problem in plot?
 
 
