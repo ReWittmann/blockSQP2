@@ -6,7 +6,7 @@
 
 # \file OCProblems.cpp
 # \author Reinhold Wittmann
-# \date 2024-2025
+# \date 2024-2026
 #
 # Collection of optimal control problems implemented using casadi,
 # employing a helper base class for multiple shooting parametrization.

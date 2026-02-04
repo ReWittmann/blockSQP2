@@ -582,8 +582,7 @@ void Condenser::set_dep_bound_handling(int DEP_BOUNDS){
 
 
 int Condenser::get_hessblock_index(int v_ind){
-	for (int i = 0; i<= num_hessblocks; i++){
-        //std::cout << "Hranges " << i << " = " << hess_block_ranges[i] << "\n";
+	for (int i = 0; i <= num_hessblocks; i++){
 		if (hess_block_ranges[i] == v_ind){
 			return i;
 		}
@@ -596,8 +595,6 @@ int Condenser::get_hessblock_index(int v_ind){
 void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::Sparse_Matrix &con_jac, const blockSQP::SymMatrix *const hess, const blockSQP::Matrix &lb_var, const blockSQP::Matrix &ub_var, const blockSQP::Matrix &lb_con, const blockSQP::Matrix &ub_con,
     blockSQP::Matrix &condensed_h, blockSQP::Sparse_Matrix &condensed_Jacobian, blockSQP::SymMatrix *condensed_hess, blockSQP::Matrix &condensed_lb_var, blockSQP::Matrix &condensed_ub_var, blockSQP::Matrix &condensed_lb_con, blockSQP::Matrix &condensed_ub_con
 ){
-    //std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
-
 	T_Slices.resize(0);
 	O_Slices.resize(0);
 	T_grad_obj.resize(0);
@@ -638,10 +635,6 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     O_ub_var.push_back(ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
     O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
 
-    //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
-    //std::cout << "Sliced linear term, bounds and jacobian in " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
-
-
     //Assert that lower and upper bounds of condensing conditions are equal
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
@@ -652,24 +645,15 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
         }
     }
 
-    //std::chrono::steady_clock::time_point T_start, T_end;
-
     for (int i = 0; i < num_targets; i++){
-        //T_start = std::chrono::steady_clock::now();
         single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
-        //T_end = std::chrono::steady_clock::now();
-        //std::cout << "Condensing target " << i << " took " << std::chrono::duration_cast<std::chrono::milliseconds>(T_end - T_start).count() << "ms\n";
-
         O_Slices[i].remove_rows(c_starts, c_ends, num_targets);
-        //T_Slices[i].remove_rows(c_starts, c_ends, num_targets);
     }
     O_Slices[num_targets].remove_rows(c_starts, c_ends, num_targets);
 
 
 
 //Assemble reduced constraint-jacobian (condensed jacobian without dependent-variable bounds)
-    //T0 = std::chrono::steady_clock::now();
-
     std::vector<blockSQP::Sparse_Matrix> reduced_Slices(2*num_targets + 1);
     for (int i = 0; i<num_targets; i++){
         reduced_Slices[2*i] = O_Slices[i];
@@ -678,14 +662,7 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     reduced_Slices[2*num_targets] = O_Slices[num_targets];
     blockSQP::Sparse_Matrix reduced_Jacobian = blockSQP::horzcat(reduced_Slices);
 
-    //T1 = std::chrono::steady_clock::now();
-    //std::cout << "Assembling the reduced jacobian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
-
 //Assemble condensed block-hessian
-    //if (condensed_hess == nullptr) condensed_hess = new blockSQP::SymMatrix[condensed_num_hessblocks];
-
-    //T0 = std::chrono::steady_clock::now();
-
     int ind_1 = 0;
     int ind_2 = 0;
     for (int tnum = 0; tnum < num_targets; tnum++){
@@ -700,9 +677,6 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     for (int i = 0; i < num_hessblocks - ind_2; i++){
         condensed_hess[ind_1 + i] = hess[ind_2 + i];
     }
-
-    //T1 = std::chrono::steady_clock::now();
-    //std::cout << "Assembling the condensed block hessian took " << std::chrono::duration_cast<std::chrono::milliseconds>(T1 - T0).count() << "ms\n";
 
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
     blockSQP::Matrix reduced_lb_con = lb_con.without_rows(c_starts, c_ends, num_targets);
@@ -788,11 +762,6 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     }
     condensed_h_k[2*num_targets] = O_grad_obj[num_targets];
     condensed_h = blockSQP::vertcat(condensed_h_k);
-
-    //std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
-    //std::cout << "Rest of condensing took " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << "ms\n";
-    //std::cout << "Assembled complete condensed system from smaller condensed systems in " << std::chrono::duration_cast<std::chrono::milliseconds>(T2 - T1).count() << " ms.\n";
-
     return;
 }
 
@@ -1077,8 +1046,6 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
     mu_lambda_k[2*n_stages] = mu_k[n_stages];
 
     //Calculate adjoint variables backwards in time
-    //std::cout << "First dimension of summands are " << (Data.S_k[n_stages - 1] * xi_free_k[n_stages]).m << " " << (Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1]).m << " " << Data.q_k[n_stages - 1].m << " " << lambda_k[n_stages - 1].m << "\n";
-
     //Definition of Lagrangian: 0.5 xT H x + qT * x - lambdaT * x - muT * (Ax - b)
 
     blockSQP::Matrix J_T_sigma(Data.cond_sizes[n_stages-1]);
@@ -1253,15 +1220,9 @@ void Condenser::convex_combination_recover(const blockSQP::Matrix &xi_cond, cons
 
     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
     //assemble multipliers for free and dependent variable bounds
-    //std::cout << "T_lambda =\n" << T_lambda[0] << "\n";
-    //std::cout << "T_mu =\n" << T_mu[0] << "\n";
-    //std::cout << "sigma=\n" << sigma << "\n";
-
     for (int i = 0; i < num_targets; i++){
         single_convex_combination_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, t, T_xi_full[i], T_nu[i], T_mu_lambda[i]);
     }
-    //std::cout << "T_nu =\n" << T_nu[0] << "\n";
-    //std::cout << "T_mu_lambda =\n" << T_mu_lambda[0] << "\n";
 
     //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
     for (int i = 0; i < num_targets; i++){
