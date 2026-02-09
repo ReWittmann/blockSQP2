@@ -16,6 +16,21 @@ import numpy as np
 from . import py_blockSQP
 import typing
 
+
+class blockSQP_Data:
+    objval : float
+    xi : np.ndarray[np.float64]
+    lam : np.ndarray[np.float64]
+    constr : np.ndarray[np.float64]
+    gradObj : np.ndarray[np.float64]
+    constrJac : np.ndarray[np.float64]
+    jacNz : np.ndarray[np.float64]
+    jacIndRow : np.ndarray[np.int32]
+    jacIndCol : np.ndarray[np.int32]
+    dmode : int
+    hess_arr : list[np.ndarray[np.float64]]
+    hess_last : np.ndarray[np.float64]
+
 class blockSQP_Problemspec(py_blockSQP.Problemform):
     #Primal start point for optimization
     x_start : np.ndarray[np.float64]
@@ -61,7 +76,7 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
         self.nCon = nCon
         
         self._stepModification = None
-    
+        self.Data = blockSQP_Data()
     ##Some setter methods##
     
     def set_bounds(self, lb_x, ub_x, lb_g, ub_g, objLo = -np.inf, objUp = np.inf):
@@ -122,19 +137,20 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
     #############################
     
     rest_cont : bool = False
-    class Data:
-        objval : float
-        xi : np.ndarray[np.float64]
-        lam : np.ndarray[np.float64]
-        constr : np.ndarray[np.float64]
-        gradObj : np.ndarray[np.float64]
-        constrJac : np.ndarray[np.float64]
-        jacNz : np.ndarray[np.float64]
-        jacIndRow : np.ndarray[np.int32]
-        jacIndCol : np.ndarray[np.int32]
-        dmode : int
-        hess_arr : list[np.ndarray[np.float64]]
-        hess_last : np.ndarray[np.float64]
+    Data : blockSQP_Data
+    # class Data:
+    #     objval : float
+    #     xi : np.ndarray[np.float64]
+    #     lam : np.ndarray[np.float64]
+    #     constr : np.ndarray[np.float64]
+    #     gradObj : np.ndarray[np.float64]
+    #     constrJac : np.ndarray[np.float64]
+    #     jacNz : np.ndarray[np.float64]
+    #     jacIndRow : np.ndarray[np.int32]
+    #     jacIndCol : np.ndarray[np.int32]
+    #     dmode : int
+    #     hess_arr : list[np.ndarray[np.float64]]
+    #     hess_last : np.ndarray[np.float64]
         
     def get_objval(self):
         self.Cpp_Data.objval = self.Data.objval

@@ -28,7 +28,7 @@ import OCProblems
 #Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_OED(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
