@@ -102,12 +102,17 @@ void SQPoptions::optionsConsistency(){
     }
     
     if (par_QPs){
+        #ifdef BLOCKSQP_PAR_QPS_DISABLED
+            throw ParameterError("Option par_QPs = true --> error, parallel solution of QPs is disabled in this build.");
+        #endif
         if(qpsol == QPsolvers::qpOASES){
             #ifdef SOLVER_MUMPS
                 #ifndef SQPROBLEMSCHUR_ENABLE_PASSTHROUGH
-                    throw ParameterError("SQPoptions::par_QPs = true -- a modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+                    throw ParameterError("SQPoptions::par_QPs = true --> error, a modified version of qpOASES must be linked to enable parallel solution of QPs with dynamically loaded MUMPS linear solver");
+                #elif !defined(LINUX) && !defined(WINDOWS)
+                    throw ParameterError("SQPoptions::par_QPs = true --> error, parallel solution of quadratic subproblems is not available on this build or platform");
                 #elif !defined(DMUMPS_C_DYN)
-                    throw ParameterError("SQPoptions::par_QPs = true -- parallel QP solution must be enabled via DMUMPS_C_DYN preprocessor flag if using qpOASES with mumps sparse solver, in addition to providing dynamically loadable mumps shared libraries");
+                    throw ParameterError("SQPoptions::par_QPs = true --> error, parallel QP solution must be enabled via DMUMPS_C_DYN preprocessor flag if using qpOASES with mumps sparse solver, in addition to providing dynamically loadable mumps shared libraries");
                 #endif
             #endif
         }

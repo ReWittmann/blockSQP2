@@ -205,11 +205,15 @@ class CQPsolver : public QPsolverBase{
 
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
+    void setup_inner_QPsol(Matrix &deltaXi, Matrix &lambdaQP);
     virtual QPresults solve(Matrix &deltaXi, Matrix &lambdaQP);
     virtual void solve(std::stop_token stopRequest, std::promise<QPresults> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
     
     virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
     void set_use_hotstart(bool use_hom);
+    
+    void set_hotstart_point(QPsolverBase *hot_QP);
+    void set_hotstart_point(CQPsolver *hot_QP);
     
     //Statistics
     virtual int get_QP_it();

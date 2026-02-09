@@ -38,7 +38,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 itMax = 200                                 #max number of steps
-step_plots = True                           #Plot each iterate?
+step_plots = False                           #Plot each iterate?
 plot_title = False                          #Put name of problem in plot?
 
 

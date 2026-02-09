@@ -237,7 +237,6 @@ Condenser::Condenser(
 				}
 
 				if (vblocks[targets[tnum].vblock_end - 1].dependent){
-                    //std::cout << "Last block dependent, appending free block of size 0 during layout generation\n";
                     targets_data[tnum].free_sizes[n_stages] = 0;
                     targets_data[tnum].alt_vranges[2*n_stages + 1] = targets_data[tnum].alt_vranges[2*n_stages];
 				}
@@ -639,7 +638,6 @@ void Condenser::full_condense(const blockSQP::Matrix &grad_obj, const blockSQP::
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-14 || ub_con(i) - lb_con(i) >= 1e-14){
-                std::cout << "lb_con(i) = " << lb_con(i) << ", ub_con(i) = " << ub_con(i) << "\n";
                 throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }
@@ -785,7 +783,6 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
 		Data.r_k[i] = grad_obj.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
 
 		Data.A_k[i-1] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).dense()*(-1);
-		//std::cout << "Target " << tnum << " A_k " << i-1 << " nnz = " << B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).nnz << "\n";
 
 		Data.q_k[i-1] = grad_obj.get_slice(Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
 
@@ -893,7 +890,6 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
     for (int i = n_stages - 3; i >= 0; i--){
         J_fullrow = add_fullrow(sparse_dense_multiply_2(CSR_Matrix(Data.J_dep_k[i+1]), Data.A_k[i]), fullrow_multiply(J_fullrow, Data.A_k[i]));
         Data.J_d_CSR_k[i] = add_fullrow(CSR_Matrix(Data.J_dep_k[i]), J_fullrow);
-
         Data.J_reduced_k[i] = Sparse_Matrix(add_fullrow(CSR_Matrix(Data.J_free_k[i]), sparse_dense_multiply_2(Data.J_d_CSR_k[i], Data.B_k[i])));
     }
 
@@ -1301,8 +1297,6 @@ void Condenser::single_convex_combination_recover(int tnum, const blockSQP::Matr
     mu_lambda_k[2*n_stages] = mu_k[n_stages];
 
     //Calculate adjoint variables backward in time
-    //std::cout << "First dimension of summands are " << (Data.S_k[n_stages - 1] * xi_free_k[n_stages]).m << " " << (Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1]).m << " " << Data.q_k[n_stages - 1].m << " " << lambda_k[n_stages - 1].m << "\n";
-
     //Definition of Lagrangian: 0.5 xT H x + qT * x + lambdaT * x + muT * (Ax - b) + sigmaT J
 
     blockSQP::Matrix J_T_sigma(Data.cond_sizes[n_stages-1]);
@@ -1562,7 +1556,6 @@ void Condenser::correction_condense(const blockSQP::Matrix &grad_obj, const bloc
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-14 || ub_con(i) - lb_con(i) >= 1e-14){
-                //std::cout << "lb_con(i) = " << lb_con(i) << ", ub_con(i) = " << ub_con(i) << "\n";
                 throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }
@@ -1750,15 +1743,9 @@ void Condenser::recover_correction_var_mult(const blockSQP::Matrix &xi_cond, con
 
     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
     //assemble multipliers for free and dependent variable bounds
-    //std::cout << "T_lambda =\n" << T_lambda[0] << "\n";
-    //std::cout << "T_mu =\n" << T_mu[0] << "\n";
-    //std::cout << "sigma=\n" << sigma << "\n";
-
     for (int i = 0; i < num_targets; i++){
         single_correction_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, target_corrections[i], T_xi_full[i], T_nu[i], T_mu_lambda[i]);
     }
-    //std::cout << "T_nu =\n" << T_nu[0] << "\n";
-    //std::cout << "T_mu_lambda =\n" << T_mu_lambda[0] << "\n";
 
     //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
     for (int i = 0; i < num_targets; i++){
@@ -1845,8 +1832,6 @@ void Condenser::single_correction_recover(int tnum, const blockSQP::Matrix &xi_f
     mu_lambda_k[2*n_stages] = mu_k[n_stages];
 
     //Calculate adjoint variables backwards in time
-    //std::cout << "First dimension of summands are " << (Data.S_k[n_stages - 1] * xi_free_k[n_stages]).m << " " << (Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1]).m << " " << Data.q_k[n_stages - 1].m << " " << lambda_k[n_stages - 1].m << "\n";
-
     //Definition of Lagrangian: 0.5 xT H x + qT * x - lambdaT * x - muT * (Ax - b)
 
     blockSQP::Matrix J_T_sigma(Data.cond_sizes[n_stages-1]);
