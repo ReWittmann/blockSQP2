@@ -1322,8 +1322,8 @@ Matrix Sparse_Matrix::get_dense_slice(int m_start, int m_end, int n_start, int n
 	}
 	#endif
 
-    int m_ = (m_end - m_start) * (m_end - m_start >= 0);
-    int n_ = (n_end - n_start) * (n_end - n_start >= 0);
+    int m_ = (m_end - m_start) * (m_end - m_start > 0);
+    int n_ = (n_end - n_start) * (n_end - n_start > 0);
     double *arr = new double[m_ * n_]();
 
     int i_nz;
@@ -1339,6 +1339,13 @@ Matrix Sparse_Matrix::get_dense_slice(int m_start, int m_end, int n_start, int n
     return Matrix(m_, n_, arr);
 }
 
+double Sparse_Matrix::operator()(int i, int j) const{
+    for (int ind = colind[j]; ind < colind[j + 1]; ind++){
+        if (row[ind] == i) return nz[ind];
+        else if (row[ind] > i) break;
+    }
+    return 0;
+}
 
 Matrix Sparse_Matrix::dense() const{
     double *array_d = new double[m*n];

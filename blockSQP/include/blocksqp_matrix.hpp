@@ -78,12 +78,12 @@ class Matrix
       double *release();                                            // Return pointer to data array, passing ownership
       int TFLAG( void ) const;                                      ///< returns this->tflag (1 if it is a submatrix and does not own the memory and 0 otherwise)
 
-      virtual double &operator()(int i, int j);                     ///< access element i,j of the matrix
-      virtual double &operator()(int i, int j) const;
-      virtual double &operator()(int i);                            ///< access element i of the matrix (columnwise)
-      virtual double &operator()(int i) const;
-      virtual Matrix &operator=(const Matrix &A);                   ///< assignment operator
-      virtual Matrix &operator=(const SymMatrix &A);
+      double &operator()(int i, int j);                     ///< access element i,j of the matrix
+      double &operator()(int i, int j) const;
+      double &operator()(int i);                            ///< access element i of the matrix (columnwise)
+      double &operator()(int i) const;
+      Matrix &operator=(const Matrix &A);                   ///< assignment operator
+      Matrix &operator=(const SymMatrix &A);
       
       //virtual void operator=( Matrix &&A );
       Matrix operator+(const Matrix &M2) const;
@@ -94,7 +94,7 @@ class Matrix
       void operator-=(const Matrix &M2);
       void operator*=(const double alpha);
 
-      virtual Matrix &Dimension( int, int = 1, int = -1 );          ///< set dimension (rows, columns, leading dimension)
+      Matrix &Dimension( int, int = 1, int = -1 );          ///< set dimension (rows, columns, leading dimension)
       Matrix &Initialize(double (*)(int, int));                     ///< set matrix elements i,j to f(i,j)
       Matrix &Initialize(double);                                   ///< set all matrix elements to a constant
 
@@ -149,10 +149,10 @@ class SymMatrix{
         SymMatrix( const SymMatrix& A );
         virtual ~SymMatrix( void );
 
-        virtual double &operator()( int i, int j );
-        virtual double &operator()( int i, int j ) const;
-        virtual double &operator()( int i );
-        virtual double &operator()( int i ) const;
+        double &operator()( int i, int j );
+        double &operator()( int i, int j ) const;
+        double &operator()( int i );
+        double &operator()( int i ) const;
 
         SymMatrix &Dimension(int = 1);
         SymMatrix &Initialize(double (*)(int, int));
@@ -162,7 +162,7 @@ class SymMatrix{
         SymMatrix& Arraymatrix( int, double* );
         SymMatrix& Arraymatrix( int, double*, int = -1 );
 
-        virtual SymMatrix &operator=(const SymMatrix &M2);
+        SymMatrix &operator=(const SymMatrix &M2);
         SymMatrix operator+(const SymMatrix &M2) const;
         SymMatrix operator*(const double alpha) const;
 
@@ -213,6 +213,7 @@ class Sparse_Matrix{
 		//Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end);
 		Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
 		Matrix get_dense_slice(int m_start, int m_end, int n_start, int n_end) const;
+    double operator()(int i, int j = 0) const;
 		Matrix dense() const;
 		void remove_rows(int *starts, int *ends, int nblocks);
 		Sparse_Matrix without_nz_rows(int *starts, int *ends, int nblocks) const;

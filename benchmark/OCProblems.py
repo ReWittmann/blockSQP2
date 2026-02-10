@@ -429,7 +429,7 @@ class OCProblem:
         self.F_qf = out['qf']
         
         # self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:-self.ntR:self.ntR]), 0., 0., [self.nx]*(self.ntS - 1))
-        self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:self.ntR*self.ntS:self.ntR]), 0., 0., [self.nx]*self.ntS)
+        self.add_constraint(-cs.vec(x_stages - self.F_xf[:,self.ntR-1:self.ntR*self.ntS:self.ntR]), 0., 0., [self.nx]*self.ntS)
 
         #Evaluate state bounds at intermediate values of refinement is used
         if self.ntR > 1:

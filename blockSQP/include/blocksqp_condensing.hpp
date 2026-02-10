@@ -102,6 +102,11 @@ struct condensing_data{
     int n_free;
     int n_dep;
     
+    // Matchings may either be x_k - F(x_k-1, u_k-1) = 0 => -A_k, -B_k = B_Jac(*:*,*:*) or F(x_k-1, u_k-1) - x_k = 0 => A_k, B_k = B_Jac(*:*,*:*)
+    // std::abs(match_sign) = 1 with the sign being the sign of x_k in the matching conditions. It is assumed to be the same for all matchings of a target
+    // and inferred from passed Jacobian. 
+    double match_sign; 
+    
     //Blocks of the structured constraint-jacobian and hessian, together with linear terms and bounds
 	std::vector<blockSQP::Matrix> A_k; //A_1, ..., A_{n_stages - 1}
 	std::vector<blockSQP::Matrix> B_k; //B_0, ..., B_{n_stages - 1}
