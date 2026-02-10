@@ -773,27 +773,32 @@ void Condenser::single_condense(int tnum, const blockSQP::Matrix &grad_obj, cons
     // Matchings may either be x_k - F(x_k-1, u_k-1) = 0 => -A_k, -B_k = B_Jac(*:*,*:*) or F(x_k-1, u_k-1) - x_k = 0 => A_k, B_k = B_Jac(*:*,*:*)
     // Set match_sense to the sign before x_k in the matching, slices of B_Jac require the opposite sign.
     // double match_sense = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
-    Data.match_sign = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
-    if (std::abs(std::abs(Data.match_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.match_sign));
-    Data.match_sign = std::round(Data.match_sign);
+    Data.matching_sign = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
+    if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
+    Data.matching_sign = std::round(Data.matching_sign);
     
 	//Extract relevant subvectors and -matrices
-	Data.B_k[0] = B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1]).dense()*(-Data.match_sign); //
-    Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1])*(Data.match_sign);
+	Data.B_k[0] = B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1]).dense();
+    Data.B_k[0] *= -Data.matching_sign; //
+    Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    Data.c_k[0] *= Data.matching_sign;
 	Data.r_k[0] = grad_obj.get_slice(Data.alt_vranges[0], Data.alt_vranges[1]);
 
 	Data.R_k[0] = sub_hess[0];
 
 	for (int i = 1; i<n_stages; i++){
-        double match_sign = B_Jac(Data.cond_ranges[i], Data.alt_vranges[2*i+1]);
-        if (std::abs(std::abs(match_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], match_sign));
-        if (Data.match_sign != std::round(match_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1) = 0 or all F(x_k-1) - x_k+1=0");
+        double matching_sign = B_Jac(Data.cond_ranges[i], Data.alt_vranges[2*i+1]);
+        if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
+        if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1,...) = 0 or all F(x_k-1,...) - x_k+1 = 0");
         
-		Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense()*(-Data.match_sign);
-		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1])*(Data.match_sign);
+		Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
+        Data.B_k[i] *= -Data.matching_sign;
+		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+        Data.c_k[i] *= Data.matching_sign;
 		Data.r_k[i] = grad_obj.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
 
-		Data.A_k[i-1] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).dense()*(-Data.match_sign);
+		Data.A_k[i-1] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).dense();
+        Data.A_k[i-1] *= -Data.matching_sign;
 
 		Data.q_k[i-1] = grad_obj.get_slice(Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
 
@@ -1082,7 +1087,8 @@ void Condenser::single_recover(int tnum, const blockSQP::Matrix &xi_free, const 
         nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + blockSQP::Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
     }
     
-    nu = blockSQP::vertcat(nu_k)*Data.match_sign;
+    nu = blockSQP::vertcat(nu_k);
+    nu *= Data.matching_sign;
     xi_full = blockSQP::vertcat(xi_full_k);
     mu_lambda = blockSQP::vertcat(mu_lambda_k);
 
@@ -1331,7 +1337,8 @@ void Condenser::single_convex_combination_recover(int tnum, const blockSQP::Matr
         nu_k[i] = (Data.S_k[i]*(1-t) + Data.S_k_2[i]*t) * xi_free_k[i+1] + (Data.Q_k[i]*(1-t) + Data.Q_k_2[i]*t) * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + blockSQP::Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
     }
 
-    nu = blockSQP::vertcat(nu_k)*Data.match_sign;
+    nu = blockSQP::vertcat(nu_k);
+    nu *= Data.matching_sign;
     xi_full = blockSQP::vertcat(xi_full_k);
     mu_lambda = blockSQP::vertcat(mu_lambda_k);
 
@@ -1515,10 +1522,12 @@ void Condenser::single_SOC_condense(int tnum, const blockSQP::Matrix &lb_con){
 
 
 	//Extract the updated c_k
-	Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1])*(Data.match_sign);
+	Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    Data.c_k[0] *= Data.matching_sign;
 
 	for (int i = 1; i<n_stages; i++){
-		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1])*(Data.match_sign);
+		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+        Data.c_k[i] *= Data.matching_sign;
 	}
 
 
@@ -1652,9 +1661,11 @@ void Condenser::single_correction_condense(int tnum, const blockSQP::Matrix &lb_
         ind_1 += Data.cond_sizes[i];
     }
 
-	Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1])*(Data.match_sign);
+	Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    Data.c_k[0] *= Data.matching_sign;
 	for (int i = 1; i<n_stages; i++){
-		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1])*(Data.match_sign);
+		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+        Data.c_k[i] *= Data.matching_sign;
 	}
 
 
@@ -1866,7 +1877,8 @@ void Condenser::single_correction_recover(int tnum, const blockSQP::Matrix &xi_f
         nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + blockSQP::Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
     }
 
-    nu = blockSQP::vertcat(nu_k)*Data.match_sign;
+    nu = blockSQP::vertcat(nu_k);
+    nu *= Data.matching_sign;
     xi_full = blockSQP::vertcat(xi_full_k);
     mu_lambda = blockSQP::vertcat(mu_lambda_k);
 

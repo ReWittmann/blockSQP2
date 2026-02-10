@@ -696,6 +696,7 @@ void Matrix::operator-=(const Matrix &M2){
 }
 
 void Matrix::operator*=(const double alpha){
+    if (alpha == 1.) return;
     for (int i = 0; i < m; i++){
         for (int j = 0; j < n; j++){
             (*this)(i,j) *= alpha;
