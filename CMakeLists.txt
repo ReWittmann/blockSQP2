@@ -44,6 +44,7 @@ FetchContent_Declare(
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
 	GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
 )
+# set(gemmt OFF)
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)

@@ -381,8 +381,6 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
                 QP_threads[k].request_stop();
             }
         }
-        // Wait for convexified QPs from most convexified to least convexified. 
-        // More convexified QPs almost always solve faster than less convexified QPs, so no significant time waste occurs
         else{
             for (int j = 1; j < maxQP - 1; j++){
                 QP_results_fs[j] = QP_results_f[j].wait_until(TF);

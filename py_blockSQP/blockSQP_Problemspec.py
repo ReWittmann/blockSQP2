@@ -9,7 +9,7 @@
 # \author Reinhold Wittmann
 # \date 2022-2025
 #
-# Implementation of a python interface to the blockSQP_2 
+# Implementation of a python interface to the blockSQP2 
 # nonlinear programming solver - Python side problem specification
 
 import numpy as np
@@ -236,7 +236,8 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
                 hess_eval = self.hess(self.Data.xi, self.Data.lam[self.nVar:self.nVar + self.nCon])
                 for j in range(self.nBlocks):
                     self.Data.hess_arr[j][:] = hess_eval[j]
-        except Exception:
+        except Exception as E:
+            print("Exception during evaluation: \"", E, "\"")
             self.Cpp_Data.info = 1
         else:
             self.Cpp_Data.info = 0
@@ -258,7 +259,8 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
                 hess_eval = self.hess(self.Data.xi, self.Data.lam[self.nVar : self.nVar + self.nCon])
                 for j in range(self.nBlocks):
                     self.Data.hess_arr[j][:] = hess_eval[j]
-        except:
+        except Exception as E:
+            print("Exception during evaluation: \"", E, "\"")
             self.Cpp_Data.info = 1
         else:
             self.Cpp_Data.info = 0
@@ -270,7 +272,8 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
         try:
             self.Data.objval = self.f(xi_)
             self.Data.constr[:] = self.g(xi_)
-        except Exception:
+        except Exception as E:
+            print("Exception during evaluation: \"", E, "\"")
             self.Cpp_Data.info = 1
         else:
             self.Cpp_Data.info = 0

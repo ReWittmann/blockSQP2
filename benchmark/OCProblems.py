@@ -24,9 +24,9 @@ import matplotlib.pyplot as plt
 import typing
 import math
 import copy
-import shutil
-if shutil.which("latex") is not None:
-    plt.rcParams["text.usetex"] = True
+# import shutil
+# if shutil.which("latex") is not None:
+#     plt.rcParams["text.usetex"] = True
 
 def RK4_integrator(ODE, M = 2):
     #M: RK4 steps per interval
@@ -529,7 +529,7 @@ class OCProblem:
         g_expr = self.NLP['g']
         
         self._f = cs.Function('cs_f', [xopt], [obj_expr])
-        self.f = lambda xi: np.array(self._f(xi), dtype = np.float64).reshape(-1)
+        self.f = lambda xi: float(self._f(xi))
         
         grad_f_expr = cs.jacobian(obj_expr, xopt)
         self._grad_f = cs.Function('cs_grad_f', [xopt], [grad_f_expr])
@@ -1912,11 +1912,15 @@ class D_Onofrio_Chemotherapy_VT(OCProblem):
         
 
 class Egerstedt_Standard(OCProblem):
-    
+    default_params = {
+        'x_init': [0.5, 0.5]
+    }
     def build_problem(self):
         self.set_OCP_data(2,0,3,1, [-np.inf, 0.4], [np.inf,np.inf], [], [], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0.,1.)
-        self.fix_initial_value([0.5,0.5])
+        
+        x_init = self.model_params['x_init']
+        self.fix_initial_value(x_init)
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
