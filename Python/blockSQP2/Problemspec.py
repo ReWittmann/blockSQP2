@@ -137,7 +137,7 @@ class Problemspec(pyblockSQP2.PyProblemspec):
     #############################
     
     rest_cont : bool = False
-    Data : blockSQP_Data
+    Data : blockSQP2_Data
     # class Data:
     #     objval : float
     #     xi : np.ndarray[np.float64]
