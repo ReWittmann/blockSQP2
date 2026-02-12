@@ -7,7 +7,7 @@
  */
 
 /**
- * \file py_blockSQP.cpp
+ * \file pyblockSQP2.cpp
  * \author Reinhold Wittmann
  * \date 2022-2025
  *

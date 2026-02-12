@@ -12,11 +12,11 @@ except:
     cD = Path.cwd()
 sys.path += [str(cD.parent)]
 
-import py_blockSQP as blockSQP
+import blockSQP2
 import numpy as np
 import time
 
-opts = blockSQP.SQPoptions()
+opts = blockSQP2.SQPoptions()
 opts.opt_tol = 1.0e-12
 opts.feas_tol = 1.0e-12
 opts.enable_linesearch = False
@@ -33,9 +33,9 @@ opts.debug_level = 0
 opts.qpsol = "qpOASES"
 opts.indef_delay = 1
 
-stats = blockSQP.SQPstats("./")
+stats = blockSQP2.SQPstats("./")
 
-prob = blockSQP.Problemspec()
+prob = blockSQP2.Problemspec()
 prob.nVar = 2
 prob.nCon = 1
 prob.set_blockIndex(np.array([0,1,2], dtype = np.int32))
@@ -58,7 +58,7 @@ prob.make_sparse(jac_g_nnz, jac_g_ind_row, jac_g_ind_col)
 prob.complete()
 
 
-meth = blockSQP.SQPmethod(prob, opts, stats)
+meth = blockSQP2.SQPmethod(prob, opts, stats)
 meth.init()
 time.sleep(0.01)
 print("starting run")
