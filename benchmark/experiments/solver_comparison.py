@@ -1,4 +1,4 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+# blockSQP2 -- A python interface to blockSQP 2, a nonlinear programming
 #                solver based on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 #
@@ -9,7 +9,7 @@
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Script to compare casadi NLP solvers and py_blockSQP on 
+# Script to compare casadi NLP solvers and blockSQP2 on 
 # several problems for perturbed start points for different options.
 
 import sys
@@ -18,10 +18,10 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parent), str(cD.parents[1])]
+sys.path += [str(cD.parent), str(cD.parents[1]/Path("Python"))]
 
 import copy
-import py_blockSQP
+import blockSQP2
 import datetime
 import OCP_experiment
 import OCProblems
@@ -75,7 +75,7 @@ casadi_blockSQP_Experiments = [({'block_hess':True, 'linsol':'ma27', 'max_iter':
 
 
 def opt_conv_str_2_par_scale(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
+    opts = blockSQP2.SQPoptions()
     opts.max_conv_QPs = max_conv_QPs
     opts.conv_strategy = 2
     opts.par_QPs = True

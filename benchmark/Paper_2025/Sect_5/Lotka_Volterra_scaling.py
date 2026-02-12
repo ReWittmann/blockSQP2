@@ -6,8 +6,8 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2])]
-import py_blockSQP
+sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
+import blockSQP2
 import matplotlib.pyplot as plt
 
 itMax = 100
@@ -23,7 +23,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 ################################
-opts = py_blockSQP.SQPoptions()
+opts = blockSQP2.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
@@ -51,13 +51,13 @@ opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
 
-vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
+vBlocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))
 for i in range(len(OCprob.vBlock_sizes)):
-    vBlocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
+    vBlocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
 
 
 #Define blockSQP Problemspec
-prob = py_blockSQP.Problemspec()
+prob = blockSQP2.Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 
@@ -77,9 +77,9 @@ prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 prob.complete()
 
-stats = py_blockSQP.SQPstats("./solver_outputs")
+stats = blockSQP2.SQPstats("./solver_outputs")
 #No condensing
-optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer = blockSQP2.SQPmethod(prob, opts, stats)
 optimizer.init()
 
 ret = optimizer.run(10)
@@ -92,42 +92,42 @@ OCprob.plot(xi, dpi=200)
 
 
 ### Scale x1 by 100.0, x2 by 0.01 ###
-prob2 = py_blockSQP.scaled_Problemspec(prob)
-scale = py_blockSQP.double_array(OCprob.nVar)
+prob2 = blockSQP2.scaled_Problemspec(prob)
+scale = blockSQP2.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
 scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_state(scale_arr, i, [100.0, 0.01])
 prob2.arr_set_scale(scale)
-stats_100_001 = py_blockSQP.SQPstats("./solver_outputs")
-optimizer2 = py_blockSQP.SQPmethod(prob2, opts, stats_100_001)
+stats_100_001 = blockSQP2.SQPstats("./solver_outputs")
+optimizer2 = blockSQP2.SQPmethod(prob2, opts, stats_100_001)
 optimizer2.init()
 ret = optimizer2.run(100)
 
 ### Vice versa ###
-prob3 = py_blockSQP.scaled_Problemspec(prob)
-scale = py_blockSQP.double_array(OCprob.nVar)
+prob3 = blockSQP2.scaled_Problemspec(prob)
+scale = blockSQP2.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
 scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_state(scale_arr, i, [0.01, 100.0])
 prob3.arr_set_scale(scale)
-stats_001_100 = py_blockSQP.SQPstats("./solver_outputs")
-optimizer3 = py_blockSQP.SQPmethod(prob3, opts, stats_001_100)
+stats_001_100 = blockSQP2.SQPstats("./solver_outputs")
+optimizer3 = blockSQP2.SQPmethod(prob3, opts, stats_001_100)
 optimizer3.init()
 ret = optimizer3.run(100)
 
 
 ### u scaled by 10 ###
-prob4 = py_blockSQP.scaled_Problemspec(prob)
-scale = py_blockSQP.double_array(OCprob.nVar)
+prob4 = blockSQP2.scaled_Problemspec(prob)
+scale = blockSQP2.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
 scale_arr[:] = 1.0
 for i in range(OCprob.ntS):
     OCprob.set_stage_control(scale_arr, i, 10.0)
 prob4.arr_set_scale(scale)
-stats = py_blockSQP.SQPstats("./solver_outputs")
-optimizer4 = py_blockSQP.SQPmethod(prob4, opts, stats)
+stats = blockSQP2.SQPstats("./solver_outputs")
+optimizer4 = blockSQP2.SQPmethod(prob4, opts, stats)
 optimizer4.init()
 ret = optimizer4.run(10)
 xi = np.array(optimizer4.get_xi()).reshape(-1)
@@ -148,15 +148,15 @@ ret = optimizer4.run(90,1)
 
 
 ### u scaled by 100 ###
-prob5 = py_blockSQP.scaled_Problemspec(prob)
-scale = py_blockSQP.double_array(OCprob.nVar)
+prob5 = blockSQP2.scaled_Problemspec(prob)
+scale = blockSQP2.double_array(OCprob.nVar)
 scale_arr = np.array(scale, copy = False)
 scale_arr[:] = 1.0
 for i in range(OCprob.ntS + 1):
     OCprob.set_stage_control(scale_arr, i, 100.0)
 prob5.arr_set_scale(scale)
-stats = py_blockSQP.SQPstats("./solver_outputs")
-optimizer5 = py_blockSQP.SQPmethod(prob5, opts, stats)
+stats = blockSQP2.SQPstats("./solver_outputs")
+optimizer5 = blockSQP2.SQPmethod(prob5, opts, stats)
 optimizer5.init()
 ret = optimizer5.run(10)
 xi = np.array(optimizer5.get_xi()).reshape(-1)

@@ -1,11 +1,11 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+# pyblockSQP2 -- A python interface to blockSQP 2, a nonlinear programming
 #                solver based on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 #
 # Licensed under the zlib license. See LICENSE for more details.
 
 
-# \file blockSQP_Problemspec.py
+# \file Problemspec.py
 # \author Reinhold Wittmann
 # \date 2022-2025
 #
@@ -13,11 +13,11 @@
 # nonlinear programming solver - Python side problem specification
 
 import numpy as np
-from . import py_blockSQP
+from . import pyblockSQP2
 import typing
 
 
-class blockSQP_Data:
+class blockSQP2_Data:
     objval : float
     xi : np.ndarray[np.float64]
     lam : np.ndarray[np.float64]
@@ -31,7 +31,7 @@ class blockSQP_Data:
     hess_arr : list[np.ndarray[np.float64]]
     hess_last : np.ndarray[np.float64]
 
-class blockSQP_Problemspec(py_blockSQP.Problemform):
+class Problemspec(pyblockSQP2.PyProblemspec):
     #Primal start point for optimization
     x_start : np.ndarray[np.float64]
     #Dual start point for optimization
@@ -71,12 +71,12 @@ class blockSQP_Problemspec(py_blockSQP.Problemform):
     _stepModification: typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]
     
     def __init__(self, nVar = 0, nCon = 0):
-        py_blockSQP.Problemform.__init__(self)
+        pyblockSQP2.PyProblemspec.__init__(self)
         self.nVar = nVar
         self.nCon = nCon
         
         self._stepModification = None
-        self.Data = blockSQP_Data()
+        self.Data = blockSQP2_Data()
     ##Some setter methods##
     
     def set_bounds(self, lb_x, ub_x, lb_g, ub_g, objLo = -np.inf, objUp = np.inf):

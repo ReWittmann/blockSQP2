@@ -17,7 +17,7 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parent)]
+sys.path += [str(cD.parent/Path("Python"))]
 
 import OCProblems
 import py_blockSQP

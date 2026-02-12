@@ -27,8 +27,8 @@
  *  \date 2023-2025
  */
 
-#ifndef BLOCKSQP_DEFS_HPP
-#define BLOCKSQP_DEFS_HPP
+#ifndef BLOCKSQP2_DEFS_HPP
+#define BLOCKSQP2_DEFS_HPP
 
 //#include "math.h"
 #include <cmath>

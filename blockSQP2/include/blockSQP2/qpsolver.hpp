@@ -16,8 +16,8 @@
  *  
  */
 
-#ifndef BLOCKSQP_QPSOLVER_HPP
-#define BLOCKSQP_QPSOLVER_HPP
+#ifndef BLOCKSQP2_QPSOLVER_HPP
+#define BLOCKSQP2_QPSOLVER_HPP
 
 
 #include <blockSQP2/matrix.hpp>
@@ -35,14 +35,14 @@ using namespace std::chrono;
 #ifdef QPSOLVER_QPOASES
     #include "qpOASES.hpp"
     
-    namespace qpOASES{
-        class Options;
+    // namespace qpOASES{
+    //     class Options;
         
-        class SQProblem;
+    //     class SQProblem;
         
-        class Matrix;
-        class SymmetricMatrix;
-    }
+    //     class Matrix;
+    //     class SymmetricMatrix;
+    // }
 #endif
 
 #ifdef QPSOLVER_GUROBI

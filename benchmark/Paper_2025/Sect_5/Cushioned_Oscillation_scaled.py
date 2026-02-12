@@ -4,8 +4,8 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2])]
-import py_blockSQP
+sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
+import blockSQP2
 import OCP_experiment
 import OCProblems
 
@@ -22,7 +22,7 @@ nPertF = 40
 itMax = 400
 ###############################################################################
 
-opts = py_blockSQP.SQPoptions()
+opts = blockSQP2.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
@@ -46,7 +46,7 @@ opts.feas_tol = 1e-6
 opts.automatic_scaling = True
 
 opts.qpsol = 'qpOASES'
-QPopts = py_blockSQP.qpOASES_options()
+QPopts = blockSQP2.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts

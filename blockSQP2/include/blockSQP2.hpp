@@ -1,0 +1,11 @@
+#include <blockSQP2/condensing.hpp>
+#include <blockSQP2/defs.hpp>
+#include <blockSQP2/general_purpose.hpp>
+#include <blockSQP2/iterate.hpp>
+#include <blockSQP2/matrix.hpp>
+#include <blockSQP2/method.hpp>
+#include <blockSQP2/options.hpp>
+#include <blockSQP2/problemspec.hpp>
+#include <blockSQP2/qpsolver.hpp>
+#include <blockSQP2/restoration.hpp>
+#include <blockSQP2/stats.hpp>

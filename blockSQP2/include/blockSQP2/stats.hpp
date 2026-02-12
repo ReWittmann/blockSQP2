@@ -26,10 +26,10 @@
  *  \date 2023-2025
  */
 
-#ifndef BLOCKSQP_STATS_HPP
-#define BLOCKSQP_STATS_HPP
+#ifndef BLOCKSQP2_STATS_HPP
+#define BLOCKSQP2_STATS_HPP
 
-#include "qpOASES.hpp"
+// #include "qpOASES.hpp"
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>
 #include <blockSQP2/problemspec.hpp>

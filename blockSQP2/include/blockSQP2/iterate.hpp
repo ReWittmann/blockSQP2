@@ -28,8 +28,8 @@
  *  \date 2023-2025
  */
 
-#ifndef BLOCKSQP_ITERATE_HPP
-#define BLOCKSQP_ITERATE_HPP
+#ifndef BLOCKSQP2_ITERATE_HPP
+#define BLOCKSQP2_ITERATE_HPP
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>

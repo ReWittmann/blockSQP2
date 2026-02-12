@@ -27,11 +27,12 @@
 #include <chrono>
 using namespace std::chrono;
 #include <string>
-#include "blocksqp_options.hpp"
-#include "blocksqp_method.hpp"
-#include "blocksqp_condensing.hpp"
+#include <blockSQP2/options.hpp>
+#include <blockSQP2/method.hpp>
+#include <blockSQP2/condensing.hpp>
+#include <blockSQP2/restoration.hpp>
+
 #include "qpOASES.hpp"
-#include "blocksqp_restoration.hpp"
 
 namespace py = pybind11;
 
@@ -334,12 +335,12 @@ struct Prob_Data{
 };
 
 
-class Problemform : public blockSQP2::Problemspec
+class PyProblemspec : public blockSQP2::Problemspec
 {
 public:
-    Problemform(){}
+    PyProblemspec(){}
     
-    virtual ~Problemform(){
+    virtual ~PyProblemspec(){
         delete[] blockIdx;
         delete[] vblocks;
     };
@@ -528,61 +529,61 @@ public:
 };
 
 
-class Py_Problemform: public Problemform{
+class PyProblemspecTrampoline: public PyProblemspec{
     void initialize_dense() override {
-        PYBIND11_OVERRIDE(void, Problemform, initialize_dense,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, initialize_dense,);
     }
     
     void initialize_sparse() override {
-        PYBIND11_OVERRIDE(void, Problemform, initialize_sparse,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, initialize_sparse,);
     }
     
     void evaluate_dense() override {
-        PYBIND11_OVERRIDE(void, Problemform, evaluate_dense,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, evaluate_dense,);
     }
     
     void evaluate_sparse() override {
-        PYBIND11_OVERRIDE(void, Problemform, evaluate_sparse,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, evaluate_sparse,);
     }
     
     void evaluate_simple() override {
-        PYBIND11_OVERRIDE(void, Problemform, evaluate_simple,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, evaluate_simple,);
     }
     
     void update_inits() override {
-        PYBIND11_OVERRIDE(void, Problemform, update_inits,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, update_inits,);
     }
     void update_evals() override {
-        PYBIND11_OVERRIDE(void, Problemform, update_evals,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, update_evals,);
     }
     void update_simple() override {
-        PYBIND11_OVERRIDE(void, Problemform, update_simple,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, update_simple,);
     }
     
     void update_xi() override {
-        PYBIND11_OVERRIDE(void, Problemform, update_xi,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, update_xi,);
     }
     
     void update_lambda() override {
-        PYBIND11_OVERRIDE(void, Problemform, update_lambda,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, update_lambda,);
     }
     
     void get_objval() override {
-        PYBIND11_OVERRIDE(void, Problemform, get_objval,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, get_objval,);
     }
     
     void restore_continuity() override {
-        PYBIND11_OVERRIDE(void, Problemform, restore_continuity,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, restore_continuity,);
     }
     
     void call_stepModification() override {
-        PYBIND11_OVERRIDE(void, Problemform, call_stepModification,);
+        PYBIND11_OVERRIDE(void, PyProblemspec, call_stepModification,);
     }
 };
 
 
 
-PYBIND11_MODULE(py_blockSQP, m){
+PYBIND11_MODULE(pyblockSQP2, m){
 
 py::class_<blockSQP2::Matrix>(m, "Matrix", py::buffer_protocol())
 	.def_buffer([](blockSQP2::Matrix &mtrx) -> py::buffer_info{
@@ -887,37 +888,37 @@ py::native_enum<blockSQP2::SQPresults>(m, "SQPresults", "enum.Enum")
     .finalize()
     ;
 
-py::class_<blockSQP2::Problemspec>(m, "blockSQP2_Problemspec");
+py::class_<blockSQP2::Problemspec>(m, "blockSQP2Problemspec");
 
-py::class_<Problemform, blockSQP2::Problemspec, Py_Problemform>(m,"Problemform")
+py::class_<PyProblemspec, blockSQP2::Problemspec, PyProblemspecTrampoline>(m,"PyProblemspec")
 	.def(py::init<>())
-	.def("init_Cpp_Data", &Problemform::init_Cpp_Data)
-	.def("initialize_dense", &Problemform::initialize_dense)
-	.def("initialize_sparse", &Problemform::initialize_sparse)
-	.def("evaluate_dense", &Problemform::evaluate_dense)
-	.def("evaluate_sparse", &Problemform::evaluate_sparse)
-	.def("evaluate_simple", &Problemform::evaluate_simple)
-	.def("update_inits", &Problemform::update_inits)
-	.def("update_evals", &Problemform::update_evals)
-	.def("update_simple", &Problemform::update_simple)
-	.def("update_xi", &Problemform::update_xi)
-	.def("get_objval", &Problemform::get_objval)
-	.def("restore_continuity", &Problemform::restore_continuity)
-	.def_readwrite("Cpp_Data", &Problemform::Cpp_Data)
-	.def_readwrite("nVar", &Problemform::nVar)
-	.def_readwrite("nCon", &Problemform::nCon)
-	.def_readwrite("nnz", &Problemform::nnz)
-	.def_readwrite("objLo", &Problemform::objLo)
-	.def_readwrite("objUp", &Problemform::objUp)
-	.def_readwrite("lb_var", &Problemform::lb_var)
-	.def_readwrite("ub_var", &Problemform::ub_var)
-	.def_readwrite("lb_con", &Problemform::lb_con)
-	.def_readwrite("ub_con", &Problemform::ub_con)
-	.def_readonly("nBlocks", &Problemform::nBlocks)
-	.def_property("blockIdx", nullptr, &Problemform::set_blockIdx)
-    .def_property("vblocks", nullptr, &Problemform::set_vblocks)
-    .def_property("cond", nullptr, [](Problemform &prob, blockSQP2::Condenser *cond){prob.cond = cond;})
-    //.def_property("vblocks", nullptr, [](Problemform &P, vblock_array &v_arr){P.vblocks = v_arr.ptr; P.n_vblocks = v_arr.size;})
+	.def("init_Cpp_Data", &PyProblemspec::init_Cpp_Data)
+	.def("initialize_dense", &PyProblemspec::initialize_dense)
+	.def("initialize_sparse", &PyProblemspec::initialize_sparse)
+	.def("evaluate_dense", &PyProblemspec::evaluate_dense)
+	.def("evaluate_sparse", &PyProblemspec::evaluate_sparse)
+	.def("evaluate_simple", &PyProblemspec::evaluate_simple)
+	.def("update_inits", &PyProblemspec::update_inits)
+	.def("update_evals", &PyProblemspec::update_evals)
+	.def("update_simple", &PyProblemspec::update_simple)
+	.def("update_xi", &PyProblemspec::update_xi)
+	.def("get_objval", &PyProblemspec::get_objval)
+	.def("restore_continuity", &PyProblemspec::restore_continuity)
+	.def_readwrite("Cpp_Data", &PyProblemspec::Cpp_Data)
+	.def_readwrite("nVar", &PyProblemspec::nVar)
+	.def_readwrite("nCon", &PyProblemspec::nCon)
+	.def_readwrite("nnz", &PyProblemspec::nnz)
+	.def_readwrite("objLo", &PyProblemspec::objLo)
+	.def_readwrite("objUp", &PyProblemspec::objUp)
+	.def_readwrite("lb_var", &PyProblemspec::lb_var)
+	.def_readwrite("ub_var", &PyProblemspec::ub_var)
+	.def_readwrite("lb_con", &PyProblemspec::lb_con)
+	.def_readwrite("ub_con", &PyProblemspec::ub_con)
+	.def_readonly("nBlocks", &PyProblemspec::nBlocks)
+	.def_property("blockIdx", nullptr, &PyProblemspec::set_blockIdx)
+    .def_property("vblocks", nullptr, &PyProblemspec::set_vblocks)
+    .def_property("cond", nullptr, [](PyProblemspec &prob, blockSQP2::Condenser *cond){prob.cond = cond;})
+    //.def_property("vblocks", nullptr, [](PyProblemspec &P, vblock_array &v_arr){P.vblocks = v_arr.ptr; P.n_vblocks = v_arr.size;})
 	;
 
 py::class_<blockSQP2::SQPstats>(m,"SQPstats")

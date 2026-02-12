@@ -14,8 +14,6 @@
  * Implementation of functions for loading the sparse linear solver MUMPS
  */
 
-namespace blockSQP2{
-
 #ifdef SOLVER_MUMPS
 
 #include <blockSQP2/load_mumps.hpp>
@@ -33,6 +31,7 @@ namespace blockSQP2{
     #include "windows.h"
 #endif
 
+namespace blockSQP2{
 
 void *glob_handle_0 = nullptr;
 void *glob_handle_1 = nullptr;
@@ -186,6 +185,6 @@ void *get_plugin_handle(int ind){
     }
 #endif
 
-#endif //SOLVER_MUMPS
-
 } // namespace blockSQP2
+
+#endif //SOLVER_MUMPS

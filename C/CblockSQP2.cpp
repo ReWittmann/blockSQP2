@@ -15,11 +15,11 @@
  */
 
 
-#include "blocksqp_method.hpp"
-#include "blocksqp_condensing.hpp"
-#include "blocksqp_options.hpp"
-#include "blocksqp_problemspec.hpp"
-#include "blocksqp_matrix.hpp"
+#include <blockSQP2/method.hpp>
+#include <blockSQP2/condensing.hpp>
+#include <blockSQP2/options.hpp>
+#include <blockSQP2/problemspec.hpp>
+#include <blockSQP2/matrix.hpp>
 #include <iostream>
 #include <string>
 #include <stdexcept>

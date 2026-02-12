@@ -27,8 +27,8 @@
  *  \date 2023-2025
  */
 
-#ifndef BLOCKSQP_RESTORATION_HPP
-#define BLOCKSQP_RESTORATION_HPP
+#ifndef BLOCKSQP2_RESTORATION_HPP
+#define BLOCKSQP2_RESTORATION_HPP
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/problemspec.hpp>

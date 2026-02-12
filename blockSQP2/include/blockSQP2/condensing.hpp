@@ -15,8 +15,8 @@
  * Declaration of methods and data structures for Condenser class
  */
 
-#ifndef BLOCKSQP_CONDENSING_HPP
-#define BLOCKSQP_CONDENSING_HPP
+#ifndef BLOCKSQP2_CONDENSING_HPP
+#define BLOCKSQP2_CONDENSING_HPP
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>

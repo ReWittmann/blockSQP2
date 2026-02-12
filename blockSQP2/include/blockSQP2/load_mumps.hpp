@@ -14,8 +14,8 @@
  * Declaration functions for loading the sparse linear solver MUMPS
  */
 
-#ifndef BLOCKSQP_LOAD_MUMPS_HPP
-#define BLOCKSQP_LOAD_MUMPS_HPP
+#ifndef BLOCKSQP2_LOAD_MUMPS_HPP
+#define BLOCKSQP2_LOAD_MUMPS_HPP
 
 #ifdef SOLVER_MUMPS
 namespace blockSQP2{
@@ -29,4 +29,4 @@ void *get_fptr_dmumps_c(int ID);
 
 
 #endif //SOLVER_MUMPS
-#endif //BLOCKSQP_LOAD_MUMPS_HPP
+#endif //BLOCKSQP2_LOAD_MUMPS_HPP

@@ -27,8 +27,8 @@
  *  \date 2023-2025
  */
 
-#ifndef GENERAL_PURPOSE_HPP
-#define GENERAL_PURPOSE_HPP
+#ifndef BLOCKSQP2_GENERAL_PURPOSE_HPP
+#define BLOCKSQP2_GENERAL_PURPOSE_HPP
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>

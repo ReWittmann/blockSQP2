@@ -461,7 +461,7 @@ if(PYTHON_INTERFACE)
 		target_link_libraries(pyblockSQP2 PRIVATE -static)
 	endif()
 
-	set(pyblockSQP2_DIR ${CMAKE_SOURCE_DIR}/pyblockSQP2)
+	set(pyblockSQP2_DIR ${CMAKE_SOURCE_DIR}/Python/blockSQP2)
 	set_target_properties(pyblockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${pyblockSQP2_DIR}
 												 RUNTIME_OUTPUT_DIRECTORY ${pyblockSQP2_DIR}
 												 )

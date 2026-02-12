@@ -28,8 +28,8 @@
  *  Additional methods, sparse Matrix classes, LT_Block_Matrix class
  */
 
-#ifndef BLOCKSQP_MATRIX_HPP
-#define BLOCKSQP_MATRIX_HPP
+#ifndef BLOCKSQP2_MATRIX_HPP
+#define BLOCKSQP2_MATRIX_HPP
 
 #include <blockSQP2/defs.hpp>
 #include <iostream>

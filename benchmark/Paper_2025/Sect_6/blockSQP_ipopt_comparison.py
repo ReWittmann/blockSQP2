@@ -4,8 +4,8 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2])]
-import py_blockSQP
+sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
+import blockSQP2
 import copy
 import datetime
 import OCP_experiment
@@ -55,7 +55,7 @@ ipopt_Experiments = [
                      ]
 
 def opt_conv_str_2_par_scale(max_conv_QPs = 4):
-    opts = py_blockSQP.SQPoptions()
+    opts = blockSQP2.SQPoptions()
     opts.max_conv_QPs = max_conv_QPs
     opts.conv_strategy = 2
     opts.par_QPs = True

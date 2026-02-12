@@ -27,8 +27,8 @@
  *  \date 2023-2025
  */
 
-#ifndef BLOCKSQP_PROBLEMSPEC_HPP
-#define BLOCKSQP_PROBLEMSPEC_HPP
+#ifndef BLOCKSQP2_PROBLEMSPEC_HPP
+#define BLOCKSQP2_PROBLEMSPEC_HPP
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>

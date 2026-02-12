@@ -5,9 +5,9 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2])]
+sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
 import time
-import py_blockSQP
+import blockSQP2
 
 import OCProblems
 OCprob = OCProblems.Three_Tank_Multimode(
@@ -18,7 +18,7 @@ OCprob = OCProblems.Three_Tank_Multimode(
                     )
 itMax = 100
 ################################
-opts = py_blockSQP.SQPoptions()
+opts = blockSQP2.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
@@ -46,20 +46,20 @@ opts.enable_premature_termination = False
 opts.max_filter_overrides = 3
 
 opts.qpsol = 'qpOASES'
-QPopts = py_blockSQP.qpOASES_options()
+QPopts = blockSQP2.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
 ################################
 
 #Create condenser, pass as cond attribute of problem specification to enable condensing
-vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
+vBlocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))
 for i in range(len(OCprob.vBlock_sizes)):
-    vBlocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
+    vBlocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
 
 
 #Define blockSQP Problemspec
-prob = py_blockSQP.Problemspec()
+prob = blockSQP2.Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 
@@ -80,9 +80,9 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 prob.complete()
 
 
-stats = py_blockSQP.SQPstats("./solver_outputs")
+stats = blockSQP2.SQPstats("./solver_outputs")
 
-optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer = blockSQP2.SQPmethod(prob, opts, stats)
 optimizer.init()
 
 
@@ -97,7 +97,7 @@ opts.enable_premature_termination = True
 opts.max_filter_overrides = 3
 
 
-optimizer2 = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer2 = blockSQP2.SQPmethod(prob, opts, stats)
 optimizer2.init()
 ret = optimizer2.run(100)
 xi_accurate = np.array(optimizer2.get_xi()).reshape(-1)

@@ -1,15 +1,15 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
+# pyblockSQP2 -- A python interface to blockSQP 2, a nonlinear programming
 #                solver based on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 #
 # Licensed under the zlib license. See LICENSE for more details.
 
 
-# \file run_blockSQP.py
+# \file run_blockSQP2.py
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Script to invoke py_blockSQP for an example problem.
+# Script to invoke blockSQP2 for an example problem.
 
 import numpy as np
 import time
@@ -19,9 +19,9 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parent)]
+sys.path += [str(cD.parent/Path("Python"))]
 
-import py_blockSQP
+import blockSQP2
 import OCProblems
 
 
@@ -44,7 +44,7 @@ plot_title = False                          #Put name of problem in plot?
 
 start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
-opts = py_blockSQP.SQPoptions()
+opts = blockSQP2.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 20.0
 
@@ -73,7 +73,7 @@ opts.enable_premature_termination = True    #Enable early termination at accepta
 opts.max_filter_overrides = 2
 
 # opts.qpsol = 'qpOASES'
-# QPopts = py_blockSQP.qpOASES_options()
+# QPopts = blockSQP2.qpOASES_options()
 # QPopts.printLevel = 0                     
 # QPopts.sparsityLevel = 2                  #0-dense QPs, 1-sparse matrices + dense factorizations, 2 (default) - sparse matrices and factorizations
 # opts.qpsol_options = QPopts
@@ -81,23 +81,23 @@ opts.max_filter_overrides = 2
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vblocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
-cblocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
-hblocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
-targets = py_blockSQP.condensing_targets(1)
+vblocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
+cblocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
+hblocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
+targets = blockSQP2.condensing_targets(1)
 for i in range(len(OCprob.vBlock_sizes)):
-    vblocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
+    vblocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
 for i in range(len(OCprob.cBlock_sizes)):
-    cblocks[i] = py_blockSQP.cblock(OCprob.cBlock_sizes[i])
+    cblocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
 for i in range(len(OCprob.hessBlock_sizes)):
     hblocks[i] = OCprob.hessBlock_sizes[i]
-targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
-cond = py_blockSQP.Condenser(vblocks, cblocks, hblocks, targets, 2)
+targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
+cond = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
 
 
 #Define blockSQP Problemspec
-#See class OCProblems.OCProblem and py_blockSQP/blockSQP_Problemspec.py for field specifications
-prob = py_blockSQP.Problemspec()
+#See class OCProblems.OCProblem and blockSQP2/blockSQP_Problemspec.py for field specifications
+prob = blockSQP2.Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 
@@ -124,9 +124,9 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 prob.complete()
 
 
-stats = py_blockSQP.SQPstats("./solver_outputs")
+stats = blockSQP2.SQPstats("./solver_outputs")
 t0 = time.monotonic()
-optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+optimizer = blockSQP2.SQPmethod(prob, opts, stats)
 optimizer.init()
 
 
@@ -136,7 +136,7 @@ if (step_plots):
     xi = np.array(optimizer.get_xi()).reshape(-1)
     i = 1
     OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
-    while ret == py_blockSQP.SQPresults.it_finished and i < itMax:
+    while ret == blockSQP2.SQPresults.it_finished and i < itMax:
         ret = optimizer.run(1,1)
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1

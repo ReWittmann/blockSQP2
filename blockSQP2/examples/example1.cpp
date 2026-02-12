@@ -9,8 +9,7 @@
 #include <blockSQP2.hpp>
 #include <limits>
 
-namespace blockSQP
-{
+namespace blockSQP2{
 
 static double const myInf = std::numeric_limits<double>::infinity();    ///< Used to mark sparse zeros in Jacobian
 
@@ -246,10 +245,10 @@ void MyProblem::evaluate(const Matrix &xi, const Matrix &lambda, double *objval,
     }
 }
 
-} // namespace blockSQP
+} // namespace blockSQP2
 
 int main(int argc, const char* argv[]){
-    using namespace blockSQP;
+    using namespace blockSQP2;
     SQPresults ret;
     MyProblem *prob;
     SQPmethod *meth;
