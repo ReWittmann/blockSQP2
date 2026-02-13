@@ -56,9 +56,9 @@
 	#include "mumps_compat.h"
 
 
-	#if defined USE_MPI_H || defined MUMPS_SEQ
+	#if defined USE_MPI_H// || defined MUMPS_SEQ
 		#include "mpi.h"
-	#else
+	#elif !defined(MUMPS_SEQ)
 		#include "mumps_mpi.h"
 	#endif /* USE_MPI_H */
 

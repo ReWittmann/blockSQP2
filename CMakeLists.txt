@@ -58,7 +58,7 @@ else()
 	set(MUMPS_find_static OFF)
 	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
 endif()
-set(MUMPS_intsize64 OFF) #We use 32bit-integer BLAS, so this must be OFF
+set(MUMPS_intsize64 OFF) #We use 32bit-integer BLAS (LP64), so this must be OFF
 
 #Default to static, since we later build a shared library from this
 set(BUILD_SHARED_LIBS OFF)
@@ -106,9 +106,6 @@ ELSEIF(WIN32)
 		)
 	endif()
 ENDIF()
-target_include_directories(qpOASES
-	PUBLIC	${qpOASES_MODDED_DIR}/include
-)
 
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
