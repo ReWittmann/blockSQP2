@@ -24,9 +24,9 @@ import matplotlib.pyplot as plt
 import typing
 import math
 import copy
-import shutil
-if shutil.which("latex") is not None:
-    plt.rcParams["text.usetex"] = True
+# import shutil
+# if shutil.which("latex") is not None:
+#     plt.rcParams["text.usetex"] = True
 
 def RK4_integrator(ODE, M = 2):
     #M: RK4 steps per interval
