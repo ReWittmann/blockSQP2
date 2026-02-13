@@ -27,7 +27,7 @@ updatesequence.txt
 build/
 .build/
 install/
-blockSQP/examples/bin/
+blockSQP2/examples/bin/
 
 manual.bbl
 manual.aux
