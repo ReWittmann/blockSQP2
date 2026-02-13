@@ -11,7 +11,7 @@ import OCP_experiment
 import OCProblems
 
 #Note: On Linux, ensure the scaling governor is set to "performance"
-#      and that python actually uses multiple cores - running this
+#      and that the process actually uses multiple cores - running this
 #      script from Spyder resulted in only one CPU core being used.
 #      Running from the command line is recommended.
 

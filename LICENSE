@@ -1,7 +1,8 @@
-blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
-	      for blockSQP, the nonlinear programming solver by Dennis Janka.
-Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+blockSQP2 -- A structure-exploiting nonlinear programming solver based
+             on blockSQP by Dennis Janka.
+Copyright (C) 2023-2026 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
+The original blockSQP license is included under blockSQP2/LICENSE
 
 (zlib license):
 

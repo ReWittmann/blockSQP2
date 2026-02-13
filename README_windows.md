@@ -1,10 +1,10 @@
-blockSQP 2 -- Condensing, convexification strategies, scaling heuristics and more  
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; for blockSQP, the nonlinear programming solver by Dennis Janka.  
+**blockSQP2** -- A structure-exploiting nonlinear programming solver based  
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; on blockSQP by Dennis Janka.  
 Copyright (c) 2023-2025 Reinhold Wittmann <reinhold.wittmann@ovgu.de>  
 
-## Configuration for building blockSQP 2 on Windows
+## Configuration for building blockSQP2 on Windows
 
-The following configuration is known to work for building blockSQP 2 on Windows.
+The following configuration is known to work for building blockSQP2 on Windows.
 
 ### Requirements:
 - CMake build system (<https://cmake.org/download/>).
@@ -21,11 +21,11 @@ Note: A build using MSVC, Intel ifx and MKL was possible, but suffered from stro
 #### Python and Julia interfaces
 Download Python from (<https://www.python.org/downloads/>). It should include the required libpython.dll and enable it being found. Microsoft store Python installations may result in libpython.dll not being found.
 
-blockSQP.jl does not require Julia to be installed. Julia 1.10 is recommended for testing and using it.
+blockSQP2.jl does not require Julia to be installed. Julia 1.11 is recommended for testing and using it.
 
 
 ### Building:
-In the command line, navigate to the blockSQP_2 folder and run the commands  
+In the command line, navigate to the blockSQP2 folder and run the commands  
 `cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENBLAS_DIR=*`  
 `cmake --build build`  
 with `*` being the path to the OpenBLAS installation folder containing bin, include and lib folders.  
