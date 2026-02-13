@@ -120,7 +120,7 @@ class OCProblem:
     #Starting point for optimization
     start_point : np.ndarray[1, np.float64]
     
-    #Structure and variable type information (integrality, dependency, hessian blocks, ...)##
+    #Structure and variable type information (dependency, hessian blocks, ...)##
     #set by multiple_shooting helper method
     hessBlock_sizes : list[int]
     hessBlock_index : list[int]
