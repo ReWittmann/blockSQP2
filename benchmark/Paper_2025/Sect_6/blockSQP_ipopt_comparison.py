@@ -13,7 +13,7 @@ import OCProblems
 
 #RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD / Path("out_blockSQP_ipopt_comparison_RK4")
+dirPath = cD / Path("out_blockSQP2_ipopt_comparison_RK4")
 
 #Range for applying perturbations to initial discretized controls
 nPert0 = 0
@@ -67,9 +67,9 @@ opt2 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2.hess_approx = "exact"
 
 
-blockSQP_Experiments = [
-                        (opt1, 'blockSQP, SR1-...-BFGS'),
-                        (opt2, 'blockSQP, exH-...-BFGS')
+blockSQP2_Experiments = [
+                        (opt1, 'blockSQP2, SR1-...-BFGS'),
+                        (opt2, 'blockSQP2, exH-...-BFGS')
                         ]
 
 
@@ -78,12 +78,12 @@ dirPath.mkdir(parents = True, exist_ok = True)
 
 #Create an open file to write results into
 date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-pref = "blockSQP_ipopt"
+pref = "blockSQP2_ipopt"
 filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
 out = open(filePath, 'w')
 
 
-titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP_Experiments]
+titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP2_Experiments]
 OCP_experiment.print_heading(out, titles)
 
 #Iterate over example problems and experiments
@@ -107,7 +107,7 @@ for OCclass in Examples:
         EXP_type_sol.append(ret_type_sol)
         n_EXP += 1
     
-    for EXP_opts, EXP_name in blockSQP_Experiments:
+    for EXP_opts, EXP_name in blockSQP2_Experiments:
         ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
@@ -118,7 +118,7 @@ for OCclass in Examples:
     #Create scatter plot of total iterations and runtimes for problem
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP_ipopt")
+        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP2_ipopt")
     #Print results (iterations/runtime - mean/stddev) for problem to file
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

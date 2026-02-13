@@ -25,9 +25,9 @@ import numpy as np
 import time
 import datetime
 import matplotlib.pyplot as plt
-import shutil
-if shutil.which("latex") is not None:
-    plt.rcParams["text.usetex"] = True
+# import shutil
+# if shutil.which("latex") is not None:
+#     plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 
@@ -67,7 +67,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     return prob, cond, HOLD
 
 def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
-    """Run blockSQP on the given problem for start points perturbed at nPert0:nPertF
+    """Run blockSQP2 on the given problem for start points perturbed at nPert0:nPertF
     Return a vector of the iteration counts, the solution times in seconds and a vector of return codes
     indication the success: < 0 - failure, 0 - max it reached, 1 - partial success, > 1 success"""
 
@@ -221,7 +221,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        if shutil.which("latex") is not None:
+        if plt.rcParams['text.usetex']:
             fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
         else:
             fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
@@ -309,7 +309,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        if shutil.which("latex") is not None:
+        if plt.rcParams['text.usetex']:
             fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
         else:
             fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
@@ -393,7 +393,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
     fig, ax = plt.subplots(nrows = n_EXP, ncols = 2, constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 2.5 + 2.5*(n_EXP - 1)))
     
     if isinstance(suptitle, str):
-        if shutil.which("latex") is not None:
+        if plt.rcParams['text.usetex']:
             fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
         else:
             fig.suptitle(suptitle, fontsize = titlesize, fontweight = 'bold')
@@ -511,14 +511,14 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
     out.close()
 
 
-def run_blockSQP_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
+def run_blockSQP2_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
     dirPath.mkdir(parents = True, exist_ok = True)
     if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-        pref = "blockSQP"
+        pref = "blockSQP2"
         filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
         out = open(filePath, 'w')
     else:

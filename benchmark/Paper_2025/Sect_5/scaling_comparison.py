@@ -52,7 +52,7 @@ Experiments = [
 plot_folder = cD / Path("out_scaling_comparison")
 
 
-OCP_experiment.run_blockSQP_experiments(Examples, Experiments,\
+OCP_experiment.run_blockSQP2_experiments(Examples, Experiments,\
                                         plot_folder,\
                                         nPert0 = 0, nPertF = 40,
                                         integrator = 'RK4'
