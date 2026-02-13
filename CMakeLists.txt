@@ -6,9 +6,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   {make -C build } OR {cmake --build build}")
 endif()
 
-project(BlockSQP_2    
-	DESCRIPTION "Extensions and modifications for blockSQP, the nonlinear programming solver by Dennis Janka"
-	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP_2
+project(CMakeblockSQP2
+	DESCRIPTION "Build system for blockSQP2, a nonlinear programming solver based on blockSQP by Dennis Janka."
+	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP2
     LANGUAGES CXX
 )
 set(CMAKE_CXX_STANDARD 20)
@@ -42,8 +42,10 @@ include(FetchContent)
 FetchContent_Declare(
 	CMAKEMUMPS
 	GIT_REPOSITORY https://github.com/scivision/mumps.git
-	GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
+	# GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
+	GIT_TAG df62d7630760f3efd608f19c8e2002542897f7a9  # v5.8.2.1
 )
+# set(gemmt OFF)
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
 set(BUILD_SINGLE OFF)
@@ -56,7 +58,7 @@ else()
 	set(MUMPS_find_static OFF)
 	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
 endif()
-set(MUMPS_intsize64 OFF) #We use 32bit-integer BLAS, so this must be OFF
+set(MUMPS_intsize64 OFF) #We use 32bit-integer BLAS (LP64), so this must be OFF
 
 #Default to static, since we later build a shared library from this
 set(BUILD_SHARED_LIBS OFF)
@@ -66,7 +68,7 @@ FetchContent_MakeAvailable(CMAKEMUMPS)
 #############################################################
 #Build instuction for contained files
 
-set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP/dep/modified_qpOASES)
+set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP2/dep/modified_qpOASES)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
 	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
@@ -104,9 +106,6 @@ ELSEIF(WIN32)
 		)
 	endif()
 ENDIF()
-target_include_directories(qpOASES
-	PUBLIC	${qpOASES_MODDED_DIR}/include
-)
 
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
@@ -184,42 +183,43 @@ target_include_directories(qpOASES
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
-add_library(blockSQP STATIC
-	blockSQP/src/blocksqp_condensing.cpp
-	blockSQP/src/blocksqp_matrix.cpp
-	blockSQP/src/blocksqp_problemspec.cpp
-	blockSQP/src/blocksqp_general_purpose.cpp
-	blockSQP/src/blocksqp_glob.cpp
-   	blockSQP/src/blocksqp_hess.cpp
-   	blockSQP/src/blocksqp_iter.cpp
-   	blockSQP/src/blocksqp_method.cpp
-   	blockSQP/src/blocksqp_mainloop.cpp
-   	blockSQP/src/blocksqp_options.cpp
-   	blockSQP/src/blocksqp_qp.cpp
-   	blockSQP/src/blocksqp_restoration.cpp
-   	blockSQP/src/blocksqp_stats.cpp
-   	blockSQP/src/blocksqp_qpsolver.cpp
-   	blockSQP/src/blocksqp_defs.cpp
-   	blockSQP/src/blocksqp_scaling.cpp
-   	blockSQP/src/blocksqp_sqputils.cpp
-	blockSQP/src/blocksqp_load_mumps.cpp
+add_library(blockSQP2 STATIC
+	blockSQP2/src/condensing.cpp
+	blockSQP2/src/matrix.cpp
+	blockSQP2/src/problemspec.cpp
+	blockSQP2/src/general_purpose.cpp
+	blockSQP2/src/glob.cpp
+   	blockSQP2/src/hess.cpp
+   	blockSQP2/src/iter.cpp
+   	blockSQP2/src/method.cpp
+   	blockSQP2/src/mainloop.cpp
+   	blockSQP2/src/options.cpp
+   	blockSQP2/src/qp.cpp
+   	blockSQP2/src/restoration.cpp
+   	blockSQP2/src/stats.cpp
+   	blockSQP2/src/qpsolver.cpp
+   	blockSQP2/src/defs.cpp
+   	blockSQP2/src/scaling.cpp
+   	blockSQP2/src/sqputils.cpp
+	blockSQP2/src/load_mumps.cpp
    	)
-target_compile_definitions(blockSQP PUBLIC QPSOLVER_QPOASES)
+target_compile_definitions(blockSQP2 PUBLIC QPSOLVER_QPOASES)
 
 
 if (UNIX)
 	if(NOT APPLE)
-		target_compile_definitions(blockSQP PUBLIC LINUX)
+		target_compile_definitions(blockSQP2 PUBLIC LINUX)
 	endif()
-	target_compile_options(blockSQP PRIVATE 
+	target_compile_options(blockSQP2 PRIVATE 
 		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
 		-O3
 		# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
+		# -DMATRIX_DEBUG -O0 -g
 		)
 elseif(WIN32)
-	target_compile_definitions(blockSQP PUBLIC WINDOWS)
+	target_compile_definitions(blockSQP2 PUBLIC WINDOWS)
 	if(MINGW)
-		target_compile_options(blockSQP PRIVATE 
+		target_compile_options(blockSQP2 PRIVATE 
 			-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
 			-O3
 			# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
@@ -227,12 +227,12 @@ elseif(WIN32)
 	endif()
 endif()
 
-set_target_properties(blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
-										  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
-										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
+set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
+										  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/lib
+										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 
-target_include_directories(blockSQP PUBLIC blockSQP/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES ${OPENBLAS_INCLUDE_DIR})
-target_link_libraries(blockSQP PUBLIC qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
+target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES ${OPENBLAS_INCLUDE_DIR})
+target_link_libraries(blockSQP2 PUBLIC qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
 
@@ -240,10 +240,10 @@ target_link_libraries(blockSQP PUBLIC qpOASES) #Important: If qpOASES is built w
 #Also attach copying of dlls here since we copy dmumps_c_dyn anyways.
 set(COPY_COUNTER 0)
 if (UNIX AND NOT APPLE)
-	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
-	set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
-												  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
-												  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
+	add_library(dmumps_c_dyn SHARED blockSQP2/src/ext/dmumps_c_dyn.cpp)
+	set_target_properties(dmumps_c_dyn PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
+												  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/lib
+												  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
 	target_compile_options(dmumps_c_dyn PRIVATE -O3 -fvisibility=hidden)
 
@@ -253,18 +253,18 @@ if (UNIX AND NOT APPLE)
 		set(COPY_COUNTER ${COPY_COUNTER_LOCAL} PARENT_SCOPE)
 
 		add_custom_target(${MUMPS_COPY_TARGET} ALL
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/blockSQP/bin/libdmumps_c_dyn.so ${LIBPATH}
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/blockSQP2/bin/libdmumps_c_dyn.so ${LIBPATH}
 			COMMENT "Copying dynamic libraries\n"
 		)
 
 		add_dependencies(${MUMPS_COPY_TARGET} dmumps_c_dyn)
 	endfunction()
 elseif(WIN32)	
-	add_library(dmumps_c_dyn SHARED blockSQP/src/ext/dmumps_c_dyn.cpp)
+	add_library(dmumps_c_dyn SHARED blockSQP2/src/ext/dmumps_c_dyn.cpp)
 	set_target_properties(dmumps_c_dyn PROPERTIES 
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin
-		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/lib
-		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP/bin)
+		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
+		ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/lib
+		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 	target_link_libraries(dmumps_c_dyn PRIVATE MUMPS::MUMPS)
 	
 	if(MINGW)
@@ -295,7 +295,7 @@ elseif(WIN32)
 	if(NOT EXISTS ${GCC_BIN_DIR}/libstdc++-6.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgfortran-5.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgcc_s_seh-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libwinpthread-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libquadmath-0.dll)
 		message(FATAL_ERROR "Could not find one of libstdc++-6.dll, libgfortran.dll, libgcc_s_seh-1.dll, libwinpthread-1.dll, libquadmath-0.dll in ${GCC_BIN_DIR}")
 	endif()
-	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll)
+	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
 	]]
 
 	set(OPENBLAS_BINARY ${OPENBLAS_DIR}/bin/libopenblas.dll)
@@ -310,7 +310,7 @@ elseif(WIN32)
 		foreach(i RANGE 0 7)
 			set(MUMPS_COPY_PRODUCT ${LIBPATH}/dmumps_c_dyn_${i}.dll)
 			list(APPEND COPY_COMMANDS 
-				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/blockSQP/bin/libdmumps_c_dyn.dll ${MUMPS_COPY_PRODUCT}
+				COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_SOURCE_DIR}/blockSQP2/bin/libdmumps_c_dyn.dll ${MUMPS_COPY_PRODUCT}
 			)
 		endforeach()
 
@@ -320,11 +320,13 @@ elseif(WIN32)
 			)
 		
 		##C/C++/Fortran etc. standard libraries
+		#[[
 		if (STDLIB_BINARIES)
 			list(APPEND COPY_COMMANDS
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STDLIB_BINARIES} ${LIBPATH}
 			)
 		endif()
+		]]
 
 		set(MUMPS_COPY_TARGET MCT_${COPY_COUNTER})
 		MATH(EXPR COPY_COUNTER_LOCAL "${COPY_COUNTER} + 1")
@@ -337,34 +339,78 @@ elseif(WIN32)
 
 		add_dependencies(${MUMPS_COPY_TARGET} dmumps_c_dyn)
 	endfunction()
+
+
+	if(MINGW)
+		execute_process(
+			COMMAND where gcc.exe
+			OUTPUT_VARIABLE GCC_PATH
+			RESULT_VARIABLE GCC_ERROR
+			OUTPUT_STRIP_TRAILING_WHITESPACE
+		)
+		if (GCC_ERROR)
+			message(FATAL_ERROR "gcc.exe not found on PATH!")
+		endif()
+
+		string(REPLACE "\r" "" GCC_PATH "${GCC_PATH}")
+		string(REGEX MATCH "^[^\n]*" GCC_PATH "${GCC_PATH}")
+
+		message(STATUS "Found gcc at: ${GCC_PATH}.")
+		get_filename_component(GCC_BIN_DIR "${GCC_PATH}" DIRECTORY)
+	
+		if(NOT EXISTS ${GCC_BIN_DIR}/libstdc++-6.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgfortran-5.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgcc_s_seh-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libwinpthread-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libquadmath-0.dll)
+			message(FATAL_ERROR "Could not find one of libstdc++-6.dll, libgfortran.dll, libgcc_s_seh-1.dll, libwinpthread-1.dll, libquadmath-0.dll in ${GCC_BIN_DIR}")
+		endif()
+		set(MINGW_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
+		message(STATUS "Found MINGW binaries: " ${MINGW_BINARIES})
+
+		function(copy_mingw_libraries_to LIBPATH)
+			set(MINGW_COPY_TARGET MINGW_COPY_${COPY_COUNTER})
+			MATH(EXPR COPY_COUNTER_LOCAL "${COPY_COUNTER} + 1")
+			set(COPY_COUNTER ${COPY_COUNTER_LOCAL} PARENT_SCOPE)
+			set(MINGW_COPY_COMMAND COMMAND ${CMAKE_COMMAND} -E copy_if_different ${MINGW_BINARIES} ${LIBPATH})
+
+			add_custom_target(${MINGW_COPY_TARGET} ALL
+							  ${MINGW_COPY_COMMAND}
+							  COMMENT "Copying mingw dynamic standard libraries\n"
+			)
+			add_dependencies(${MINGW_COPY_TARGET} dmumps_c_dyn)
+		endfunction()
+	else()
+		function(copy_mingw_libraries_to LIBPATH)
+		endfunction()
+	endif()
 else()
 	function(copy_dynamic_libraries_to LIBPATH)
+	endfunction()
+
+	function(copy_mingw_libraries_to LIBPATH)
 	endfunction()
 endif()
 
 #Mumps dynamic libraries are available. Set corresponding preprocessor flag
-target_compile_definitions(blockSQP PRIVATE DMUMPS_C_DYN)
+target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN)
 
 #Build examples and place executables and required libraries in dedicated folder
-copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP/examples/bin)
+copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin)
 
-add_executable(example1 blockSQP/examples/example1.cpp)
-target_link_libraries(example1 blockSQP)
+add_executable(example1 blockSQP2/examples/example1.cpp)
+target_link_libraries(example1 blockSQP2)
 set_target_properties(example1
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin")
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin")
 	
-add_executable(example1_sparse blockSQP/examples/example1_sparse.cpp)
-target_link_libraries(example1_sparse blockSQP)
+add_executable(example1_sparse blockSQP2/examples/example1_sparse.cpp)
+target_link_libraries(example1_sparse blockSQP2)
 set_target_properties(example1_sparse
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin")
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin")
 
-add_executable(example_condensing blockSQP/examples/example_condensing.cpp)
-target_link_libraries(example_condensing blockSQP)
+add_executable(example_condensing blockSQP2/examples/example_condensing.cpp)
+target_link_libraries(example_condensing blockSQP2)
 set_target_properties(example_condensing
 	PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP/examples/bin"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
 )
 
 
@@ -373,21 +419,21 @@ set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface sho
 if(PYTHON_INTERFACE)
 	if (NOT PYTHON_INTERPRETER STREQUAL "")
 		message(STATUS "Using python interpreter ${PYTHON_INTERPRETER}")
-		set (PYTHON_EXECUTABLE ${PYTHON_INTERPRETER})
+		set (Python_EXECUTABLE ${PYTHON_INTERPRETER})
 	endif()
 	
 	FetchContent_Declare(
 		PYBIND11
 		GIT_REPOSITORY https://github.com/pybind/pybind11.git
-		GIT_TAG a2e59f0e7065404b44dfe92a28aca47ba1378dc4	#2.13.6; feel free to update to a later version
+		GIT_TAG f5fbe867d2d26e4a0a9177a51f6e568868ad3dc8 	#v. 3.0.1
 	)
 	FetchContent_MakeAvailable(PYBIND11)
 	
-	pybind11_add_module(py_blockSQP py_blockSQP/py_blockSQP.cpp)
-	target_include_directories(py_blockSQP PUBLIC blockSQP/include)	
+	pybind11_add_module(pyblockSQP2 "Python/pyblockSQP2.cpp")
+	target_include_directories(pyblockSQP2 PUBLIC blockSQP2/include)	
 	
-	if(UNIX)
-		target_compile_options(py_blockSQP PRIVATE 
+	if(UNIX OR MINGW)
+		target_compile_options(pyblockSQP2 PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
 					-O3
@@ -395,56 +441,61 @@ if(PYTHON_INTERFACE)
 		
 		#Prevent warnings for *_pointer_interface and T_array constructors 
 		#that occur after compiling with -O3. Result of using int instead of size_t, should not cause any problems.
-		target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
+		target_link_options(pyblockSQP2 PRIVATE -Wno-alloc-size-larger-than)
+	#[[
 	elseif(MINGW)
-		target_compile_options(py_blockSQP PRIVATE 
+		target_compile_options(pyblockSQP2 PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden
 					-O3
 					)
-		target_link_options(py_blockSQP PRIVATE -Wno-alloc-size-larger-than)
+		target_link_options(pyblockSQP2 PRIVATE -Wno-alloc-size-larger-than)
+	]]
 	endif()
 	
-	target_link_libraries(py_blockSQP PUBLIC blockSQP)
+	target_link_libraries(pyblockSQP2 PUBLIC blockSQP2)
 
 	if(MINGW)
-		target_link_libraries(py_blockSQP PRIVATE -static)
+		target_link_libraries(pyblockSQP2 PRIVATE -static)
 	endif()
 
-	set(py_blockSQP_DIR ${CMAKE_SOURCE_DIR}/py_blockSQP)
-	set_target_properties(py_blockSQP PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
-												 RUNTIME_OUTPUT_DIRECTORY ${py_blockSQP_DIR}
+	set(pyblockSQP2_DIR ${CMAKE_SOURCE_DIR}/Python/blockSQP2)
+	set_target_properties(pyblockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${pyblockSQP2_DIR}
+												 RUNTIME_OUTPUT_DIRECTORY ${pyblockSQP2_DIR}
 												 )
-	copy_dynamic_libraries_to(${py_blockSQP_DIR})
+	copy_dynamic_libraries_to(${pyblockSQP2_DIR})
+	if(MINGW)
+		copy_mingw_libraries_to(${pyblockSQP2_DIR})
+	endif()
 endif()
 
 
 #Build C interface to complete blockSQP.jl
 option(JULIA_INTERFACE "build Julia interface" ON)
 if(JULIA_INTERFACE)
-	add_library(blockSQP_jl SHARED C_blockSQP/C_blockSQP.cpp)
-	target_link_libraries(blockSQP_jl PUBLIC blockSQP)
+	add_library(blockSQP2_jl SHARED C/CblockSQP2.cpp)
+	target_link_libraries(blockSQP2_jl PUBLIC blockSQP2)
 	
-	target_include_directories(blockSQP_jl PUBLIC blockSQP/include)
+	target_include_directories(blockSQP2_jl PUBLIC blockSQP2/include)
 	if(UNIX)
-		target_compile_options(blockSQP_jl PRIVATE 
+		target_compile_options(blockSQP2_jl PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden
 					-O3
 					)
 	elseif(MINGW)
-		target_compile_options(blockSQP_jl PRIVATE 
+		target_compile_options(blockSQP2_jl PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden
 					-O3
 					)
-		target_link_libraries(blockSQP_jl PRIVATE -static)
+		target_link_libraries(blockSQP2_jl PRIVATE -static)
 	endif()
-	set_target_properties(blockSQP_jl PROPERTIES 
+	set_target_properties(blockSQP2_jl PROPERTIES 
 			PREFIX lib
-			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP.jl/bin
-			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP.jl/bin
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin
 	)
-	copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP.jl/bin)
+	copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin)
 endif()
 

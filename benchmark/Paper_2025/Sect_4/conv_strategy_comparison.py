@@ -4,9 +4,9 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2])]
+sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
 
-import py_blockSQP
+import blockSQP2
 import OCP_experiment
 import OCProblems
 
@@ -32,18 +32,18 @@ Examples = [
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
 #SR1_BFGS
-opt_SR1_BFGS = py_blockSQP.SQPoptions()
+opt_SR1_BFGS = blockSQP2.SQPoptions()
 opt_SR1_BFGS.max_conv_QPs = 1
 opt_SR1_BFGS.max_filter_overrides = 0
 
 #Convexification strategy 1
-opt_CS1 = py_blockSQP.SQPoptions()
+opt_CS1 = blockSQP2.SQPoptions()
 opt_CS1.max_conv_QPs = 4
 opt_CS1.conv_strategy = 1
 opt_CS1.max_filter_overrides = 0
 
 #Convexification strategy 2
-opt_CS2 = py_blockSQP.SQPoptions()
+opt_CS2 = blockSQP2.SQPoptions()
 opt_CS2.max_conv_QPs = 4
 opt_CS2.conv_strategy = 2
 opt_CS2.max_filter_overrides = 0

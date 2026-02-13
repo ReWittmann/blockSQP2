@@ -1,7 +1,7 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
-#                solver based on blockSQP by Dennis Janka.
+# blockSQP2 -- A structure-exploiting nonlinear programming solver based
+#              on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
-#
+
 # Licensed under the zlib license. See LICENSE for more details.
 
 
@@ -9,7 +9,7 @@
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Helper functions for benchmarking py_blockSQP and casadi NLP solvers
+# Helper functions for benchmarking blockSQP2 and casadi NLP solvers
 
 import sys
 from pathlib import Path
@@ -17,10 +17,10 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parent)]
+sys.path += [str(cD.parent/Path("Python"))]
 
 import OCProblems
-import py_blockSQP
+import blockSQP2
 import numpy as np
 import time
 import datetime
@@ -32,23 +32,23 @@ import casadi as cs
 
 
 def create_prob_cond(OCprob : OCProblems.OCProblem):
-    vBlocks = py_blockSQP.vblock_array(len(OCprob.vBlock_sizes))
-    cBlocks = py_blockSQP.cblock_array(len(OCprob.cBlock_sizes))
-    hBlocks = py_blockSQP.int_array(len(OCprob.hessBlock_sizes))
-    targets = py_blockSQP.condensing_targets(1)
+    vBlocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))
+    cBlocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
+    hBlocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
+    targets = blockSQP2.condensing_targets(1)
     for i in range(len(OCprob.vBlock_sizes)):
-        vBlocks[i] = py_blockSQP.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
+        vBlocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
     for i in range(len(OCprob.cBlock_sizes)):
-        cBlocks[i] = py_blockSQP.cblock(OCprob.cBlock_sizes[i])
+        cBlocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
     for i in range(len(OCprob.hessBlock_sizes)):
         hBlocks[i] = OCprob.hessBlock_sizes[i]
-    targets[0] = py_blockSQP.condensing_target(*OCprob.ctarget_data)
+    targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
     HOLD = [vBlocks, cBlocks, hBlocks, targets]
     
-    cond = py_blockSQP.Condenser(vBlocks, cBlocks, hBlocks, targets)
+    cond = blockSQP2.Condenser(vBlocks, cBlocks, hBlocks, targets)
     
     
-    prob = py_blockSQP.Problemspec()
+    prob = blockSQP2.Problemspec()
     prob.x_start = OCprob.start_point
     
     prob.nVar = OCprob.nVar
@@ -66,7 +66,11 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     
     return prob, cond, HOLD
 
-def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
+def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
+    """Run blockSQP on the given problem for start points perturbed at nPert0:nPertF
+    Return a vector of the iteration counts, the solution times in seconds and a vector of return codes
+    indication the success: < 0 - failure, 0 - max it reached, 1 - partial success, > 1 success"""
+
     N_SQP = []
     N_secs = []
     type_sol = []
@@ -79,9 +83,9 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
             prob.cond = cond
         
         prob.complete()
-        stats = py_blockSQP.SQPstats("./solver_outputs")        
+        stats = blockSQP2.SQPstats("./solver_outputs")        
         t0 = time.monotonic()
-        optimizer = py_blockSQP.SQPmethod(prob, opts, stats)
+        optimizer = blockSQP2.SQPmethod(prob, opts, stats)
         optimizer.init()
         ret = optimizer.run(itMax)
         optimizer.finish()
@@ -89,14 +93,15 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : py_blockSQP.SQPoption
         
         N_SQP.append(stats.itCount)
         N_secs.append(t1 - t0)
-        if int(ret) >= 0:
-            type_sol.append(int(ret))
+        if ret.value >= 0:
+            type_sol.append(ret.value)
         else:
             type_sol.append(-1)    
     return N_SQP, N_secs, type_sol
 
 
 def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, arg_opts : dict, nPert0, nPertF, itMax = 200):
+    """Same as perturbed_starts, but allows specifying a casadi NLP solver as first argument"""
     NLP = OCprob.NLP
     opts = arg_opts
     N_SQP = []
@@ -124,6 +129,11 @@ def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, 
 
 
 def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     n_xticks = 10
     tdist = round((nPertF - nPert0)/n_xticks)
     tdist += (tdist==0)
@@ -174,8 +184,14 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_time.set_xticks(xticks)
 
     plt.show()
-    
+
+
 def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to plot_successful is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -246,7 +262,13 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         plt.savefig(dirPath / Path(pref + "_it_s_" + name_app + "_" + date_app))
     plt.close()
 
+
 def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to plot_varshape is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -337,6 +359,11 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
 
 def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol, suptitle = None, dirPath : Path = None, savePrefix = None):
+    """Plot result of multiple runs for perturbed start points for different options. 
+    n_EXP - number of different options,
+    nPert0, nPertF - start and end index of perturbed start points,
+    EXP_... - vector of vectors of iterations counts, solution times and return codes for the pertubed start points.
+    """
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to plot_successful_small is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -406,6 +433,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
 
 
 def print_heading(out, EXP_names : list[str]):
+    """Prepare new file for later calling print_iterations on out"""
     out.write(" "*27)
     for EXP_name in EXP_names:
         out.write(EXP_name[0:40].ljust(21 + 5 + 21))
@@ -417,6 +445,10 @@ def print_heading(out, EXP_names : list[str]):
     out.write("\n")
     
 def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+    """Print iteration count and solution time - averages and 
+    standard deviations to file, EXP_... being vectors returned by
+    the perburbed_starts functions.
+    """
     n_EXP = len(EXP_N_SQP)
     EXP_N_SQP_mu = [sum(EXP_N_SQP[i])/len(EXP_N_SQP[i]) for i in range(n_EXP)]
     EXP_N_SQP_sigma = [(sum((np.array(EXP_N_SQP[i]) - EXP_N_SQP_mu[i])**2)/len(EXP_N_SQP[i]))**(0.5) for i in range(n_EXP)]
@@ -440,7 +472,7 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True):
+def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -479,7 +511,7 @@ def run_ipopt_experiments(Examples : list[type], Experiments : list[tuple[dict, 
     out.close()
 
 
-def run_blockSQP_experiments(Examples : list[type], Experiments : list[tuple[py_blockSQP.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
+def run_blockSQP_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)

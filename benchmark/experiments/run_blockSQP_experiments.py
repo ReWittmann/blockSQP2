@@ -1,7 +1,7 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
-#                solver based on blockSQP by Dennis Janka.
+# blockSQP2 -- A structure-exploiting nonlinear programming solver based
+#              on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
-#
+
 # Licensed under the zlib license. See LICENSE for more details.
 
 
@@ -9,7 +9,7 @@
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Script to benchmark py_blockSQP on several problems 
+# Script to benchmark blockSQP2 on several problems 
 # for perturbed start points for different options
 
 import datetime
@@ -19,9 +19,9 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parent), str(cD.parents[1])]
+sys.path += [str(cD.parent), str(cD.parents[1]/Path("Python"))]
 
-import py_blockSQP
+import blockSQP2
 import OCP_experiment
 import OCProblems
 
@@ -47,41 +47,36 @@ Examples = [
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
 #SR1_BFGS
-opt_SR1_BFGS = py_blockSQP.SQPoptions()
+opt_SR1_BFGS = blockSQP2.SQPoptions()
 opt_SR1_BFGS.max_conv_QPs = 1
 opt_SR1_BFGS.max_filter_overrides = 0
 opt_SR1_BFGS.BFGS_damping_factor = 0.2
 
 #Convexification strategy 0
-opt_CS0 = py_blockSQP.SQPoptions()
+opt_CS0 = blockSQP2.SQPoptions()
 opt_CS0.max_conv_QPs = 4
 opt_CS0.conv_strategy = 0
 opt_CS0.max_filter_overrides = 0
 
 #Convexification strategy 1
-opt_CS1 = py_blockSQP.SQPoptions()
+opt_CS1 = blockSQP2.SQPoptions()
 opt_CS1.max_conv_QPs = 4
 opt_CS1.conv_strategy = 1
 opt_CS1.max_filter_overrides = 0
 
 #Convexification strategy 2
-opt_CS2 = py_blockSQP.SQPoptions()
+opt_CS2 = blockSQP2.SQPoptions()
 opt_CS2.max_conv_QPs = 4
 opt_CS2.conv_strategy = 2
 opt_CS2.max_filter_overrides = 0
 
 #Full structure exploitation
-opt_full = py_blockSQP.SQPoptions()
+opt_full = blockSQP2.SQPoptions()
 opt_full.max_conv_QPs = 4
 opt_full.conv_strategy = 2
 opt_full.automatic_scaling = True
+opt_full.par_QPs = True
 
-opt_dense = py_blockSQP.SQPoptions()
-opt_dense.hess_approx = 2
-opt_dense.sizing = 4
-QPopts = py_blockSQP.qpOASES_options()
-QPopts.sparsityLevel = 2
-opt_dense.qpsol_options = QPopts
 
 #Select option sets to test for
 Experiments = [
@@ -89,8 +84,7 @@ Experiments = [
                # (opt_CS0, "Convexification strategy 0"),
                # (opt_CS1, "conv. str. 1"),
                # (opt_CS2, "conv. str. 2"),
-               (opt_full, "opt_full"),
-               # (opt_dense, "opt_dense")
+               (opt_full, "opt_full_NTP"),
                ]
 
 

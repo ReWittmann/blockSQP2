@@ -1,7 +1,7 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
-#                solver based on blockSQP by Dennis Janka.
+# blockSQP2 -- A structure-exploiting nonlinear programming solver based
+#              on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
-#
+
 # Licensed under the zlib license. See LICENSE for more details.
 
 
@@ -25,21 +25,21 @@ import OCProblems
 
 Examples = [
             OCProblems.Batch_Reactor,
-            OCProblems.Cart_Pendulum,
-            OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
-            OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
-            OCProblems.Hang_Glider,
-            OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Time_Optimal_Car,
-            OCProblems.Tubular_Reactor,
-            OCProblems.Lotka_OED,
+            # OCProblems.Cart_Pendulum,
+            # OCProblems.Catalyst_Mixing,
+            # OCProblems.Cushioned_Oscillation,
+            # OCProblems.Egerstedt_Standard,
+            # OCProblems.Electric_Car,
+            # OCProblems.Goddard_Rocket,
+            # OCProblems.Hang_Glider,
+            # OCProblems.Hanging_Chain,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Quadrotor_Helicopter,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Time_Optimal_Car,
+            # OCProblems.Tubular_Reactor,
+            # OCProblems.Lotka_OED,
             ]
 Experiments = [
                 ({'ipopt': {'hessian_approximation': 'limited-memory', 'tol': 1e-6}}, "Ipopt, limited-memory, tol 1e-6"),

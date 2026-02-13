@@ -1,7 +1,7 @@
-# py_blockSQP -- A python interface to blockSQP 2, a nonlinear programming
-#                solver based on blockSQP by Dennis Janka.
+# blockSQP2 -- A structure-exploiting nonlinear programming solver based
+#              on blockSQP by Dennis Janka.
 # Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
-#
+
 # Licensed under the zlib license. See LICENSE for more details.
 
 
@@ -19,18 +19,17 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(
-                    nt = 100,
-                    refine = 1,
+OCprob = OCProblems.Lotka_Volterra_Fishing_MAYER(
+                    nt = 20,
+                    refine = 6,
                     parallel = True,
                     integrator = 'RK4',
-                    
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'exact'
-ipopts['tol'] = 1e-6
-ipopts['constr_viol_tol'] = 1e-6
+ipopts['hessian_approximation'] = 'limited-memory'
+ipopts['tol'] = 1e-5
+ipopts['constr_viol_tol'] = 1e-5
 ipopts['max_iter'] = itMax
 
 sp = OCprob.start_point
@@ -39,7 +38,7 @@ S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 
 # S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : None, "jit" : False, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}})#, 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":False, "fatrop.print_level":10, "jit_options": {"flags": "-O3", "verbose": True}})#, {'ipopt':ipopts})
 #See fatrop source code - legacy/src/OCPCInterface.cpp for options
-# S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : 'manual', 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":False, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}, \
+# S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : 'manual', 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":True, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}, \
 #                                           'fatrop':{'tol':1e-6, 'acceptable_tol':1e-4}
 #                                           })
 

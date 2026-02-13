@@ -4,8 +4,8 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2])]
-import py_blockSQP
+sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
+import blockSQP2
 import OCP_experiment
 import OCProblems
 
@@ -20,7 +20,7 @@ nPertF = 40
 itMax = 400
 ###############################################################################
 
-opts = py_blockSQP.SQPoptions()
+opts = blockSQP2.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
@@ -30,11 +30,10 @@ opts.par_QPs = True
 opts.enable_QP_cancellation = True
 opts.indef_delay = 3
 
-opts.exact_hess = 0
-opts.hess_approx = 1
-opts.sizing = 2
-opts.fallback_approx = 2
-opts.fallback_sizing = 4
+opts.hess_approx = 'SR1'
+opts.sizing = 'OL'
+opts.fallback_approx = 'BFGS'
+opts.fallback_sizing = 'COL'
 opts.BFGS_damping_factor = 1/3
 
 opts.lim_mem = True
@@ -43,7 +42,7 @@ opts.opt_tol = 1e-6
 opts.feas_tol = 1e-6
 
 opts.qpsol = 'qpOASES'
-QPopts = py_blockSQP.qpOASES_options()
+QPopts = blockSQP2.qpOASES_options()
 QPopts.printLevel = 0
 QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts

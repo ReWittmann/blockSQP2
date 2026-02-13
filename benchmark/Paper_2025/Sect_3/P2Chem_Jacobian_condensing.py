@@ -6,11 +6,11 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[2])]
+sys.path += [str(cD.parents[2]/Path("Python"))]
 
 import matplotlib.pyplot as plt
 from scipy.sparse import coo_matrix
-import py_blockSQP
+import blockSQP2
 
 
 structure_data = np.load(cD / Path('structure_data.npz'))
@@ -25,29 +25,29 @@ for i in range(5):
 
 
 #Condensing information
-vblocks = py_blockSQP.vblock_array(len(vblock_sizes))
+vblocks = blockSQP2.vblock_array(len(vblock_sizes))
 for i in range(len(vblock_sizes)):
-    vblocks[i] = py_blockSQP.vblock(vblock_sizes[i], vblock_dependencies[i])
+    vblocks[i] = blockSQP2.vblock(vblock_sizes[i], vblock_dependencies[i])
 
-cblocks = py_blockSQP.cblock_array(len(cblock_sizes))
+cblocks = blockSQP2.cblock_array(len(cblock_sizes))
 for i in range(len(cblock_sizes)):
-    cblocks[i] = py_blockSQP.cblock(cblock_sizes[i])
+    cblocks[i] = blockSQP2.cblock(cblock_sizes[i])
 
-targets = py_blockSQP.condensing_targets(5)
+targets = blockSQP2.condensing_targets(5)
 for i in range(5):
-    targets[i] = py_blockSQP.condensing_target(*(targets_data[i]))
+    targets[i] = blockSQP2.condensing_target(*(targets_data[i]))
 
-hessblock_sizes = py_blockSQP.int_array(len(hsizes))
+hessblock_sizes = blockSQP2.int_array(len(hsizes))
 np.array(hessblock_sizes, copy = False)[:] = hsizes
 
-cond_nobounds = py_blockSQP.Condenser(vblocks, cblocks, hessblock_sizes, targets, 0)
-cond_bounds = py_blockSQP.Condenser(vblocks, cblocks, hessblock_sizes, targets, 2)
+cond_nobounds = blockSQP2.Condenser(vblocks, cblocks, hessblock_sizes, targets, 0)
+cond_bounds = blockSQP2.Condenser(vblocks, cblocks, hessblock_sizes, targets, 2)
 
 #Prepare calculation of the condensed jacobian
 
-###Create py_blockSQP.condensing_args object to pass to Condenser
+###Create blockSQP2.condensing_args object to pass to Condenser
 def identity_S(n, scale = 1.0):
-    M = py_blockSQP.SymMatrix(n)
+    M = blockSQP2.SymMatrix(n)
     M.Initialize(0)
     for i in range(n):
         M[i,i] = scale
@@ -61,11 +61,11 @@ lb_con = prob_vectors['lb_con'].reshape(-1)
 ub_con = prob_vectors['ub_con'].reshape(-1)
 grad_obj = prob_vectors['grad_obj'].reshape(-1)
 
-M_lb_var = py_blockSQP.Matrix(len(lb_var))
-M_ub_var = py_blockSQP.Matrix(len(ub_var))
-M_lb_con = py_blockSQP.Matrix(len(lb_con))
-M_ub_con = py_blockSQP.Matrix(len(ub_con))
-M_grad_obj = py_blockSQP.Matrix(len(grad_obj))
+M_lb_var = blockSQP2.Matrix(len(lb_var))
+M_ub_var = blockSQP2.Matrix(len(ub_var))
+M_lb_con = blockSQP2.Matrix(len(lb_con))
+M_ub_con = blockSQP2.Matrix(len(ub_con))
+M_grad_obj = blockSQP2.Matrix(len(grad_obj))
 
 np.array(M_lb_var, copy = False)[:,0] = lb_var
 np.array(M_ub_var, copy = False)[:,0] = ub_var
@@ -82,23 +82,23 @@ nz = np.array(Jacobian['nz'])
 row = np.array(Jacobian['row'])
 colind = np.array(Jacobian['colind'])
 
-A_nz = py_blockSQP.double_array(nnz)
-A_row = py_blockSQP.int_array(nnz)
-A_colind = py_blockSQP.int_array(n + 1)
+A_nz = blockSQP2.double_array(nnz)
+A_row = blockSQP2.int_array(nnz)
+A_colind = blockSQP2.int_array(n + 1)
 np.array(A_nz, copy = False)[:] = nz
 np.array(A_row, copy = False)[:] = row
 np.array(A_colind, copy = False)[:] = colind
 
-SM_Jacobian = py_blockSQP.Sparse_Matrix(m, n, A_nz, A_row, A_colind)
+SM_Jacobian = blockSQP2.Sparse_Matrix(m, n, A_nz, A_row, A_colind)
 
 #Set Hessian as identity scaled by 1e-4, causes the step 
 #to potentially violate implicit bounds
-hess = py_blockSQP.SymMat_array(len(hsizes))
+hess = blockSQP2.SymMat_array(len(hsizes))
 for i in range(len(hsizes)):
     hess[i] = identity_S(hsizes[i], 1e-4)
 
 
-cond_args_nobounds = py_blockSQP.condensing_args()
+cond_args_nobounds = blockSQP2.condensing_args()
 cond_args_nobounds.grad_obj = M_grad_obj
 cond_args_nobounds.con_jac = SM_Jacobian 
 cond_args_nobounds.hess = hess
@@ -122,7 +122,7 @@ deltaXi = np.array(cond_args_nobounds.deltaXi).reshape(-1)
 deltaXi_rest_nobounds = np.array(cond_args_nobounds.deltaXi_rest).reshape(-1)
 print("||deltaXi - deltaXi_rest_nobounds|| = ", np.linalg.norm(deltaXi - deltaXi_rest_nobounds, np.inf), "\n\n")
 
-cond_args_bounds = py_blockSQP.condensing_args()
+cond_args_bounds = blockSQP2.condensing_args()
 cond_args_bounds.grad_obj = M_grad_obj
 cond_args_bounds.con_jac = SM_Jacobian 
 cond_args_bounds.hess = hess
