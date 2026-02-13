@@ -25,9 +25,9 @@ import numpy as np
 import time
 import datetime
 import matplotlib.pyplot as plt
-import shutil
-if shutil.which("latex") is not None:
-    plt.rcParams["text.usetex"] = True
+# import shutil
+# if shutil.which("latex") is not None:
+#     plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 
@@ -205,7 +205,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
     
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        if shutil.which("latex") is not None:
+        if plt.rcParams['text.usetex']:
             fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
         else:
             fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
@@ -287,7 +287,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
     fig = plt.figure(constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 3.5 + 3.5*(n_EXP - 1)))
     if isinstance(suptitle, str):
-        if shutil.which("latex") is not None:
+        if plt.rcParams['text.usetex']:
             fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = 24, fontweight = 'bold')
         else:
             fig.suptitle(suptitle, fontsize = 24, fontweight = 'bold')
@@ -366,7 +366,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
     fig, ax = plt.subplots(nrows = n_EXP, ncols = 2, constrained_layout=True, dpi = 300, figsize = (14+2*(max(n_EXP - 2, 0)), 2.5 + 2.5*(n_EXP - 1)))
     
     if isinstance(suptitle, str):
-        if shutil.which("latex") is not None:
+        if plt.rcParams['text.usetex']:
             fig.suptitle(r"$\textbf{" + suptitle + "}$", fontsize = titlesize, fontweight = 'bold')
         else:
             fig.suptitle(suptitle, fontsize = titlesize, fontweight = 'bold')

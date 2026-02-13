@@ -9,6 +9,8 @@ except:
 sys.path += [str(cD.parents[2])]
 
 import matplotlib.pyplot as plt
+# plt.rcParams["text.usetex"] = True
+
 from scipy.sparse import coo_matrix
 import py_blockSQP
 
@@ -196,7 +198,6 @@ J_cond_B_coo = coo_matrix((nz_cond_2, (row_cond_2, col_cond_2)), shape=(m_cond_2
 
 
 #Full constraint matrix
-plt.rcParams["text.usetex"] = True
 fig, ax = plt.subplots(dpi = 200, figsize = (12*0.65, 9*0.65))
 ax.spy(J_full_coo, markersize = 0.05)
 ax.tick_params(labelsize = 'x-large')
