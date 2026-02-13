@@ -54,7 +54,7 @@ QPopts.sparsityLevel = 2
 opts.qpsol_options = QPopts
 ################################
 
-#Define blockSQP Problemspec
+#Define blockSQP2 Problemspec
 prob = blockSQP2.Problemspec()
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon

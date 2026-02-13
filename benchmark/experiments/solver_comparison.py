@@ -28,9 +28,9 @@ import OCProblems
 
 #RK4/collocation/cvodes
 ODE_integrator = 'RK4'
-dirPath = cD / Path("out_ipopt_blockSQP")
+dirPath = cD / Path("out_ipopt_blockSQP2")
 
-file_prefix = "ipopt_blockSQP"
+file_prefix = "ipopt_blockSQP2"
 
 nPert0 = 0
 nPertF = 40
@@ -63,7 +63,7 @@ ipopt_Experiments = [
                      ({'ipopt': {'hessian_approximation': 'exact', 'tol': 1e-6}}, 'ipopt, exact Hessian')
                      ]
 
-casadi_blockSQP_Experiments = [({'block_hess':True, 'linsol':'ma27', 'max_iter': 1000}, 'casadi blockSQP')]
+casadi_blockSQP2_Experiments = [({'block_hess':True, 'linsol':'ma27', 'max_iter': 1000}, 'casadi blockSQP')]
 
 # worhp_Experiments = [({'worhp':{'ScaledKKT':False, 
 #                                 'TolOpti':1e-6, 
@@ -84,7 +84,7 @@ def opt_conv_str_2_par_scale(max_conv_QPs = 4):
 opt1 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2 = opt_conv_str_2_par_scale(max_conv_QPs = 4)
 opt2.hess_approx = 'exact'
-blockSQP_Experiments = [
+blockSQP2_Experiments = [
                         (opt1, 'blockSQP, SR1-...-BFGS'),
                         # (opt2, 'blockSQP, exH-...-BFGS')
                         ]
@@ -97,8 +97,8 @@ filePath = dirPath / Path(file_prefix + "_it_" + date_app + ".txt")
 out = open(filePath, 'w')
 
 
-titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP_Experiments]
-# titles = [EXP_name for _, EXP_name in casadi_blockSQP_Experiments]
+titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP2_Experiments]
+# titles = [EXP_name for _, EXP_name in casadi_blockSQP2_Experiments]
 # titles = [EXP_name for _, EXP_name in worhp_Experiments]
 
 
@@ -126,7 +126,7 @@ for OCclass in Examples:
         EXP_type_sol.append(ret_type_sol)
         n_EXP += 1
     
-    for EXP_opts, EXP_name in blockSQP_Experiments:
+    for EXP_opts, EXP_name in blockSQP2_Experiments:
         ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
@@ -134,7 +134,7 @@ for OCclass in Examples:
         titles.append(EXP_name)
         n_EXP += 1
     
-    # for EXP_opts, EXP_name in casadi_blockSQP_Experiments:
+    # for EXP_opts, EXP_name in casadi_blockSQP2_Experiments:
     #     ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('blocksqp', OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
     #     EXP_N_SQP.append(ret_N_SQP)
     #     EXP_N_secs.append(ret_N_secs)

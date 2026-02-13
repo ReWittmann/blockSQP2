@@ -10,7 +10,7 @@
 #
 # Collection of optimal control problems implemented using casadi,
 # employing a helper base class for multiple shooting parametrization.
-# Used for testing and benchmarking py_blockSQP
+# Used for testing and benchmarking blockSQP2
 # 
 # The problems originate from various sources, most notably
 #  Dolan, E. D., Moré, J. J., & Munson, T. S. (2004). Benchmarking optimization software with COPS 3.0 (No. ANL/MCS-TM-273). Argonne National Lab., Argonne, IL (US).
@@ -120,7 +120,7 @@ class OCProblem:
     #Starting point for optimization
     start_point : np.ndarray[1, np.float64]
     
-    #Structure and variable type information (integrality, dependency, hessian blocks, ...)##
+    #Structure and variable type information (dependency, hessian blocks, ...)##
     #set by multiple_shooting helper method
     hessBlock_sizes : list[int]
     hessBlock_index : list[int]
@@ -128,7 +128,7 @@ class OCProblem:
     vBlock_dependencies : list[bool]    #Which blocks are free/dependent
             
     cBlock_sizes : list[int]            #Partition of constraints, used to distinguish individual continuity conditions
-    ctarget_data : list[int]            #Specifies target for condensing, see blockSQP/src/blockSQP_condensing.hpp
+    ctarget_data : list[int]            #Specifies target for condensing, see blockSQP2/include/blockSQP2/condensing.hpp
     
     #########################################################
     #Internal fields
@@ -3918,7 +3918,7 @@ class Cart_Pendulum(OCProblem):
     
     param_set_1 = {'u_max': 30, 'lambda_u': 0.5}
     param_set_2 = {'u_max': 15, 'lambda_u': 0.05}
-    param_set_3 = {'u_max': 30, 'lambda_u': 0.05} #causes blockSQP to run into local optimum, ipopts central path leads to likely global optimum
+    param_set_3 = {'u_max': 30, 'lambda_u': 0.05} #causes blockSQP2 to run into local optimum, ipopt's central path leads to likely global optimum
     
     def build_problem(self):
         M, m, l, g, u_max, lambda_u = (self.model_params[key] for key in ['M','m','l','g','u_max','lambda_u'])

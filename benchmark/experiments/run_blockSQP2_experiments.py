@@ -88,7 +88,7 @@ Experiments = [
                ]
 
 
-plot_folder = cD / Path("out_blockSQP_experiments")
+plot_folder = cD / Path("out_blockSQP2_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
@@ -104,7 +104,7 @@ dirPath = plot_folder
 dirPath.mkdir(parents = True, exist_ok = True)
 if file_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-    pref = "blockSQP"
+    pref = "blockSQP2"
     filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
     out = open(filePath, 'w')
 else:
@@ -130,6 +130,6 @@ for OCclass in Examples:
     ###############################################################################
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP")
+        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP2")
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()
