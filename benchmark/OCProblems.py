@@ -529,7 +529,7 @@ class OCProblem:
         g_expr = self.NLP['g']
         
         self._f = cs.Function('cs_f', [xopt], [obj_expr])
-        self.f = lambda xi: np.array(self._f(xi), dtype = np.float64).reshape(-1)
+        self.f = lambda xi: float(self._f(xi))
         
         grad_f_expr = cs.jacobian(obj_expr, xopt)
         self._grad_f = cs.Function('cs_grad_f', [xopt], [grad_f_expr])
