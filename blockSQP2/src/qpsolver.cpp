@@ -26,11 +26,6 @@
 #include <chrono>
 using namespace std::chrono;
 
-// #ifdef LINUX
-//     #include <dlfcn.h>
-// #elif defined(WINDOWS)
-//     //#include "windows.h"
-// #endif
 
 namespace blockSQP2{
 
@@ -48,25 +43,10 @@ std::string to_string(QPresults qpres){
             return "infeasibility";
         default:;
     }
-    return "other error";
+    return "unspecified error";
 }
 std::ostream& operator<<(std::ostream &os, QPresults qpres){
     return os << "\"" << to_string(qpres) << "\"";
-    // switch (qpres){
-    //     case QPresults::undef:
-    //         os << "\"undefined\""; break;
-    //     case QPresults::success:
-    //         os << "\"success\""; break;
-    //     case QPresults::time_it_limit_reached:
-    //         os << "\"time/it limit exceeded\""; break;
-    //     case QPresults::indef_unbounded:
-    //         os << "\"definiteness condition violated or unbounded\""; break;
-    //     case QPresults::infeasible:
-    //         os << "\"infeasibility\""; break;
-    //     default:
-    //         os << "\"other error\"";
-    // }
-	// return os;
 }
 
 QPsolverBase::~QPsolverBase(){}

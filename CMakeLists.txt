@@ -40,11 +40,11 @@ set(LAPACK_LIBRARY ${LAPACK_LIBRARIES})
 
 include(FetchContent)
 FetchContent_Declare(
-	CMAKEMUMPS
-	GIT_REPOSITORY https://github.com/scivision/mumps.git
-	# GIT_TAG 5b153379cdd1b0d2a33daf88bffab16a22ff0004
+	SCIV_MUMPS_SUPERBUILD
+	GIT_REPOSITORY https://github.com/scivision/mumps-superbuild.git
 	GIT_TAG df62d7630760f3efd608f19c8e2002542897f7a9  # v5.8.2.1
 )
+
 # set(gemmt OFF)
 set(MUMPS_parallel OFF)
 set(MUMPS_scalapack OFF)
@@ -63,7 +63,7 @@ set(MUMPS_intsize64 OFF) #We use 32bit-integer BLAS (LP64), so this must be OFF
 #Default to static, since we later build a shared library from this
 set(BUILD_SHARED_LIBS OFF)
 
-FetchContent_MakeAvailable(CMAKEMUMPS)
+FetchContent_MakeAvailable(SCIV_MUMPS_SUPERBUILD)
 
 #############################################################
 #Build instuction for contained files
@@ -259,7 +259,7 @@ if (UNIX AND NOT APPLE)
 
 		add_dependencies(${MUMPS_COPY_TARGET} dmumps_c_dyn)
 	endfunction()
-elseif(WIN32)	
+elseif(WIN32)
 	add_library(dmumps_c_dyn SHARED blockSQP2/src/ext/dmumps_c_dyn.cpp)
 	set_target_properties(dmumps_c_dyn PROPERTIES 
 		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
