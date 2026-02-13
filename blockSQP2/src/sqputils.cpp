@@ -24,9 +24,6 @@
  *
  */
 
- 
-
-
  #include <blockSQP2/iterate.hpp>
  #include <blockSQP2/options.hpp>
  #include <blockSQP2/stats.hpp>
@@ -39,8 +36,7 @@
  #include <chrono>
 
 
-
- namespace blockSQP2{
+namespace blockSQP2{
 
 void SQPmethod::calcLagrangeGradient(const Matrix &lambda, const Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
                                       Matrix &gradLagrange, int flag){
