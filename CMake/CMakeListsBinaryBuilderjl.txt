@@ -15,6 +15,13 @@ set(CMAKE_CXX_STANDARD 20)
 
 
 # LAPACK/BLAS: Included via qpOASES
+find_path(OPENBLAS_PREFIX
+	include/cblas.h
+	DOC "OpenBLAS directory prefix."
+	REQUIRED
+)
+message(STATUS "Found OPENBLAS_PREFIX: ${OPENBLAS_PREFIX}")
+
 # Find dependencies: qpOASES
 find_path(QPOASES_PREFIX
     include/qpOASES.hpp
