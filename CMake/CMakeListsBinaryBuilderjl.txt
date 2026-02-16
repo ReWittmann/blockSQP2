@@ -20,7 +20,7 @@ find_path(OPENBLAS_PREFIX
 	DOC "OpenBLAS directory prefix."
 	REQUIRED
 )
-message(STATUS "Found OPENBLAS_PREFIX: ${OPENBLAS_PREFIX}")
+message(STATUS "Found path OPENBLAS_PREFIX: ${OPENBLAS_PREFIX}")
 
 # Find dependencies: qpOASES
 find_path(QPOASES_PREFIX
@@ -28,6 +28,8 @@ find_path(QPOASES_PREFIX
     DOC "qpOASES directory prefix."
     REQUIRED
     )
+message(STATUS "Found path QPOASES_PREFIX: ${QPOASES_PREFIX}")
+
 find_library(QPOASES_LIBRARY
     qpOASES
     REQUIRED
