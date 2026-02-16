@@ -3,6 +3,8 @@ blockSQP2 -- A structure-exploiting nonlinear programming solver based
 Copyright (C) 2023-2026 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 The original blockSQP license is included under blockSQP2/LICENSE
+This project contains a modified version qpOASES, subject to a separate 
+LGPL license included under blockSQP2/dep/modified_qpOASES/LICENSE
 
 (zlib license):
 
