@@ -6,8 +6,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   {make -C build } OR {cmake --build build}")
 endif()
 
-project(CMakeblockSQP2
-	DESCRIPTION "Build system for blockSQP2, a nonlinear programming solver based on blockSQP by Dennis Janka."
+project(BinaryBuilderblockSQP2
+	DESCRIPTION "Build system for blockSQP2 to be used in BinaryBuilder.jl."
 	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP2
     LANGUAGES CXX
 	)
@@ -57,7 +57,7 @@ add_library(blockSQP2 STATIC
    	blockSQP2/src/sqputils.cpp
 	blockSQP2/src/load_mumps.cpp
    	)
-target_compile_definitions(blockSQP2 PUBLIC QPSOLVER_QPOASES)
+target_compile_definitions(blockSQP2 PUBLIC QPSOLVER_QPOASES SOLVER_MUMPS BSQP_PAR_QPS_DISABLED BSQP_CBLAS_PREFIX=${CBLAS_PREFIX})
 
 if (UNIX AND NOT APPLE)
 	target_compile_definitions(blockSQP2 PUBLIC LINUX)

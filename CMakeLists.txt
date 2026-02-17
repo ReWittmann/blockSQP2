@@ -389,7 +389,7 @@ else()
 endif()
 
 #Mumps dynamic libraries are available. Set corresponding preprocessor flag
-target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN)
+target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN) # -DBSQP_CBLAS_SUFFIX= 
 
 #Build examples and place executables and required libraries in dedicated folder
 copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin)

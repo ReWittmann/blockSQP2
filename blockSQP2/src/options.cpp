@@ -101,7 +101,7 @@ void SQPoptions::optionsConsistency(){
     }
     
     if (par_QPs){
-        #ifdef BLOCKSQP_PAR_QPS_DISABLED
+        #ifdef BSQP_PAR_QPS_DISABLED
             throw ParameterError("Option par_QPs = true --> error, parallel solution of QPs is disabled in this build.");
         #else
             if(qpsol == QPsolvers::qpOASES){
