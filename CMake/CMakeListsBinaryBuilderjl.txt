@@ -31,7 +31,7 @@ find_path(QPOASES_PREFIX
 message(STATUS "Found path QPOASES_PREFIX: ${QPOASES_PREFIX}")
 
 find_library(QPOASES_LIBRARY
-    qpOASES
+    qpOASES_MUMPS
     REQUIRED
     )
 message(STATUS "Found QPOASES_LIBRARY: " ${QPOASES_LIBRARY})
