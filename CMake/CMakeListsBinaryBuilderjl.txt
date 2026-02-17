@@ -34,11 +34,13 @@ find_library(QPOASES_LIBRARY
     qpOASES
     REQUIRED
     )
+message(STATUS "Found QPOASES_LIBRARY: " ${QPOASES_LIBRARY})
 
 find_library(OPENBLAS_LIBRARY
-	OpenBLAS
+	"openblas${OPENBLAS_SUFFIX}"
 	REQUIRED
 )
+message(STATUS "Found OPENBLAS_LIBRARY: " ${OPENBLAS_LIBRARY})
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
@@ -62,7 +64,8 @@ add_library(blockSQP2 STATIC
    	blockSQP2/src/sqputils.cpp
 	blockSQP2/src/load_mumps.cpp
    	)
-target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES SOLVER_MUMPS BSQP_PAR_QPS_DISABLED BSQP_CBLAS_SUFFIX=${CBLAS_SUFFIX})
+target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES SOLVER_MUMPS BSQP_PAR_QPS_DISABLED 
+						BSQP_CBLAS_SUFFIX=${OPENBLAS_SUFFIX})
 
 if (UNIX AND NOT APPLE)
 	target_compile_definitions(blockSQP2 PUBLIC LINUX)
@@ -80,7 +83,7 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 target_include_directories(blockSQP2 PUBLIC ${CMAKE_SOURCE_DIR}/blockSQP2/include 
 											${QPOASES_PREFIX}/include
 											)
-target_link_libraries(blockSQP2 PUBLIC ${QPOASES_LIBRARY})
+target_link_libraries(blockSQP2 PUBLIC ${QPOASES_LIBRARY} ${OPENBLAS_LIBRARY})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 #Build C interface to complete blockSQP.jl
