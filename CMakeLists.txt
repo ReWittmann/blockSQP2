@@ -89,7 +89,7 @@ add_library(qpOASES STATIC
 	)
 
 #MUMPS LINEAR SOLVER
-target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
+target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE __NO_COPYRIGHT__)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS LAPACK::LAPACK BLAS::BLAS) #
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)

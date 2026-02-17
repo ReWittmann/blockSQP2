@@ -35,6 +35,11 @@ find_library(QPOASES_LIBRARY
     REQUIRED
     )
 
+find_library(OPENBLAS_LIBRARY
+	OpenBLAS
+	REQUIRED
+)
+
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
 add_library(blockSQP2 STATIC
