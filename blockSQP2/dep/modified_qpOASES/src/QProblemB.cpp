@@ -40,7 +40,7 @@
 
 
 #include <qpOASES/QProblemB.hpp>
-#include <qpOASES/LapackBlasReplacement.hpp>
+#include <qpOASES/LapackBlas.hpp>
 
 
 BEGIN_NAMESPACE_QPOASES
@@ -1423,10 +1423,12 @@ returnValue QProblemB::computeCholesky( )
 					H->getCol (FR_idx[j], bounds.getFree (), 1.0, &(R[j*nV]) );
 
 				/* R'*R = H */
-				la_int_t info = 0;
-				la_uint_t _nFR = (la_uint_t)nFR, _nV = (la_uint_t)nV;
+				// la_int_t info = 0;
+				// la_uint_t _nFR = (la_uint_t)nFR, _nV = (la_uint_t)nV;
+				lapack_int info = 0;
+				lapack_int _nFR = (lapack_int)nFR, _nV = (lapack_int)nV;
 
-				POTRF( "U", &_nFR, R, &_nV, &info );
+				POTRF( "U", &_nFR, R, &_nV, &info STRLENS1(1));
 
 				/* <0 = invalid call, =0 ok, >0 not spd */
 				if (info > 0) {
