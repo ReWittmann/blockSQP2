@@ -44,7 +44,7 @@ message(STATUS "Found include prefix: " ${INCLUDE_PREFIX})
 # )
 # message(STATUS "Found mumps mpiseq library:" ${MUMPS_MPISEQ_LIBRARY})
 
-if (CMAKE_SYSTE_NAME EQUAL Windows)
+if (CMAKE_SYSTE_NAME STREQUAL "Windows")
 	message(STATUS "Searching for libblastrampoline-5.dll ...")
 	set(BLASTRAMPOLINE_LIBNAME blastrampoline-5)
 else()
