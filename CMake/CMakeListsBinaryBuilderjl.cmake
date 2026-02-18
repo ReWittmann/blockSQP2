@@ -15,10 +15,13 @@ set(CMAKE_CXX_STANDARD 20)
 
 
 find_path(INCLUDE_PREFIX
-	include/dmumps.h
+	include/dmumps_c.h
 	REQUIRED
 )
 message(STATUS "Found include path: " ${INCLUDE_PREFIX})
+
+set(BLAS_INCLUDE_PREFIX ${INCLUDE_PREFIX}/libblastrampoline/LP64/common)
+message(STATUS "BLAS_INCLUDE_PREFIX: " ${BLAS_INCLUDE_PREFIX})
 
 find_library(MUMPS_LIBRARY
 	"dmumps"
@@ -44,11 +47,11 @@ find_library(MUMPS_MPISEQ_LIBRARY
 )
 message(STATUS "Found mumps mpiseq library:" ${MUMPS_MPISEQ_LIBRARY})
 
-find_library(BLASTRAMPOLINE_LIBRARY
-	"blastrampoline-5"
+find_library(LIBBLASTRAMPOLINE_LIBRARY
+	"blastrampoline"
 	REQUIRED
 )
-message(STATUS "Found BLASTRAMPOLINE_LIBRARY: " ${BLASTRAMPOLINE_LIBRARY})
+message(STATUS "Found LIBBLASTRAMPOLINE_LIBRARY: " ${LIBBLASTRAMPOLINE_LIBRARY})
 
 
 set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP2/dep/modified_qpOASES)
@@ -93,10 +96,10 @@ ELSEIF (WIN32)
 ENDIF ()
 
 target_include_directories(qpOASES
-	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES PRIVATE ${INCLUDE_PREFIX}
+	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES PRIVATE ${INCLUDE_PREFIX} PUBLIC ${BLAS_INCLUDE_PREFIX}
 )
 
-set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${BLASTRAMPOLINE_LIBRARY})
+set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${LIBBLASTRAMPOLINE_LIBRARY})
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
