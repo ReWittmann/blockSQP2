@@ -20,29 +20,29 @@ find_path(INCLUDE_PREFIX
 )
 message(STATUS "Found include prefix: " ${INCLUDE_PREFIX})
 
-find_library(MUMPS_LIBRARY
-	"dmumps"
-	REQUIRED
-)
-message(STATUS "Found mumps library:" ${MUMPS_LIBRARY})
+# find_library(MUMPS_LIBRARY
+# 	"dmumps"
+# 	REQUIRED
+# )
+# message(STATUS "Found mumps library:" ${MUMPS_LIBRARY})
 
-find_library(MUMPS_COMMON_LIBRARY
-	"mumps_common"
-	REQUIRED
-)
-message(STATUS "Found mumps common library:" ${MUMPS_COMMON_LIBRARY})
+# find_library(MUMPS_COMMON_LIBRARY
+# 	"mumps_common"
+# 	REQUIRED
+# )
+# message(STATUS "Found mumps common library:" ${MUMPS_COMMON_LIBRARY})
 
-find_library(MUMPS_PORD_LIBRARY
-	"pord"
-	REQUIRED
-)
-message(STATUS "Found pord library:" ${MUMPS_PORD_LIBRARY})
+# find_library(MUMPS_PORD_LIBRARY
+# 	"pord"
+# 	REQUIRED
+# )
+# message(STATUS "Found pord library:" ${MUMPS_PORD_LIBRARY})
 
-find_library(MUMPS_MPISEQ_LIBRARY
-	"mpiseq"
-	REQUIRED
-)
-message(STATUS "Found mumps mpiseq library:" ${MUMPS_MPISEQ_LIBRARY})
+# find_library(MUMPS_MPISEQ_LIBRARY
+# 	"mpiseq"
+# 	REQUIRED
+# )
+# message(STATUS "Found mumps mpiseq library:" ${MUMPS_MPISEQ_LIBRARY})
 
 find_library(LIBBLASTRAMPOLINE_LIBRARY
 	"blastrampoline"
@@ -97,7 +97,9 @@ target_include_directories(qpOASES
 	PUBLIC ${INCLUDE_PREFIX}/include
 )
 
-set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${LIBBLASTRAMPOLINE_LIBRARY})
+# set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${LIBBLASTRAMPOLINE_LIBRARY})
+
+set(QPOASES_LIBRARIES qpOASES ${LIBBLASTRAMPOLINE_LIBRARY})
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
