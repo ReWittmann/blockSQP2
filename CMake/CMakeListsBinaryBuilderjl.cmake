@@ -43,6 +43,7 @@ message(STATUS "Found include prefix: " ${INCLUDE_PREFIX})
 # 	REQUIRED
 # )
 # message(STATUS "Found mumps mpiseq library:" ${MUMPS_MPISEQ_LIBRARY})
+message(STATUS "Building for " ${CMAKE_SYSTEM_NAME})
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	message(STATUS "Searching for libblastrampoline-5.dll ...")
@@ -52,7 +53,7 @@ else()
 endif()
 
 find_library(LIBBLASTRAMPOLINE_LIBRARY
-	"blastrampoline"
+	${BLASTRAMPOLINE_LIBNAME}
 	REQUIRED
 )
 message(STATUS "Found LIBBLASTRAMPOLINE_LIBRARY: " ${LIBBLASTRAMPOLINE_LIBRARY})
