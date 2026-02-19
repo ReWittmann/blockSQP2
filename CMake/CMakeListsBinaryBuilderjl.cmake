@@ -113,9 +113,11 @@ add_library(blockSQP2 STATIC
    	blockSQP2/src/defs.cpp
    	blockSQP2/src/scaling.cpp
    	blockSQP2/src/sqputils.cpp
-	blockSQP2/src/load_mumps.cpp
+	# blockSQP2/src/load_mumps.cpp # Not required here
    	)
-target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES SOLVER_MUMPS BSQP_PAR_QPS_DISABLED 
+target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES 
+						# SOLVER_MUMPS 			#We can unset this when we disable parallel solution of QPs
+						BSQP_PAR_QPS_DISABLED 
 						BSQP_CBLAS_SUFFIX=${CBLAS_SUFFIX})
 
 if (UNIX AND NOT APPLE)
