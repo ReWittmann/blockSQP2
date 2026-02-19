@@ -22,7 +22,10 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
-#include <format>
+
+#ifdef __cpp_lib_format
+    #include <format>
+#endif
 
 #include <chrono>
 #include <thread>
@@ -774,7 +777,11 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     // Set match_sense to the sign before x_k in the matching, slices of B_Jac require the opposite sign.
     // double match_sense = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
     Data.matching_sign = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
-    if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
+    #ifdef __cpp_lib_format
+        if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
+    #else
+        if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
+    #endif
     Data.matching_sign = std::round(Data.matching_sign);
     
 	//Extract relevant subvectors and -matrices
@@ -788,7 +795,11 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 
 	for (int i = 1; i<n_stages; i++){
         double matching_sign = B_Jac(Data.cond_ranges[i], Data.alt_vranges[2*i+1]);
-        if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
+        #ifdef __cpp_lib_format
+            if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
+        #else
+            if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
+        #endif
         if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1,...) = 0 or all F(x_k-1,...) - x_k+1 = 0");
         
 		Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
