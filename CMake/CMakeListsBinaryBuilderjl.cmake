@@ -113,7 +113,7 @@ add_library(blockSQP2 STATIC
    	blockSQP2/src/defs.cpp
    	blockSQP2/src/scaling.cpp
    	blockSQP2/src/sqputils.cpp
-	# blockSQP2/src/load_mumps.cpp # Not required here
+	blockSQP2/src/load_mumps.cpp
    	)
 target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES 
 						SOLVER_MUMPS

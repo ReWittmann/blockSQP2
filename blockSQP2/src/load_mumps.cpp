@@ -183,8 +183,29 @@ void *get_plugin_handle(int ind){
     void load_mumps_libs(int N_plugins){
         throw NotImplementedError("load_mumps_libs should never be called on this platform");
     }
+    void *get_plugin_handle(int ind){
+        throw NotImplementedError("get_plugin_handle should never be called on this platform");
+    }
+    void *get_fptr_dmumps_c(int ID){
+        throw NotImplementedError("get_fptr_dmumps_c should never be called on this platform");
+    }
 #endif
 
 } // namespace blockSQP2
 
+#else
+namespace blockSQP2{
+
+#include <blockSQP2/defs.hpp>
+void load_mumps_libs(int N_plugins){
+    throw NotImplementedError("load_mumps_libs should never be called on this build");
+}
+void *get_plugin_handle(int ind){
+    throw NotImplementedError("get_plugin_handle should never be called on this build");
+}
+void *get_fptr_dmumps_c(int ID){
+    throw NotImplementedError("get_fptr_dmumps_c should never be called on this build");
+}
+
+}
 #endif //SOLVER_MUMPS
