@@ -14,11 +14,12 @@ project(BinaryBuilderblockSQP2
 set(CMAKE_CXX_STANDARD 20)
 
 
-find_path(INCLUDE_PREFIX
-	include/dmumps_c.h
-	REQUIRED
-)
-message(STATUS "Found include prefix: " ${INCLUDE_PREFIX})
+
+# find_path(INCLUDE_PREFIX
+# 	include/dmumps_c.h
+# 	REQUIRED
+# )
+# message(STATUS "Found include prefix: " ${INCLUDE_PREFIX})
 
 # find_library(MUMPS_LIBRARY
 # 	"dmumps"
@@ -107,7 +108,12 @@ target_include_directories(qpOASES
 
 # set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${LIBBLASTRAMPOLINE_LIBRARY})
 
-set(QPOASES_LIBRARIES qpOASES ${LIBBLASTRAMPOLINE_LIBRARY})
+set(QPOASES_LIBRARIES qpOASES 
+    ${DMUMPS_LIBRARIES} \
+    ${DMUMPS_COMMON_LIBRARY} \
+    ${DMUMPS_PORD_LIBRARY} \
+    ${DMUMPS_MPISEQ_LIBRARY} \
+	${LIBBLASTRAMPOLINE_LIBRARY})
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
