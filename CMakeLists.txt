@@ -103,6 +103,7 @@ ELSEIF(WIN32)
 		target_compile_options(qpOASES PRIVATE -DWIN32 
 			-Wall -pedantic -Wfloat-equal -Wshadow 
 			-O3 -finline-functions
+			INTERFACE -Wno-overloaded-virtual
 		)
 	endif()
 ENDIF()
