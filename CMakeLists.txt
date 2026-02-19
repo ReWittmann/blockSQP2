@@ -109,6 +109,7 @@ ENDIF()
 
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
+			${OPENBLAS_INCLUDE_DIR}
 )
 
 
@@ -231,7 +232,7 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 										  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/lib
 										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 
-target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES ${OPENBLAS_INCLUDE_DIR})
+target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include)# ${OPENBLAS_INCLUDE_DIR})
 target_link_libraries(blockSQP2 PUBLIC qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
