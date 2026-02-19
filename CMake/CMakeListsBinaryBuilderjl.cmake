@@ -13,38 +13,16 @@ project(BinaryBuilderblockSQP2
 	)
 set(CMAKE_CXX_STANDARD 20)
 
-
-
-# find_path(INCLUDE_PREFIX
-# 	include/dmumps_c.h
-# 	REQUIRED
-# )
-# message(STATUS "Found include prefix: " ${INCLUDE_PREFIX})
-
-# find_library(MUMPS_LIBRARY
-# 	"dmumps"
-# 	REQUIRED
-# )
-# message(STATUS "Found mumps library:" ${MUMPS_LIBRARY})
-
-# find_library(MUMPS_COMMON_LIBRARY
-# 	"mumps_common"
-# 	REQUIRED
-# )
-# message(STATUS "Found mumps common library:" ${MUMPS_COMMON_LIBRARY})
-
-# find_library(MUMPS_PORD_LIBRARY
-# 	"pord"
-# 	REQUIRED
-# )
-# message(STATUS "Found pord library:" ${MUMPS_PORD_LIBRARY})
-
-# find_library(MUMPS_MPISEQ_LIBRARY
-# 	"mpiseq"
-# 	REQUIRED
-# )
-# message(STATUS "Found mumps mpiseq library:" ${MUMPS_MPISEQ_LIBRARY})
 message(STATUS "Building for " ${CMAKE_SYSTEM_NAME})
+
+# Command line arguments, see Yggdrasil/B/blockSQP2/build_tarballs.jl
+	# CBLAS_SUFFIX (""/"64_")
+
+	# MUMPS_INCLUDE_DIR (assumed to contain all dependency headers)
+    # MUMPS_LIBRARIES
+    # MUMPS_COMMON_LIBRARY
+    # MUMPS_PORD_LIBRARY
+    # MUMPS_MPISEQ_LIBRARY
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
 	message(STATUS "Searching for libblastrampoline-5.dll ...")
@@ -157,7 +135,7 @@ target_include_directories(blockSQP2 PUBLIC ${CMAKE_SOURCE_DIR}/blockSQP2/includ
 target_link_libraries(blockSQP2 PUBLIC ${QPOASES_LIBRARIES})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
-#Build C interface to complete blockSQP.jl
+#libblockSQP_jl is just the compiled C interface that blockSQP.jl calls
 add_library(blockSQP2_jl SHARED ${CMAKE_SOURCE_DIR}/C/CblockSQP2.cpp)
 target_link_libraries(blockSQP2_jl PUBLIC blockSQP2)
 
