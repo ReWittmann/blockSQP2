@@ -109,10 +109,10 @@ target_include_directories(qpOASES
 # set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${LIBBLASTRAMPOLINE_LIBRARY})
 
 set(QPOASES_LIBRARIES qpOASES 
-    ${DMUMPS_LIBRARIES} \
-    ${DMUMPS_COMMON_LIBRARY} \
-    ${DMUMPS_PORD_LIBRARY} \
-    ${DMUMPS_MPISEQ_LIBRARY} \
+    ${DMUMPS_LIBRARIES}
+    ${DMUMPS_COMMON_LIBRARY}
+    ${DMUMPS_PORD_LIBRARY}
+    ${DMUMPS_MPISEQ_LIBRARY}
 	${LIBBLASTRAMPOLINE_LIBRARY})
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
