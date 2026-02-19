@@ -21,13 +21,13 @@ if(WIN32)
 	set(LAPACK_VENDOR OpenBLAS)
 	set(BLA_STATIC OFF)
 	
-	set(OPENBLAS_DIR "" CACHE STRING "Path to the OpenBLAS installation folder containing lib, bin and include folders. Make sure it is the 32bit-integer version (e.g. Openblas-*.*.**-x64)")
-	if (OPENBLAS_DIR STREQUAL "")
-		message(FATAL_ERROR "\nERROR: Please pass path to OpenBLAS via cmake -B build ... -DOPENBLAS_DIR=\"PATH/TO/OPENBLAS\". The folder should contain lib, bin and include folders. Make sure it is the 32bit-integer version (e.g. Openblas-*.*.**-x64)")
+	set(OPENBLAS_PREFIX "" CACHE STRING "Path to the OpenBLAS installation folder containing lib, bin and include folders.")
+	if (OPENBLAS_PREFIX STREQUAL "")
+		message(FATAL_ERROR "\nERROR: Please pass path to OpenBLAS via cmake -B build ... -DOPENBLAS_PREFIX=\"PATH/TO/OPENBLAS\". The folder should contain lib, bin and include folders.")
 	endif()
-	file(TO_CMAKE_PATH ${OPENBLAS_DIR} OPENBLAS_DIR)
-	set(CMAKE_PREFIX_PATH ${OPENBLAS_DIR})
-	set(OPENBLAS_INCLUDE_DIR ${OPENBLAS_DIR}/include ${OPENBLAS_DIR}/include/openblas)
+	file(TO_CMAKE_PATH ${OPENBLAS_PREFIX} OPENBLAS_PREFIX)
+	set(CMAKE_PREFIX_PATH ${OPENBLAS_PREFIX})
+	set(OPENBLAS_INCLUDE_DIR ${OPENBLAS_PREFIX}/include ${OPENBLAS_PREFIX}/include/openblas)
 endif()
 
 find_package(BLAS REQUIRED)
@@ -300,9 +300,9 @@ elseif(WIN32)
 	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
 	]]
 
-	set(OPENBLAS_BINARY ${OPENBLAS_DIR}/bin/libopenblas.dll)
+	set(OPENBLAS_BINARY ${OPENBLAS_PREFIX}/bin/libopenblas.dll)
 	if(NOT EXISTS ${OPENBLAS_BINARY})
-		message(FATAL_ERROR "Expected libopenblas.dll in OPENBLAS_DIR/bin")
+		message(FATAL_ERROR "Expected libopenblas.dll in OPENBLAS_PREFIX/bin")
 	endif()
 
 	function(copy_dynamic_libraries_to LIBPATH)
@@ -318,7 +318,7 @@ elseif(WIN32)
 
 		##OpenBLAS
 		list(APPEND COPY_COMMANDS
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENBLAS_DIR}/bin/libopenblas.dll ${LIBPATH}
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENBLAS_PREFIX}/bin/libopenblas.dll ${LIBPATH}
 			)
 		
 		##C/C++/Fortran etc. standard libraries
