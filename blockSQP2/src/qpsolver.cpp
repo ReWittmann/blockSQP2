@@ -403,7 +403,7 @@ QPresults CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, co
         QP_result = inner_QPsol->solve(xi_cond, lambda_cond);
         std::cout << "QP_result is " << QP_result << "\n";
         std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
-        std::cout << "Solved QP with added corrections in " << duration_cast<milliseconds>(T1 - T0) << "\n";
+        std::cout << "Solved QP with added corrections in " << duration_cast<milliseconds>(T1 - T0).count() << "ms\n"; //gcc-10 compatibility: Dont use operator<< duration overload
         
         if (QP_result == QPresults::success)
             cond->recover_correction_var_mult(xi_cond, lambda_cond, corrections.get(), deltaXi_corr, lambdaQP_corr);

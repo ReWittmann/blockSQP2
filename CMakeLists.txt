@@ -21,13 +21,13 @@ if(WIN32)
 	set(LAPACK_VENDOR OpenBLAS)
 	set(BLA_STATIC OFF)
 	
-	set(OPENBLAS_DIR "" CACHE STRING "Path to the OpenBLAS installation folder containing lib, bin and include folders. Make sure it is the 32bit-integer version (e.g. Openblas-*.*.**-x64)")
-	if (OPENBLAS_DIR STREQUAL "")
-		message(FATAL_ERROR "\nERROR: Please pass path to OpenBLAS via cmake -B build ... -DOPENBLAS_DIR=\"PATH/TO/OPENBLAS\". The folder should contain lib, bin and include folders. Make sure it is the 32bit-integer version (e.g. Openblas-*.*.**-x64)")
+	set(OPENBLAS_PREFIX "" CACHE STRING "Path to the OpenBLAS installation folder containing lib, bin and include folders.")
+	if (OPENBLAS_PREFIX STREQUAL "")
+		message(FATAL_ERROR "\nERROR: Please pass path to OpenBLAS via cmake -B build ... -DOPENBLAS_PREFIX=\"PATH/TO/OPENBLAS\". The folder should contain lib, bin and include folders.")
 	endif()
-	file(TO_CMAKE_PATH ${OPENBLAS_DIR} OPENBLAS_DIR)
-	set(CMAKE_PREFIX_PATH ${OPENBLAS_DIR})
-	set(OPENBLAS_INCLUDE_DIR ${OPENBLAS_DIR}/include ${OPENBLAS_DIR}/include/openblas)
+	file(TO_CMAKE_PATH ${OPENBLAS_PREFIX} OPENBLAS_PREFIX)
+	set(CMAKE_PREFIX_PATH ${OPENBLAS_PREFIX})
+	set(OPENBLAS_INCLUDE_DIR ${OPENBLAS_PREFIX}/include ${OPENBLAS_PREFIX}/include/openblas)
 endif()
 
 find_package(BLAS REQUIRED)
@@ -89,7 +89,7 @@ add_library(qpOASES STATIC
 	)
 
 #MUMPS LINEAR SOLVER
-target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
+target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE __NO_COPYRIGHT__)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS LAPACK::LAPACK BLAS::BLAS) #
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
@@ -103,12 +103,14 @@ ELSEIF(WIN32)
 		target_compile_options(qpOASES PRIVATE -DWIN32 
 			-Wall -pedantic -Wfloat-equal -Wshadow 
 			-O3 -finline-functions
+			INTERFACE -Wno-overloaded-virtual
 		)
 	endif()
 ENDIF()
 
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES
+			${OPENBLAS_INCLUDE_DIR}
 )
 
 
@@ -231,7 +233,7 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 										  ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/lib
 										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 
-target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES ${OPENBLAS_INCLUDE_DIR})
+target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include)# ${OPENBLAS_INCLUDE_DIR})
 target_link_libraries(blockSQP2 PUBLIC qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
@@ -298,9 +300,9 @@ elseif(WIN32)
 	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
 	]]
 
-	set(OPENBLAS_BINARY ${OPENBLAS_DIR}/bin/libopenblas.dll)
+	set(OPENBLAS_BINARY ${OPENBLAS_PREFIX}/bin/libopenblas.dll)
 	if(NOT EXISTS ${OPENBLAS_BINARY})
-		message(FATAL_ERROR "Expected libopenblas.dll in OPENBLAS_DIR/bin")
+		message(FATAL_ERROR "Expected libopenblas.dll in OPENBLAS_PREFIX/bin")
 	endif()
 
 	function(copy_dynamic_libraries_to LIBPATH)
@@ -316,7 +318,7 @@ elseif(WIN32)
 
 		##OpenBLAS
 		list(APPEND COPY_COMMANDS
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENBLAS_DIR}/bin/libopenblas.dll ${LIBPATH}
+				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENBLAS_PREFIX}/bin/libopenblas.dll ${LIBPATH}
 			)
 		
 		##C/C++/Fortran etc. standard libraries
@@ -389,7 +391,7 @@ else()
 endif()
 
 #Mumps dynamic libraries are available. Set corresponding preprocessor flag
-target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN)
+target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN) # -DBSQP_CBLAS_SUFFIX= 
 
 #Build examples and place executables and required libraries in dedicated folder
 copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin)

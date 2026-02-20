@@ -33,7 +33,7 @@
 
 
 #include <qpOASES/Matrices.hpp>
-#include <qpOASES/LapackBlasReplacement.hpp>
+#include <qpOASES/LapackBlas.hpp>
 
 
 BEGIN_NAMESPACE_QPOASES
@@ -303,29 +303,47 @@ returnValue DenseMatrix::getSparseSubmatrix (int_t irowsLength, const int_t* con
 
 returnValue DenseMatrix::times(	int_t xN, real_t alpha, const real_t* x, int_t xLD, real_t beta, real_t* y, int_t yLD ) const
 {
-	la_uint_t _xN     = (la_uint_t)xN;
-	la_uint_t _nRows  = (la_uint_t)nRows;
-	la_uint_t _nCols  = (la_uint_t)nCols;
-	la_uint_t _leaDim = (la_uint_t)getMax(1,nCols);
-	la_uint_t _xLD    = (la_uint_t)getMax(1,xLD);
-	la_uint_t _yLD    = (la_uint_t)getMax(1,yLD);
+	// la_uint_t _xN     = (la_uint_t)xN;
+	// la_uint_t _nRows  = (la_uint_t)nRows;
+	// la_uint_t _nCols  = (la_uint_t)nCols;
+	// la_uint_t _leaDim = (la_uint_t)getMax(1,nCols);
+	// la_uint_t _xLD    = (la_uint_t)getMax(1,xLD);
+	// la_uint_t _yLD    = (la_uint_t)getMax(1,yLD);
+
+	// blasint _xN     = (blasint)xN;
+	// blasint _nRows  = (blasint)nRows;
+	// blasint _nCols  = (blasint)nCols;
+	blasint _leaDim = (blasint)getMax(1,nCols);
+	blasint _xLD    = (blasint)getMax(1,xLD);
+	blasint _yLD    = (blasint)getMax(1,yLD);
 
 	/* Call BLAS. Mind row major format! */
-	GEMM( "TRANS", "NOTRANS", &_nRows, &_xN, &_nCols, &alpha, val, &_leaDim, x, &_xLD, &beta, y, &_yLD );
+	// GEMM( "TRANS", "NOTRANS", &_nRows, &_xN, &_nCols, &alpha, val, &_leaDim, x, &_xLD, &beta, y, &_yLD );
+	CBLAS__GEMM(CblasColMajor, CblasTrans, CblasNoTrans, nRows, xN, nCols, alpha, val, _leaDim, x, _xLD, beta, y, _yLD );
+
 	return SUCCESSFUL_RETURN;
 }
 
 returnValue DenseMatrix::transTimes( int_t xN, real_t alpha, const real_t* x, int_t xLD, real_t beta, real_t* y, int_t yLD ) const
 {
-	la_uint_t _xN     = (la_uint_t)xN;
-	la_uint_t _nRows  = (la_uint_t)nRows;
-	la_uint_t _nCols  = (la_uint_t)nCols;
-	la_uint_t _leaDim = (la_uint_t)getMax(1,nCols);
-	la_uint_t _xLD    = (la_uint_t)getMax(1,xLD);
-	la_uint_t _yLD    = (la_uint_t)getMax(1,yLD);
+	// la_uint_t _xN     = (la_uint_t)xN;
+	// la_uint_t _nRows  = (la_uint_t)nRows;
+	// la_uint_t _nCols  = (la_uint_t)nCols;
+	// la_uint_t _leaDim = (la_uint_t)getMax(1,nCols);
+	// la_uint_t _xLD    = (la_uint_t)getMax(1,xLD);
+	// la_uint_t _yLD    = (la_uint_t)getMax(1,yLD);
+
+	// blasint _xN     = (blasint)xN;
+	// blasint _nRows  = (blasint)nRows;
+	// blasint _nCols  = (blasint)nCols;
+	blasint _leaDim = (blasint)getMax(1,nCols);
+	blasint _xLD    = (blasint)getMax(1,xLD);
+	blasint _yLD    = (blasint)getMax(1,yLD);
 
 	/* Call BLAS. Mind row major format! */
-	GEMM( "NOTRANS", "NOTRANS", &_nCols, &_xN, &_nRows, &alpha, val, &_leaDim, x, &_xLD, &beta, y, &_yLD );
+	// GEMM( "NOTRANS", "NOTRANS", &_nCols, &_xN, &_nRows, &alpha, val, &_leaDim, x, &_xLD, &beta, y, &_yLD );
+	CBLAS__GEMM(CblasColMajor, CblasNoTrans, CblasNoTrans, nCols, xN, nRows, alpha, val, _leaDim, x, _xLD, beta, y, _yLD );
+
 	return SUCCESSFUL_RETURN;
 }
 

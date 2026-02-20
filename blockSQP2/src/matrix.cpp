@@ -37,6 +37,13 @@
 #include "cblas.h"
 //#define MATRIX_DEBUG      //Do bounds and dimension checking when performing matrix operations
 
+#ifndef BSQP_CBLAS_SUFFIX
+    #define BSQP_CBLAS_SUFFIX
+#endif
+#define BSQP_CONCAT(a,b) a##b
+#define BSQP_EXPAND_CONCAT(a,b) BSQP_CONCAT(a,b)
+#define BSQP_BLASFUNC(a) BSQP_EXPAND_CONCAT(a, BSQP_CBLAS_SUFFIX) // #####!!! READ THIS !!!#####: If this is in an error message: Invalid cblas suffix. Check cblas.h, and use -DBSQP_CBLAS_SUFFIX= instead of -DBSQP_CBLAS_SUFFIX if there is no suffix.
+
 namespace blockSQP2{
 
 void Error( const char *F )
@@ -216,6 +223,7 @@ Matrix::Matrix(const SymMatrix &A){
 
 /*
 Matrix::Matrix(Matrix&& M){
+    if (this == &M) return;
     m = M.m;
     n = M.n;
     ldim = M.ldim;
@@ -646,8 +654,8 @@ Matrix Matrix::operator*(const Matrix &M2) const{
     else if (n == 0) return Matrix(m, M2.n);
     //
 
-    double *array_3 = new double[m * M2.n];
-    cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, M2.n, n, 1.0, array, ldim, M2.array, M2.ldim, 0., array_3, m);
+    double *array_3 = new double[m * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
     return Matrix(m, M2.n, array_3);
 }
 
@@ -2290,9 +2298,8 @@ CSR_Matrix fullrow_multiply(const CSR_Matrix &M1, const Matrix &M2){
         n_nzrow += ((M1.rowind[i+1] - M1.rowind[i]) > 0);
     }
 
-    double *nz = new double[n_nzrow * M2.n];
-
-    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, n_nzrow, M2.n, M1.n, 1.0, M1.nz, M1.n, M2.array, M2.ldim, 0., nz, M2.n);
+    double *nz = new double[n_nzrow * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
+    BSQP_BLASFUNC(cblas_dgemm)(CblasRowMajor, CblasNoTrans, CblasTrans, blasint(n_nzrow), blasint(M2.n), blasint(M1.n), 1.0, M1.nz, blasint(M1.n), M2.array, blasint(M2.ldim), 0., nz, M2.n);
 
     int *col = new int[n_nzrow * M2.n];
     int ind = 0;
