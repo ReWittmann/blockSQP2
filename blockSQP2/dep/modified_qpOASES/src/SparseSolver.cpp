@@ -58,7 +58,7 @@
 
 	#if defined USE_MPI_H// || defined MUMPS_SEQ
 		#include "mpi.h"
-	#elif !defined(MUMPS_SEQ)
+	#elif defined(MUMPS_SEQ)
 		#include "mumps_mpi.h"
 	#endif /* USE_MPI_H */
 

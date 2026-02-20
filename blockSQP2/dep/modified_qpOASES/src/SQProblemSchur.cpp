@@ -43,7 +43,7 @@
  */
 
 #include <qpOASES/SQProblemSchur.hpp>
-#include <qpOASES/LapackBlasReplacement.hpp>
+#include <qpOASES/LapackBlas.hpp>
 
 
 #ifndef __MATLAB__
@@ -2417,13 +2417,18 @@ returnValue SQProblemSchur::updateSchurQR( int_t idxDel )
 
 	/* Estimate condition number of R (= condition number of S)*/
 	real_t *WORK;
-	unsigned long N = (unsigned long)nS;
-	unsigned long LDA = (unsigned long)nSmax;
-	unsigned long *IWORK;
-	long INFO = 0;
-	IWORK = new unsigned long[N];
+	// unsigned long N = (unsigned long)nS;
+	// unsigned long LDA = (unsigned long)nSmax;
+	// unsigned long *IWORK;
+	// long INFO = 0;
+	// IWORK = new unsigned long[N];
+	lapack_int N = (lapack_int)nS;
+	lapack_int LDA = (lapack_int)nSmax;
+	lapack_int *IWORK;
+	lapack_int INFO = 0;
+	IWORK = new lapack_int[N];
 	WORK = new real_t[3*N];
-	TRCON( "1", "U", "N", &N, R_, &LDA, &rcondS, WORK, IWORK, &INFO );
+	TRCON( "1", "U", "N", &N, R_, &LDA, &rcondS, WORK, IWORK, &INFO STRLENS3(1,1,1));
 	if ( INFO != 0 )
 	{
 		MyPrintf( "TRCON returns INFO = %d\n",(int)INFO );
@@ -2454,11 +2459,17 @@ returnValue SQProblemSchur::backsolveSchurQR( int_t dimS, const real_t* const rh
 	}
 
 	int_t i, j;
-	long INFO = 0;
-	unsigned long NRHS = 1;
-	unsigned long M = (unsigned long)dimS;
-	unsigned long LDA = (unsigned long)nSmax;
-	unsigned long LDC = (unsigned long)dimS;
+	// long INFO = 0;
+	// unsigned long NRHS = 1;
+	// unsigned long M = (unsigned long)dimS;
+	// unsigned long LDA = (unsigned long)nSmax;
+	// unsigned long LDC = (unsigned long)dimS;
+
+	lapack_int INFO = 0;
+	lapack_int NRHS = 1;
+	lapack_int M = (lapack_int)dimS;
+	lapack_int LDA = (lapack_int)nSmax;
+	lapack_int LDC = (lapack_int)dimS;
 
 	for( i=0; i<dimS; i++ )
 		sol[i] = 0.0;
@@ -2469,7 +2480,7 @@ returnValue SQProblemSchur::backsolveSchurQR( int_t dimS, const real_t* const rh
 			sol[i] += Q_[j+i*nSmax] * rhs[j];
 
 	/* Solve Rx = sol */
-	TRTRS( "U", "N", "N", &M, &NRHS, R_, &LDA, sol, &LDC, &INFO );
+	TRTRS( "U", "N", "N", &M, &NRHS, R_, &LDA, sol, &LDC, &INFO STRLENS3(1,1,1));
 	if ( INFO != 0 )
 	{
 		MyPrintf("TRTRS returns INFO = %d\n", INFO);
