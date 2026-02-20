@@ -223,6 +223,7 @@ Matrix::Matrix(const SymMatrix &A){
 
 /*
 Matrix::Matrix(Matrix&& M){
+    if (this == &M) return;
     m = M.m;
     n = M.n;
     ldim = M.ldim;

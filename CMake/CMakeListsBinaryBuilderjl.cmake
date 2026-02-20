@@ -18,7 +18,7 @@ message(STATUS "Building for " ${CMAKE_SYSTEM_NAME})
 # Command line arguments, see Yggdrasil/B/blockSQP2/build_tarballs.jl
 	# CBLAS_SUFFIX (""/"64_")
 
-	# MUMPS_INCLUDE_DIR (assumed to contain all dependency headers)
+	# INCLUDE_DIR (assumed to contain all dependency headers)
     # MUMPS_LIBRARIES
     # MUMPS_COMMON_LIBRARY
     # MUMPS_PORD_LIBRARY
@@ -80,8 +80,8 @@ ELSEIF (WIN32)
 ENDIF ()
 
 target_include_directories(qpOASES
-	PUBLIC	${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES 
-	PUBLIC ${INCLUDE_PREFIX}/include
+	PUBLIC ${qpOASES_MODDED_DIR}/include ${qpOASES_MODDED_DIR}/include/qpOASES 
+	PUBLIC ${INCLUDE_DIR}
 )
 
 # set(QPOASES_LIBRARIES qpOASES ${MUMPS_LIBARY} ${MUMPS_COMMON_LIBRARY} ${MUMPS_PORD_LIBRARY} ${MUMPS_MPISEQ_LIBRARY} ${LIBBLASTRAMPOLINE_LIBRARY})
