@@ -358,7 +358,7 @@ void SQPmethod::printInfo( int printLevel )
     strcat(strcat(hessString1, ", "), to_print_string(param->sizing).c_str());
     
     printf( "\n+---------------------------------------------------------------+\n");
-    printf( "| Starting blockSQP with the following algorithmic settings:    |\n");
+    printf( "| Starting blockSQP2 with the following algorithmic settings:   |\n");
     printf( "+---------------------------------------------------------------+\n");
     printf( "| qpOASES flavor            | %-34s|\n", qpString );
     printf( "| Globalization             | %-34s|\n", globString );
