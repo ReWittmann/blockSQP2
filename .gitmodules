@@ -1,3 +1,3 @@
-[submodule "blockSQP.jl"]
-	path = blockSQP2.jl
-	url = https://github.com/ReWittmann/blockSQP.jl.git
+[submodule "BlockSQP2.jl"]
+	path = BlockSQP2.jl
+	url = https://github.com/ReWittmann/BlockSQP2.jl.git
