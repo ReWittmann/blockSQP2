@@ -20,9 +20,7 @@
 #ifdef SOLVER_MUMPS
 namespace blockSQP2{
 
-
 void load_mumps_libs(int N_plugins);
-// void *get_plugin_handle(int ind);
 void *get_fptr_dmumps_c(int ID);
 
 } // namespace blockSQP2

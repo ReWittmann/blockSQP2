@@ -89,28 +89,7 @@ void *get_plugin_handle(int ind){
 }
 
 
-#ifdef LINUX
-    //Flag indicating that libdmumps_c_dyn.so, build from libdmumps_c_dyn.cpp has been linked
-    //In this case, rely on rpath to find and load the shared library
-    
-    /*
-    #ifdef DMUMPS_C_DYN
-    //Rely on dynamic linking and rpath to find the directory of libdmumps_c_dyn.so
-    extern "C" void dmumps_c_dyn(void* mumps_struc_c_dyn);
-    
-    const char* get_mumps_module_dir(){
-        Dl_info info;
-        bool load_success = dladdr((void*) &dmumps_c_dyn, &info);
-        if (!load_success) throw std::runtime_error(std::string("dladdr failed to obtain path to libdmumps_c_dyn.so from linked symbol dmumps_c_dyn"));
-        char* path_ = new char[PATH_MAX];
-        std::strncpy(path_, info.dli_fname, PATH_MAX);
-        path_[PATH_MAX - 1] = '\0';
-        const char* dir = dirname(path_);
-        return dir;
-    }
-    #endif
-    */
-            
+#ifdef LINUX            
     //Search for libdmumps_c_syn.so in current directory
     const char* get_current_lib_dir(){
         Dl_info info;
@@ -183,9 +162,6 @@ void *get_plugin_handle(int ind){
     void load_mumps_libs(int N_plugins){
         throw NotImplementedError("load_mumps_libs should never be called on this platform");
     }
-    // void *get_plugin_handle(int ind){
-    //     throw NotImplementedError("get_plugin_handle should never be called on this platform");
-    // }
     void *get_fptr_dmumps_c(int ID){
         throw NotImplementedError("get_fptr_dmumps_c should never be called on this platform");
     }
@@ -193,19 +169,5 @@ void *get_plugin_handle(int ind){
 
 } // namespace blockSQP2
 
-// #else
-// namespace blockSQP2{
 
-// #include <blockSQP2/defs.hpp>
-// void load_mumps_libs(int N_plugins){
-//     throw NotImplementedError("load_mumps_libs should never be called on this build");
-// }
-// // void *get_plugin_handle(int ind){
-// //     throw NotImplementedError("get_plugin_handle should never be called on this build");
-// // }
-// void *get_fptr_dmumps_c(int ID){
-//     throw NotImplementedError("get_fptr_dmumps_c should never be called on this build");
-// }
-
-// }
 #endif //SOLVER_MUMPS
