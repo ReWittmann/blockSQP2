@@ -495,9 +495,9 @@ if(JULIA_INTERFACE)
 	endif()
 	set_target_properties(blockSQP2_jl PROPERTIES 
 			PREFIX lib
-			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin
-			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin
+			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/BlockSQP2.jl/bin
+			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/BlockSQP2.jl/bin
 	)
-	copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin)
+	copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/BlockSQP2.jl/bin)
 endif()
 
