@@ -6,6 +6,16 @@
 #include "cblas.h"
 #include "lapack.h"
 
+#ifndef OPENBLAS_CONFIG_H
+	#if defined(CBLAS_INT)
+		typedef CBLAS_INT blasint
+	#elif defined(MKL_INT)
+		typedef MKL_INT blasint
+	#else
+		#error "Included cblas header defines neither blasint nor CBLAS_INT nor MKL_INT"
+	#endif
+#endif
+
 #ifndef QPOS_CBLAS_SUFFIX
     #define QPOS_CBLAS_SUFFIX
 #endif
