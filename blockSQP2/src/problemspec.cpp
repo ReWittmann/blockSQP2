@@ -33,7 +33,13 @@ namespace blockSQP2{
 Problemspec::Problemspec(){}
 Problemspec::~Problemspec(){}
 
-void Problemspec::evaluate( const Matrix &xi, double *objval, Matrix &constr, int *info ){
+//Default: Do nothing. Cant make these pure virtual since we only need either dense or sparse version.
+void Problemspec::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){};
+void Problemspec::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){};
+void Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info){};
+void Problemspec::evaluate( const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info ){};
+
+void Problemspec::evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info){
     Matrix lambdaDummy, gradObjDummy;
     SymMatrix *hessDummy(nullptr);
     int dmode = 0;
@@ -50,7 +56,11 @@ void Problemspec::evaluate( const Matrix &xi, double *objval, Matrix &constr, in
     if (*info) evaluate(xi, lambdaDummy, objval, constr, gradObjDummy, constrJacDummy, hessDummy, dmode, info);
 }
 
+void Problemspec::reduceConstrVio(Matrix &xi, int *info){*info = 1;}
+void Problemspec::stepModification(Matrix &xi, Matrix &lambda, int *info){*info = 1;}
+void Problemspec::printInfo(){};
 
+// scaled_Problemspec //
 scaled_Problemspec::scaled_Problemspec(Problemspec *UNSCprob): unscaled_prob(UNSCprob), scaling_factors(new double[unscaled_prob->nVar]){
     nVar = unscaled_prob->nVar;
     nCon = unscaled_prob->nCon;
@@ -73,9 +83,7 @@ scaled_Problemspec::scaled_Problemspec(Problemspec *UNSCprob): unscaled_prob(UNS
     xi_unscaled.Dimension(nVar);
 }
 
-scaled_Problemspec::~scaled_Problemspec(){
-    //delete[] scaling_factors;
-}
+scaled_Problemspec::~scaled_Problemspec(){}
 
 void scaled_Problemspec::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){
     unscaled_prob->initialize(xi, lambda, constrJac);
