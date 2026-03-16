@@ -26,7 +26,8 @@ else run &nbsp; `sudo apt install libblas-dev liblapack-dev liblapacke-dev`
 ## Building
 In the command line, navigate to this folder and invoke  
 &nbsp;&nbsp; `cmake -B .build ${OPTIONS}`  
-&nbsp;&nbsp; `cmake --build .build`
+&nbsp;&nbsp; `cmake --build .build`  
+**Note**: Ensure the path contains no whitespaces or parentheses, as these may cause problems.
 
 ### General build options
 These are general CMake options, it is usually not necessary to set them manually.
