@@ -37,6 +37,16 @@
 #include "cblas.h"
 //#define MATRIX_DEBUG      //Do bounds and dimension checking when performing matrix operations
 
+#ifndef OPENBLAS_CONFIG_H
+	#if defined(CBLAS_INT)
+		typedef CBLAS_INT blasint;
+	#elif defined(MKL_INT)
+		typedef MKL_INT blasint;
+	#else
+		#error "Included cblas header defines neither blasint nor CBLAS_INT nor MKL_INT"
+	#endif
+#endif
+
 #ifndef BSQP_CBLAS_SUFFIX
     #define BSQP_CBLAS_SUFFIX
 #endif
