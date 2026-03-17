@@ -690,12 +690,14 @@ void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Ma
         else
             ub[i] = 1e20;
         
-        //Workaround for qpOASES failing of a variable has equal upper and lower bounds with equalities enabled
+        //Workaround for qpOASES sometimes failing of a variable has equal upper and lower bounds with equalities enabled
+        /*
         if (opts.enableEqualities && ub[i] - lb[i] < opts.boundTolerance){
             double bound_shift = opts.boundTolerance + 2*qpOASES::EPS - (ub[i] - lb[i]);
             lb[i] -= (std::max)(0.55*bound_shift, lb[i]*1e-14); 
             ub[i] += (std::max)(0.55*bound_shift, ub[i]*1e-14);
         }
+        */
     }
     for (int i = 0; i < nCon; i++){
         if (lb_A(i) > -Qparam->inf)
