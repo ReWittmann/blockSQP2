@@ -695,3 +695,43 @@ CDLEXP int *Sparse_Matrix_colind(void *ptr){
     return static_cast<Sparse_Matrix *>(ptr)->colind.get();
 }
 
+
+
+
+
+CDLEXP void TEST(int a){
+    std::cout << "a is " << a << "\n";
+}
+
+CDLEXP void *TEST2(){
+    return static_cast<void*>(new int(3));
+}
+
+CDLEXP void TEST3(void *obj){
+    std::cout << "obj is " << *static_cast<int*>(obj) << "\n";
+}
+
+CDLEXP void TEST4(void *obj){
+    delete static_cast<int*>(obj);
+}
+
+class TESTCLS{
+    public:
+    TESTCLS(){std::cout << "Created instance\n";}
+    ~TESTCLS(){std::cout << "Deleted instance\n";}
+};
+
+CDLEXP void *CREATE_TESTCLS(){
+    TESTCLS *out = new TESTCLS();
+    std::cout << "ptr is " << out << "\n";
+    return static_cast<void*>(out);
+}
+
+CDLEXP void PRINT_TESTCLS(void *obj){
+    std::cout << "ptr is " << obj << "\n" << std::flush;
+}
+
+CDLEXP void DELETE_TESTCLS(void *obj){
+    std::cout << "ptr is " << obj << "\n" << std::flush;
+    delete static_cast<TESTCLS*>(obj);
+}
