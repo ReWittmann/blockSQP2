@@ -107,7 +107,7 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
 SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), sub_QP(nullptr), sub_QPs_par(nullptr), scaled_prob(nullptr),
     rest_prob(nullptr), rest_param(nullptr), rest_stats(nullptr), rest_method(nullptr), initCalled(false){}
 
-SQPmethod::~SQPmethod(){}
+SQPmethod::~SQPmethod(){std::cout << "SQPmethod:: Destructor called\n";}
 
 
 

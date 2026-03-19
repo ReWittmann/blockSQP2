@@ -31,7 +31,7 @@
 
 namespace blockSQP2{
 Problemspec::Problemspec(){}
-Problemspec::~Problemspec(){}
+Problemspec::~Problemspec(){std::cout << "Problemspec: Destructor called\n";}
 
 //Default: Do nothing. Cant make these pure virtual since we only need either dense or sparse version.
 void Problemspec::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){};

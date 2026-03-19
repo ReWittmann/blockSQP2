@@ -146,7 +146,7 @@ else:
 t1 = time.monotonic()
 if not step_plots:
     xi = np.array(optimizer.get_xi()).reshape(-1)
-    OCprob.plot(xi, dpi=200, title=plot_title)
+    # OCprob.plot(xi, dpi=200, title=plot_title)
 
 time.sleep(0.01)
 print(t1 - t0, "s")
