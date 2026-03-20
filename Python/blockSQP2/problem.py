@@ -24,7 +24,7 @@ class Problem:
     nVar: int  # Number of variables
     nCon: int  # Number of constraints
     nnz: int   # Number of non-zeros
-    blockIdx: np.ndarray  # Block indices (array of int32)
+    _blockIdx: typing.Optional[np.ndarray[c_int]] # Block indices (array of int32)
     vblocks: typing.List['vblock']  # List of vblock objects (you should define the 'vblock' class)
     condenser: typing.Optional['Condenser']  # Optional condenser object
     
@@ -63,7 +63,7 @@ class Problem:
     sparse : bool
     
     
-    def __init__(self, nVar, nCon):
+    def __init__(self, nVar = 0, nCon = 0):
         self.nVar = nVar
         self.nCon = nCon
         self.nnz = -1
@@ -71,7 +71,7 @@ class Problem:
         self._stepModifier = None
         self.sparse = False
         self.rest_cont = False
-        self.blockIdx = np.array([0, nVar], dtype = c_int)
+        self.blockIdx = None
         self.vblocks = []
         self.condenser = None
         
@@ -112,9 +112,16 @@ class Problem:
         self.jac_g_colind = jacIndCol
     
     def set_blockIndex(self, idx : typing.Iterable):
-        idx = np.array(idx, dtype = c_int)
+        # idx = np.array(idx, dtype = c_int)
         self.blockIdx = idx
     
+    @property
+    def blockIdx(self):
+        return self._blockIdx
+    
+    @blockIdx.setter
+    def blockIdx(self, idx : typing.Optional[typing.Iterable]):
+        self._blockIdx = np.array(idx, dtype = c_int) if idx is not None else None
     
     @property
     def costrVioReducer(self):
@@ -153,74 +160,85 @@ class Problem:
         jac_colind_arr[:] = self.jac_g_colind
     
     def evaluate_dense(self, _, xi: c_double_p, lam : c_double_p, objval : c_double_p, constr : c_double_p, gradObj : c_double_p, constrJac : c_double_p, hess : POINTER(c_double_p), dmode : c_int, info : c_int_p):
-        xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
-        lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
-        constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
-    
-        objval[0] = self.f(xi_arr)
-        constr_arr[:] = self.g(xi_arr)
-        if dmode > 0:
-            gradObj_arr = np.ctypeslib.as_array(gradObj, shape=(self.nVar,))
-            constrJac_arr = np.ctypeslib.as_array(constrJac, shape=(self.nCon, self.nVar))
-    
-            gradObj_arr[:] = self.grad_f(xi_arr)
-            constrJac_arr[:, :] = self.jac_g(xi_arr)
-            if dmode == 2:
-                hess_arr = np.ctypeslib.as_array(hess, shape=(self.n_hessblocks,))
-                s = self.blockIdx[self.n_hessblocks] - self.blockIdx[self.n_hessblocks - 1]
-                hess_last = np.ctypeslib.as_array(hess_arr[self.n_hessblocks - 1], shape=(s * (s + 1) // 2,))
-                hess_last[:] = self.last_hessBlock(xi_arr, lam_arr[self.nVar: self.nVar + self.nCon])
-    
-            elif dmode == 3:
-                hess_list = []
-                for i in range(len(self.blockIdx) - 1):
-                    Bsize = self.blockIdx[i+1] - self.blockIdx[i]
-                    hess_list.append(np.ctypeslib.as_array(hess[i], shape = ((Bsize*(Bsize + 1))//2,)))
-                hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
-                for i in range(len(self.blockIdx) - 1):
-                    hess_list[i][:] = hess_eval[i]
-        info[0] = 0
+        try:
+            xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
+            lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
+            constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
+        
+            objval[0] = self.f(xi_arr)
+            constr_arr[:] = self.g(xi_arr)
+            if dmode > 0:
+                gradObj_arr = np.ctypeslib.as_array(gradObj, shape=(self.nVar,))
+                constrJac_arr = np.ctypeslib.as_array(constrJac, shape=(self.nCon, self.nVar))
+        
+                gradObj_arr[:] = self.grad_f(xi_arr)
+                constrJac_arr[:, :] = self.jac_g(xi_arr)
+                if dmode == 2:
+                    hess_arr = np.ctypeslib.as_array(hess, shape=(self.n_hessblocks,))
+                    s = self.blockIdx[self.n_hessblocks] - self.blockIdx[self.n_hessblocks - 1]
+                    hess_last = np.ctypeslib.as_array(hess_arr[self.n_hessblocks - 1], shape=(s * (s + 1) // 2,))
+                    hess_last[:] = self.last_hessBlock(xi_arr, lam_arr[self.nVar: self.nVar + self.nCon])
+        
+                elif dmode == 3:
+                    hess_list = []
+                    for i in range(len(self.blockIdx) - 1):
+                        Bsize = self.blockIdx[i+1] - self.blockIdx[i]
+                        hess_list.append(np.ctypeslib.as_array(hess[i], shape = ((Bsize*(Bsize + 1))//2,)))
+                    hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
+                    for i in range(len(self.blockIdx) - 1):
+                        hess_list[i][:] = hess_eval[i]
+        except Exception as E:
+            info[0] = 1
+        else:
+            info[0] = 0
     
     def evaluate_sparse(self, _, xi : c_double_p, lam : c_double_p, objval : c_double_p, constr : c_double_p, gradObj : c_double_p, jac_nz : c_double_p, jac_row : c_int_p, jac_colind : c_int_p, hess : POINTER(c_double_p), dmode : c_int, info : c_int_p):
-        xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
-        lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
-        constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
-        jac_nz_arr = np.ctypeslib.as_array(jac_nz, shape=(self.nnz,))
-    
-        objval[0] = self.f(xi_arr)
-        constr_arr[:] = self.g(xi_arr)
-    
-        if dmode > 0:
-            gradObj_arr = np.ctypeslib.as_array(gradObj, shape=(self.nVar,))
-            gradObj_arr[:] = self.grad_f(xi_arr)
-    
-            jac_g_nz_eval = self.jac_g_nz(xi_arr)
-            jac_nz_arr[:] = jac_g_nz_eval
-    
-            if dmode == 2:
-                hess_arr = np.ctypeslib.as_array(hess, shape=(self.n_hessblocks,))
-                s_last = self.blockIdx[self.n_hessblocks] - self.blockIdx[self.n_hessblocks - 1]
-                hess_last = np.ctypeslib.as_array(hess_arr[self.n_hessblocks - 1], shape=(s_last * (s_last + 1) // 2,))
-                hess_last[:] = self.last_hessBlock(xi_arr, lam_arr[self.nVar: self.nVar + self.nCon])
-    
-            elif dmode == 3:
-                hess_list = []
-                for i in range(len(self.blockIdx) - 1):
-                    Bsize = self.blockIdx[i+1] - self.blockIdx[i]
-                    hess_list.append(np.ctypeslib.as_array(hess[i], shape = ((Bsize*(Bsize + 1))//2,)))
-                hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
-                for i in range(len(self.blockIdx) - 1):
-                    hess_list[i][:] = hess_eval[i]
-        info[0] = 0
+        try:
+            xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
+            lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
+            constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
+            jac_nz_arr = np.ctypeslib.as_array(jac_nz, shape=(self.nnz,))
+        
+            objval[0] = self.f(xi_arr)
+            constr_arr[:] = self.g(xi_arr)
+        
+            if dmode > 0:
+                gradObj_arr = np.ctypeslib.as_array(gradObj, shape=(self.nVar,))
+                gradObj_arr[:] = self.grad_f(xi_arr)
+        
+                jac_g_nz_eval = self.jac_g_nz(xi_arr)
+                jac_nz_arr[:] = jac_g_nz_eval
+        
+                if dmode == 2:
+                    hess_arr = np.ctypeslib.as_array(hess, shape=(self.n_hessblocks,))
+                    s_last = self.blockIdx[self.n_hessblocks] - self.blockIdx[self.n_hessblocks - 1]
+                    hess_last = np.ctypeslib.as_array(hess_arr[self.n_hessblocks - 1], shape=(s_last * (s_last + 1) // 2,))
+                    hess_last[:] = self.last_hessBlock(xi_arr, lam_arr[self.nVar: self.nVar + self.nCon])
+        
+                elif dmode == 3:
+                    hess_list = []
+                    for i in range(len(self.blockIdx) - 1):
+                        Bsize = self.blockIdx[i+1] - self.blockIdx[i]
+                        hess_list.append(np.ctypeslib.as_array(hess[i], shape = ((Bsize*(Bsize + 1))//2,)))
+                    hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
+                    for i in range(len(self.blockIdx) - 1):
+                        hess_list[i][:] = hess_eval[i]
+        except Exception as E:
+            info[0] = 1
+        else:
+            info[0] = 0
     
     def evaluate_simple(self, _, xi : c_double_p, objval : c_double_p, constr : c_double_p, info : c_int_p):
-        xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
-        constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
-        
-        objval[0] = self.f(xi_arr)
-        constr_arr[:] = self.g(xi_arr)
-        
-        info[0] = 0
+        try:
+            xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
+            constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
+            
+            objval[0] = self.f(xi_arr)
+            constr_arr[:] = self.g(xi_arr)
+        except Exception as E:
+            info[0] = 1
+        else:
+            info[0] = 0
         
     def call_constrVioReducer(self, _, xi : c_double_p, info : c_int_p):
         xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
@@ -238,5 +256,6 @@ class Problem:
             return
         info[0] = 1
 
-
+    def complete(self):
+        print("Calling problem.complete() is no longer required.")
 

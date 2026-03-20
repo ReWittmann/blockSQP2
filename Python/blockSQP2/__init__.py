@@ -30,7 +30,7 @@ from .function_signatures import add_BSQP_signatures
 add_BSQP_signatures(BSQP)
 
 
-from .solver import Solver
+from .solver import Solver, SQPresults
 Solver.BSQP = BSQP
 
 from .problem import Problem
@@ -45,8 +45,18 @@ Condenser.BSQP = BSQP
 from .stats import Stats
 Stats.BSQP = BSQP
 
-#Backward compatibility
+#Some backwards compatibility to original pybind11 based interface
 Problemspec = Problem
+qpOASES_options = qpOASESoptions
 SQPoptions = Options
 SQPstats = Stats
 SQPmethod = Solver
+
+def vblock_array(size):
+    return [None]*size
+def cblock_array(size):
+    return [None]*size
+def int_array(size):
+    return [0]*size
+def condensing_targets(size):
+    return [None]*size

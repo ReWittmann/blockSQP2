@@ -7,3 +7,7 @@ class Stats:
         
     def __del__(self):
         self.BSQP.delete_SQPstats(self.SQPstats_obj)
+    
+    @property
+    def itCount(self):
+        return self.BSQP.SQPstats_get_itCount(self.SQPstats_obj)

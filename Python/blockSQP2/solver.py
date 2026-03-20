@@ -3,6 +3,19 @@ from .problem import Problem
 from .stats import Stats
 from .options import Options#, create_cxx_options
 import numpy as np
+from enum import Enum
+
+class SQPresults(Enum):
+    it_finished = 0
+    partial_success = 1
+    success = 2
+    super_success = 3
+    local_infeasibility = -1
+    restoration_failure = -2
+    linesearch_failure = -3
+    qp_failure = -4
+    eval_failure = -5
+    misc_error = -10
 
 class Solver:
     BSQP : CDLL
@@ -35,11 +48,13 @@ class Solver:
         self.BSQP.Problemspec_set_reduce_constr_vio(self.Problemspec_obj, self.Py_Problem.PTR_reduce_constr_vio)
         self.BSQP.Problemspec_set_modify_step(self.Problemspec_obj, self.Py_Problem.PTR_modify_step)
         
-        self.BSQP.Problemspec_set_blockIdx(
-            self.Problemspec_obj,
-            self.Py_Problem.blockIdx.ctypes.data_as(POINTER(c_int)),
-            c_int(len(self.Py_Problem.blockIdx) - 1)
-        )
+        if self.Py_Problem.blockIdx is not None:
+            self.BSQP.Problemspec_set_blockIdx(
+                self.Problemspec_obj,
+                self.Py_Problem.blockIdx.ctypes.data_as(POINTER(c_int)),
+                c_int(len(self.Py_Problem.blockIdx) - 1)
+            )
+        
         self.BSQP.Problemspec_set_nnz(
             self.Problemspec_obj,
             self.Py_Problem.nnz
@@ -112,7 +127,7 @@ class Solver:
         if ret == -1000:
             error_message = self.BSQP.get_error_message()
             raise Exception(error_message.value.decode('utf-8'))
-        return ret
+        return SQPresults(ret)
 
     def finish(self):
         self.BSQP.SQPmethod_finish(self.SQPmethod_obj)

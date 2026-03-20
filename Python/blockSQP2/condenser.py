@@ -25,7 +25,7 @@ class condensing_target:
     def __init__(self, arg_n_stages, arg_first_free, arg_vblock_end, arg_first_cond, arg_cblock_end):
         self.n_stages = arg_n_stages
         self.first_free = arg_first_free
-        self.vlbock_end = arg_vblock_end
+        self.vblock_end = arg_vblock_end
         self.first_cond = arg_first_cond
         self.cblock_end = arg_cblock_end
 
@@ -190,7 +190,6 @@ class Condenser:
         BSQP = self.BSQP
         cond = self.Condenser_obj
     
-        # --- sizes ---
         nVar = BSQP.Condenser_nVar(cond)
         nCon = BSQP.Condenser_nCon(cond)
         nBlocks = BSQP.Condenser_nBlocks(cond)
@@ -198,7 +197,6 @@ class Condenser:
         nnz = len(constr_jac.nz)
         assert nnz == constr_jac.colind[constr_jac.n]
         
-        # np.ctypeslib.as_array(cast(BSQP.Matrix_array(self.Matrix_grad_obj), c_double_p), shape = (nVar,))[:] = grad_obj
         as_array(BSQP.Matrix_array(self.Matrix_grad_obj), nVar, c_double)[:] = grad_obj
         
         BSQP.Sparse_Matrix_set_structure(self.Sparse_Matrix_constr_jac, nCon, nVar, nnz)

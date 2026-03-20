@@ -38,14 +38,13 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 itMax = 200                                 #max number of steps
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
 plot_title = False                          #Put name of problem in plot?
 
 
 start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
 opts = blockSQP2.SQPoptions()
-# opts = blockSQP2.Options()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 20.0
 
@@ -86,18 +85,22 @@ opts.max_filter_overrides = 2
 # cblocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
 # hblocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
 # targets = blockSQP2.condensing_targets(1)
-# for i in range(len(OCprob.vBlock_sizes)):
-#     vblocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
-# for i in range(len(OCprob.cBlock_sizes)):
-#     cblocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
-# for i in range(len(OCprob.hessBlock_sizes)):
-#     hblocks[i] = OCprob.hessBlock_sizes[i]
-# targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
-# cond = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
-
 vblocks = []
+cblocks = []
+hblocks = []
+targets = []
 for i in range(len(OCprob.vBlock_sizes)):
     vblocks.append(blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])) #Create vblock structs {int size; bool dependent}
+for i in range(len(OCprob.cBlock_sizes)):
+    cblocks.append(blockSQP2.cblock(OCprob.cBlock_sizes[i]))
+for i in range(len(OCprob.hessBlock_sizes)):
+    hblocks.append(OCprob.hessBlock_sizes[i])
+targets.append(blockSQP2.condensing_target(*OCprob.ctarget_data))
+condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+
+# vblocks = []
+# for i in range(len(OCprob.vBlock_sizes)):
+#     vblocks.append(blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])) #Create vblock structs {int size; bool dependent}
 
 
 #Define blockSQP Problemspec
@@ -116,13 +119,13 @@ prob.make_sparse(OCprob.jac_g_nnz, OCprob.jac_g_row, OCprob.jac_g_colind)
 prob.jac_g_nz = OCprob.jac_g_nz
 
 prob.hess = OCprob.hess_lag
-prob.set_blockIndex(OCprob.hessBlock_index)
+prob.blockIdx = OCprob.hessBlock_index
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 #Recommended: Dont pass condenser to activate condensing, 
 #but pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
-# prob.cond = cond
+# prob.condenser = condenser
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
