@@ -1,9 +1,11 @@
-from ctypes import *
+from ctypes import CDLL, c_void_p, c_int, c_double, c_char, c_char_p, POINTER, cast
 from .problem import Problem
-from .options import Options, qpOASESoptions, create_cxx_options
+from .stats import Stats
+from .options import Options#, create_cxx_options
+import numpy as np
 
 class Solver:
-    BSQP : ctypes.CDLL
+    BSQP : CDLL
     
     #C++ side objects
     SQPmethod_obj : c_void_p = c_void_p(None)
@@ -21,43 +23,42 @@ class Solver:
         self.Py_Opts = arg_opts
         self.Py_Stats = arg_stats
         
-        self.Problemspec_obj = self.BSQP.create_Problemspec(self.Py_Problem.nVar, self.Py_Problem.nCon)
+        self.Problemspec_obj = self.BSQP.create_Problemspec(c_int(self.Py_Problem.nVar), c_int(self.Py_Problem.nCon))
         
         # Register callbacks
-        self.BSQP.Problemspec_set_closure(c_void_p(None))
-        self.BSQP.Problemspec_set_dense_init(self.Problemspec_obj, Py_Problem.PTR_initialize_dense)
-        self.BSQP.Problemspec_set_sparse_init(self.Problemspec_obj, Py_Problem.PTR_initialize_sparse)
-        self.BSQP.Problemspec_set_sparse_eval(self.Problemspec_obj, Py_Problem.PTR_evaluate_sparse)
-        
-        self.BSQP.Problemspec_set_dense_eval(self.Problemspec_obj, Py_Problem.PTR_evaluate_dense)
-        self.BSQP.Problemspec_set_simple_eval(self.Problemspec_obj, Py_Problem.PTR_avaluate_simple)
-        self.BSQP.Problemspec_set_continuity_restoration(self.Problemspec_obj, Py_Problem.PTR_reduceConstrVio)
+        self.BSQP.Problemspec_set_closure(self.Problemspec_obj, c_void_p(None))
+        self.BSQP.Problemspec_set_dense_init(self.Problemspec_obj, self.Py_Problem.PTR_initialize_dense)
+        self.BSQP.Problemspec_set_sparse_init(self.Problemspec_obj, self.Py_Problem.PTR_initialize_sparse)
+        self.BSQP.Problemspec_set_dense_eval(self.Problemspec_obj, self.Py_Problem.PTR_evaluate_dense)
+        self.BSQP.Problemspec_set_sparse_eval(self.Problemspec_obj, self.Py_Problem.PTR_evaluate_sparse)
+        self.BSQP.Problemspec_set_simple_eval(self.Problemspec_obj, self.Py_Problem.PTR_evaluate_simple)
+        self.BSQP.Problemspec_set_reduce_constr_vio(self.Problemspec_obj, self.Py_Problem.PTR_reduce_constr_vio)
+        self.BSQP.Problemspec_set_modify_step(self.Problemspec_obj, self.Py_Problem.PTR_modify_step)
         
         self.BSQP.Problemspec_set_blockIdx(
             self.Problemspec_obj,
-            Py_Problem.blockIdx.ctypes.data_as(POINTER(c_int)),
-            c_int(len(Py_Problem.blockIdx) - 1)
+            self.Py_Problem.blockIdx.ctypes.data_as(POINTER(c_int)),
+            c_int(len(self.Py_Problem.blockIdx) - 1)
         )
-
         self.BSQP.Problemspec_set_nnz(
             self.Problemspec_obj,
-            c_int(Py_Problem.nnz)
+            self.Py_Problem.nnz
         )
 
         self.BSQP.Problemspec_set_bounds(
             self.Problemspec_obj,
-            Py_Problem.lb_var.ctypes.data_as(POINTER(c_double)),
-            Py_Problem.ub_var.ctypes.data_as(POINTER(c_double)),
-            Py_Problem.lb_con.ctypes.data_as(POINTER(c_double)),
-            Py_Problem.ub_con.ctypes.data_as(POINTER(c_double)),
-            c_double(Py_Problem.lb_obj),
-            c_double(Py_Problem.ub_obj)
+            self.Py_Problem.lb_var.ctypes.data_as(POINTER(c_double)),
+            self.Py_Problem.ub_var.ctypes.data_as(POINTER(c_double)),
+            self.Py_Problem.lb_con.ctypes.data_as(POINTER(c_double)),
+            self.Py_Problem.ub_con.ctypes.data_as(POINTER(c_double)),
+            c_double(self.Py_Problem.lb_obj),
+            c_double(self.Py_Problem.ub_obj)
         )
 
-        if len(Py_Problem.vblocks) > 0:
-            vblock_array = self.BSQP.create_vblock_array(c_int(len(Py_Problem.vblocks)))
+        if len(self.Py_Problem.vblocks) > 0:
+            vblock_array = self.BSQP.create_vblock_array(c_int(len(self.Py_Problem.vblocks)))
 
-            for i, vb in enumerate(Py_Problem.vblocks):
+            for i, vb in enumerate(self.Py_Problem.vblocks):
                 self.BSQP.vblock_array_set(
                     vblock_array,
                     c_int(i),
@@ -68,36 +69,77 @@ class Solver:
             self.BSQP.Problemspec_pass_vblocks(
                 self.Problemspec_obj,
                 vblock_array,
-                c_int(len(Py_Problem.vblocks))
+                c_int(len(self.Py_Problem.vblocks))
             )
 
-        if Py_Problem.condenser is not None:
+        if self.Py_Problem.condenser is not None:
             self.BSQP.Problemspec_set_cond(
                 self.Problemspec_obj,
-                Py_Problem.condenser.Condenser_obj
+                self.Py_Problem.condenser.Condenser_obj
             )
 
-        self.SQPoptions_obj, self.QPsolver_options_obj = create_cxx_options(
-            self.BSQP, Py_Opts
-        )
+        self.SQPoptions_obj, self.QPsolver_options_obj = self.Py_Opts.cxx_obj()
+        # create_cxx_options(
+        #     self.BSQP, self.Py_Opts
+        # )
 
         self.SQPmethod_obj = self.BSQP.create_SQPmethod(
             self.Problemspec_obj,
             self.SQPoptions_obj,
-            Py_Stats.SQPstats_obj
+            self.Py_Stats.SQPstats_obj
         )
 
         if not self.SQPmethod_obj:
             err = self.BSQP.get_error_message()
-            raise RuntimeError(ctypes.cast(err, c_char_p).value.decode())
+            raise RuntimeError(cast(err, c_char_p).value.decode())
     
     def finalize(self):
-        self.BSQP.delete_SQPmethod(self.SQPmethod_obj)
-        self.BSQP.delete_Problemspec(self.Problemspec_obj)
-        self.BSQP.delete_SQPoptions(self.SQPoptions_obj)
-        self.BSQP.delete_SQPstats(self.SQPstats_obj)
-    
+        pass
+        # self.BSQP.delete_SQPmethod(self.SQPmethod_obj)
+        # self.BSQP.delete_Problemspec(self.Problemspec_obj)
+        # self.BSQP.delete_SQPoptions(self.SQPoptions_obj)
+        # self.BSQP.delete_QPsolver_options(self.QPsolver_options_obj)
+        
     def __del__(self):
         self.finalize()
     
+    def init(self):
+        self.BSQP.SQPmethod_init(self.SQPmethod_obj)
+
+    def run(self, maxIt: int, warmStart: int = 0):
+        ret = self.BSQP.SQPmethod_run(self.SQPmethod_obj, maxIt, warmStart)
+
+        if ret == -1000:
+            error_message = self.BSQP.get_error_message()
+            raise Exception(error_message.value.decode('utf-8'))
+        return ret
+
+    def finish(self):
+        self.BSQP.SQPmethod_finish(self.SQPmethod_obj)
+
+    def get_itCount(self):
+        return self.BSQP.SQPstats_get_itCount(self.Py_Stats.SQPstats_obj)
+
+    def get_primal_solution(self):
+        xi_arr = np.zeros(self.Py_Problem.nVar, dtype = c_double)
+        self.BSQP.SQPmethod_get_xi(self.SQPmethod_obj, xi_arr.ctypes.data_as(POINTER(c_double)))
+        return xi_arr
+
+    def get_dual_solution(self):
+        lam_arr = np.zeros(self.Py_Problem.nVar + self.Py_Problem.nCon)
+        self.BSQP.SQPmethod_get_lambda(self.SQPmethod_obj, lam_arr.ctypes.data_as(POINTER(c_double)))
+        return lam_arr[self.Py_Problem.nVar:]
+    
+    def get_dual_solution_full(self):
+        lam_arr = np.zeros(self.Py_Problem.nVar + self.Py_Problem.nCon)
+        self.BSQP.SQPmethod_get_lambda(self.SQPmethod_obj, lam_arr.ctypes.data_as(POINTER(c_double)))
+        return lam_arr
+    
+    def get_xi(self):
+        return self.get_primal_solution()
+    def get_lambda(self):
+        return self.get_dual_solution_full()
+
+
+
     

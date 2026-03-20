@@ -1,5 +1,28 @@
 from ctypes import c_void_p, c_int, c_double, c_char, c_char_p, CFUNCTYPE, POINTER
 
+BSQP_callback_signatures = {
+        'initialize_dense': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_double), POINTER(c_double)),
+        'initialize_sparse': CFUNCTYPE(None, c_void_p,
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_int), POINTER(c_int)),
+        'evaluate_dense': CFUNCTYPE(None, c_void_p,
+                               POINTER(c_double), POINTER(c_double),
+                               POINTER(c_double), POINTER(c_double),
+                               POINTER(c_double), POINTER(c_double),
+                               POINTER(POINTER(c_double)), c_int, POINTER(c_int)),
+        'evaluate_sparse': CFUNCTYPE(None, c_void_p,
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_int), POINTER(c_int),
+                                POINTER(POINTER(c_double)), c_int, POINTER(c_int)),
+        'evaluate_simple': CFUNCTYPE(None, c_void_p,
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_int)),
+        'reduce_constr_vio': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_int)),
+        'modify_step': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_double), POINTER(c_int))
+    }
+
 BSQP_function_signatures = {
     "get_error_message": (None, ()),
     "create_vblock_array": (c_void_p, (c_int,)),
@@ -76,12 +99,22 @@ BSQP_function_signatures = {
     "Problemspec_pass_vblocks": (None, (c_void_p, c_void_p, c_int)),
     "Problemspec_set_cond": (None, (c_void_p, c_void_p)),
     "Problemspec_set_closure": (None, (c_void_p, c_void_p)),
-    "Problemspec_set_dense_init": (None, (c_void_p, c_void_p)),
-    "Problemspec_set_dense_eval": (None, (c_void_p, c_void_p)),
-    "Problemspec_set_simple_eval": (None, (c_void_p, c_void_p)),
-    "Problemspec_set_sparse_init": (None, (c_void_p, c_void_p)),
-    "Problemspec_set_sparse_eval": (None, (c_void_p, c_void_p)),
-    "Problemspec_set_continuity_restoration": (None, (c_void_p, c_void_p)),
+    
+    # "Problemspec_set_dense_init": (None, (c_void_p, c_void_p)),
+    # "Problemspec_set_dense_eval": (None, (c_void_p, c_void_p)),
+    # "Problemspec_set_simple_eval": (None, (c_void_p, c_void_p)),
+    # "Problemspec_set_sparse_init": (None, (c_void_p, c_void_p)),
+    # "Problemspec_set_sparse_eval": (None, (c_void_p, c_void_p)),
+    # "Problemspec_set_reduce_constr_vio": (None, (c_void_p, c_void_p)),
+    # "Problemspec_set_modify_step": (None, (c_void_p, c_void_p))
+    
+    "Problemspec_set_dense_init": (None, (c_void_p, BSQP_callback_signatures['initialize_dense'])),
+    "Problemspec_set_sparse_init": (None, (c_void_p, BSQP_callback_signatures['initialize_sparse'])),
+    "Problemspec_set_dense_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_dense'])),
+    "Problemspec_set_sparse_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_sparse'])),
+    "Problemspec_set_simple_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_simple'])),
+    "Problemspec_set_reduce_constr_vio": (None, (c_void_p, BSQP_callback_signatures['reduce_constr_vio'])),
+    "Problemspec_set_modify_step": (None, (c_void_p, BSQP_callback_signatures['modify_step'])),
     
     "create_SQPmethod": (c_void_p, (c_void_p, c_void_p, c_void_p)),
     "delete_SQPmethod": (None, (c_void_p,)),
@@ -141,34 +174,12 @@ BSQP_function_signatures = {
     "Sparse_Matrix_colind": (c_void_p, (c_void_p,))
 }
 
-def add_function_signatures(mod_BSQP):
+def add_BSQP_signatures(mod_BSQP):
     for key in BSQP_function_signatures:
-        mod_BSQP.__getattr__(key).restype = BSQP_function_signatures[key][0]
-        mod_BSQP.__getattr__(key).argtypes = BSQP_function_signatures[key][1]
+        #"dlsym" the method
+        BSQP_method = mod_BSQP.__getattr__(key)
+        BSQP_method.restype = BSQP_function_signatures[key][0]
+        BSQP_method.argtypes = BSQP_function_signatures[key][1]
+        # mod_BSQP.__getattr__(key).restype = BSQP_function_signatures[key][0]
+        # mod_BSQP.__getattr__(key).argtypes = BSQP_function_signatures[key][1]
     return
-
-
-callback_signatures = {
-        'initialize_dense': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_double), POINTER(c_double)),
-        'initialize_sparse': CFUNCTYPE(None, c_void_p,
-                                POINTER(c_double), POINTER(c_double),
-                                POINTER(c_double), POINTER(c_int), POINTER(c_int)),
-        'evaluate_dense': CFUNCTYPE(None, c_void_p,
-                               POINTER(c_double), POINTER(c_double),
-                               POINTER(c_double), POINTER(c_double),
-                               POINTER(c_double), POINTER(c_double),
-                               POINTER(POINTER(c_double)), c_int, POINTER(c_int)),
-        'evaluate_sparse': CFUNCTYPE(None, c_void_p,
-                                POINTER(c_double), POINTER(c_double),
-                                POINTER(c_double), POINTER(c_int)),
-        'evaluate_simple': CFUNCTYPE(None, c_void_p,
-                                POINTER(c_double), POINTER(c_double),
-                                POINTER(c_double), POINTER(c_double),
-                                POINTER(c_double), POINTER(c_double),
-                                POINTER(c_int), POINTER(c_int),
-                                POINTER(POINTER(c_double)), c_int, POINTER(c_int)),
-        'restore_continuity': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_int))
-    }
-
-def callbacktype(name):
-    return callback_signatures[name]

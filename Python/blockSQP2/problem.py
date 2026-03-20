@@ -14,33 +14,11 @@
 import numpy as np
 import typing
 from ctypes import c_double, c_int, CFUNCTYPE, POINTER, c_void_p
-from .function_signatures import callbacktype
-
+from .function_signatures import BSQP_callback_signatures as CB_sigs
+from .condenser import vblock, Condenser
 
 c_double_p = POINTER(c_double)
 c_int_p = POINTER(c_int)
-
-callback_signatures = {
-        'initialize_dense': CFUNCTYPE(None, c_void_p, c_double_p, c_double_p, c_double_p),
-        'initialize_sparse': CFUNCTYPE(None, c_void_p,
-                                c_double_p, c_double_p,
-                                c_double_p, c_int_p, c_int_p),
-        'evaluate_dense': CFUNCTYPE(None, c_void_p,
-                               c_double_p, c_double_p,
-                               c_double_p, c_double_p,
-                               c_double_p, c_double_p,
-                               POINTER(c_double_p), c_int, c_int_p),
-        'evaluate_sparse': CFUNCTYPE(None, c_void_p,
-                                c_double_p, c_double_p,
-                                c_double_p, c_int_p),
-        'evaluate_simple': CFUNCTYPE(None, c_void_p,
-                                c_double_p, c_double_p,
-                                c_double_p, c_double_p,
-                                c_double_p, c_double_p,
-                                c_int_p, c_int_p,
-                                POINTER(c_double_p), c_int, c_int_p),
-        'restore_continuity': CFUNCTYPE(None, c_void_p, c_double_p, c_int_p)
-    }
 
 class Problem:
     nVar: int  # Number of variables
@@ -49,7 +27,7 @@ class Problem:
     blockIdx: np.ndarray  # Block indices (array of int32)
     vblocks: typing.List['vblock']  # List of vblock objects (you should define the 'vblock' class)
     condenser: typing.Optional['Condenser']  # Optional condenser object
-
+    
     # Additional fields from Julia struct
     lb_var: np.ndarray  # Lower bounds for variables
     ub_var: np.ndarray  # Upper bounds for variables
@@ -85,54 +63,56 @@ class Problem:
     sparse : bool
     
     
-    def __init__(self, nVar = 0, nCon = 0):
+    def __init__(self, nVar, nCon):
         self.nVar = nVar
         self.nCon = nCon
+        self.nnz = -1
         
         self._stepModifier = None
         self.sparse = False
         self.rest_cont = False
+        self.blockIdx = np.array([0, nVar], dtype = c_int)
+        self.vblocks = []
+        self.condenser = None
         
+        self.C_initialize_dense = lambda scope, xi, lam, constrJac: self.initialize_dense(scope, xi, lam, constrJac)
+        self.C_initialize_sparse = lambda scope, xi, lam, jac_nz, jac_row, jac_colind: self.initialize_sparse(scope, xi, lam, jac_nz, jac_row, jac_colind)
+        self.C_evaluate_dense = lambda scope, xi, lam, objval, constr, gradObj, constrJac, hess, dmode, info: self.evaluate_dense(scope, xi, lam, objval, constr, gradObj, constrJac, hess, dmode, info)
+        self.C_evaluate_sparse = lambda scope, xi, lam, objval, constr, gradObj, jac_nz, jac_row, jac_colind, hess, dmode, info: self.evaluate_sparse(scope, xi, lam, objval, constr, gradObj, jac_nz, jac_row, jac_colind, hess, dmode, info)
+        self.C_evaluate_simple = lambda scope, xi, objval, constr, info: self.evaluate_simple(scope, xi, objval, constr, info)
         
-        self.C_initialize_dense = lambda *args: self.initialize_dense(*args)
-        self.C_initialize_sparse = lambda *args: self.initialize_sparse(*args)
-        self.C_evaluate_dense = lambda *args: self.evaluate_dense(*args)
-        self.C_evaluate_sparse = lambda *args: self.evaluate_sparse(*args)
-        self.C_evaluate_simple = lambda *args: self.evaluate_simple(*args)
+        self.C_reduce_constr_vio = lambda scope, xi, info: self.call_constrVioReducer(scope, xi, info)
+        self.C_modify_step = lambda scope, xi, lam, info: self.call_stepModifier(scope, xi, lam, info)
         
-        self.C_restore_continuity = lambda *args: self.restore_continuity(*args)
-        self.C_modify_step = lambda *args: self.modify_step(*args)
+        self.PTR_initialize_dense = CB_sigs["initialize_dense"](self.C_initialize_dense)
+        self.PTR_initialize_sparse = CB_sigs["initialize_sparse"](self.C_initialize_sparse)
+        self.PTR_evaluate_dense = CB_sigs["evaluate_dense"](self.C_evaluate_dense)
+        self.PTR_evaluate_sparse = CB_sigs["evaluate_sparse"](self.C_evaluate_sparse)
+        self.PTR_evaluate_simple = CB_sigs["evaluate_simple"](self.C_evaluate_simple)
         
-        
-        self.PTR_initialize_dense = callbacktype("initialize_dense")(self._initialize_dense)
-        self.PTR_initialize_sparse = callbacktype("initialize_sparse")(self._initialize_sparse)
-        self.PTR_evaluate_dense = callbacktype("evaluate_dense")(self.evaluate_dense)
-        self.PTR_evaluate_sparse = callbacktype("evaluate_sparse")(self.evaluate_sparse)
-        self.PTR_evaluate_simple = callbacktype("evaluate_simple")(self.evaluate_simple)
-        
-        self.PTR_reduceConstrVio = callbacktype("reduceConstrVio")(self.C_restore_continuity)
-        self.PTR_modify_step = callbacktype("modify_step")(self.C_modify_step)
+        self.PTR_reduce_constr_vio = CB_sigs["reduce_constr_vio"](self.C_reduce_constr_vio)
+        self.PTR_modify_step = CB_sigs["modify_step"](self.C_modify_step)
         
     ##Some setter methods##
     def set_bounds(self, lb_x, ub_x, lb_g, ub_g, objLo = -np.inf, objUp = np.inf):
-        self.objLo = objLo
-        self.objUp = objUp
+        self.lb_obj = objLo
+        self.ub_obj = objUp
         
-        self.lb_var = lb_x
-        self.ub_Var = ub_x
+        self.lb_var = np.asarray(lb_x, dtype = c_double)
+        self.ub_var = np.asarray(ub_x, dtype = c_double)
         
-        self.lb_con = lb_g
-        self.ub_con = ub_g
+        self.lb_con = np.asarray(lb_g, dtype = c_double)
+        self.ub_con = np.asarray(ub_g, dtype = c_double)
     
     def make_sparse(self, nnz : int, jacIndRow : typing.Union[list, np.ndarray], jacIndCol : typing.Union[list, np.ndarray]):
         self.sparse = True
         self.nnz = nnz
         assert len(jacIndRow) == nnz
-        self.jacIndRow = jacIndRow
-        self.jacIndCol = jacIndCol
+        self.jac_g_row = jacIndRow
+        self.jac_g_colind = jacIndCol
     
     def set_blockIndex(self, idx : typing.Iterable):
-        idx = np.array(idx, dtype = np.int32)
+        idx = np.array(idx, dtype = c_int)
         self.blockIdx = idx
     
     
@@ -153,14 +133,14 @@ class Problem:
     def set_stepModifier(self, stepM_func : typing.Optional[typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]]):
         self._stepModifier = stepM_func
     
-    def initialize_dense(self,_, xi : c_double_p, lam : c_double_p, constrJac : c_double_p):
+    def initialize_dense(self, _, xi : c_double_p, lam : c_double_p, constrJac : c_double_p):
         xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
         lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
         
         xi_arr[:] = self.x_start
         lam_arr[:] = self.lam_start
 
-    def initialize_sparse(self, _, xi : c_double_p, lam : c_double_p, jac_nz : c_double_p, jac_row : c_int_p, jac_colind : c_int_p, info : c_int_p):
+    def initialize_sparse(self, _, xi : c_double_p, lam : c_double_p, jac_nz : c_double_p, jac_row : c_int_p, jac_colind : c_int_p):
         xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
         lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
         jac_row_arr = np.ctypeslib.as_array(jac_row, shape=(self.nnz,))

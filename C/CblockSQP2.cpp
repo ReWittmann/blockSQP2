@@ -63,9 +63,10 @@ public:
     void (*initialize_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
     void (*evaluate_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info);
     
-    void (*restore_continuity)(void *closure_pass, double *xi, int *info);
+    void (*reduce_constr_vio)(void *closure_pass, double *xi, int *info);
+    void (*modify_step)(void *closure_pass, double *xi, double *lambda, int *info);
     
-    // Pass-through pointer to a closure of the caller, currently for all callbacks.
+    // Pass-through pointer to a closure of the caller, passed to callbacks.
     void *closure;
     
     // Invoke callbacks in overridden methods
@@ -117,8 +118,8 @@ public:
     
     // Optional Methods
     virtual void reduceConstrVio(Matrix &xi, int *info){
-        if (restore_continuity != nullptr){
-            (*restore_continuity)(closure, xi.array, info);
+        if (reduce_constr_vio != nullptr){
+            (*reduce_constr_vio)(closure, xi.array, info);
         }
     };
 };
@@ -467,8 +468,12 @@ CDLEXP void Problemspec_set_sparse_eval(void *ptr, void (*fp_eval_sparse)(void *
     static_cast<CProblemspec *>(ptr)->evaluate_sparse = fp_eval_sparse;
 }
 
-CDLEXP void Problemspec_set_continuity_restoration(void *ptr, void (*fp_rest_cont)(void *closure_pass, double *xi, int *info)){
-    static_cast<CProblemspec *>(ptr)->restore_continuity = fp_rest_cont;
+CDLEXP void Problemspec_set_reduce_constr_vio(void *ptr, void (*fp_red_vio)(void *closure_pass, double *xi, int *info)){
+    static_cast<CProblemspec *>(ptr)->reduce_constr_vio = fp_red_vio;
+}
+
+CDLEXP void Problemspec_set_modify_step(void *ptr, void (*fp_mod_step)(void *closure_pass, double *xi, double *lambda, int *info)){
+    static_cast<CProblemspec *>(ptr)->modify_step = fp_mod_step;
 }
 
 // SQPmethod

@@ -45,6 +45,7 @@ plot_title = False                          #Put name of problem in plot?
 start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
 opts = blockSQP2.SQPoptions()
+# opts = blockSQP2.Options()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 20.0
 
@@ -81,23 +82,27 @@ opts.max_filter_overrides = 2
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vblocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
-cblocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
-hblocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
-targets = blockSQP2.condensing_targets(1)
+# vblocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
+# cblocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
+# hblocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
+# targets = blockSQP2.condensing_targets(1)
+# for i in range(len(OCprob.vBlock_sizes)):
+#     vblocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
+# for i in range(len(OCprob.cBlock_sizes)):
+#     cblocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
+# for i in range(len(OCprob.hessBlock_sizes)):
+#     hblocks[i] = OCprob.hessBlock_sizes[i]
+# targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
+# cond = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+
+vblocks = []
 for i in range(len(OCprob.vBlock_sizes)):
-    vblocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
-for i in range(len(OCprob.cBlock_sizes)):
-    cblocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
-for i in range(len(OCprob.hessBlock_sizes)):
-    hblocks[i] = OCprob.hessBlock_sizes[i]
-targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
-cond = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+    vblocks.append(blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])) #Create vblock structs {int size; bool dependent}
 
 
 #Define blockSQP Problemspec
 #See class OCProblems.OCProblem and blockSQP2/blockSQP_Problemspec.py for field specifications
-prob = blockSQP2.Problemspec()
+prob = blockSQP2.Problemspec(OCprob.nVar, OCprob.nCon)
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 
@@ -121,7 +126,7 @@ prob.vblocks = vblocks
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
-prob.complete()
+# prob.complete()
 
 
 stats = blockSQP2.SQPstats("./solver_outputs")
@@ -146,7 +151,7 @@ else:
 t1 = time.monotonic()
 if not step_plots:
     xi = np.array(optimizer.get_xi()).reshape(-1)
-    # OCprob.plot(xi, dpi=200, title=plot_title)
+    OCprob.plot(xi, dpi=200, title=plot_title)
 
 time.sleep(0.01)
 print(t1 - t0, "s")
