@@ -25,23 +25,6 @@ targets_data = []
 for i in range(5):
     targets_data.append(structure_data['target_' + str(i)])
 
-
-#Condensing information
-# vblocks = blockSQP2.vblock_array(len(vblock_sizes))
-# for i in range(len(vblock_sizes)):
-#     vblocks[i] = blockSQP2.vblock(vblock_sizes[i], vblock_dependencies[i])
-
-# cblocks = blockSQP2.cblock_array(len(cblock_sizes))
-# for i in range(len(cblock_sizes)):
-#     cblocks[i] = blockSQP2.cblock(cblock_sizes[i])
-
-# targets = blockSQP2.condensing_targets(5)
-# for i in range(5):
-#     targets[i] = blockSQP2.condensing_target(*(targets_data[i]))
-
-# hessblock_sizes = blockSQP2.int_array(len(hsizes))
-# np.array(hessblock_sizes, copy = False)[:] = hsizes
-
 vblocks = [blockSQP2.vblock(size, bool(dep)) for size, dep in zip(vblock_sizes, vblock_dependencies)]
 cblocks = [blockSQP2.cblock(size) for size in cblock_sizes]
 hessblock_sizes = hsizes
@@ -50,15 +33,6 @@ targets = [blockSQP2.condensing_target(*tdata) for tdata in targets_data]
 cond_nobounds = blockSQP2.Condenser(vblocks, cblocks, hessblock_sizes, targets, 0)
 cond_bounds = blockSQP2.Condenser(vblocks, cblocks, hessblock_sizes, targets, 2)
 
-#Prepare calculation of the condensed jacobian
-
-###Create blockSQP2.condensing_args object to pass to Condenser
-# def identity_S(n, scale = 1.0):
-#     M = blockSQP2.SymMatrix(n)
-#     M.Initialize(0)
-#     for i in range(n):
-#         M[i,i] = scale
-#     return M
 
 prob_vectors = np.load(cD / Path('prob_vectors.npz'))
 
@@ -67,18 +41,6 @@ ub_var = prob_vectors['ub_var'].reshape(-1)
 lb_con = prob_vectors['lb_con'].reshape(-1)
 ub_con = prob_vectors['ub_con'].reshape(-1)
 grad_obj = prob_vectors['grad_obj'].reshape(-1)
-
-# M_lb_var = blockSQP2.Matrix(len(lb_var))
-# M_ub_var = blockSQP2.Matrix(len(ub_var))
-# M_lb_con = blockSQP2.Matrix(len(lb_con))
-# M_ub_con = blockSQP2.Matrix(len(ub_con))
-# M_grad_obj = blockSQP2.Matrix(len(grad_obj))
-
-# np.array(M_lb_var, copy = False)[:,0] = lb_var
-# np.array(M_ub_var, copy = False)[:,0] = ub_var
-# np.array(M_lb_con, copy = False)[:,0] = lb_con
-# np.array(M_ub_con, copy = False)[:,0] = ub_con
-# np.array(M_grad_obj, copy = False)[:,0] = grad_obj
 
 Jacobian = np.load(cD / Path('Jacobian.npz'))
 
@@ -89,83 +51,13 @@ nz = np.array(Jacobian['nz'])
 row = np.array(Jacobian['row'])
 colind = np.array(Jacobian['colind'])
 
-# A_nz = blockSQP2.double_array(nnz)
-# A_row = blockSQP2.int_array(nnz)
-# A_colind = blockSQP2.int_array(n + 1)
-# np.array(A_nz, copy = False)[:] = nz
-# np.array(A_row, copy = False)[:] = row
-# np.array(A_colind, copy = False)[:] = colind
-
-# SM_Jacobian = blockSQP2.Sparse_Matrix(m, n, A_nz, A_row, A_colind)
 
 constrJac = blockSQP2.Sparse_Matrix(m, n, nz, row, colind)
-
-#Set Hessian as identity scaled by 1e-4, causes the step 
-#to potentially violate implicit bounds
-# hess = blockSQP2.SymMat_array(len(hsizes))
-# for i in range(len(hsizes)):
-#     hess[i] = identity_S(hsizes[i], 1e-4)
-
 hess = [np.eye(hsize)*1e-4 for hsize in hsizes]
-
-# cond_args_nobounds = blockSQP2.condensing_args()
-# cond_args_nobounds.grad_obj = M_grad_obj
-# cond_args_nobounds.con_jac = SM_Jacobian 
-# cond_args_nobounds.hess = hess
-# cond_args_nobounds.lb_var = M_lb_var
-# cond_args_nobounds.ub_var = M_ub_var
-# cond_args_nobounds.lb_con = M_lb_con
-# cond_args_nobounds.ub_con = M_ub_con
-
-#Condense a QP to obtain the condensed jacobian
-# cond_nobounds.condense_args(cond_args_nobounds)
 c_grad_n, c_jac_n, c_hess_n, c_lb_var_n, c_ub_var_n, c_lb_con_n, c_ub_con_n = cond_nobounds.full_condense(grad_obj, constrJac, hess, lb_var, ub_var, lb_con, ub_con)
 c_grad_b, c_jac_b, c_hess_b, c_lb_var_b, c_ub_var_b, c_lb_con_b, c_ub_con_b = cond_bounds.full_condense(grad_obj, constrJac, hess, lb_var, ub_var, lb_con, ub_con)
 
-
-
-
-# TODO: Re-enable this for the current blockSQP2 version
-
-# #Optional: Solve both QPs and compare the solution (-times)
-# sys.stdout.flush()
-# print("Solving the full QP and condensed QP (without implicit bounds), this may take up to half a minute ...")
-# sys.stdout.flush()
-# time.sleep(0.01)
-# cond_args_nobounds.solve_QPs()
-# #QP solution
-# deltaXi = np.array(cond_args_nobounds.deltaXi).reshape(-1)
-# #QP solution restored from condensed QP solution
-# deltaXi_rest_nobounds = np.array(cond_args_nobounds.deltaXi_rest).reshape(-1)
-# print("||deltaXi - deltaXi_rest_nobounds|| = ", np.linalg.norm(deltaXi - deltaXi_rest_nobounds, np.inf), "\n\n")
-
-# cond_args_bounds = blockSQP2.condensing_args()
-# cond_args_bounds.grad_obj = M_grad_obj
-# cond_args_bounds.con_jac = SM_Jacobian 
-# cond_args_bounds.hess = hess
-# cond_args_bounds.lb_var = M_lb_var
-# cond_args_bounds.ub_var = M_ub_var
-# cond_args_bounds.lb_con = M_lb_con
-# cond_args_bounds.ub_con = M_ub_con
-
-# #Condense with condenser that includes dependent variable bounds
-# cond_bounds.condense_args(cond_args_bounds)
-
-# #Optional: Solve both QPs and compare the solution (-times)
-# sys.stdout.flush()
-# print("Solving the full QP and condensed QP (with implicit bounds), this may take up to half a minute ...")
-# sys.stdout.flush()
-# time.sleep(0.01)
-# cond_args_bounds.solve_QPs()
-# #QP solution
-# deltaXi = np.array(cond_args_bounds.deltaXi).reshape(-1)
-# #QP solution restored from condensed QP solution
-# deltaXi_rest_bounds = np.array(cond_args_bounds.deltaXi_rest).reshape(-1)
-# print("||deltaXi - deltaXi_rest_bounds|| = ", np.linalg.norm(deltaXi - deltaXi_rest_bounds, np.inf))
-
-
-
-
+# TODO: Re-enable solving the condensed QPs with qpOASES
 
 
 #Plot the sparsity structure of the condensed jacobian
