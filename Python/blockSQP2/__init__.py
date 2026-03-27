@@ -12,7 +12,7 @@ def load_library(lib_name):
     elif sys.platform == 'darwin':
         libname = Path(f"lib{lib_name}.dylib")
     elif sys.platform == 'win32':
-        libname = Path(f"{lib_name}.dll")
+        libname = Path(f"lib{lib_name}.dll")
     else:
         raise OSError(f"Unsupported platform: {sys.platform}")
     

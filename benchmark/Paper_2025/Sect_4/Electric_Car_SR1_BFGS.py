@@ -16,7 +16,7 @@ import OCProblems
 OCprob = OCProblems.Electric_Car(
                     nt = 100, 
                     refine = 1, 
-                    parallel = True, 
+                    parallel = False, 
                     integrator = 'RK4', 
                     )
 
