@@ -92,26 +92,24 @@ OCprob.plot(xi, dpi=200)
 
 
 ### Scale x1 by 100.0, x2 by 0.01 ###
-prob2 = blockSQP2.scaled_Problemspec(prob)
-scale = blockSQP2.double_array(OCprob.nVar)
-scale_arr = np.array(scale, copy = False)
-scale_arr[:] = 1.0
+prob2 = blockSQP2.ScaledProblem(prob)
+scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 for i in range(OCprob.ntS + 1):
-    OCprob.set_stage_state(scale_arr, i, [100.0, 0.01])
-prob2.arr_set_scale(scale)
+    OCprob.set_stage_state(scalingFactors, i, [100.0, 0.01])
+prob2.set_scale(scalingFactors)
+
 stats_100_001 = blockSQP2.SQPstats("./solver_outputs")
 optimizer2 = blockSQP2.SQPmethod(prob2, opts, stats_100_001)
 optimizer2.init()
 ret = optimizer2.run(100)
 
 ### Vice versa ###
-prob3 = blockSQP2.scaled_Problemspec(prob)
-scale = blockSQP2.double_array(OCprob.nVar)
-scale_arr = np.array(scale, copy = False)
-scale_arr[:] = 1.0
+prob3 = blockSQP2.ScaledProblem(prob)
+scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 for i in range(OCprob.ntS + 1):
-    OCprob.set_stage_state(scale_arr, i, [0.01, 100.0])
-prob3.arr_set_scale(scale)
+    OCprob.set_stage_state(scalingFactors, i, [0.01, 100.0])
+prob3.set_scale(scalingFactors)
+
 stats_001_100 = blockSQP2.SQPstats("./solver_outputs")
 optimizer3 = blockSQP2.SQPmethod(prob3, opts, stats_001_100)
 optimizer3.init()
@@ -119,13 +117,12 @@ ret = optimizer3.run(100)
 
 
 ### u scaled by 10 ###
-prob4 = blockSQP2.scaled_Problemspec(prob)
-scale = blockSQP2.double_array(OCprob.nVar)
-scale_arr = np.array(scale, copy = False)
-scale_arr[:] = 1.0
+prob4 = blockSQP2.ScaledProblem(prob)
+scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 for i in range(OCprob.ntS):
-    OCprob.set_stage_control(scale_arr, i, 10.0)
-prob4.arr_set_scale(scale)
+    OCprob.set_stage_control(scalingFactors, i, 10.0)
+prob4.set_scale(scalingFactors)
+
 stats = blockSQP2.SQPstats("./solver_outputs")
 optimizer4 = blockSQP2.SQPmethod(prob4, opts, stats)
 optimizer4.init()
@@ -148,13 +145,12 @@ ret = optimizer4.run(90,1)
 
 
 ### u scaled by 100 ###
-prob5 = blockSQP2.scaled_Problemspec(prob)
-scale = blockSQP2.double_array(OCprob.nVar)
-scale_arr = np.array(scale, copy = False)
-scale_arr[:] = 1.0
+prob5 = blockSQP2.ScaledProblem(prob)
+scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 for i in range(OCprob.ntS + 1):
-    OCprob.set_stage_control(scale_arr, i, 100.0)
-prob5.arr_set_scale(scale)
+    OCprob.set_stage_control(scalingFactors, i, 100.0)
+prob5.set_scale(scalingFactors)
+
 stats = blockSQP2.SQPstats("./solver_outputs")
 optimizer5 = blockSQP2.SQPmethod(prob5, opts, stats)
 optimizer5.init()

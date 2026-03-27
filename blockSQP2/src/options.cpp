@@ -48,6 +48,9 @@ SQPoptions::SQPoptions(){
 
 SQPoptions::~SQPoptions(){}
 
+void SQPoptions::pass_qpsol_options(std::unique_ptr<QPsolver_options> arg_qpsol_opts){
+    held_qpsol_options = std::move(arg_qpsol_opts);
+}
 
 void SQPoptions::optionsConsistency(Problemspec *problem){
     if ((automatic_scaling || (conv_strategy == 2 && max_conv_QPs > 1)) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
@@ -141,12 +144,12 @@ void SQPoptions::optionsConsistency(){
 void SQPoptions::complete_QP_options(){
     //Create default options if no options have been passed
     if (qpsol_options == nullptr){
-        if (qpsol == QPsolvers::qpOASES) default_qpsol_options = std::make_unique<qpOASES_options>();
-        else if (qpsol == QPsolvers::gurobi) default_qpsol_options = std::make_unique<gurobi_options>();
-        else if (qpsol == QPsolvers::qpalm) default_qpsol_options = std::make_unique<qpalm_options>();
+        if (qpsol == QPsolvers::qpOASES) held_qpsol_options = std::make_unique<qpOASES_options>();
+        else if (qpsol == QPsolvers::gurobi) held_qpsol_options = std::make_unique<gurobi_options>();
+        else if (qpsol == QPsolvers::qpalm) held_qpsol_options = std::make_unique<qpalm_options>();
         else throw ParameterError("No valid option for QP solver");
 
-        qpsol_options = default_qpsol_options.get();
+        qpsol_options = held_qpsol_options.get();
     }
     //Some values can also be set directly in the options, copy them over default QP solver options.
     if (qpsol_options->eps == 1e-16) qpsol_options->eps = eps;

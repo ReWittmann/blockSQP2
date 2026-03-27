@@ -13,55 +13,47 @@
 
 import numpy as np
 import typing
-from ctypes import c_double, c_int, CFUNCTYPE, POINTER, c_void_p
+from ctypes import c_double, c_int, c_char, POINTER, c_void_p
 from .function_signatures import BSQP_callback_signatures as CB_sigs
+from .cxxwrappers import CXXobjCreator, CXXobjHolder
 from .condenser import vblock, Condenser
 
 c_double_p = POINTER(c_double)
 c_int_p = POINTER(c_int)
 
-class Problem:
+class Problem(CXXobjCreator):
     nVar: int  # Number of variables
     nCon: int  # Number of constraints
     nnz: int   # Number of non-zeros
-    _blockIdx: typing.Optional[np.ndarray[c_int]] # Block indices (array of int32)
-    vblocks: typing.List['vblock']  # List of vblock objects (you should define the 'vblock' class)
-    condenser: typing.Optional['Condenser']  # Optional condenser object
+    sparse : bool
     
-    # Additional fields from Julia struct
+    _blockIdx: typing.Optional[np.ndarray[c_int]]
+    vblocks: typing.List[vblock]
+    condenser: typing.Optional[Condenser]
+    
     lb_var: np.ndarray  # Lower bounds for variables
     ub_var: np.ndarray  # Upper bounds for variables
     lb_con: np.ndarray  # Lower bounds for constraints
     ub_con: np.ndarray  # Upper bounds for constraints
     lb_obj: c_double    # Lower bound for objective
     ub_obj: c_double    # Upper bound for objective
-
-    # Function references (initialized as None here, but they will be set later in usage)
+    
     f: typing.Optional[typing.Callable[[np.ndarray], c_double]]  # Objective function
     g: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Constraints function
     grad_f: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Gradient of objective
     jac_g: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Jacobian of constraints
     last_hessBlock: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Last Hessian block
     hess: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Hessian
-    _costrVioReducer: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Continuity restoration
+    _costrVioReducer: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]  # Feasibility restoration heuristic
     _stepModifier: typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]
     
-    # Jacobian sparsity structure
+    # Jacobian CCS sparsity structure and evaluation function
     jac_g_nz: typing.Optional[typing.Callable[[np.ndarray], np.ndarray]]
-    jac_g_row: np.ndarray       # Row indices for Jacobian non-zeros
-    jac_g_colind: np.ndarray    # Column indices for Jacobian non-zeros
+    jac_g_row: np.ndarray
+    jac_g_colind: np.ndarray
 
-    #Primal start point for optimization
     x_start : np.ndarray[np.float64]
-    #Dual start point for optimization
     lam_start : np.ndarray[np.float64]
-    
-    #Model bounds on inputs (variables) for functions and derivatives
-    # lb_input : np.ndarray[np.float64]
-    # ub_input : np.ndarray[np.float64]
-    
-    sparse : bool
-    
     
     def __init__(self, nVar = 0, nCon = 0):
         self.nVar = nVar
@@ -93,7 +85,7 @@ class Problem:
         self.PTR_reduce_constr_vio = CB_sigs["reduce_constr_vio"](self.C_reduce_constr_vio)
         self.PTR_modify_step = CB_sigs["modify_step"](self.C_modify_step)
         
-    ##Some setter methods##
+    # Some setters
     def set_bounds(self, lb_x, ub_x, lb_g, ub_g, objLo = -np.inf, objUp = np.inf):
         self.lb_obj = objLo
         self.ub_obj = objUp
@@ -112,7 +104,6 @@ class Problem:
         self.jac_g_colind = jacIndCol
     
     def set_blockIndex(self, idx : typing.Iterable):
-        # idx = np.array(idx, dtype = c_int)
         self.blockIdx = idx
     
     @property
@@ -122,6 +113,7 @@ class Problem:
     @blockIdx.setter
     def blockIdx(self, idx : typing.Optional[typing.Iterable]):
         self._blockIdx = np.array(idx, dtype = c_int) if idx is not None else None
+    
     
     @property
     def costrVioReducer(self):
@@ -139,6 +131,7 @@ class Problem:
     @stepModifier.setter
     def set_stepModifier(self, stepM_func : typing.Optional[typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]]):
         self._stepModifier = stepM_func
+    
     
     def initialize_dense(self, _, xi : c_double_p, lam : c_double_p, constrJac : c_double_p):
         xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
@@ -187,7 +180,7 @@ class Problem:
                     hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
                     for i in range(len(self.blockIdx) - 1):
                         hess_list[i][:] = hess_eval[i]
-        except Exception as E:
+        except Exception:
             info[0] = 1
         else:
             info[0] = 0
@@ -223,7 +216,7 @@ class Problem:
                     hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
                     for i in range(len(self.blockIdx) - 1):
                         hess_list[i][:] = hess_eval[i]
-        except Exception as E:
+        except Exception:
             info[0] = 1
         else:
             info[0] = 0
@@ -235,7 +228,7 @@ class Problem:
             
             objval[0] = self.f(xi_arr)
             constr_arr[:] = self.g(xi_arr)
-        except Exception as E:
+        except Exception:
             info[0] = 1
         else:
             info[0] = 0
@@ -255,7 +248,72 @@ class Problem:
             info[0] = self._stepModifier(xi_arr, lam_arr)
             return
         info[0] = 1
-
+    
+    
+    def create_cxx_obj(self):
+        BSQP = self.BSQP
+        
+        cxx_obj = BSQP.create_Problemspec(self.nVar, self.nCon)
+        self.CXX_Problem = cxx_obj
+        
+        BSQP.Problemspec_set_closure(cxx_obj, c_void_p(None))
+        BSQP.Problemspec_set_dense_init(cxx_obj, self.PTR_initialize_dense)
+        BSQP.Problemspec_set_sparse_init(cxx_obj, self.PTR_initialize_sparse)
+        BSQP.Problemspec_set_dense_eval(cxx_obj, self.PTR_evaluate_dense)
+        BSQP.Problemspec_set_sparse_eval(cxx_obj, self.PTR_evaluate_sparse)
+        BSQP.Problemspec_set_simple_eval(cxx_obj, self.PTR_evaluate_simple)
+        BSQP.Problemspec_set_reduce_constr_vio(cxx_obj, self.PTR_reduce_constr_vio)
+        BSQP.Problemspec_set_modify_step(cxx_obj, self.PTR_modify_step)
+        
+        if self.blockIdx is not None:
+            BSQP.Problemspec_set_blockIdx(cxx_obj, self.blockIdx.ctypes.data_as(POINTER(c_int)), c_int(len(self.blockIdx) - 1))
+        BSQP.Problemspec_set_nnz(cxx_obj, self.nnz)
+        
+        BSQP.Problemspec_set_bounds(
+            cxx_obj,
+            self.lb_var.ctypes.data_as(POINTER(c_double)),
+            self.ub_var.ctypes.data_as(POINTER(c_double)),
+            self.lb_con.ctypes.data_as(POINTER(c_double)),
+            self.ub_con.ctypes.data_as(POINTER(c_double)),
+            c_double(self.lb_obj),
+            c_double(self.ub_obj)
+        )
+        
+        if len(self.vblocks) > 0:
+            vblock_array = BSQP.create_vblock_array(c_int(len(self.vblocks)))
+            for i, vb in enumerate(self.vblocks):
+                BSQP.vblock_array_set(vblock_array, c_int(i), c_int(vb.size), c_char(vb.dependent))
+            BSQP.Problemspec_pass_vblocks(cxx_obj, vblock_array, c_int(len(self.vblocks)))
+        
+        if self.condenser is not None:
+            BSQP.Problemspec_set_cond(cxx_obj, self.condenser.get_cxx_obj())
+        
+        deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
+        return CXXobjHolder(cxx_obj, deleter)
+    
     def complete(self):
-        print("Calling problem.complete() is no longer required.")
-
+        print("Calling *.complete is no longer required.")
+    
+class ScaledProblem(Problem):
+    parent : Problem
+    scaling_factors : np.ndarray[c_double]
+    
+    def __init__(self, parent):
+        self.parent = parent
+        self.scaling_factors = np.ones(parent.nVar, dtype = c_double)
+        
+        self.nVar = parent.nVar
+        self.nCon = parent.nCon
+        self.nnz = parent.nnz
+        
+    def set_scale(self, scaling_factors):
+        self.scaling_factors = np.asarray(scaling_factors, dtype = c_double)
+    def rescale(self, rescaling_factors):
+        self.scaling_factors *= np.asarray(rescaling_factors, dtype = c_double)
+    
+    def create_cxx_obj(self):
+        parent_hld = self.parent.create_cxx_obj()
+        cxx_obj = self.BSQP.create_scaled_Problemspec(parent_hld.ptr)
+        self.BSQP.scaled_Problemspec_set_scale(cxx_obj, self.scaling_factors.ctypes.data_as(c_double_p))
+        deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
+        return CXXobjHolder(cxx_obj, deleter, parent_hld)

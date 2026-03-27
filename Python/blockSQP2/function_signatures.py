@@ -100,14 +100,6 @@ BSQP_function_signatures = {
     "Problemspec_set_cond": (None, (c_void_p, c_void_p)),
     "Problemspec_set_closure": (None, (c_void_p, c_void_p)),
     
-    # "Problemspec_set_dense_init": (None, (c_void_p, c_void_p)),
-    # "Problemspec_set_dense_eval": (None, (c_void_p, c_void_p)),
-    # "Problemspec_set_simple_eval": (None, (c_void_p, c_void_p)),
-    # "Problemspec_set_sparse_init": (None, (c_void_p, c_void_p)),
-    # "Problemspec_set_sparse_eval": (None, (c_void_p, c_void_p)),
-    # "Problemspec_set_reduce_constr_vio": (None, (c_void_p, c_void_p)),
-    # "Problemspec_set_modify_step": (None, (c_void_p, c_void_p))
-    
     "Problemspec_set_dense_init": (None, (c_void_p, BSQP_callback_signatures['initialize_dense'])),
     "Problemspec_set_sparse_init": (None, (c_void_p, BSQP_callback_signatures['initialize_sparse'])),
     "Problemspec_set_dense_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_dense'])),
@@ -115,6 +107,9 @@ BSQP_function_signatures = {
     "Problemspec_set_simple_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_simple'])),
     "Problemspec_set_reduce_constr_vio": (None, (c_void_p, BSQP_callback_signatures['reduce_constr_vio'])),
     "Problemspec_set_modify_step": (None, (c_void_p, BSQP_callback_signatures['modify_step'])),
+    
+    "create_scaled_Problemspec": (c_void_p, (c_void_p,)),
+    "scaled_Problemspec_set_scale": (None, (c_void_p, POINTER(c_double))),
     
     "create_SQPmethod": (c_void_p, (c_void_p, c_void_p, c_void_p)),
     "delete_SQPmethod": (None, (c_void_p,)),
@@ -139,7 +134,7 @@ BSQP_function_signatures = {
     "create_Condenser": (c_void_p, (c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_int)),
     "delete_Condenser": (None, (c_void_p,)),
     "Condenser_print_info": (None, (c_void_p,)),
-    "Condenser_full_condense": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
+    "Condenser_full_condense": (None, (c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
     "Condenser_recover_var_mult": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
     "Condenser_nVar": (c_int, (c_void_p,)),
     "Condenser_nCon": (c_int, (c_void_p,)),
@@ -176,10 +171,10 @@ BSQP_function_signatures = {
 
 def add_BSQP_signatures(mod_BSQP):
     for key in BSQP_function_signatures:
-        #"dlsym" the method
+        # "dlsym" the method
         BSQP_method = mod_BSQP.__getattr__(key)
+        
+        # set its signature
         BSQP_method.restype = BSQP_function_signatures[key][0]
         BSQP_method.argtypes = BSQP_function_signatures[key][1]
-        # mod_BSQP.__getattr__(key).restype = BSQP_function_signatures[key][0]
-        # mod_BSQP.__getattr__(key).argtypes = BSQP_function_signatures[key][1]
     return

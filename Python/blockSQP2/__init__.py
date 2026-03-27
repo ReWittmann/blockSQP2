@@ -19,31 +19,23 @@ def load_library(lib_name):
     libpath = str(cD/libname)
     try:
         lib = CDLL(libpath)
-        # print(f"Library {lib_name} loaded successfully.")
         return lib
     except OSError as e:
         raise OSError(f"Error loading library {lib_name}: {e}") from e
 
 BSQP = load_library("pyblockSQP2")
-
 from .function_signatures import add_BSQP_signatures
 add_BSQP_signatures(BSQP)
 
 
+from .cxxwrappers import CXXwrapper, CXXobjCreator, CXXobjHolder
+CXXwrapper.BSQP = BSQP
+
 from .solver import Solver, SQPresults
-Solver.BSQP = BSQP
-
-from .problem import Problem
-
+from .problem import Problem, ScaledProblem
 from .options import qpOASESoptions, Options
-qpOASESoptions.BSQP = BSQP
-Options.BSQP = BSQP
-
-from .condenser import vblock, cblock, condensing_target, Condenser
-Condenser.BSQP = BSQP
-
+from .condenser import Sparse_Matrix, vblock, cblock, condensing_target, Condenser
 from .stats import Stats
-Stats.BSQP = BSQP
 
 #Some backwards compatibility to original pybind11 based interface
 Problemspec = Problem

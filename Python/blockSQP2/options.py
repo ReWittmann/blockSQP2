@@ -1,19 +1,24 @@
-from ctypes import c_int, c_void_p, c_char_p, c_char, c_double
-from typing import Union, Optional
+from ctypes import c_int, c_char_p, c_char, c_double
+from typing import Optional
+from .cxxwrappers import CXXobjCreator, CXXobjHolder
 
-class qpOASESoptions:
+class qpOASESoptions(CXXobjCreator):
     def __init__(self, sparsityLevel: int = 2, printLevel: int = 0, terminationTolerance: float = 5.0e6 * 2.221e-16):
         self.sparsityLevel = sparsityLevel
         self.printLevel = printLevel
         self.terminationTolerance = terminationTolerance
-    def cxx_obj(self):
-        qpOASESoptions_obj = self.BSQP.create_qpOASES_options()
-        self.BSQP.qpOASES_options_set_sparsityLevel(qpOASESoptions_obj, c_int(self.sparsityLevel))
-        self.BSQP.qpOASES_options_set_printLevel(qpOASESoptions_obj, c_int(self.printLevel))
-        self.BSQP.qpOASES_options_set_terminationTolerance(qpOASESoptions_obj, c_double(self.terminationTolerance))
-        return qpOASESoptions_obj
-    
-class Options:
+    def create_cxx_obj(self):
+        BSQP = self.BSQP
+        
+        cxx_obj = BSQP.create_qpOASES_options()
+        BSQP.qpOASES_options_set_sparsityLevel(cxx_obj, c_int(self.sparsityLevel))
+        BSQP.qpOASES_options_set_printLevel(cxx_obj, c_int(self.printLevel))
+        BSQP.qpOASES_options_set_terminationTolerance(cxx_obj, c_double(self.terminationTolerance))
+        
+        deleter = lambda ptr: self.BSQP.delete_QPsolver_options(ptr)
+        return CXXobjHolder(cxx_obj, deleter)
+
+class Options(CXXobjCreator):
     def __init__(self,
                  maxiters: int = 100,
                  eps: float = 1.0e-16,
@@ -100,194 +105,102 @@ class Options:
         self.enable_premature_termination = enable_premature_termination
         self.indef_delay = indef_delay
     
-    def cxx_obj(self):
-        # Initialize the SQPoptions_obj (C++ side object)
-        SQPoptions_obj = self.BSQP.create_SQPoptions()
+    def create_cxx_obj(self):
+        BSQP = self.BSQP        
+        cxx_obj = BSQP.create_SQPoptions()        
 
         # Set options
-        self.BSQP.SQPoptions_set_eps(SQPoptions_obj, c_double(self.eps))
-        self.BSQP.SQPoptions_set_inf(SQPoptions_obj, c_double(self.inf))
-        self.BSQP.SQPoptions_set_print_level(SQPoptions_obj, c_int(self.print_level))
-        self.BSQP.SQPoptions_set_result_print_color(SQPoptions_obj, c_int(self.result_print_color))
-        self.BSQP.SQPoptions_set_debug_level(SQPoptions_obj, c_int(self.debug_level))
+        BSQP.SQPoptions_set_eps(cxx_obj, c_double(self.eps))
+        BSQP.SQPoptions_set_inf(cxx_obj, c_double(self.inf))
+        BSQP.SQPoptions_set_print_level(cxx_obj, c_int(self.print_level))
+        BSQP.SQPoptions_set_result_print_color(cxx_obj, c_int(self.result_print_color))
+        BSQP.SQPoptions_set_debug_level(cxx_obj, c_int(self.debug_level))
 
         # Termination criteria
-        self.BSQP.SQPoptions_set_opt_tol(SQPoptions_obj, c_double(self.opt_tol))
-        self.BSQP.SQPoptions_set_feas_tol(SQPoptions_obj, c_double(self.feas_tol))
-        self.BSQP.SQPoptions_set_enable_premature_termination(SQPoptions_obj, c_char(self.enable_premature_termination))
-        self.BSQP.SQPoptions_set_max_extra_steps(SQPoptions_obj, c_int(self.max_extra_steps))
+        BSQP.SQPoptions_set_opt_tol(cxx_obj, c_double(self.opt_tol))
+        BSQP.SQPoptions_set_feas_tol(cxx_obj, c_double(self.feas_tol))
+        BSQP.SQPoptions_set_enable_premature_termination(cxx_obj, c_char(self.enable_premature_termination))
+        BSQP.SQPoptions_set_max_extra_steps(cxx_obj, c_int(self.max_extra_steps))
 
         # Line search heuristics
-        self.BSQP.SQPoptions_set_max_filter_overrides(SQPoptions_obj, c_int(self.max_filter_overrides))
+        BSQP.SQPoptions_set_max_filter_overrides(cxx_obj, c_int(self.max_filter_overrides))
 
         # Derivative evaluation
-        self.BSQP.SQPoptions_set_sparse(SQPoptions_obj, c_char(self.sparse))
+        BSQP.SQPoptions_set_sparse(cxx_obj, c_char(self.sparse))
 
         # Restoration phase
-        self.BSQP.SQPoptions_set_enable_rest(SQPoptions_obj, c_char(self.enable_rest))
+        BSQP.SQPoptions_set_enable_rest(cxx_obj, c_char(self.enable_rest))
 
         # Full/limited memory quasi newton
-        self.BSQP.SQPoptions_set_lim_mem(SQPoptions_obj, c_char(self.lim_mem))
-        self.BSQP.SQPoptions_set_mem_size(SQPoptions_obj, c_int(self.mem_size))
+        BSQP.SQPoptions_set_lim_mem(cxx_obj, c_char(self.lim_mem))
+        BSQP.SQPoptions_set_mem_size(cxx_obj, c_int(self.mem_size))
 
         # Hessian approximation
-        self.BSQP.SQPoptions_set_block_hess(SQPoptions_obj, c_int(self.block_hess))
-        ret = self.BSQP.SQPoptions_set_hess_approx(SQPoptions_obj, c_char_p(self.hess_approx.encode('utf-8')))
+        BSQP.SQPoptions_set_block_hess(cxx_obj, c_int(self.block_hess))
+        ret = BSQP.SQPoptions_set_hess_approx(cxx_obj, c_char_p(self.hess_approx.encode('utf-8')))
         if ret > 0:
-            error_message = self.BSQP.get_error_message()
+            error_message = BSQP.get_error_message()
             raise Exception(error_message.value.decode('utf-8'))
         
-        ret = self.BSQP.SQPoptions_set_fallback_approx(SQPoptions_obj, c_char_p(self.fallback_approx.encode('utf-8')))
+        ret = BSQP.SQPoptions_set_fallback_approx(cxx_obj, c_char_p(self.fallback_approx.encode('utf-8')))
         if ret > 0:
-            error_message = self.BSQP.get_error_message()
+            error_message = BSQP.get_error_message()
             raise Exception(error_message.value.decode('utf-8'))
         
-        self.BSQP.SQPoptions_set_indef_delay(SQPoptions_obj, c_int(self.indef_delay))
+        BSQP.SQPoptions_set_indef_delay(cxx_obj, c_int(self.indef_delay))
         
         # Hessian sizing
-        self.BSQP.SQPoptions_set_initial_hess_scale(SQPoptions_obj, c_double(self.initial_hess_scale))
-        ret = self.BSQP.SQPoptions_set_sizing(SQPoptions_obj, c_char_p(self.sizing.encode('utf-8')))
+        BSQP.SQPoptions_set_initial_hess_scale(cxx_obj, c_double(self.initial_hess_scale))
+        ret = BSQP.SQPoptions_set_sizing(cxx_obj, c_char_p(self.sizing.encode('utf-8')))
         if ret > 0:
-            error_message = self.BSQP.get_error_message()
+            error_message = BSQP.get_error_message()
             raise Exception(error_message.value.decode('utf-8'))
         
-        ret = self.BSQP.SQPoptions_set_fallback_sizing(SQPoptions_obj, c_char_p(str(self.fallback_sizing).encode('utf-8')))
+        ret = BSQP.SQPoptions_set_fallback_sizing(cxx_obj, c_char_p(str(self.fallback_sizing).encode('utf-8')))
         if ret > 0:
-            error_message = self.BSQP.get_error_message()
+            error_message = BSQP.get_error_message()
             raise Exception(error_message.value.decode('utf-8'))
         
-        self.BSQP.SQPoptions_set_COL_eps(SQPoptions_obj, c_double(self.COL_eps))
-        self.BSQP.SQPoptions_set_COL_tau_1(SQPoptions_obj, c_double(self.COL_tau_1))
-        self.BSQP.SQPoptions_set_COL_tau_2(SQPoptions_obj, c_double(self.COL_tau_2))
-        self.BSQP.SQPoptions_set_OL_eps(SQPoptions_obj, c_double(self.OL_eps))
+        BSQP.SQPoptions_set_COL_eps(cxx_obj, c_double(self.COL_eps))
+        BSQP.SQPoptions_set_COL_tau_1(cxx_obj, c_double(self.COL_tau_1))
+        BSQP.SQPoptions_set_COL_tau_2(cxx_obj, c_double(self.COL_tau_2))
+        BSQP.SQPoptions_set_OL_eps(cxx_obj, c_double(self.OL_eps))
         
         # Quasi-Newton
-        self.BSQP.SQPoptions_set_BFGS_damping_factor(SQPoptions_obj, c_double(self.BFGS_damping_factor))
+        BSQP.SQPoptions_set_BFGS_damping_factor(cxx_obj, c_double(self.BFGS_damping_factor))
         
         # Convexification strategy
-        self.BSQP.SQPoptions_set_conv_strategy(SQPoptions_obj, c_int(self.conv_strategy))
-        self.BSQP.SQPoptions_set_max_conv_QPs(SQPoptions_obj, c_int(self.max_conv_QPs))
-        self.BSQP.SQPoptions_set_par_QPs(SQPoptions_obj, c_char(self.par_QPs))
-        self.BSQP.SQPoptions_set_enable_QP_cancellation(SQPoptions_obj, c_char(self.enable_QP_cancellation))
+        BSQP.SQPoptions_set_conv_strategy(cxx_obj, c_int(self.conv_strategy))
+        BSQP.SQPoptions_set_max_conv_QPs(cxx_obj, c_int(self.max_conv_QPs))
+        BSQP.SQPoptions_set_par_QPs(cxx_obj, c_char(self.par_QPs))
+        BSQP.SQPoptions_set_enable_QP_cancellation(cxx_obj, c_char(self.enable_QP_cancellation))
         
         # Scaling
-        self.BSQP.SQPoptions_set_automatic_scaling(SQPoptions_obj, c_char(self.automatic_scaling))
+        BSQP.SQPoptions_set_automatic_scaling(cxx_obj, c_char(self.automatic_scaling))
         
         # Filter line search
-        self.BSQP.SQPoptions_set_enable_linesearch(SQPoptions_obj, c_char(self.enable_linesearch))
-        self.BSQP.SQPoptions_set_max_linesearch_steps(SQPoptions_obj, c_int(self.max_linesearch_steps))
-        self.BSQP.SQPoptions_set_max_consec_reduced_steps(SQPoptions_obj, c_int(self.max_consec_reduced_steps))
-        self.BSQP.SQPoptions_set_max_consec_skipped_updates(SQPoptions_obj, c_int(self.max_consec_skipped_updates))
-        self.BSQP.SQPoptions_set_skip_first_linesearch(SQPoptions_obj, c_int(self.skip_first_linesearch))
-        self.BSQP.SQPoptions_set_max_SOC(SQPoptions_obj, c_int(self.max_SOC))
+        BSQP.SQPoptions_set_enable_linesearch(cxx_obj, c_char(self.enable_linesearch))
+        BSQP.SQPoptions_set_max_linesearch_steps(cxx_obj, c_int(self.max_linesearch_steps))
+        BSQP.SQPoptions_set_max_consec_reduced_steps(cxx_obj, c_int(self.max_consec_reduced_steps))
+        BSQP.SQPoptions_set_max_consec_skipped_updates(cxx_obj, c_int(self.max_consec_skipped_updates))
+        BSQP.SQPoptions_set_skip_first_linesearch(cxx_obj, c_int(self.skip_first_linesearch))
+        BSQP.SQPoptions_set_max_SOC(cxx_obj, c_int(self.max_SOC))
         
         # qpsol and qpsol_options below
-        self.BSQP.SQPoptions_set_max_QP_it(SQPoptions_obj, c_int(self.max_QP_it))
-        self.BSQP.SQPoptions_set_max_QP_secs(SQPoptions_obj, c_double(self.max_QP_secs))
+        BSQP.SQPoptions_set_max_QP_it(cxx_obj, c_int(self.max_QP_it))
+        BSQP.SQPoptions_set_max_QP_secs(cxx_obj, c_double(self.max_QP_secs))
         
         # Handle `qpsol_options` if provided
         if self.qpsol == "qpOASES":
             QPopts = self.qpsol_options if self.qpsol_options is not None else qpOASESoptions()
-            QPsolver_options_obj = QPopts.cxx_obj()
-            self.BSQP.SQPoptions_set_qpsol_options(SQPoptions_obj, QPsolver_options_obj)
-
-        return SQPoptions_obj, QPsolver_options_obj
+            QPsolver_options_hld = QPopts.create_cxx_obj()
+            BSQP.SQPoptions_set_qpsol_options(cxx_obj, QPsolver_options_hld.ptr)
         
+        deleter = lambda ptr: self.BSQP.delete_SQPoptions(ptr)
+        return CXXobjHolder(cxx_obj, deleter, QPsolver_options_hld)
 
-# def create_cxx_options(opts: Options):
-#     BSQP = opts.BSQP
-    
-#     # Initialize the SQPoptions_obj (C++ side object)
-#     SQPoptions_obj = BSQP.create_SQPoptions()
 
-#     # Set options
-#     BSQP.SQPoptions_set_eps(SQPoptions_obj, c_double(opts.eps))
-#     BSQP.SQPoptions_set_inf(SQPoptions_obj, c_double(opts.inf))
-#     BSQP.SQPoptions_set_print_level(SQPoptions_obj, c_int(opts.print_level))
-#     BSQP.SQPoptions_set_result_print_color(SQPoptions_obj, c_int(opts.result_print_color))
-#     BSQP.SQPoptions_set_debug_level(SQPoptions_obj, c_int(opts.debug_level))
 
-#     # Termination criteria
-#     BSQP.SQPoptions_set_opt_tol(SQPoptions_obj, c_double(opts.opt_tol))
-#     BSQP.SQPoptions_set_feas_tol(SQPoptions_obj, c_double(opts.feas_tol))
-#     BSQP.SQPoptions_set_enable_premature_termination(SQPoptions_obj, c_char(opts.enable_premature_termination))
-#     BSQP.SQPoptions_set_max_extra_steps(SQPoptions_obj, c_int(opts.max_extra_steps))
 
-#     # Line search heuristics
-#     BSQP.SQPoptions_set_max_filter_overrides(SQPoptions_obj, c_int(opts.max_filter_overrides))
 
-#     # Derivative evaluation
-#     BSQP.SQPoptions_set_sparse(SQPoptions_obj, c_char(opts.sparse))
 
-#     # Restoration phase
-#     BSQP.SQPoptions_set_enable_rest(SQPoptions_obj, c_char(opts.enable_rest))
-
-#     # Full/limited memory quasi newton
-#     BSQP.SQPoptions_set_lim_mem(SQPoptions_obj, c_char(opts.lim_mem))
-#     BSQP.SQPoptions_set_mem_size(SQPoptions_obj, c_int(opts.mem_size))
-
-#     # Hessian approximation
-#     BSQP.SQPoptions_set_block_hess(SQPoptions_obj, c_int(opts.block_hess))
-#     ret = BSQP.SQPoptions_set_hess_approx(SQPoptions_obj, c_char_p(opts.hess_approx.encode('utf-8')))
-#     if ret > 0:
-#         error_message = BSQP.get_error_message()
-#         raise Exception(error_message.value.decode('utf-8'))
-    
-#     ret = BSQP.SQPoptions_set_fallback_approx(SQPoptions_obj, c_char_p(opts.fallback_approx.encode('utf-8')))
-#     if ret > 0:
-#         error_message = BSQP.get_error_message()
-#         raise Exception(error_message.value.decode('utf-8'))
-    
-#     BSQP.SQPoptions_set_indef_delay(SQPoptions_obj, c_int(opts.indef_delay))
-    
-#     # Hessian sizing
-#     BSQP.SQPoptions_set_initial_hess_scale(SQPoptions_obj, c_double(opts.initial_hess_scale))
-#     ret = BSQP.SQPoptions_set_sizing(SQPoptions_obj, c_char_p(opts.sizing.encode('utf-8')))
-#     if ret > 0:
-#         error_message = BSQP.get_error_message()
-#         raise Exception(error_message.value.decode('utf-8'))
-    
-#     ret = BSQP.SQPoptions_set_fallback_sizing(SQPoptions_obj, c_char_p(str(opts.fallback_sizing).encode('utf-8')))
-#     if ret > 0:
-#         error_message = BSQP.get_error_message()
-#         raise Exception(error_message.value.decode('utf-8'))
-    
-#     BSQP.SQPoptions_set_COL_eps(SQPoptions_obj, c_double(opts.COL_eps))
-#     BSQP.SQPoptions_set_COL_tau_1(SQPoptions_obj, c_double(opts.COL_tau_1))
-#     BSQP.SQPoptions_set_COL_tau_2(SQPoptions_obj, c_double(opts.COL_tau_2))
-#     BSQP.SQPoptions_set_OL_eps(SQPoptions_obj, c_double(opts.OL_eps))
-    
-#     # Quasi-Newton
-#     BSQP.SQPoptions_set_BFGS_damping_factor(SQPoptions_obj, c_double(opts.BFGS_damping_factor))
-    
-#     # Convexification strategy
-#     BSQP.SQPoptions_set_conv_strategy(SQPoptions_obj, c_int(opts.conv_strategy))
-#     BSQP.SQPoptions_set_max_conv_QPs(SQPoptions_obj, c_int(opts.max_conv_QPs))
-#     BSQP.SQPoptions_set_par_QPs(SQPoptions_obj, c_char(opts.par_QPs))
-#     BSQP.SQPoptions_set_enable_QP_cancellation(SQPoptions_obj, c_char(opts.enable_QP_cancellation))
-    
-#     # Scaling
-#     BSQP.SQPoptions_set_automatic_scaling(SQPoptions_obj, c_char(opts.automatic_scaling))
-    
-#     # Filter line search
-#     BSQP.SQPoptions_set_enable_linesearch(SQPoptions_obj, c_char(opts.enable_linesearch))
-#     BSQP.SQPoptions_set_max_linesearch_steps(SQPoptions_obj, c_int(opts.max_linesearch_steps))
-#     BSQP.SQPoptions_set_max_consec_reduced_steps(SQPoptions_obj, c_int(opts.max_consec_reduced_steps))
-#     BSQP.SQPoptions_set_max_consec_skipped_updates(SQPoptions_obj, c_int(opts.max_consec_skipped_updates))
-#     BSQP.SQPoptions_set_skip_first_linesearch(SQPoptions_obj, c_int(opts.skip_first_linesearch))
-#     BSQP.SQPoptions_set_max_SOC(SQPoptions_obj, c_int(opts.max_SOC))
-    
-#     # qpsol and qpsol_options below
-#     BSQP.SQPoptions_set_max_QP_it(SQPoptions_obj, c_int(opts.max_QP_it))
-#     BSQP.SQPoptions_set_max_QP_secs(SQPoptions_obj, c_double(opts.max_QP_secs))
-    
-#     # Handle `qpsol_options` if provided
-#     if opts.qpsol == "qpOASES":
-#         QPsolver_options_obj = BSQP.create_qpOASES_options()
-#         if opts.qpsol_options is not None:
-#             BSQP.qpOASES_options_set_sparsityLevel(QPsolver_options_obj, c_int(opts.qpsol_options.sparsityLevel))
-#             BSQP.qpOASES_options_set_printLevel(QPsolver_options_obj, c_int(opts.qpsol_options.printLevel))
-#             BSQP.qpOASES_options_set_terminationTolerance(QPsolver_options_obj, c_double(opts.qpsol_options.terminationTolerance))
-#         BSQP.SQPoptions_set_qpsol_options(SQPoptions_obj, QPsolver_options_obj)
-
-#     return SQPoptions_obj, QPsolver_options_obj
