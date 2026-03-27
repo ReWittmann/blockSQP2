@@ -417,58 +417,7 @@ set_target_properties(example_condensing
 
 
 option(PYTHON_INTERFACE "build python interface" ON)
-set(PYTHON_INTERPRETER "" CACHE STRING "The python interpreter the interface should be built for")
 if(PYTHON_INTERFACE)
-	# if (NOT PYTHON_INTERPRETER STREQUAL "")
-	# 	message(STATUS "Using python interpreter ${PYTHON_INTERPRETER}")
-	# 	set (Python_EXECUTABLE ${PYTHON_INTERPRETER})
-	# endif()
-	
-	# FetchContent_Declare(
-	# 	PYBIND11
-	# 	GIT_REPOSITORY https://github.com/pybind/pybind11.git
-	# 	GIT_TAG 45fab4087eaaff234227a10cf7845e8b07f28a98 	#v. 3.0.2
-	# )
-	# FetchContent_MakeAvailable(PYBIND11)
-	
-	# pybind11_add_module(pyblockSQP2 "Python/pyblockSQP2.cpp")
-	# target_include_directories(pyblockSQP2 PUBLIC blockSQP2/include)	
-	
-	# if(UNIX OR MINGW)
-	# 	target_compile_options(pyblockSQP2 PRIVATE 
-	# 				-Wall -Wextra -Wno-unused-parameter
-	# 				-fvisibility=hidden #Recommended in pybind11 FAQ, greatly reduces binary size
-	# 				-O3
-	# 				)
-		
-	# 	#Prevent warnings for *_pointer_interface and T_array constructors 
-	# 	#that occur after compiling with -O3. Result of using int instead of size_t, should not cause any problems.
-	# 	target_link_options(pyblockSQP2 PRIVATE -Wno-alloc-size-larger-than)
-	# #[[
-	# elseif(MINGW)
-	# 	target_compile_options(pyblockSQP2 PRIVATE 
-	# 				-Wall -Wextra -Wno-unused-parameter
-	# 				-fvisibility=hidden
-	# 				-O3
-	# 				)
-	# 	target_link_options(pyblockSQP2 PRIVATE -Wno-alloc-size-larger-than)
-	# ]]
-	# endif()
-	
-	# target_link_libraries(pyblockSQP2 PUBLIC blockSQP2)
-
-	# if(MINGW)
-	# 	target_link_libraries(pyblockSQP2 PRIVATE -static)
-	# endif()
-
-	# set(pyblockSQP2_DIR ${CMAKE_SOURCE_DIR}/Python/blockSQP2)
-	# set_target_properties(pyblockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${pyblockSQP2_DIR}
-	# 											 RUNTIME_OUTPUT_DIRECTORY ${pyblockSQP2_DIR}
-	# 											 )
-	# copy_dynamic_libraries_to(${pyblockSQP2_DIR})
-	# if(MINGW)
-	# 	copy_mingw_libraries_to(${pyblockSQP2_DIR})
-	# endif()
 	add_library(pyblockSQP2 SHARED C/CblockSQP2.cpp)
 	target_link_libraries(pyblockSQP2 PUBLIC blockSQP2)
 	
