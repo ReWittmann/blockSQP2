@@ -25,8 +25,6 @@ import blockSQP2
 import OCProblems
 
 
-#Note: ImportError: generic_type: ... is an ipython issue that occurs when python tries to load a rebuilt pybind11 module, reload ipython session to fix
-
 #Check OCProblems.py for available examples
 OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
@@ -81,23 +79,16 @@ opts.max_filter_overrides = 2
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vblocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))    # [{size, dependent : bool}] Free-dependent information, required for conv. strategy 2 and automatic scaling  
-cblocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
-hblocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
-targets = blockSQP2.condensing_targets(1)
-for i in range(len(OCprob.vBlock_sizes)):
-    vblocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i]) #Create vblock structs {int size; bool dependent}
-for i in range(len(OCprob.cBlock_sizes)):
-    cblocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
-for i in range(len(OCprob.hessBlock_sizes)):
-    hblocks[i] = OCprob.hessBlock_sizes[i]
-targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
-cond = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+vblocks = [blockSQP2.vblock(size, dep) for size, dep in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies)]
+cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
+hblocks = [size for size in OCprob.hessBlock_sizes]
+targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
+condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
 
 
 #Define blockSQP Problemspec
-#See class OCProblems.OCProblem and blockSQP2/blockSQP_Problemspec.py for field specifications
-prob = blockSQP2.Problemspec()
+#See class OCProblems.OCProblem and blockSQP2/Problem.py for field specifications
+prob = blockSQP2.Problemspec(OCprob.nVar, OCprob.nCon)
 prob.nVar = OCprob.nVar
 prob.nCon = OCprob.nCon
 
@@ -111,24 +102,23 @@ prob.make_sparse(OCprob.jac_g_nnz, OCprob.jac_g_row, OCprob.jac_g_colind)
 prob.jac_g_nz = OCprob.jac_g_nz
 
 prob.hess = OCprob.hess_lag
-prob.set_blockIndex(OCprob.hessBlock_index)
+prob.blockIdx = OCprob.hessBlock_index
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
 #Recommended: Dont pass condenser to activate condensing, 
 #but pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
-# prob.cond = cond
+# prob.condenser = condenser
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
-prob.complete()
 
 
 stats = blockSQP2.SQPstats("./solver_outputs")
+
 t0 = time.monotonic()
 optimizer = blockSQP2.SQPmethod(prob, opts, stats)
 optimizer.init()
-
 
 if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)

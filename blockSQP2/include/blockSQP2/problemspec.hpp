@@ -124,7 +124,7 @@ class Problemspec{
                                      int *info         ///< error flag
                                      );
         
-        virtual void stepModification(Matrix &xi, Matrix &lambda, int *info);
+        virtual void modifyStep(Matrix &xi, Matrix &lambda, int *info);
         
         /// Print information about the current problem
         virtual void printInfo();
@@ -154,7 +154,7 @@ public:
     void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info);
     
     void reduceConstrVio(Matrix &xi, int* info);
-    void stepModification(Matrix &xi, Matrix &lambda, int *info);
+    void modifyStep(Matrix &xi, Matrix &lambda, int *info);
 };
 
 

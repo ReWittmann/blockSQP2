@@ -25,9 +25,6 @@ import numpy as np
 import time
 import datetime
 import matplotlib.pyplot as plt
-# import shutil
-# if shutil.which("latex") is not None:
-#     plt.rcParams["text.usetex"] = True
 import casadi as cs
 
 

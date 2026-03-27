@@ -130,7 +130,7 @@ bool SQPmethod::modify_step(){
     
     vars->trialXi = vars->xi;
     vars->trialLambda = vars->lambda;
-    prob->stepModification(vars->trialXi, vars->trialLambda, &info);
+    prob->modifyStep(vars->trialXi, vars->trialLambda, &info);
     if (info) return true;
     
     prob->evaluate(vars->trialXi, &objTrial, vars->trialConstr, &info);

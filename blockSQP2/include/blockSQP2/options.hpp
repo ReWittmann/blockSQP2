@@ -176,11 +176,13 @@ class SQPoptions{
     
     private:
     //Holder if no qpsol_options were provided
-    std::unique_ptr<QPsolver_options> default_qpsol_options;
+    std::unique_ptr<QPsolver_options> held_qpsol_options;
 
     public:
     SQPoptions();
     ~SQPoptions();
+    
+    void pass_qpsol_options(std::unique_ptr<QPsolver_options> arg_qpsol_opts);
     //Checks for options inconsistent with the given problem specification, then calls optionsConsistency. 
     void optionsConsistency(Problemspec *problem);
     //Checks for inconsistent options. Throw ParameterError if inconsistent options are detected. Calls complete_QP_options.

@@ -21,7 +21,7 @@ Each license applies to the respective package, and any statement in it regardin
 2. The CMake build system <https://cmake.org/>
 3. A build system backend (GNU make, Ninja build)
 4. BLAS and LAPACK (LAPACKE), likely to be already installed on Linux systems,  
-else run &nbsp; `sudo apt install libblas-dev liblapack-dev liblapacke-dev`
+else run e.g. &nbsp; `sudo apt install libblas-dev liblapack-dev liblapacke-dev`
 
 ## Building
 In the command line, navigate to this folder and invoke  

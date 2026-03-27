@@ -63,9 +63,10 @@ public:
     void (*initialize_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
     void (*evaluate_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info);
     
-    void (*restore_continuity)(void *closure_pass, double *xi, int *info);
+    void (*reduce_constr_vio)(void *closure_pass, double *xi, int *info);
+    void (*modify_step)(void *closure_pass, double *xi, double *lambda, int *info);
     
-    // Pass-through pointer to a closure of the caller, currently for all callbacks.
+    // Pass-through pointer to a closure of the caller, passed to callbacks.
     void *closure;
     
     // Invoke callbacks in overridden methods
@@ -117,15 +118,15 @@ public:
     
     // Optional Methods
     virtual void reduceConstrVio(Matrix &xi, int *info){
-        if (restore_continuity != nullptr){
-            (*restore_continuity)(closure, xi.array, info);
+        if (reduce_constr_vio != nullptr){
+            (*reduce_constr_vio)(closure, xi.array, info);
         }
     };
 };
 
 // vblock[size]
 CDLEXP void *create_vblock_array(int size){
-    return (void *)new vblock[size];
+    return static_cast<void *>(new vblock[size]);
 }
 
 CDLEXP void delete_vblock_array(void *ptr){
@@ -162,75 +163,85 @@ CDLEXP void qpOASES_options_set_terminationTolerance(void *opts, double val){
 }
 
 // SQPoptions
+
+inline SQPoptions *castOPT(void *ptr){
+    return static_cast<SQPoptions *>(ptr);
+}
+
 CDLEXP void *create_SQPoptions(){
     return static_cast<void *>(new SQPoptions);
 }
 
 CDLEXP void delete_SQPoptions(void *ptr_SQPoptions){
-    delete static_cast<SQPoptions *>(ptr_SQPoptions);
+    delete castOPT(ptr_SQPoptions);
 }
 
+CDLEXP void SQPoptions_pass_qpsol_options(void *obj, void *qpsol_options_obj){
+    static_cast<SQPoptions*>(obj)->pass_qpsol_options(std::unique_ptr<QPsolver_options>(static_cast<QPsolver_options*>(qpsol_options_obj)));
+}
+
+
 CDLEXP void SQPoptions_set_print_level(void *ptr_SQPoptions, int val){
-    static_cast<SQPoptions *>(ptr_SQPoptions)->print_level = val;
+    castOPT(ptr_SQPoptions)->print_level = val;
 }
 
 CDLEXP void SQPoptions_set_result_print_color(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->result_print_color = val;
+    castOPT(ptr)->result_print_color = val;
 }
 CDLEXP void SQPoptions_set_debug_level(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->debug_level = val;
+    castOPT(ptr)->debug_level = val;
 }
 CDLEXP void SQPoptions_set_eps(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->eps = val;
+    castOPT(ptr)->eps = val;
 }
 CDLEXP void SQPoptions_set_inf(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->inf = val;
+    castOPT(ptr)->inf = val;
 }
 CDLEXP void SQPoptions_set_opt_tol(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->opt_tol = val;
+    castOPT(ptr)->opt_tol = val;
 }
 CDLEXP void SQPoptions_set_feas_tol(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->feas_tol = val;
+    castOPT(ptr)->feas_tol = val;
 }
 CDLEXP void SQPoptions_set_sparse(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->sparse = bool(val);
+    castOPT(ptr)->sparse = bool(val);
 }
 CDLEXP void SQPoptions_set_enable_linesearch(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->enable_linesearch = bool(val);
+    castOPT(ptr)->enable_linesearch = bool(val);
 }
 CDLEXP void SQPoptions_set_enable_rest(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->enable_rest = bool(val);
+    castOPT(ptr)->enable_rest = bool(val);
 }
 CDLEXP void SQPoptions_set_rest_rho(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->rest_rho = val;
+    castOPT(ptr)->rest_rho = val;
 }
 CDLEXP void SQPoptions_set_rest_zeta(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->rest_zeta = val;
+    castOPT(ptr)->rest_zeta = val;
 }
 CDLEXP void SQPoptions_set_max_linesearch_steps(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_linesearch_steps = val;
+    castOPT(ptr)->max_linesearch_steps = val;
 }
 CDLEXP void SQPoptions_set_max_consec_reduced_steps(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_consec_reduced_steps = val;
+    castOPT(ptr)->max_consec_reduced_steps = val;
 }
 CDLEXP void SQPoptions_set_max_consec_skipped_updates(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_consec_skipped_updates = val;
+    castOPT(ptr)->max_consec_skipped_updates = val;
 }
 CDLEXP void SQPoptions_set_max_QP_it(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_QP_it = val;
+    castOPT(ptr)->max_QP_it = val;
 }
 CDLEXP void SQPoptions_set_block_hess(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->block_hess = val;
+    castOPT(ptr)->block_hess = val;
 }
 // CDLEXP void SQPoptions_set_sizing(void *ptr, int val){
-//     static_cast<SQPoptions *>(ptr)->sizing = Sizings(val);
+//     castOPT(ptr)->sizing = Sizings(val);
 // }
 // CDLEXP void SQPoptions_set_fallback_sizing(void *ptr, int val){
-//     static_cast<SQPoptions *>(ptr)->fallback_sizing = Sizings(val);
+//     castOPT(ptr)->fallback_sizing = Sizings(val);
 // }
 CDLEXP int SQPoptions_set_sizing(void *ptr, char* val){
     try{
-        static_cast<SQPoptions *>(ptr)->sizing = Sizings_from_string(std::string(val));
+        castOPT(ptr)->sizing = Sizings_from_string(std::string(val));
         return 0;
     }
     catch (std::exception &E){
@@ -241,7 +252,7 @@ CDLEXP int SQPoptions_set_sizing(void *ptr, char* val){
 }
 CDLEXP int SQPoptions_set_fallback_sizing(void *ptr, char* val){
     try{
-        static_cast<SQPoptions *>(ptr)->fallback_sizing = Sizings_from_string(std::string(val));
+        castOPT(ptr)->fallback_sizing = Sizings_from_string(std::string(val));
         return 0;
     }
     catch (std::exception &E){
@@ -252,39 +263,39 @@ CDLEXP int SQPoptions_set_fallback_sizing(void *ptr, char* val){
 }
 
 CDLEXP void SQPoptions_set_max_QP_secs(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->max_QP_secs = val;
+    castOPT(ptr)->max_QP_secs = val;
 }
 CDLEXP void SQPoptions_set_initial_hess_scale(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->initial_hess_scale = val;
+    castOPT(ptr)->initial_hess_scale = val;
 }
 CDLEXP void SQPoptions_set_COL_eps(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->COL_eps = val;
+    castOPT(ptr)->COL_eps = val;
 }
 CDLEXP void SQPoptions_set_OL_eps(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->OL_eps = val;
+    castOPT(ptr)->OL_eps = val;
 }
 CDLEXP void SQPoptions_set_COL_tau_1(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->COL_tau_1 = val;
+    castOPT(ptr)->COL_tau_1 = val;
 }
 CDLEXP void SQPoptions_set_COL_tau_2(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->COL_tau_2 = val;
+    castOPT(ptr)->COL_tau_2 = val;
 }
 CDLEXP void SQPoptions_set_BFGS_damping_factor(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->BFGS_damping_factor = val;
+    castOPT(ptr)->BFGS_damping_factor = val;
 }
 CDLEXP void SQPoptions_set_min_damping_quotient(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->min_damping_quotient = val;
+    castOPT(ptr)->min_damping_quotient = val;
 }
 // CDLEXP void SQPoptions_set_hess_approx(void *ptr, int val){
-//     static_cast<SQPoptions *>(ptr)->hess_approx = Hessians(val);
+//     castOPT(ptr)->hess_approx = Hessians(val);
 // }
 // CDLEXP void SQPoptions_set_fallback_approx(void *ptr, int val){
-//     static_cast<SQPoptions *>(ptr)->fallback_approx = Hessians(val);
+//     castOPT(ptr)->fallback_approx = Hessians(val);
 // }
 
 CDLEXP int SQPoptions_set_hess_approx(void *ptr, char* val){
     try{
-        static_cast<SQPoptions *>(ptr)->hess_approx = Hessians_from_string(std::string(val));
+        castOPT(ptr)->hess_approx = Hessians_from_string(std::string(val));
         return 0;
     }
     catch (std::exception &E){
@@ -295,7 +306,7 @@ CDLEXP int SQPoptions_set_hess_approx(void *ptr, char* val){
 }
 CDLEXP int SQPoptions_set_fallback_approx(void *ptr, char* val){
     try{
-        static_cast<SQPoptions *>(ptr)->fallback_approx = Hessians_from_string(std::string(val));
+        castOPT(ptr)->fallback_approx = Hessians_from_string(std::string(val));
         return 0;
     }
     catch (std::exception &E){
@@ -305,52 +316,52 @@ CDLEXP int SQPoptions_set_fallback_approx(void *ptr, char* val){
     return 1;
 }
 CDLEXP void SQPoptions_set_indef_local_only(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->indef_local_only = bool(val);
+    castOPT(ptr)->indef_local_only = bool(val);
 }
 CDLEXP void SQPoptions_set_lim_mem(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->lim_mem = bool(val);
+    castOPT(ptr)->lim_mem = bool(val);
 }
 CDLEXP void SQPoptions_set_mem_size(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->mem_size = val;
+    castOPT(ptr)->mem_size = val;
 }
 // CDLEXP void SQPoptions_set_exact_hess(void *ptr, int val){
-//     static_cast<SQPoptions *>(ptr)->exact_hess = val;
+//     castOPT(ptr)->exact_hess = val;
 // }
 CDLEXP void SQPoptions_set_skip_first_linesearch(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->skip_first_linesearch = val;
+    castOPT(ptr)->skip_first_linesearch = val;
 }
 CDLEXP void SQPoptions_set_conv_strategy(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->conv_strategy = val;
+    castOPT(ptr)->conv_strategy = val;
 }
 CDLEXP void SQPoptions_set_max_conv_QPs(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_conv_QPs = val;
+    castOPT(ptr)->max_conv_QPs = val;
 }
 CDLEXP void SQPoptions_set_hess_regularization_factor(void *ptr, double val){
-    static_cast<SQPoptions *>(ptr)->reg_factor = val;
+    castOPT(ptr)->reg_factor = val;
 }
 CDLEXP void SQPoptions_set_max_SOC(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_SOC = val;
+    castOPT(ptr)->max_SOC = val;
 }
 CDLEXP void SQPoptions_set_qpsol_options(void *ptr, QPsolver_options *QPopts){
-    static_cast<SQPoptions *>(ptr)->qpsol_options = QPopts;
+    castOPT(ptr)->qpsol_options = QPopts;
 }
 CDLEXP void SQPoptions_set_automatic_scaling(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->automatic_scaling = bool(val);
+    castOPT(ptr)->automatic_scaling = bool(val);
 }
 CDLEXP void SQPoptions_set_max_filter_overrides(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_filter_overrides = val;
+    castOPT(ptr)->max_filter_overrides = val;
 }
 CDLEXP void SQPoptions_set_max_extra_steps(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->max_extra_steps = val;
+    castOPT(ptr)->max_extra_steps = val;
 }
 CDLEXP void SQPoptions_set_par_QPs(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->par_QPs = bool(val);
+    castOPT(ptr)->par_QPs = bool(val);
 }
 CDLEXP void SQPoptions_set_enable_QP_cancellation(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->enable_QP_cancellation = bool(val);
+    castOPT(ptr)->enable_QP_cancellation = bool(val);
 }
 CDLEXP void SQPoptions_set_enable_premature_termination(void *ptr, char val){
-    static_cast<SQPoptions *>(ptr)->enable_premature_termination = bool(val);
+    castOPT(ptr)->enable_premature_termination = bool(val);
 }
 CDLEXP void SQPoptions_set_qpsol(void *ptr, int val){
     QPsolvers QPS;
@@ -360,10 +371,10 @@ CDLEXP void SQPoptions_set_qpsol(void *ptr, int val){
         QPS = QPsolvers::gurobi;
     else
         QPS = QPsolvers::unset;
-    static_cast<SQPoptions *>(ptr)->qpsol = QPS;
+    castOPT(ptr)->qpsol = QPS;
 }
 CDLEXP void SQPoptions_set_indef_delay(void *ptr, int val){
-    static_cast<SQPoptions *>(ptr)->indef_delay = val;
+    castOPT(ptr)->indef_delay = val;
 }
 
 // SQPstats
@@ -380,16 +391,20 @@ CDLEXP int SQPstats_get_itCount(void *ptr){
 }
 
 // Problemspec (C callback subclass)
+inline CProblemspec *castCP(void *ptr){
+    return static_cast<CProblemspec *>(ptr);
+}
+
 CDLEXP void *create_Problemspec(int nVar, int nCon){
     return static_cast<void *>(new CProblemspec(nVar, nCon));
 }
 
 CDLEXP void delete_Problemspec(void *ptr){
-    delete static_cast<CProblemspec *>(ptr);
+    delete castCP(ptr);
 }
 
 CDLEXP void Problemspec_print_info(void *ptr){
-    Problemspec *P = static_cast<CProblemspec *>(ptr);
+    Problemspec *P = castCP(ptr);
     std::cout << "\nnVar: " << P->nVar << "\nnCon: " << P->nCon << "\nnBlocks: " << P->nBlocks << "\nnnz: " << P->nnz << "\nblockIdx: ";
     for (int i = 0; i <= P->nBlocks; i++)
     {
@@ -399,82 +414,100 @@ CDLEXP void Problemspec_print_info(void *ptr){
 }
 
 CDLEXP void Problemspec_set_nnz(void *ptr, int nnz){
-    static_cast<CProblemspec *>(ptr)->nnz = nnz;
+    castCP(ptr)->nnz = nnz;
 }
 
 CDLEXP void Problemspec_set_bounds(void *ptr, double *arg_lb_var, double *arg_ub_var, double *arg_lb_con, double *arg_ub_con, double arg_lb_obj, double arg_ub_obj){
-    static_cast<CProblemspec *>(ptr)->objLo = arg_lb_obj;
-    static_cast<CProblemspec *>(ptr)->objUp = arg_ub_obj;
+    castCP(ptr)->objLo = arg_lb_obj;
+    castCP(ptr)->objUp = arg_ub_obj;
 
-    static_cast<CProblemspec *>(ptr)->lb_var.Dimension(static_cast<CProblemspec *>(ptr)->nVar);
-    static_cast<CProblemspec *>(ptr)->ub_var.Dimension(static_cast<CProblemspec *>(ptr)->nVar);
-    static_cast<CProblemspec *>(ptr)->lb_con.Dimension(static_cast<CProblemspec *>(ptr)->nCon);
-    static_cast<CProblemspec *>(ptr)->ub_con.Dimension(static_cast<CProblemspec *>(ptr)->nCon);
+    castCP(ptr)->lb_var.Dimension(castCP(ptr)->nVar);
+    castCP(ptr)->ub_var.Dimension(castCP(ptr)->nVar);
+    castCP(ptr)->lb_con.Dimension(castCP(ptr)->nCon);
+    castCP(ptr)->ub_con.Dimension(castCP(ptr)->nCon);
 
-    std::copy(arg_lb_var, arg_lb_var + static_cast<CProblemspec *>(ptr)->nVar, static_cast<CProblemspec *>(ptr)->lb_var.array);
-    std::copy(arg_ub_var, arg_ub_var + static_cast<CProblemspec *>(ptr)->nVar, static_cast<CProblemspec *>(ptr)->ub_var.array);
+    std::copy(arg_lb_var, arg_lb_var + castCP(ptr)->nVar, castCP(ptr)->lb_var.array);
+    std::copy(arg_ub_var, arg_ub_var + castCP(ptr)->nVar, castCP(ptr)->ub_var.array);
 
-    std::copy(arg_lb_con, arg_lb_con + static_cast<CProblemspec *>(ptr)->nCon, static_cast<CProblemspec *>(ptr)->lb_con.array);
-    std::copy(arg_ub_con, arg_ub_con + static_cast<CProblemspec *>(ptr)->nCon, static_cast<CProblemspec *>(ptr)->ub_con.array);
+    std::copy(arg_lb_con, arg_lb_con + castCP(ptr)->nCon, castCP(ptr)->lb_con.array);
+    std::copy(arg_ub_con, arg_ub_con + castCP(ptr)->nCon, castCP(ptr)->ub_con.array);
     return;
 }
 
 CDLEXP void Problemspec_set_blockIdx(void *ptr, int *arg_blockIdx, int arg_nBlocks){
-    static_cast<CProblemspec *>(ptr)->nBlocks = arg_nBlocks;
-    delete[] static_cast<CProblemspec *>(ptr)->blockIdx;
-    static_cast<CProblemspec *>(ptr)->blockIdx = new int[arg_nBlocks + 1];
-    std::copy(arg_blockIdx, arg_blockIdx + arg_nBlocks + 1, static_cast<CProblemspec *>(ptr)->blockIdx);
+    castCP(ptr)->nBlocks = arg_nBlocks;
+    delete[] castCP(ptr)->blockIdx;
+    castCP(ptr)->blockIdx = new int[arg_nBlocks + 1];
+    std::copy(arg_blockIdx, arg_blockIdx + arg_nBlocks + 1, castCP(ptr)->blockIdx);
 }
 
 CDLEXP void Problemspec_set_vblocks(void *ptr, void *arg_vblocks, int arg_n_vblocks){
-    delete[] static_cast<CProblemspec *>(ptr)->vblocks;
-    static_cast<CProblemspec *>(ptr)->n_vblocks = arg_n_vblocks;
-    static_cast<CProblemspec *>(ptr)->vblocks = new vblock[arg_n_vblocks];
-    std::copy(static_cast<vblock *>(arg_vblocks), static_cast<vblock *>(arg_vblocks) + arg_n_vblocks, static_cast<CProblemspec *>(ptr)->vblocks);
+    delete[] castCP(ptr)->vblocks;
+    castCP(ptr)->n_vblocks = arg_n_vblocks;
+    castCP(ptr)->vblocks = new vblock[arg_n_vblocks];
+    std::copy(static_cast<vblock *>(arg_vblocks), static_cast<vblock *>(arg_vblocks) + arg_n_vblocks, castCP(ptr)->vblocks);
 }
 
 CDLEXP void Problemspec_pass_vblocks(void *ptr, void *arg_vblocks, int arg_n_vblocks){
-    delete[] static_cast<CProblemspec *>(ptr)->vblocks;
-    static_cast<CProblemspec *>(ptr)->n_vblocks = arg_n_vblocks;
-    static_cast<CProblemspec *>(ptr)->vblocks = static_cast<vblock *>(arg_vblocks);
+    delete[] castCP(ptr)->vblocks;
+    castCP(ptr)->n_vblocks = arg_n_vblocks;
+    castCP(ptr)->vblocks = static_cast<vblock *>(arg_vblocks);
 }
 
 CDLEXP void Problemspec_set_cond(void *ptr, void *Condenser_cond){
-    static_cast<CProblemspec *>(ptr)->cond = static_cast<Condenser*>(Condenser_cond);
+    castCP(ptr)->cond = static_cast<Condenser*>(Condenser_cond);
 }
 
 CDLEXP void Problemspec_set_closure(void *ptr, void *arg_closure){
-    static_cast<CProblemspec *>(ptr)->closure = arg_closure;
+    castCP(ptr)->closure = arg_closure;
 }
 
 CDLEXP void Problemspec_set_dense_init(void *ptr, void (*fp_init_dense)(void *closure_pass, double *xi, double *lambda, double *constrJac)){
-    static_cast<CProblemspec *>(ptr)->initialize_dense = fp_init_dense;
+    castCP(ptr)->initialize_dense = fp_init_dense;
 }
 
 CDLEXP void Problemspec_set_dense_eval(void *ptr, void (*fp_eval_dense)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info)){
-    static_cast<CProblemspec *>(ptr)->evaluate_dense = fp_eval_dense;
+    castCP(ptr)->evaluate_dense = fp_eval_dense;
 }
 
 CDLEXP void Problemspec_set_simple_eval(void *ptr, void (*fp_eval_simple)(void *closure_pass, const double *xi, double *objval, double *constr, int *info)){
-    static_cast<CProblemspec *>(ptr)->evaluate_simple = fp_eval_simple;
+    castCP(ptr)->evaluate_simple = fp_eval_simple;
 }
 
 CDLEXP void Problemspec_set_sparse_init(void *ptr, void (*fp_init_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol)){
-    static_cast<CProblemspec *>(ptr)->initialize_sparse = fp_init_sparse;
+    castCP(ptr)->initialize_sparse = fp_init_sparse;
 }
 
 CDLEXP void Problemspec_set_sparse_eval(void *ptr, void (*fp_eval_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info)){
-    static_cast<CProblemspec *>(ptr)->evaluate_sparse = fp_eval_sparse;
+    castCP(ptr)->evaluate_sparse = fp_eval_sparse;
 }
 
-CDLEXP void Problemspec_set_continuity_restoration(void *ptr, void (*fp_rest_cont)(void *closure_pass, double *xi, int *info)){
-    static_cast<CProblemspec *>(ptr)->restore_continuity = fp_rest_cont;
+CDLEXP void Problemspec_set_reduce_constr_vio(void *ptr, void (*fp_red_vio)(void *closure_pass, double *xi, int *info)){
+    castCP(ptr)->reduce_constr_vio = fp_red_vio;
 }
+
+CDLEXP void Problemspec_set_modify_step(void *ptr, void (*fp_mod_step)(void *closure_pass, double *xi, double *lambda, int *info)){
+    castCP(ptr)->modify_step = fp_mod_step;
+}
+
+
+CDLEXP void *create_scaled_Problemspec(void *parent){
+    return static_cast<void *>(new scaled_Problemspec(castCP(parent)));
+}
+
+CDLEXP void scaled_Problemspec_set_scale(void *ptr, double *scaleFactors){
+    static_cast<scaled_Problemspec*>(ptr)->set_scale(scaleFactors);
+}
+
+// CDLEXP void delete_Scaled_Problemspec(void *ptr){
+//     delete_Problemspec(ptr);
+// }
+
 
 // SQPmethod
 CDLEXP void *create_SQPmethod(void *Problemspec_prob, void *SQPoptions_opts, void *SQPstats_stats){
     try{
-        return static_cast<void *>(new SQPmethod(static_cast<Problemspec *>(Problemspec_prob), static_cast<SQPoptions *>(SQPoptions_opts), static_cast<SQPstats *>(SQPstats_stats)));
+        return static_cast<void *>(new SQPmethod(static_cast<Problemspec *>(Problemspec_prob), castOPT(SQPoptions_opts), static_cast<SQPstats *>(SQPstats_stats)));
     }
     catch (std::exception &E){
         strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
@@ -560,58 +593,62 @@ CDLEXP void target_array_set(void *ptr, int index, int n_stages, int first_free,
 }
 
 // Condenser
+inline Condenser *castCND(void *ptr){
+    return static_cast<Condenser *>(ptr);
+}
+
 CDLEXP void *create_Condenser(void *arg_vblocks, int N_vblocks, void *arg_cblocks, int N_cblocks, void *arg_hsizes, int N_hsizes, void *arg_targets, int N_targets, int arg_dep_bounds){
     return new Condenser(static_cast<vblock *>(arg_vblocks), N_vblocks, static_cast<cblock *>(arg_cblocks), N_cblocks, static_cast<int *>(arg_hsizes), N_hsizes, static_cast<condensing_target *>(arg_targets), N_targets, arg_dep_bounds);
 }
 
 CDLEXP void delete_Condenser(void *ptr){
-    delete static_cast<Condenser *>(ptr);
+    delete castCND(ptr);
 }
 
 CDLEXP void Condenser_print_info(void *ptr){
-    static_cast<Condenser *>(ptr)->print_info();
+    castCND(ptr)->print_info();
 }
 
 CDLEXP void Condenser_full_condense(void *ptr, void *Matrix_grad_obj, void *Sparse_Matrix_constr_jac, void *SymMatrix_array_hess, void *Matrix_lb_var, void *Matrix_ub_var, void *Matrix_lb_con, void *Matrix_ub_con, void *Matrix_condensed_grad_obj, void *Sparse_Matrix_condensed_constr_jac, void *SymMatrix_array_condensed_hess, void *Matrix_condensed_lb_var, void *Matrix_condensed_ub_var, void *Matrix_condensed_lb_con, void *Matrix_condensed_ub_con){
-    static_cast<Condenser *>(ptr)->full_condense(*static_cast<Matrix *>(Matrix_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_hess), *static_cast<Matrix *>(Matrix_lb_var), *static_cast<Matrix *>(Matrix_ub_var), *static_cast<Matrix *>(Matrix_lb_con), *static_cast<Matrix *>(Matrix_ub_con),
+    castCND(ptr)->full_condense(*static_cast<Matrix *>(Matrix_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_hess), *static_cast<Matrix *>(Matrix_lb_var), *static_cast<Matrix *>(Matrix_ub_var), *static_cast<Matrix *>(Matrix_lb_con), *static_cast<Matrix *>(Matrix_ub_con),
                                                  *static_cast<Matrix *>(Matrix_condensed_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_condensed_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_condensed_hess), *static_cast<Matrix *>(Matrix_condensed_lb_var), *static_cast<Matrix *>(Matrix_condensed_ub_var), *static_cast<Matrix *>(Matrix_condensed_lb_con), *static_cast<Matrix *>(Matrix_condensed_ub_con));
 }
 
 CDLEXP void Condenser_recover_var_mult(void *ptr, void *xi_cond, void *lambda_cond, void *xi_rest, void *lambda_rest){
-    static_cast<Condenser *>(ptr)->recover_var_mult(*static_cast<Matrix *>(xi_cond), *static_cast<Matrix *>(lambda_cond), *static_cast<Matrix *>(xi_rest), *static_cast<Matrix *>(lambda_rest));
+    castCND(ptr)->recover_var_mult(*static_cast<Matrix *>(xi_cond), *static_cast<Matrix *>(lambda_cond), *static_cast<Matrix *>(xi_rest), *static_cast<Matrix *>(lambda_rest));
 }
 
 // Member access
 CDLEXP int Condenser_nVar(void *ptr){
-    return static_cast<Condenser *>(ptr)->num_vars;
+    return castCND(ptr)->num_vars;
 }
 
 CDLEXP int Condenser_nCon(void *ptr){
-    return static_cast<Condenser *>(ptr)->num_cons;
+    return castCND(ptr)->num_cons;
 }
 
 CDLEXP int Condenser_nBlocks(void *ptr){
-    return static_cast<Condenser *>(ptr)->num_hessblocks;
+    return castCND(ptr)->num_hessblocks;
 }
 
 CDLEXP int *Condenser_hsizes(void *ptr){
-    return static_cast<Condenser *>(ptr)->hess_block_sizes;
+    return castCND(ptr)->hess_block_sizes;
 }
 
 CDLEXP int Condenser_condensed_nVar(void *ptr){
-    return static_cast<Condenser *>(ptr)->condensed_num_vars;
+    return castCND(ptr)->condensed_num_vars;
 }
 
 CDLEXP int Condenser_condensed_nCon(void *ptr){
-    return static_cast<Condenser *>(ptr)->condensed_num_cons;
+    return castCND(ptr)->condensed_num_cons;
 }
 
 CDLEXP int Condenser_condensed_nBlocks(void *ptr){
-    return static_cast<Condenser *>(ptr)->condensed_num_hessblocks;
+    return castCND(ptr)->condensed_num_hessblocks;
 }
 
 CDLEXP int *Condenser_condensed_hsizes(void *ptr){
-    return static_cast<Condenser *>(ptr)->condensed_hess_block_sizes;
+    return castCND(ptr)->condensed_hess_block_sizes;
 }
 
 // Matrix
@@ -694,4 +731,3 @@ CDLEXP int *Sparse_Matrix_row(void *ptr){
 CDLEXP int *Sparse_Matrix_colind(void *ptr){
     return static_cast<Sparse_Matrix *>(ptr)->colind.get();
 }
-

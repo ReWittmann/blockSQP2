@@ -2151,6 +2151,8 @@ class Electric_Car(OCProblem):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, 0.1 + 0.9*i/self.ntS)
         self.integrate_full(self.start_point)
+        self.start_point = np.maximum(self.start_point, self.lb_var)
+        self.start_point = np.minimum(self.start_point, self.ub_var)
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)

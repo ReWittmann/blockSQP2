@@ -57,7 +57,7 @@ void Problemspec::evaluate(const Matrix &xi, double *objval, Matrix &constr, int
 }
 
 void Problemspec::reduceConstrVio(Matrix &xi, int *info){*info = 1;}
-void Problemspec::stepModification(Matrix &xi, Matrix &lambda, int *info){*info = 1;}
+void Problemspec::modifyStep(Matrix &xi, Matrix &lambda, int *info){*info = 1;}
 void Problemspec::printInfo(){};
 
 // scaled_Problemspec //
@@ -211,11 +211,11 @@ void scaled_Problemspec::rescale(const double *const scaleFacs){
     return;
 }
 
-void scaled_Problemspec::stepModification(Matrix &xi, Matrix &lambda, int *info){
+void scaled_Problemspec::modifyStep(Matrix &xi, Matrix &lambda, int *info){
     for (int i = 0; i < nVar; i++){
         xi_unscaled(i) = xi(i)/scaling_factors[i];
     }
-    unscaled_prob->stepModification(xi_unscaled, lambda, info);
+    unscaled_prob->modifyStep(xi_unscaled, lambda, info);
     if (!(*info)){
         for (int i = 0; i < nVar; i++){
             xi(i) = xi_unscaled(i)*scaling_factors[i];

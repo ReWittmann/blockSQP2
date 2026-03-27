@@ -1,0 +1,180 @@
+from ctypes import c_void_p, c_int, c_double, c_char, c_char_p, CFUNCTYPE, POINTER
+
+BSQP_callback_signatures = {
+        'initialize_dense': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_double), POINTER(c_double)),
+        'initialize_sparse': CFUNCTYPE(None, c_void_p,
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_int), POINTER(c_int)),
+        'evaluate_dense': CFUNCTYPE(None, c_void_p,
+                               POINTER(c_double), POINTER(c_double),
+                               POINTER(c_double), POINTER(c_double),
+                               POINTER(c_double), POINTER(c_double),
+                               POINTER(POINTER(c_double)), c_int, POINTER(c_int)),
+        'evaluate_sparse': CFUNCTYPE(None, c_void_p,
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_int), POINTER(c_int),
+                                POINTER(POINTER(c_double)), c_int, POINTER(c_int)),
+        'evaluate_simple': CFUNCTYPE(None, c_void_p,
+                                POINTER(c_double), POINTER(c_double),
+                                POINTER(c_double), POINTER(c_int)),
+        'reduce_constr_vio': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_int)),
+        'modify_step': CFUNCTYPE(None, c_void_p, POINTER(c_double), POINTER(c_double), POINTER(c_int))
+    }
+
+BSQP_function_signatures = {
+    "get_error_message": (None, ()),
+    "create_vblock_array": (c_void_p, (c_int,)),
+    "delete_vblock_array": (None, (c_void_p,)),
+    "vblock_array_set": (None, (c_void_p, c_int, c_int, c_char)),
+    
+    "delete_QPsolver_options": (None, (c_void_p,)),
+    
+    "create_qpOASES_options": (c_void_p, ()),
+    "qpOASES_options_set_sparsityLevel": (None, (c_void_p, c_int)),
+    "qpOASES_options_set_printLevel": (None, (c_void_p, c_int)),
+    "qpOASES_options_set_terminationTolerance": (None, (c_void_p, c_double)),
+    
+    "create_SQPoptions": (c_void_p, ()),
+    "delete_SQPoptions": (None, (c_void_p,)),
+    "SQPoptions_set_print_level": (None, (c_void_p, c_int)),
+    "SQPoptions_set_result_print_color": (None, (c_void_p, c_int)),
+    "SQPoptions_set_debug_level": (None, (c_void_p, c_int)),
+    "SQPoptions_set_eps": (None, (c_void_p, c_double)),
+    "SQPoptions_set_inf": (None, (c_void_p, c_double)),
+    "SQPoptions_set_opt_tol": (None, (c_void_p, c_double)),
+    "SQPoptions_set_feas_tol": (None, (c_void_p, c_double)),
+    "SQPoptions_set_sparse": (None, (c_void_p, c_char)),
+    "SQPoptions_set_enable_linesearch": (None, (c_void_p, c_char)),
+    "SQPoptions_set_enable_rest": (None, (c_void_p, c_char)),
+    "SQPoptions_set_rest_rho": (None, (c_void_p, c_double)),
+    "SQPoptions_set_rest_zeta": (None, (c_void_p, c_double)),
+    "SQPoptions_set_max_linesearch_steps": (None, (c_void_p, c_int)),
+    "SQPoptions_set_max_consec_reduced_steps": (None, (c_void_p, c_int)),
+    "SQPoptions_set_max_consec_skipped_updates": (None, (c_void_p, c_int)),
+    "SQPoptions_set_max_QP_it": (None, (c_void_p, c_int)),
+    "SQPoptions_set_block_hess": (None, (c_void_p, c_int)),
+    "SQPoptions_set_sizing": (c_int, (c_void_p, c_char_p)),
+    "SQPoptions_set_fallback_sizing": (c_int, (c_void_p, c_char_p)),
+    "SQPoptions_set_max_QP_secs": (None, (c_void_p, c_double)),
+    "SQPoptions_set_initial_hess_scale": (None, (c_void_p, c_double)),
+    "SQPoptions_set_COL_eps": (None, (c_void_p, c_double)),
+    "SQPoptions_set_OL_eps": (None, (c_void_p, c_double)),
+    "SQPoptions_set_COL_tau_1": (None, (c_void_p, c_double)),
+    "SQPoptions_set_COL_tau_2": (None, (c_void_p, c_double)),
+    "SQPoptions_set_BFGS_damping_factor": (None, (c_void_p, c_double)),
+    "SQPoptions_set_min_damping_quotient": (None, (c_void_p, c_double)),
+    "SQPoptions_set_hess_approx": (c_int, (c_void_p, c_char_p)),
+    "SQPoptions_set_fallback_approx": (c_int, (c_void_p, c_char_p)),
+    "SQPoptions_set_indef_local_only": (None, (c_void_p, c_char_p)),
+    "SQPoptions_set_lim_mem": (None, (c_void_p, c_char)),
+    "SQPoptions_set_mem_size": (None, (c_void_p, c_int)),
+    "SQPoptions_set_skip_first_linesearch": (None, (c_void_p, c_int)),
+    "SQPoptions_set_conv_strategy": (None, (c_void_p, c_int)),
+    "SQPoptions_set_max_conv_QPs": (None, (c_void_p, c_int)),
+    "SQPoptions_set_hess_regularization_factor": (None, (c_void_p, c_double)),
+    "SQPoptions_set_max_SOC": (None, (c_void_p, c_int)),
+    "SQPoptions_set_qpsol_options": (None, (c_void_p, c_void_p)),
+    "SQPoptions_set_automatic_scaling": (None, (c_void_p, c_char)),
+    "SQPoptions_set_max_filter_overrides": (None, (c_void_p, c_int)),
+    "SQPoptions_set_max_extra_steps": (None, (c_void_p, c_int)),
+    "SQPoptions_set_par_QPs": (None, (c_void_p, c_char)),
+    "SQPoptions_set_enable_QP_cancellation": (None, (c_void_p, c_char)),
+    "SQPoptions_set_enable_premature_termination": (None, (c_void_p, c_char)),
+    "SQPoptions_set_qpsol": (None, (c_void_p, c_int)),
+    "SQPoptions_set_indef_delay": (None, (c_void_p, c_int)),
+    
+    "create_SQPstats": (c_void_p, (c_char_p,)),
+    "delete_SQPstats": (None, (c_void_p,)),
+    "SQPstats_get_itCount": (c_int, (c_void_p,)),
+    
+    "create_Problemspec": (c_void_p, (c_int, c_int)),
+    "delete_Problemspec": (None, (c_void_p,)),
+    "Problemspec_print_info": (None, (c_void_p,)),
+    "Problemspec_set_nnz": (None, (c_void_p, c_int)),
+    "Problemspec_set_bounds": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double)),
+    "Problemspec_set_blockIdx": (None, (c_void_p, c_void_p, c_int)),
+    "Problemspec_set_vblocks": (None, (c_void_p, c_void_p, c_int)),
+    "Problemspec_pass_vblocks": (None, (c_void_p, c_void_p, c_int)),
+    "Problemspec_set_cond": (None, (c_void_p, c_void_p)),
+    "Problemspec_set_closure": (None, (c_void_p, c_void_p)),
+    
+    "Problemspec_set_dense_init": (None, (c_void_p, BSQP_callback_signatures['initialize_dense'])),
+    "Problemspec_set_sparse_init": (None, (c_void_p, BSQP_callback_signatures['initialize_sparse'])),
+    "Problemspec_set_dense_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_dense'])),
+    "Problemspec_set_sparse_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_sparse'])),
+    "Problemspec_set_simple_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_simple'])),
+    "Problemspec_set_reduce_constr_vio": (None, (c_void_p, BSQP_callback_signatures['reduce_constr_vio'])),
+    "Problemspec_set_modify_step": (None, (c_void_p, BSQP_callback_signatures['modify_step'])),
+    
+    "create_scaled_Problemspec": (c_void_p, (c_void_p,)),
+    "scaled_Problemspec_set_scale": (None, (c_void_p, POINTER(c_double))),
+    
+    "create_SQPmethod": (c_void_p, (c_void_p, c_void_p, c_void_p)),
+    "delete_SQPmethod": (None, (c_void_p,)),
+    "SQPmethod_init": (None, (c_void_p,)),
+    "SQPmethod_run": (c_int, (c_void_p, c_int, c_int)),
+    "SQPmethod_finish": (None, (c_void_p,)),
+    "SQPmethod_get_xi": (None, (c_void_p, c_void_p)),
+    "SQPmethod_get_lambda": (None, (c_void_p, c_void_p)),
+    
+    "create_cblock_array": (c_void_p, (c_int,)),
+    "delete_cblock_array": (None, (c_void_p,)),
+    "cblock_array_set": (None, (c_void_p, c_int, c_int)),
+    
+    "create_hsize_array": (c_void_p, (c_int,)),
+    "delete_hsize_array": (None, (c_void_p,)),
+    "hsize_array_set": (None, (c_void_p, c_int, c_int)),
+    
+    "create_target_array": (c_void_p, (c_int,)),
+    "delete_target_array": (None, (c_void_p,)),
+    "target_array_set": (None, (c_void_p, c_int, c_int, c_int, c_int, c_int, c_int)),
+    
+    "create_Condenser": (c_void_p, (c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_int)),
+    "delete_Condenser": (None, (c_void_p,)),
+    "Condenser_print_info": (None, (c_void_p,)),
+    "Condenser_full_condense": (None, (c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
+    "Condenser_recover_var_mult": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
+    "Condenser_nVar": (c_int, (c_void_p,)),
+    "Condenser_nCon": (c_int, (c_void_p,)),
+    "Condenser_nBlocks": (c_int, (c_void_p,)),
+    "Condenser_hsizes": (c_void_p, (c_void_p,)),
+    "Condenser_condensed_nVar": (c_int, (c_void_p,)),
+    "Condenser_condensed_nCon": (c_int, (c_void_p,)),
+    "Condenser_condensed_nBlocks": (c_int, (c_void_p,)),
+    "Condenser_condensed_hsizes": (c_void_p, (c_void_p,)),
+    
+    "create_Matrix": (c_void_p, (c_int, c_int)),
+    "create_Matrix_default": (c_void_p, ()),
+    "delete_Matrix": (None, (c_void_p,)),
+    "Matrix_array": (c_void_p, (c_void_p,)),
+    
+    "create_SymMatrix": (c_void_p, (c_int,)),
+    "delete_SymMatrix": (None, (c_void_p,)),
+    "SymMatrix_show_array": (c_void_p, (c_void_p,)),
+    
+    "create_SymMatrix_array": (c_void_p, (c_int,)),
+    "delete_SymMatrix_array": (None, (c_void_p,)),
+    "SymMatrix_array_index_resize": (None, (c_void_p, c_int, c_int)),
+    "SymMatrix_array_index_array": (c_void_p, (c_void_p, c_int)),
+    
+    "create_Sparse_Matrix": (c_void_p, (c_int, c_int, c_int)),
+    "create_Sparse_Matrix_default": (c_void_p, ()),
+    "Sparse_Matrix_set_structure": (None, (c_void_p, c_int, c_int, c_int)),
+    "delete_Sparse_Matrix": (None, (c_void_p,)),
+    "Sparse_Matrix_nnz": (c_int, (c_void_p,)),
+    "Sparse_Matrix_nz": (c_void_p, (c_void_p,)),
+    "Sparse_Matrix_row": (c_void_p, (c_void_p,)),
+    "Sparse_Matrix_colind": (c_void_p, (c_void_p,))
+}
+
+def add_BSQP_signatures(mod_BSQP):
+    for key in BSQP_function_signatures:
+        # "dlsym" the method
+        BSQP_method = mod_BSQP.__getattr__(key)
+        
+        # set its signature
+        BSQP_method.restype = BSQP_function_signatures[key][0]
+        BSQP_method.argtypes = BSQP_function_signatures[key][1]
+    return

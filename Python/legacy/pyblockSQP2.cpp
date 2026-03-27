@@ -396,6 +396,7 @@ public:
     virtual void restore_continuity(){};
     virtual void call_stepModification(){};
     
+    virtual void tag(){};
     
     void initialize(blockSQP2::Matrix &xi, blockSQP2::Matrix &lambda, blockSQP2::Matrix &constrJac) override {
         Cpp_Data.xi.ptr = xi.array;
@@ -578,9 +579,37 @@ class PyProblemspecTrampoline: public PyProblemspec{
     void call_stepModification() override {
         PYBIND11_OVERRIDE(void, PyProblemspec, call_stepModification,);
     }
+    
+    void tag() override {
+        PYBIND11_OVERRIDE(void, PyProblemspec, tag,);
+    }
 };
 
+// class PySQPmethod: public blockSQP2::SQPmethod{
+//     public:
+//     PyProblemspec *prob_hold;
+//     PySQPmethod(PyProblemspec *arg_prob, blockSQP2::SQPoptions *arg_opts, blockSQP2::SQPstats *arg_stats):
+//         SQPmethod(arg_prob, arg_opts, arg_stats), prob_hold(arg_prob){
+//             prob_hold->tag();
+//         }
+// };
 
+class PySQPmethod: public blockSQP2::SQPmethod{
+    public:
+    std::shared_ptr<blockSQP2::Problemspec> prob_hold;
+    PySQPmethod(std::shared_ptr<PyProblemspec> arg_prob, blockSQP2::SQPoptions *arg_opts, blockSQP2::SQPstats *arg_stats):
+        SQPmethod(arg_prob.get(), arg_opts, arg_stats), prob_hold(std::move(arg_prob)){}
+        
+    ~PySQPmethod(){
+        std::cout << "PySQPmethod:: destructor called\n";
+        std::cout << "shared_ptr refcount is " << prob_hold.use_count() << "\n";
+    }
+};
+
+class Problemspec_holder{
+    public:
+    blockSQP2::Problemspec *prob;
+};
 
 PYBIND11_MODULE(pyblockSQP2, m){
 
@@ -887,9 +916,9 @@ py::native_enum<blockSQP2::SQPresults>(m, "SQPresults", "enum.Enum")
     .finalize()
     ;
 
-py::class_<blockSQP2::Problemspec>(m, "blockSQP2Problemspec");
+py::class_<blockSQP2::Problemspec, std::shared_ptr<blockSQP2::Problemspec>>(m, "blockSQP2Problemspec");
 
-py::class_<PyProblemspec, blockSQP2::Problemspec, PyProblemspecTrampoline>(m,"PyProblemspec")
+py::class_<PyProblemspec, blockSQP2::Problemspec, PyProblemspecTrampoline, std::shared_ptr<PyProblemspec>>(m,"PyProblemspec")
 	.def(py::init<>())
 	.def("init_Cpp_Data", &PyProblemspec::init_Cpp_Data)
 	.def("initialize_dense", &PyProblemspec::initialize_dense)
@@ -920,6 +949,8 @@ py::class_<PyProblemspec, blockSQP2::Problemspec, PyProblemspecTrampoline>(m,"Py
     //.def_property("vblocks", nullptr, [](PyProblemspec &P, vblock_array &v_arr){P.vblocks = v_arr.ptr; P.n_vblocks = v_arr.size;})
 	;
 
+// m.def("TEST_func", [](PyProblemspec *prob){prob->tag();});
+
 py::class_<blockSQP2::SQPstats>(m,"SQPstats")
 	.def(py::init<char*>())
 	.def_readwrite("itCount", &blockSQP2::SQPstats::itCount)
@@ -938,7 +969,7 @@ py::class_<blockSQP2::SQPstats>(m,"SQPstats")
 	.def_readwrite("nTotalSkippedUpdates", &blockSQP2::SQPstats::nTotalSkippedUpdates)
 	.def_readwrite("averageSizingFactor", &blockSQP2::SQPstats::averageSizingFactor);
 
-py::class_<blockSQP2::SQPmethod>(m, "SQPmethod")
+py::class_<blockSQP2::SQPmethod>(m, "blockSQP2SQPmethod")
 	.def(py::init<blockSQP2::Problemspec*, blockSQP2::SQPoptions*, blockSQP2::SQPstats*>())
 	 //.def_readonly("vars", &blockSQP2::SQPmethod::vars)
     .def_property_readonly("vars", [](blockSQP2::SQPmethod *meth){return meth->vars.get();})
@@ -956,7 +987,9 @@ py::class_<blockSQP2::SQPmethod>(m, "SQPmethod")
     .def("arr_apply_rescaling", [](blockSQP2::SQPmethod &M, double_array *arr){if (M.param->automatic_scaling){M.apply_rescaling(arr->ptr);} return;})
     .def("dec_nquasi", [](blockSQP2::SQPmethod &M){for (int iBlock = 0; iBlock < M.vars->nBlocks; iBlock++){if (M.vars->nquasi[iBlock] > 0) M.vars->nquasi[iBlock] -= 1;} return;})
     ;
-
+py::class_<PySQPmethod, blockSQP2::SQPmethod>(m, "SQPmethod")
+    .def(py::init<std::shared_ptr<PyProblemspec>, blockSQP2::SQPoptions*, blockSQP2::SQPstats*>())
+    ;
 
 py::class_<blockSQP2::bound_correction_method, blockSQP2::SQPmethod>(m, "bound_correction_method")
     .def(py::init<blockSQP2::Problemspec*, blockSQP2::SQPoptions*, blockSQP2::SQPstats*>())
@@ -1009,7 +1042,7 @@ py::class_<blockSQP2::SQPiterate>(m, "SQPiterate")
 	.def("set_hess2_block", [](blockSQP2::SQPiterate &vars, int i, blockSQP2::SymMatrix &M){vars.hess2[i] = M;})
 	;
 
-py::class_<blockSQP2::RestorationProblem, blockSQP2::Problemspec>(m, "RestorationProblem")
+py::class_<blockSQP2::RestorationProblem, blockSQP2::Problemspec, std::shared_ptr<blockSQP2::RestorationProblem>>(m, "RestorationProblem")
         .def(py::init<blockSQP2::Problemspec*, blockSQP2::Matrix&, double, double>())
         ;
 
@@ -1115,14 +1148,14 @@ py::class_<condensing_args>(m, "condensing_args")
     ;
 
 
-py::class_<blockSQP2::TC_restoration_Problem, blockSQP2::Problemspec>(m, "TC_restoration_Problem")
+py::class_<blockSQP2::TC_restoration_Problem, blockSQP2::Problemspec, std::shared_ptr<blockSQP2::TC_restoration_Problem>>(m, "TC_restoration_Problem")
     .def(py::init<blockSQP2::Problemspec*, const blockSQP2::Matrix&, double, double>())
     .def_readonly("nVar", &blockSQP2::TC_restoration_Problem::nVar)
     .def_readonly("nCon", &blockSQP2::TC_restoration_Problem::nCon)
     .def_readwrite("xi_ref", &blockSQP2::TC_restoration_Problem::xi_ref)
     ;
 
-py::class_<blockSQP2::TC_feasibility_Problem, blockSQP2::Problemspec>(m, "TC_feasibility_Problem")
+py::class_<blockSQP2::TC_feasibility_Problem, blockSQP2::Problemspec, std::shared_ptr<blockSQP2::TC_feasibility_Problem>>(m, "TC_feasibility_Problem")
     .def(py::init<blockSQP2::Problemspec*>())
     .def_readonly("nVar", &blockSQP2::TC_feasibility_Problem::nVar)
     .def_readonly("nCon", &blockSQP2::TC_feasibility_Problem::nCon)
@@ -1141,7 +1174,7 @@ py::class_<blockSQP2::TC_feasibility_Problem, blockSQP2::Problemspec>(m, "TC_fea
 	.def_property("jac_orig_colind", [](blockSQP2::TC_feasibility_Problem &P)->int_pointer_interface{int_pointer_interface colind; colind.size = P.nVar + 1; colind.ptr = P.jac_orig_colind; return colind;}, nullptr)
 	;
 
-py::class_<blockSQP2::scaled_Problemspec, blockSQP2::Problemspec>(m, "scaled_Problemspec")
+py::class_<blockSQP2::scaled_Problemspec, blockSQP2::Problemspec, std::shared_ptr<blockSQP2::scaled_Problemspec>>(m, "scaled_Problemspec")
     .def(py::init<blockSQP2::Problemspec*>())
     .def("arr_set_scale", [](blockSQP2::scaled_Problemspec &P, double_array &arr){P.set_scale(arr.ptr);});
 }

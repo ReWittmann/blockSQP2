@@ -290,5 +290,8 @@ class Problemspec(pyblockSQP2.PyProblemspec):
         if self._stepModification is not None:
             self.Cpp_Data.info = self._stepModification(self.Data.xi, self.Data.lam)
         return
-
+    def tag(self):
+        print("#### TAG ####")
+        self.asdf = 3
+        return
 

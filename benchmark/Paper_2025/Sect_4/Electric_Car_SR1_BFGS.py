@@ -16,7 +16,7 @@ import OCProblems
 OCprob = OCProblems.Electric_Car(
                     nt = 100, 
                     refine = 1, 
-                    parallel = True, 
+                    parallel = False, 
                     integrator = 'RK4', 
                     )
 
@@ -70,7 +70,7 @@ prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
-prob.complete()
+# prob.complete()
 
 stats = blockSQP2.SQPstats("./solver_outputs")
 
