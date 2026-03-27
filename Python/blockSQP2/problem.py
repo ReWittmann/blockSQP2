@@ -154,7 +154,7 @@ class Problem(CXXobjCreator):
     
     def evaluate_dense(self, _, xi: c_double_p, lam : c_double_p, objval : c_double_p, constr : c_double_p, gradObj : c_double_p, constrJac : c_double_p, hess : POINTER(c_double_p), dmode : c_int, info : c_int_p):
         try:
-            xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
+            xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))            
             lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
             constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
         

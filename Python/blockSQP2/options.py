@@ -20,7 +20,6 @@ class qpOASESoptions(CXXobjCreator):
 
 class Options(CXXobjCreator):
     def __init__(self,
-                 maxiters: int = 100,
                  eps: float = 1.0e-16,
                  inf: float = float('inf'),
                  print_level: int = 2,
@@ -42,7 +41,7 @@ class Options(CXXobjCreator):
                  COL_tau_1: float = 0.5,
                  COL_tau_2: float = 1.0e4,
                  OL_eps: float = 1.0e-4,
-                 BFGS_damping_factor: float = 1 / 3,
+                 BFGS_damping_factor: float = 1./3.,
                  conv_strategy: int = 1,
                  max_conv_QPs: int = 4,
                  enable_linesearch: bool = True,
@@ -62,7 +61,6 @@ class Options(CXXobjCreator):
                  automatic_scaling: bool = False,
                  enable_premature_termination: bool = False,
                  indef_delay: int = 3):
-        self.maxiters = maxiters
         self.eps = eps
         self.inf = inf
         self.print_level = print_level
