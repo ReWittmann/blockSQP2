@@ -417,6 +417,16 @@ CDLEXP void Problemspec_set_nnz(void *ptr, int nnz){
     castCP(ptr)->nnz = nnz;
 }
 
+CDLEXP int Problemspec_get_nVar(void *ptr){
+    return static_cast<Problemspec*>(ptr)->nVar;
+}
+CDLEXP int Problemspec_get_nCon(void *ptr){
+    return static_cast<Problemspec*>(ptr)->nCon;
+}
+CDLEXP int Problemspec_get_nnz(void *ptr){
+    return static_cast<Problemspec*>(ptr)->nnz;
+}
+
 CDLEXP void Problemspec_set_bounds(void *ptr, double *arg_lb_var, double *arg_ub_var, double *arg_lb_con, double *arg_ub_con, double arg_lb_obj, double arg_ub_obj){
     castCP(ptr)->objLo = arg_lb_obj;
     castCP(ptr)->objUp = arg_ub_obj;
@@ -627,6 +637,11 @@ CDLEXP int Condenser_nCon(void *ptr){
     return castCND(ptr)->num_cons;
 }
 
+CDLEXP int Condenser_num_true_cons(void *ptr){
+    return castCND(ptr)->num_true_cons;
+}
+
+
 CDLEXP int Condenser_nBlocks(void *ptr){
     return castCND(ptr)->num_hessblocks;
 }
@@ -730,4 +745,21 @@ CDLEXP int *Sparse_Matrix_row(void *ptr){
 
 CDLEXP int *Sparse_Matrix_colind(void *ptr){
     return static_cast<Sparse_Matrix *>(ptr)->colind.get();
+}
+
+
+
+CDLEXP void *create_BoundCorrectionSolver(void *Problemspec_prob, void *SQPoptions_opts, void *SQPstats_stats){
+    try{
+        return static_cast<void *>(new bound_correction_method(static_cast<Problemspec *>(Problemspec_prob), castOPT(SQPoptions_opts), static_cast<SQPstats *>(SQPstats_stats)));
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return nullptr;
+}
+
+CDLEXP void *create_TCfeasibilityProblem(void *parent){
+    return static_cast<void*>(new TC_feasibility_Problem(static_cast<Problemspec*>(parent)));
 }

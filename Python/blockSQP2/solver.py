@@ -95,3 +95,22 @@ class Solver(CXXobjWrapper):
     def get_lambda(self):
         return self.get_dual_solution_full()
 
+class BoundCorrectionSolver(Solver):
+    def __init__(self, arg_prob, arg_opts, arg_stats):
+        self.Py_Problem = arg_prob
+        self.Py_Opts = arg_opts
+        self.Py_Stats = arg_stats
+        
+        self.prob_nVar = self.Py_Problem.nVar
+        self.prob_nCon = self.Py_Problem.nCon
+        
+        BSQP = self.BSQP
+        self.Problemspec_hld = self.Py_Problem.create_cxx_obj()
+        self.SQPoptions_hld = self.Py_Opts.create_cxx_obj()        
+        self.SQPstats_obj = self.Py_Stats.get_cxx_obj()
+        
+        self.cxx_obj = BSQP.create_BoundCorrectionSolver(self.Problemspec_hld.ptr, self.SQPoptions_hld.ptr, self.SQPstats_obj)
+        if not self.cxx_obj:
+            err = BSQP.get_error_message()
+            raise RuntimeError(cast(err, c_char_p).value.decode())
+    

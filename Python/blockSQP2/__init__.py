@@ -31,8 +31,8 @@ add_BSQP_signatures(BSQP)
 from .cxxwrappers import CXXwrapper, CXXobjCreator, CXXobjHolder
 CXXwrapper.BSQP = BSQP
 
-from .solver import Solver, SQPresults
-from .problem import Problem, ScaledProblem
+from .solver import Solver, SQPresults, BoundCorrectionSolver
+from .problem import Problem, ScaledProblem, TCfeasibilityProblem
 from .options import qpOASESoptions, Options
 from .condenser import Sparse_Matrix, vblock, cblock, condensing_target, Condenser
 from .stats import Stats

@@ -24,7 +24,7 @@ BSQP_callback_signatures = {
     }
 
 BSQP_function_signatures = {
-    "get_error_message": (None, ()),
+    "get_error_message": (c_char_p, ()),
     "create_vblock_array": (c_void_p, (c_int,)),
     "delete_vblock_array": (None, (c_void_p,)),
     "vblock_array_set": (None, (c_void_p, c_int, c_int, c_char)),
@@ -93,6 +93,10 @@ BSQP_function_signatures = {
     "delete_Problemspec": (None, (c_void_p,)),
     "Problemspec_print_info": (None, (c_void_p,)),
     "Problemspec_set_nnz": (None, (c_void_p, c_int)),
+    "Problemspec_get_nVar": (c_int, (c_void_p,)),
+    "Problemspec_get_nCon": (c_int, (c_void_p,)),
+    "Problemspec_get_nnz": (c_int, (c_void_p,)),
+    
     "Problemspec_set_bounds": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double)),
     "Problemspec_set_blockIdx": (None, (c_void_p, c_void_p, c_int)),
     "Problemspec_set_vblocks": (None, (c_void_p, c_void_p, c_int)),
@@ -138,6 +142,7 @@ BSQP_function_signatures = {
     "Condenser_recover_var_mult": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
     "Condenser_nVar": (c_int, (c_void_p,)),
     "Condenser_nCon": (c_int, (c_void_p,)),
+    "Condenser_num_true_cons": (c_int, (c_void_p,)),
     "Condenser_nBlocks": (c_int, (c_void_p,)),
     "Condenser_hsizes": (c_void_p, (c_void_p,)),
     "Condenser_condensed_nVar": (c_int, (c_void_p,)),
@@ -166,7 +171,9 @@ BSQP_function_signatures = {
     "Sparse_Matrix_nnz": (c_int, (c_void_p,)),
     "Sparse_Matrix_nz": (c_void_p, (c_void_p,)),
     "Sparse_Matrix_row": (c_void_p, (c_void_p,)),
-    "Sparse_Matrix_colind": (c_void_p, (c_void_p,))
+    "Sparse_Matrix_colind": (c_void_p, (c_void_p,)),
+    "create_BoundCorrectionSolver": (c_void_p, (c_void_p, c_void_p, c_void_p)),
+    "create_TCfeasibilityProblem": (c_void_p, (c_void_p,))
 }
 
 def add_BSQP_signatures(mod_BSQP):

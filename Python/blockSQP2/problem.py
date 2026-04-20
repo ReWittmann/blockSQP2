@@ -317,3 +317,19 @@ class ScaledProblem(Problem):
         self.BSQP.scaled_Problemspec_set_scale(cxx_obj, self.scaling_factors.ctypes.data_as(c_double_p))
         deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
         return CXXobjHolder(cxx_obj, deleter, parent_hld)
+
+class TCfeasibilityProblem(Problem):
+    parent : Problem
+    def __init__(self, parent):
+        self.parent = parent
+        
+        ntc = self.BSQP.Condenser_num_true_cons(parent.condenser.cxx_obj)
+        self.nVar = parent.nVar + ntc
+        self.nCon = parent.nCon
+        self.nnz = parent.nnz + ntc
+        
+    def create_cxx_obj(self):
+        parent_hld = self.parent.create_cxx_obj()
+        cxx_obj = self.BSQP.create_TCfeasibilityProblem(parent_hld.ptr)
+        deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
+        return CXXobjHolder(cxx_obj, deleter, parent_hld)
