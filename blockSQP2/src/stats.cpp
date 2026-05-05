@@ -57,15 +57,6 @@ SQPstats::SQPstats(PATHSTR myOutpath){
 
 void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *param, bool hasConverged )
 {
-    /*
-     * vars->steptype:
-     *-1: full step was accepted because it reduces the KKT error although line search failed
-     * 0: standard line search step
-     * 1: Hessian has been reset to identity
-     * 2: feasibility restoration heuristic has been called
-     * 3: feasibility restoration phase has been called
-     */
-
     if( itCount == 0 )
     {
         if( param->print_level > 0 )
@@ -150,7 +141,7 @@ void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *p
                 printf("%-10.2e", vars->lambdaStepNorm );
             }
 
-            if( (vars->alpha == 1.0 && vars->steptype != -1) || !param->result_print_color )
+            if( (vars->alpha == 1.0 && vars->steptype != StepTypes::KKT_heuristic) || !param->result_print_color )
                 printf("%-9.1e", vars->alpha );
             else
                 printf("\033[0;36m%-9.1e\033[0m", vars->alpha );

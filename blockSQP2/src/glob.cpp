@@ -441,7 +441,7 @@ int SQPmethod::feasibilityRestorationPhase(){
 
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-    bool warmStart = (vars->steptype == 3);
+    bool warmStart = (vars->steptype == StepTypes::rest_phase);
     
     if (!warmStart){
         vars->nRestIt = 0;
@@ -760,33 +760,6 @@ void SQPmethod::augmentFilter( double cNorm, double obj )
     return;
 }
 
-/*
-int SCQPmethod::feasibilityRestorationPhase(){
-    // No Feasibility restoration phase
-    if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
-
-    //Set up the restoration problem and restoration method
-    stats->nRestPhaseCalls++;
-    int warmStart;
-    // Iterate until a point acceptable to the filter is found
-    if (vars->steptype != 3){
-        rest_prob->update_xi_ref(vars->xi);
-        //TODO scaling in restoration phase
-        //rest_prob->n_vblocks = prob->n_vblocks;
-        //rest_prob->vblocks = rest_vblocks;
-
-        warmStart = 0;
-        vars->nRestIt = 0;
-        rest_method = std::make_unique<SCQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get(), rest_cond.get());
-        rest_method->init();
-    }
-    else warmStart = 1;
-    
-    //Invoke the restoration phase with setup problem and method
-    return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
-}
-
-*/
 
 bool bound_correction_method::filterLineSearch(){
 
@@ -962,12 +935,12 @@ int bound_correction_method::feasibilityRestorationPhase(){
     
     //Set up the restoration problem and restoration method
     stats->nRestPhaseCalls++;
-    bool warmStart = (vars->steptype == 3);
+    bool warmStart = (vars->steptype == StepTypes::rest_phase);
     // Iterate until a point acceptable to the filter is found
     if (!warmStart){
         vars->nRestIt = 0;
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
-        
+        // rest_param->skip_first_linesearch = true;
         rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         
         warmStart = 0;

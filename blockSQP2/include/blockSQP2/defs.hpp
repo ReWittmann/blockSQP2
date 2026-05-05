@@ -44,6 +44,19 @@ namespace blockSQP2{
 
 typedef char PATHSTR[4096];
 
+
+enum class StepTypes{
+    filter_overwriting = -2,
+    KKT_heuristic = -1,
+    linesearch = 0,
+    ID_hess = 1,
+    rest_heuristic = 2,
+    rest_phase = 3
+};
+inline bool is_rest(StepTypes stepType){
+    return stepType == StepTypes::rest_heuristic || stepType == StepTypes::rest_phase;
+}
+
 enum class SQPresults{
     it_finished = 0,
     partial_success = 1,

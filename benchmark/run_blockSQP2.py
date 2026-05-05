@@ -36,10 +36,11 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 itMax = 200                                 #max number of steps
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
+step_delay_ms = 0
 plot_title = False                          #Put name of problem in plot?
 
-
+OCprob.integrate_full(OCprob.start_point)
 start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
 opts = blockSQP2.SQPoptions()
@@ -130,6 +131,7 @@ if (step_plots):
         ret = optimizer.run(1,1)
         xi = np.array(optimizer.get_xi()).reshape(-1)
         i += 1
+        time.sleep(step_delay_ms/1000)
         OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
 else:
     ret = optimizer.run(itMax)

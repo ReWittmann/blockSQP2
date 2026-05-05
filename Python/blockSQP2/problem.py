@@ -28,7 +28,7 @@ class Problem(CXXobjCreator):
     sparse : bool
     
     _blockIdx: typing.Optional[np.ndarray[c_int]]
-    vblocks: typing.List[vblock]
+    vblocks: typing.Optional[typing.List[vblock]]
     condenser: typing.Optional[Condenser]
     
     lb_var: np.ndarray  # Lower bounds for variables
@@ -279,7 +279,7 @@ class Problem(CXXobjCreator):
             c_double(self.ub_obj)
         )
         
-        if len(self.vblocks) > 0:
+        if self.vblocks is not None and len(self.vblocks) > 0:
             vblock_array = BSQP.create_vblock_array(c_int(len(self.vblocks)))
             for i, vb in enumerate(self.vblocks):
                 BSQP.vblock_array_set(vblock_array, c_int(i), c_int(vb.size), c_char(vb.dependent))

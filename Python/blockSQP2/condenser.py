@@ -1,5 +1,6 @@
 from ctypes import c_void_p, c_char, c_int, c_double, POINTER, cast
 c_double_p = POINTER(c_double)
+c_char_p = POINTER(c_char)
 
 import typing
 import numpy as np
@@ -120,6 +121,9 @@ class Condenser(CXXobjWrapper):
             BSQP.target_array_set(self.target_array_obj, i, t.n_stages, t.first_free, t.vblock_end, t.first_cond, t.cblock_end)
         
         self.cxx_obj = BSQP.create_Condenser(self.vblock_array_obj, len(vblocks), self.cblock_array_obj, len(cblocks), self.hsize_array_obj, len(hsizes), self.target_array_obj, len(targets), dep_bounds)
+        if not self.cxx_obj:
+            err = BSQP.get_error_message()
+            raise RuntimeError(cast(err, c_char_p).value.decode())
         
         nVar = BSQP.Condenser_nVar(self.cxx_obj)
         nCon = BSQP.Condenser_nCon(self.cxx_obj)

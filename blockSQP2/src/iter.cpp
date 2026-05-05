@@ -239,7 +239,7 @@ void SQPiterate::initIterate( SQPoptions* param )
     alpha = 1.0;
     nSOCS = 0;
     reducedStepCount = 0;
-    steptype = 0;
+    steptype = StepTypes::linesearch;
     n_id_hess = 0;
 
     obj = param->inf;

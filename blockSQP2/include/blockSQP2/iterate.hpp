@@ -55,7 +55,8 @@ class SQPiterate{
         double alpha;                                 // stepsize for line search
         int nSOCS;                                    // number of second-order correction steps
         int reducedStepCount;                         // count number of consecutive reduced steps,
-        int steptype;                                 // -2: Filter-overwriting step -1: Step heuristic, 0: Linesearch step, 1: Linesearch step with identity Hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
+        // int steptype;                                 // -2: Filter-overwriting step -1: Step heuristic, 0: Linesearch step, 1: Linesearch step with identity Hessian, 2: Feasibility restoration heuristic step, 3: Feasibility restoration step
+        StepTypes steptype;
         int n_id_hess;                                // Number of condecutive uses of identity hessian as fallback
         
         //Current primal-dual iterate. 
