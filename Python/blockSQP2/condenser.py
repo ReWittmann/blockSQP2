@@ -1,6 +1,5 @@
-from ctypes import c_void_p, c_char, c_int, c_double, POINTER, cast
+from ctypes import c_void_p, c_char, c_char_p, c_int, c_double, POINTER, cast
 c_double_p = POINTER(c_double)
-c_char_p = POINTER(c_char)
 
 import typing
 import numpy as np
@@ -231,7 +230,7 @@ class Condenser(CXXobjWrapper):
         as_array(BSQP.Matrix_array(self.Matrix_lb_con), nCon, c_double)[:] = lb_con
         as_array(BSQP.Matrix_array(self.Matrix_ub_con), nCon, c_double)[:] = ub_con
         
-        BSQP.Condenser_full_condense(
+        full_condense_err = BSQP.Condenser_full_condense(
             self.cxx_obj,
             self.Matrix_grad_obj,
             self.Sparse_Matrix_constr_jac,
@@ -249,6 +248,9 @@ class Condenser(CXXobjWrapper):
             self.Matrix_condensed_lb_con,
             self.Matrix_condensed_ub_con
         )
+        if full_condense_err > 0:
+            error_message = BSQP.get_error_message()
+            raise RuntimeError(cast(error_message, c_char_p).value.decode())
         
         condensed_nVar = BSQP.Condenser_condensed_nVar(self.cxx_obj)
         condensed_nCon = BSQP.Condenser_condensed_nCon(self.cxx_obj)

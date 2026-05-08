@@ -642,7 +642,7 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-12 || ub_con(i) - lb_con(i) >= 1e-12){
-                throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
+                throw std::invalid_argument("Error, matching conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }
     }
@@ -1455,7 +1455,7 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-14 || ub_con(i) - lb_con(i) >= 1e-14){
-                throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
+                throw std::invalid_argument("Error, matching conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }
     }
@@ -1587,7 +1587,7 @@ void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
             if (lb_con(i) - ub_con(i) >= 1e-14 || ub_con(i) - lb_con(i) >= 1e-14){
-                throw std::invalid_argument("Error, Condensing conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
+                throw std::invalid_argument("Error, matching conditions not equality constrained, difference (ub - lb)[" + std::to_string(i) + "] = " + std::to_string(ub_con(i) - lb_con(i)));
             }
         }
     }

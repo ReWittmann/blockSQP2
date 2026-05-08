@@ -629,9 +629,17 @@ CDLEXP void Condenser_print_info(void *ptr){
     castCND(ptr)->print_info();
 }
 
-CDLEXP void Condenser_full_condense(void *ptr, void *Matrix_grad_obj, void *Sparse_Matrix_constr_jac, void *SymMatrix_array_hess, void *Matrix_lb_var, void *Matrix_ub_var, void *Matrix_lb_con, void *Matrix_ub_con, void *Matrix_condensed_grad_obj, void *Sparse_Matrix_condensed_constr_jac, void *SymMatrix_array_condensed_hess, void *Matrix_condensed_lb_var, void *Matrix_condensed_ub_var, void *Matrix_condensed_lb_con, void *Matrix_condensed_ub_con){
-    castCND(ptr)->full_condense(*static_cast<Matrix *>(Matrix_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_hess), *static_cast<Matrix *>(Matrix_lb_var), *static_cast<Matrix *>(Matrix_ub_var), *static_cast<Matrix *>(Matrix_lb_con), *static_cast<Matrix *>(Matrix_ub_con),
-                                                 *static_cast<Matrix *>(Matrix_condensed_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_condensed_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_condensed_hess), *static_cast<Matrix *>(Matrix_condensed_lb_var), *static_cast<Matrix *>(Matrix_condensed_ub_var), *static_cast<Matrix *>(Matrix_condensed_lb_con), *static_cast<Matrix *>(Matrix_condensed_ub_con));
+CDLEXP int Condenser_full_condense(void *ptr, void *Matrix_grad_obj, void *Sparse_Matrix_constr_jac, void *SymMatrix_array_hess, void *Matrix_lb_var, void *Matrix_ub_var, void *Matrix_lb_con, void *Matrix_ub_con, void *Matrix_condensed_grad_obj, void *Sparse_Matrix_condensed_constr_jac, void *SymMatrix_array_condensed_hess, void *Matrix_condensed_lb_var, void *Matrix_condensed_ub_var, void *Matrix_condensed_lb_con, void *Matrix_condensed_ub_con){
+    try{
+        castCND(ptr)->full_condense(*static_cast<Matrix *>(Matrix_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_hess), *static_cast<Matrix *>(Matrix_lb_var), *static_cast<Matrix *>(Matrix_ub_var), *static_cast<Matrix *>(Matrix_lb_con), *static_cast<Matrix *>(Matrix_ub_con),
+                                    *static_cast<Matrix *>(Matrix_condensed_grad_obj), *static_cast<Sparse_Matrix *>(Sparse_Matrix_condensed_constr_jac), static_cast<SymMatrix *>(SymMatrix_array_condensed_hess), *static_cast<Matrix *>(Matrix_condensed_lb_var), *static_cast<Matrix *>(Matrix_condensed_ub_var), *static_cast<Matrix *>(Matrix_condensed_lb_con), *static_cast<Matrix *>(Matrix_condensed_ub_con));
+        return 0;
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return 1;
 }
 
 CDLEXP void Condenser_recover_var_mult(void *ptr, void *xi_cond, void *lambda_cond, void *xi_rest, void *lambda_rest){

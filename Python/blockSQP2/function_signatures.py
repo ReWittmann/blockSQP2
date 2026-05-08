@@ -138,7 +138,7 @@ BSQP_function_signatures = {
     "create_Condenser": (c_void_p, (c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_int)),
     "delete_Condenser": (None, (c_void_p,)),
     "Condenser_print_info": (None, (c_void_p,)),
-    "Condenser_full_condense": (None, (c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
+    "Condenser_full_condense": (c_int, (c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p,  c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
     "Condenser_recover_var_mult": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)),
     "Condenser_nVar": (c_int, (c_void_p,)),
     "Condenser_nCon": (c_int, (c_void_p,)),
