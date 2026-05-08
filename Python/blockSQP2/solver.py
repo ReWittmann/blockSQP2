@@ -52,8 +52,8 @@ class Solver(CXXobjWrapper):
         self.cxx_obj = BSQP.create_SQPmethod(self.Problemspec_hld.ptr, self.SQPoptions_hld.ptr, self.SQPstats_obj)
 
         if not self.cxx_obj:
-            err = BSQP.get_error_message()
-            raise RuntimeError(cast(err, c_char_p).value.decode())
+            error_message = BSQP.get_error_message()
+            raise RuntimeError(cast(error_message, c_char_p).value.decode())
     
     def __del__(self):
         self.BSQP.delete_SQPmethod(self.cxx_obj)
@@ -66,7 +66,7 @@ class Solver(CXXobjWrapper):
 
         if ret == -1000:
             error_message = self.BSQP.get_error_message()
-            raise Exception(error_message.value.decode('utf-8'))
+            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
         return SQPresults(ret)
 
     def finish(self):
@@ -111,6 +111,6 @@ class BoundCorrectionSolver(Solver):
         
         self.cxx_obj = BSQP.create_BoundCorrectionSolver(self.Problemspec_hld.ptr, self.SQPoptions_hld.ptr, self.SQPstats_obj)
         if not self.cxx_obj:
-            err = BSQP.get_error_message()
-            raise RuntimeError(cast(err, c_char_p).value.decode())
+            error_message = BSQP.get_error_message()
+            raise RuntimeError(cast(error_message, c_char_p).value.decode())
     

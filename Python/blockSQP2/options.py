@@ -1,4 +1,4 @@
-from ctypes import c_int, c_char_p, c_char, c_double
+from ctypes import c_int, c_char_p, c_char, c_double, cast
 from typing import Optional
 from .cxxwrappers import CXXobjCreator, CXXobjHolder
 
@@ -138,12 +138,12 @@ class Options(CXXobjCreator):
         ret = BSQP.SQPoptions_set_hess_approx(cxx_obj, c_char_p(self.hess_approx.encode('utf-8')))
         if ret > 0:
             error_message = BSQP.get_error_message()
-            raise Exception(error_message.value.decode('utf-8'))
+            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
         
         ret = BSQP.SQPoptions_set_fallback_approx(cxx_obj, c_char_p(self.fallback_approx.encode('utf-8')))
         if ret > 0:
             error_message = BSQP.get_error_message()
-            raise Exception(error_message.value.decode('utf-8'))
+            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
         
         BSQP.SQPoptions_set_indef_delay(cxx_obj, c_int(self.indef_delay))
         
@@ -152,12 +152,12 @@ class Options(CXXobjCreator):
         ret = BSQP.SQPoptions_set_sizing(cxx_obj, c_char_p(self.sizing.encode('utf-8')))
         if ret > 0:
             error_message = BSQP.get_error_message()
-            raise Exception(error_message.value.decode('utf-8'))
+            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
         
         ret = BSQP.SQPoptions_set_fallback_sizing(cxx_obj, c_char_p(str(self.fallback_sizing).encode('utf-8')))
         if ret > 0:
             error_message = BSQP.get_error_message()
-            raise Exception(error_message.value.decode('utf-8'))
+            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
         
         BSQP.SQPoptions_set_COL_eps(cxx_obj, c_double(self.COL_eps))
         BSQP.SQPoptions_set_COL_tau_1(cxx_obj, c_double(self.COL_tau_1))

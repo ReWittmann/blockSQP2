@@ -56,18 +56,18 @@ public:
     };
     
     // Allocate callbacks (function pointers to global julia functions)
-    void (*initialize_dense)(void *closure_pass, double *xi, double *lambda, double *constrJac);
-    void (*evaluate_dense)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info);
-    void (*evaluate_simple)(void *closure_pass, const double *xi, double *objval, double *constr, int *info);
+    void (*initialize_dense)(void *closure_pass, double *xi, double *lambda, double *constrJac) = nullptr;
+    void (*evaluate_dense)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *constrJac, double **hess, int dmode, int *info) = nullptr;
+    void (*evaluate_simple)(void *closure_pass, const double *xi, double *objval, double *constr, int *info) = nullptr;
     
-    void (*initialize_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-    void (*evaluate_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info);
+    void (*initialize_sparse)(void *closure_pass, double *xi, double *lambda, double *jacNz, int *jacIndRow, int *jacIndCol) = nullptr;
+    void (*evaluate_sparse)(void *closure_pass, const double *xi, const double *lambda, double *objval, double *constr, double *gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, double **hess, int dmode, int *info) = nullptr;
     
-    void (*reduce_constr_vio)(void *closure_pass, double *xi, int *info);
-    void (*modify_step)(void *closure_pass, double *xi, double *lambda, int *info);
+    void (*reduce_constr_vio)(void *closure_pass, double *xi, int *info) = nullptr;
+    void (*modify_step)(void *closure_pass, double *xi, double *lambda, int *info) = nullptr;
     
     // Pass-through pointer to a closure of the caller, passed to callbacks.
-    void *closure;
+    void *closure = nullptr;
     
     // Invoke callbacks in overridden methods
     virtual void initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){
@@ -121,6 +121,7 @@ public:
         if (reduce_constr_vio != nullptr){
             (*reduce_constr_vio)(closure, xi.array, info);
         }
+        *info = 1;
     };
 };
 
