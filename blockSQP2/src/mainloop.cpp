@@ -116,12 +116,8 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         
         //Solve the quadratic subproblem. What kind of QP is solved how depends on options, parameters and iteration states. 
-        steady_clock::time_point T0 = steady_clock::now();
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
-        steady_clock::time_point T1 = steady_clock::now();
-        std::cout << "solveQP took " << duration_cast<milliseconds>(T1 - T0) << "\n";
         
-        // infoQP == 0 ~ success
         if (infoQP == QPresults::time_it_limit_reached){
             bool qpError = true;
             
