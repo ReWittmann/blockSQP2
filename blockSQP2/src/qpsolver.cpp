@@ -857,8 +857,8 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         for (int i = 0; i < nVar; i++){
             if (opts.enableEqualities && std::abs(ub[i] - lb[i]) < opts.boundTolerance){
                 double bound_shift = opts.boundTolerance + 2*qpOASES::EPS - (ub[i] - lb[i]);
-                lb[i] -= (std::max)(0.55*bound_shift, lb[i]*1e-14); 
-                ub[i] += (std::max)(0.55*bound_shift, ub[i]*1e-14);
+                lb[i] -= (std::max)(0.55*bound_shift, std::abs(lb[i])*1e-14); 
+                ub[i] += (std::max)(0.55*bound_shift, std::abs(ub[i])*1e-14);
                 eq_count++;
             }
         }
