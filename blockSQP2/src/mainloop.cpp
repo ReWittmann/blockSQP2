@@ -331,6 +331,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                     vars->save_iterate();
                     vars->solution_found = true;
                 }
+                std::cout << "Convergence achieved, now performing extra steps for improved accuracy\n";
             }
             else return print_SQPresult(SQPresults::success, param->result_print_color);
         }

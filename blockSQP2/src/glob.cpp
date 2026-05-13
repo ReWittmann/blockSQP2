@@ -196,7 +196,15 @@ bool SQPmethod::filterLineSearch(){
     cNorm = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     
     // Backtracking line search
-    for (k = 0; k<param->max_linesearch_steps; k++){        
+    for (k = 0; k<param->max_linesearch_steps; k++){
+        
+        // if (k == 2 && !vars->conv_qp_solved){
+        //     if (solveQP(vars->deltaXi, vars->lambdaQP, 1) == QPresults::success){
+        //     k = 0; 
+        //     alpha = 1.0;
+        //     }
+        // }
+        
         // Compute new trial point and set it in bounds
         for (int i = 0; i < nVar; i++){
             vars->trialXi(i) = vars->xi(i) + alpha * vars->deltaXi(i);
