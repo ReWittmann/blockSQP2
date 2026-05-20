@@ -248,6 +248,7 @@ void SQPiterate::initIterate( SQPoptions* param )
     gradNorm = param->inf;
     lambdaStepNorm = 0.0;
     tol = param->inf;
+    comp = param->inf;
 }
 
 SQPiterate::~SQPiterate(void){}

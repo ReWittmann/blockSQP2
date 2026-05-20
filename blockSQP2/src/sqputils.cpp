@@ -148,32 +148,32 @@ bool SQPmethod::calcOptTol(){
     vars->cNorm  = lInfConstraintNorm(vars->xi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
     vars->cNormS = vars->cNorm /( 1.0 + lInfVectorNorm( vars->xi ) );
 
-    //TODO complementarity. Has not caused issues in our experiments.
-    /*
-    double comp_error = 0;
-    double ctol = 1e-5;
+    // Check complementarity. 
+    // TODO: Consider giving own tolerance(s) rather than repurposing opt_tol and feas_tol.
+    //       This is zero in most iterations, so should rarely matter.
+    double compl_error = 0;
+    double ctol = param->feas_tol;
     for (int i = 0; i < prob->nVar; i++){
         if (prob->ub_var(i) - prob->lb_var(i) < ctol){}
         else if (vars->xi(i) < prob->lb_var(i) + ctol)
-            comp_error += fmax(-vars->lambda(i), 0);
+            compl_error += fmax(-vars->lambda(i), 0);
         else if (vars->xi(i) > prob->ub_var(i) - ctol)
-            comp_error += fmax(vars->lambda(i), 0);
+            compl_error += fmax(vars->lambda(i), 0);
         else 
-            comp_error += abs(vars->lambda(i));
+            compl_error += abs(vars->lambda(i));
     }
     for (int i = 0; i < prob->nCon; i++){
         if (prob->ub_con(i) - prob->lb_con(i) < ctol){}
         else if (vars->constr(i) < prob->lb_con(i) + ctol)
-            comp_error += fmax(-vars->lambda(prob->nVar + i), 0);
+            compl_error += fmax(-vars->lambda(prob->nVar + i), 0);
         else if (vars->constr(i) > prob->ub_con(i) - ctol)
-            comp_error += fmax(vars->lambda(prob->nVar + i), 0);
+            compl_error += fmax(vars->lambda(prob->nVar + i), 0);
         else 
-            comp_error += abs(vars->lambda(prob->nVar + i));
+            compl_error += abs(vars->lambda(prob->nVar + i));
     }
-    std::cout << "Comp error = " << comp_error << "\n";
-    */
+    vars->comp = compl_error;
     
-    if (vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol)
+    if (vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol && vars->comp <= param->opt_tol)
         return true;
     return false;
 }

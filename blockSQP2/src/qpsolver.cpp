@@ -863,7 +863,7 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
             }
         }
         if (eq_count > 0){
-            std::cout << "QP solution failed and variables with equal lower and upper bound were detected. This hints at a qpOASES bug. Attempting hacky workaround...\n";
+            std::cout << "Note: QP solution failed and variables with equal lower and upper bound were detected. This hints at a qpOASES bug. Attempting workaround...\n";
             return solve(deltaXi, lambdaQP);
         }
     }

@@ -51,6 +51,7 @@ class SQPiterate{
         double gradNorm;                              // norm of Lagrangian gradient
         double lambdaStepNorm;                        // norm of step in dual variables
         double tol;                                   // current optimality tolerance
+        double comp;                                  // complementarity error
         
         double alpha;                                 // stepsize for line search
         int nSOCS;                                    // number of second-order correction steps

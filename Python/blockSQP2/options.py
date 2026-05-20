@@ -29,6 +29,8 @@ class Options(CXXobjCreator):
                  feas_tol: float = 1.0e-6,
                  sparse: bool = True,
                  enable_rest: bool = True,
+                 rest_rho: float = 1.0,
+                 rest_zeta: float = 1e-6,
                  lim_mem: bool = True,
                  mem_size: int = 20,
                  block_hess: int = 1,
@@ -70,6 +72,8 @@ class Options(CXXobjCreator):
         self.feas_tol = feas_tol
         self.sparse = sparse
         self.enable_rest = enable_rest
+        self.rest_rho = rest_rho
+        self.rest_zeta = rest_zeta
         self.lim_mem = lim_mem
         self.mem_size = mem_size
         self.block_hess = block_hess
@@ -128,7 +132,9 @@ class Options(CXXobjCreator):
 
         # Restoration phase
         BSQP.SQPoptions_set_enable_rest(cxx_obj, c_char(self.enable_rest))
-
+        BSQP.SQPoptions_set_rest_rho(cxx_obj, c_double(self.rest_rho))
+        BSQP.SQPoptions_set_rest_zeta(cxx_obj, c_double(self.rest_zeta))
+        
         # Full/limited memory quasi newton
         BSQP.SQPoptions_set_lim_mem(cxx_obj, c_char(self.lim_mem))
         BSQP.SQPoptions_set_mem_size(cxx_obj, c_int(self.mem_size))

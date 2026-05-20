@@ -330,8 +330,8 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 if (!vars->solution_found){
                     vars->save_iterate();
                     vars->solution_found = true;
+                    std::cout << "***Convergence achieved, now performing extra steps for improved accuracy...\n";
                 }
-                std::cout << "Convergence achieved, now performing extra steps for improved accuracy\n";
             }
             else return print_SQPresult(SQPresults::success, param->result_print_color);
         }
@@ -383,10 +383,10 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         
         
         if (!vars->it_saved){
-            if(vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 2./3.))
+            if(vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 2./3.) && vars->comp <= param->opt_tol)
                 vars->save_iterate();
         }
-        else if (vars->cNormS < vars->cNormSOpt_save && vars->tol < vars->tolOpt_save)
+        else if (vars->cNormS < vars->cNormSOpt_save && vars->tol < vars->tolOpt_save && vars->comp <= param->opt_tol)
             vars->save_iterate();
         
         //Increment memory counter of each block and scaling memory counter unless step is restoration step.
