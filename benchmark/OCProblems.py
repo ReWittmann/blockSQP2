@@ -1161,8 +1161,8 @@ class Calcium_Oscillation(OCProblem):
     'tx2': 0.384306,
     'tx3': 0.28977
     }
-    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_thread = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
     
     def build_problem(self):
         self.set_OCP_data(4,1,1,1,[0,0,0,0],[np.inf,np.inf,np.inf,np.inf],[1.1], [1.3], [1], [np.inf])
@@ -1751,7 +1751,7 @@ class D_Onofrio_Chemotherapy(OCProblem):
     }
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = True, N_threads = 4, **kwargs):
-        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel,**kwargs)
+        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel, N_threads = N_threads, **kwargs)
     
     def build_problem(self):
         zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
@@ -1840,7 +1840,7 @@ class D_Onofrio_Chemotherapy_VT(OCProblem):
     }
     
     def __init__(self, nt = 20, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
-        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel,**kwargs)
+        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel, N_threads = N_threads, **kwargs)
 
     
     def build_problem(self):
@@ -2182,7 +2182,7 @@ class Electric_Car(OCProblem):
         else:
             plt.title('')
         
-        ax.legend(fontsize='large')
+        ax.legend(fontsize='x-large')
         
         ax.set_xlabel('t', fontsize = 17.5)
         ax.xaxis.set_label_coords(1.015,-0.006)
@@ -2275,7 +2275,7 @@ class Gravity_Turn(OCProblem):
     }
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     def build_problem(self):
         m0, m1, Isp, Fmax, cd, A, g0, r0, H, rho0, betaT, vT, hT, Tmin, Tmax, eps= (self.model_params[key] for key in ['m0', 'm1', 'Isp', 'Fmax', 'cd', 'A', 'g0', 'r0', 'H', 'rho0', 'betaT', 'vT', 'hT', 'Tmin', 'Tmax', 'eps'])
@@ -2585,7 +2585,7 @@ class Supermarket_Refrigeration(OCProblem):
     }
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     def build_problem(self):
         self.set_OCP_data(10, 1, 3, 0, [0., -5.,-20.,2.0,0.01, -5.,-20.0, 2.0, 0.01] + [-np.inf], [1.7, 10.,0.,5.0,20.,10.,0.,5.0,20.] + [np.inf], [650./self.ntS], [750./self.ntS], [0.,0.,0.], [1.,1.,1.])
@@ -2854,10 +2854,11 @@ class Time_Optimal_Car(OCProblem):
             
         plt.show()
         plt.close()
-        
+
+# \dot{x}, \dot{y} = y, u*(1-x**2)*y - x
 class Van_der_Pol_Oscillator(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     default_params = dict()
     def build_problem(self):
@@ -2869,7 +2870,7 @@ class Van_der_Pol_Oscillator(OCProblem):
         u = cs.MX.sym('u')
         dt = cs.MX.sym('dt')
         ode_rhs = cs.vertcat(y,u*(1-x**2)*y - x)
-        quad = x**2 + y**2+u**2
+        quad = x**2 + y**2 + u**2
         self.ODE = {'x':X, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
         self.multiple_shooting()
         self.set_objective(self.q_tf)
@@ -2907,9 +2908,10 @@ class Van_der_Pol_Oscillator(OCProblem):
         plt.show()
         plt.close()
 
+# \dot{x}, \dot{y} = y, (1-x**2)*y - x + u
 class Van_der_Pol_Oscillator_2(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     default_params = dict()
     def build_problem(self):
@@ -2959,9 +2961,10 @@ class Van_der_Pol_Oscillator_2(OCProblem):
         plt.show()    
         plt.close()
 
+# \dot{x}, \dot{y} = y, (1-x**2)*y - x + u
 class Van_der_Pol_Oscillator_3(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     default_params = dict()
     def build_problem(self):
@@ -3019,7 +3022,7 @@ class Van_der_Pol_Oscillator_3(OCProblem):
 
 class Van_der_Pol_Oscillator_3_MAYER(OCProblem):
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     default_params = dict()
     def build_problem(self):
@@ -3092,7 +3095,7 @@ class Ocean(OCProblem):
         'DL0':2.3e4
         }
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     
     def build_problem(self):
@@ -3397,7 +3400,7 @@ class Fermenter(OCProblem):
     #                   }
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     def build_problem(self):
         self.set_OCP_data(9, 0, 3, 0, [0.,0.,0.,0.,0.3,0.] + [0.,0.,0.], [0.1,0.04,0.03,0.1,0.45,0.1] + [0.05,0.2,0.025], [], [], [0.,0.,0.], [15.,1.,30.])
@@ -3502,7 +3505,7 @@ class Batch_Distillation(OCProblem):
     x0scale = 1.0
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
-        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_thread=4, **kwargs)
+        OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     def build_problem(self):
         M0init, MDinit, x0init, xinit, xCinit, xDinit, alpha, V, m, mC = (self.model_params[key] for key in ['M0init', 'MDinit', 'x0init', 'xinit', 'xCinit', 'xDinit', 'alpha', 'V', 'm', 'mC'])

@@ -383,12 +383,7 @@ void RestorationProblem::recover_lambda(const Matrix &lambda_rest, Matrix &lambd
 TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, const Matrix &xi_Reference,
                                                  double param_rho, double param_zeta):
         parent_cond(parent_Problem->cond), xi_ref(xi_Reference), rho(param_rho), zeta(param_zeta){
-    
     parent = parent_Problem;
-    // one slack variable for each true (not used for condensing) constraint
-    nVar = parent->nVar + parent_cond->num_true_cons;
-    nCon = parent->nCon;
-    nnz = parent->nnz + parent_cond->num_true_cons;
     
     // Block structure: One additional block for every slack variable
     nBlocks = parent->nBlocks + parent_cond->num_true_cons;
@@ -405,34 +400,38 @@ TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, cons
     objUp = 1.0e20;
     
     //Bounds for original variables, bounds for slack variables, bounds for original constraints and conditions, bounds for dependent variables as constraints
-    lb_var.Dimension(nVar).Initialize(-std::numeric_limits<double>::infinity());
-    ub_var.Dimension(nVar).Initialize(std::numeric_limits<double>::infinity());
+    nVar = parent->nVar + parent_cond->num_true_cons;
+    lb_var.Dimension(nVar);//.Initialize(-std::numeric_limits<double>::infinity());
+    ub_var.Dimension(nVar);//.Initialize(std::numeric_limits<double>::infinity());
     
     //Variable bounds
     for (int i = 0; i < parent->nVar; i++){
         lb_var(i) = parent->lb_var(i);
         ub_var(i) = parent->ub_var(i);
     }
+    for (int i = parent->nVar; i < nVar; i++){
+        lb_var(i) = -std::numeric_limits<double>::infinity();
+        ub_var(i) = std::numeric_limits<double>::infinity();
+    }
     
     //No bounds for slack variables
     
     //Bounds for constraints and conditions
+    nCon = parent->nCon;
     lb_con.Dimension(nCon);//.Initialize(-std::numeric_limits<double>::infinity());
     ub_con.Dimension(nCon);//.Initialize(std::numeric_limits<double>::infinity());
-    
-    for (int i = 0; i < parent->nCon; i++){
+    for (int i = 0; i < nCon; i++){
         lb_con(i) = parent->lb_con(i);
         ub_con(i) = parent->ub_con(i);
     }
     
-    cond = create_restoration_Condenser(parent_cond);
+    nnz = parent->nnz + parent_cond->num_true_cons;
+    
+    cond = create_restoration_Condenser(parent_cond, parent_cond->add_dep_bounds);
     vblocks = cond->vblocks;
 }
 
 TC_restoration_Problem::~TC_restoration_Problem(){
-    delete[] jac_orig_nz;
-    delete[] jac_orig_row;
-    delete[] jac_orig_colind;
     delete[] blockIdx;
     delete cond;
 }
@@ -451,12 +450,12 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     slack.Submatrix( xi, parent_cond->num_true_cons, 1, parent->nVar, 0 );
     
     //Allocate the sparse jacobian of the parent problem
-    jac_orig_nz = new double[parent->nnz];
-    jac_orig_row = new int[parent->nnz];
-    jac_orig_colind = new int[parent->nVar + 1];
+    jac_orig_nz = std::make_unique<double[]>(parent->nnz);
+    jac_orig_row = std::make_unique<int[]>(parent->nnz);
+    jac_orig_colind = std::make_unique<int[]>(parent->nVar + 1);
     
     // Call initialize of the parent problem. There, the sparse Jacobian is intialized
-    parent->initialize(xi_parent, lambda, jac_orig_nz, jac_orig_row, jac_orig_colind);
+    parent->initialize(xi_parent, lambda, jac_orig_nz.get(), jac_orig_row.get(), jac_orig_colind.get());
     
     //Initialize restoration jacobian: Slacks only for true constraints
     for (int i = 0; i < parent->nnz; i++){
@@ -476,7 +475,7 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     //Create restoration Jacobian from B and C, adding slacks only for B:
     //[B I]
     //[C 0]
-    //Matrix row may not be sorted according to B anc C, 
+    //Matrix rows may not be sorted according to B anc C, 
     //so iterate over constraint blocks corresponding to B
     for (int i = 0; i < parent_cond->num_cblocks; i++){
         if (!parent_cond->cblocks[i].removed){
@@ -667,10 +666,10 @@ holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUND
         rest_cblocks[i] = parent->cblocks[i];
     }
     
-    for (int i = 0; i<parent->num_hessblocks; i++){
+    for (int i = 0; i < parent->num_hessblocks; i++){
         rest_hess_block_sizes[i] = parent->hess_block_sizes[i];
     }
-    for (int i = parent->num_hessblocks; i<N_hessblocks; i++){
+    for (int i = parent->num_hessblocks; i < N_hessblocks; i++){
         rest_hess_block_sizes[i] = 1;
     }
     
@@ -686,8 +685,6 @@ holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUND
 TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): parent(parent_Problem), parent_cond(parent_Problem->cond){
 
     // one slack variable for each true (not used for condensing) constraint
-    nVar = parent->nVar + parent_cond->num_true_cons;
-    nCon = parent->nCon;
     nnz = parent->nnz + parent_cond->num_true_cons;
 
     // Block structure: One additional block for every slack variable
@@ -705,6 +702,7 @@ TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): par
     objUp = 1.0e20;
 
     //Bounds for original variables, bounds for slack variables, bounds for original constraints and conditions, bounds for dependent variables as constraints
+    nVar = parent->nVar + parent_cond->num_true_cons;
     lb_var.Dimension(nVar).Initialize(-std::numeric_limits<double>::infinity());
     ub_var.Dimension(nVar).Initialize(std::numeric_limits<double>::infinity());
 
@@ -717,15 +715,16 @@ TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): par
     //No bounds for slack variables
 
     //Bounds for constraints and conditions
-    lb_con.Dimension(nCon).Initialize(-std::numeric_limits<double>::infinity());
-    ub_con.Dimension(nCon).Initialize(std::numeric_limits<double>::infinity());
+    nCon = parent->nCon;
+    lb_con.Dimension(nCon);//.Initialize(-std::numeric_limits<double>::infinity());
+    ub_con.Dimension(nCon);//.Initialize(std::numeric_limits<double>::infinity());
 
-    for (int i = 0; i < parent->nCon; i++){
+    for (int i = 0; i < nCon; i++){
         lb_con(i) = parent->lb_con(i);
         ub_con(i) = parent->ub_con(i);
     }
     
-    cond = create_restoration_Condenser(parent_cond);
+    cond = create_restoration_Condenser(parent_cond, parent_cond->add_dep_bounds);
     vblocks = cond->vblocks;
 }
 
@@ -774,7 +773,6 @@ void TC_feasibility_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
                 jacNz[ind_1 + j] = -1.0;
                 jacIndRow[ind_1 + j] = ind_2 + j;
                 jacIndCol[ind_3 + j + 1] = ind_1 + j + 1;
-                //jacIndCol[ind_3 + 1 + j] = jacIndCol[ind_3 + j] + 1;
             }
             ind_1 += parent_cond->cblocks[i].size;
             ind_3 += parent_cond->cblocks[i].size;
@@ -824,7 +822,6 @@ void TC_feasibility_Problem::evaluate(
 
     for (int i = 0; i < parent->nVar; i++){
         if (std::isnan(xi_parent(i))){
-            std::cout << "Submatrix value is nan!\n" << "Index = " << i << "\nMatrix value = " << xi(i) << "\n";
             throw std::invalid_argument("Submatrix value is nan!");
         }
     }

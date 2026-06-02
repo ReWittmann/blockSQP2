@@ -151,31 +151,27 @@ bool SQPmethod::calcOptTol(){
     // Check complementarity. 
     // TODO: Consider giving own tolerance(s) rather than repurposing opt_tol and feas_tol.
     //       This is zero in most iterations, so should rarely matter.
-    double compl_error = 0;
+    vars->comp = 0.;
     double ctol = param->feas_tol;
     for (int i = 0; i < prob->nVar; i++){
         if (prob->ub_var(i) - prob->lb_var(i) < ctol){}
         else if (vars->xi(i) < prob->lb_var(i) + ctol)
-            compl_error += fmax(-vars->lambda(i), 0);
+            vars->comp += fmax(-vars->lambda(i), 0);
         else if (vars->xi(i) > prob->ub_var(i) - ctol)
-            compl_error += fmax(vars->lambda(i), 0);
+            vars->comp += fmax(vars->lambda(i), 0);
         else 
-            compl_error += abs(vars->lambda(i));
+            vars->comp += abs(vars->lambda(i));
     }
     for (int i = 0; i < prob->nCon; i++){
         if (prob->ub_con(i) - prob->lb_con(i) < ctol){}
         else if (vars->constr(i) < prob->lb_con(i) + ctol)
-            compl_error += fmax(-vars->lambda(prob->nVar + i), 0);
+            vars->comp += fmax(-vars->lambda(prob->nVar + i), 0);
         else if (vars->constr(i) > prob->ub_con(i) - ctol)
-            compl_error += fmax(vars->lambda(prob->nVar + i), 0);
+            vars->comp += fmax(vars->lambda(prob->nVar + i), 0);
         else 
-            compl_error += abs(vars->lambda(prob->nVar + i));
+            vars->comp += abs(vars->lambda(prob->nVar + i));
     }
-    vars->comp = compl_error;
-    
-    if (vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol && vars->comp <= param->opt_tol)
-        return true;
-    return false;
+    return vars->tol <= param->opt_tol && vars->cNormS <= param->feas_tol && vars->comp <= param->opt_tol;
 }
 
 

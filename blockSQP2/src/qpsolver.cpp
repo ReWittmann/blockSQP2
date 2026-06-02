@@ -856,14 +856,14 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         int eq_count = 0;
         for (int i = 0; i < nVar; i++){
             if (opts.enableEqualities && std::abs(ub[i] - lb[i]) < opts.boundTolerance){
-                double bound_shift = opts.boundTolerance + 2*qpOASES::EPS - std::abs(ub[i] - lb[i]);
+                double bound_shift = opts.boundTolerance - (ub[i] - lb[i]) + 2*qpOASES::EPS;
                 lb[i] -= (std::max)(0.55*bound_shift, std::abs(lb[i])*1e-14); 
                 ub[i] += (std::max)(0.55*bound_shift, std::abs(ub[i])*1e-14);
                 eq_count++;
             }
         }
         if (eq_count > 0){
-            std::cout << "Note: QP solution failed and variables with equal lower and upper bound were detected. This hints at a qpOASES bug. Attempting workaround...\n";
+            //std::cout << "Note: QP solution failed and variables with equal lower and upper bound were detected. This hints at a qpOASES bug. Attempting workaround...\n";
             return solve(deltaXi, lambdaQP);
         }
     }

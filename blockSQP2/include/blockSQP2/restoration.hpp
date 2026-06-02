@@ -136,9 +136,9 @@ class TC_restoration_Problem: public RestorationProblemBase{
     
     Matrix constr_orig;
     
-    double *jac_orig_nz = nullptr;
-    int *jac_orig_row = nullptr;
-    int *jac_orig_colind = nullptr;
+    std::unique_ptr<double[]> jac_orig_nz;
+    std::unique_ptr<int[]> jac_orig_row;
+    std::unique_ptr<int[]> jac_orig_colind;
     
     public:
     TC_restoration_Problem(Problemspec *parent_Problem, const Matrix &xi_Reference, double param_rho, double param_zeta);
