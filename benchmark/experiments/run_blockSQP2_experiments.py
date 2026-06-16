@@ -65,10 +65,20 @@ opt_CS1.conv_strategy = 1
 opt_CS1.max_filter_overrides = 0
 
 #Convexification strategy 2
-opt_CS2 = blockSQP2.SQPoptions()
-opt_CS2.max_conv_QPs = 4
-opt_CS2.conv_strategy = 2
-opt_CS2.max_filter_overrides = 0
+opt_CS2 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True
+)
+
+opt_CS2_new = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True
+    )
 
 #Full structure exploitation
 opt_full = blockSQP2.SQPoptions()
@@ -83,8 +93,9 @@ Experiments = [
                # (opt_SR1_BFGS, "SR1-BFGS"),
                # (opt_CS0, "Convexification strategy 0"),
                # (opt_CS1, "conv. str. 1"),
-               # (opt_CS2, "conv. str. 2"),
-               (opt_full, "opt_full_NTP"),
+                (opt_CS2, "conv. str. 2"),
+                (opt_CS2_new, "conv. str. 2 new"),
+               # (opt_full, "opt_full_NTP"),
                ]
 
 

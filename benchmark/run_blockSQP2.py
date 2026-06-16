@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Goddard_Rocket(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -35,12 +35,12 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 
-itMax = 200                                 #max number of steps
+itMax = 100                                   #max number of steps
 step_plots = True                           #Plot each iterate?
 step_delay_ms = 0
-plot_title = False                          #Put name of problem in plot?
+plot_title = True                           #Put name of problem in plot?
 
-OCprob.integrate_full(OCprob.start_point)
+
 start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
 opts = blockSQP2.SQPoptions()
@@ -49,7 +49,7 @@ opts.max_QP_secs = 20.0
 
 opts.max_conv_QPs = 4                       #max number of additional QPs per SQP iteration including fallback Hess QP
 opts.conv_strategy = 2                      #Convexification strategy, 2 requires passing vblocks
-opts.par_QPs = True                         #Enable parallel solution of QPs
+opts.par_QPs = False                         #Enable parallel solution of QPs
 opts.enable_QP_cancellation = True          #Enable cancellation of long running QP threads
 opts.indef_delay = 3                        #Only use fallback Hessian in first # iterations
 
@@ -68,9 +68,10 @@ opts.conv_kappa_max = 8.                    #Maximum Hess regularization factor 
 opts.automatic_scaling = True
 
 opts.max_extra_steps = 0                    #Extra steps for improved accuracy
-opts.enable_premature_termination = True    #Enable early termination at acceptable tolerance
-opts.max_filter_overrides = 2
+opts.enable_premature_termination = False    #Enable early termination at acceptable tolerance
+opts.max_filter_overrides = 0
 
+opts.test_opt_1 = True
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()
 # QPopts.printLevel = 0                     
@@ -114,6 +115,11 @@ prob.vblocks = vblocks
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 
+# scaledProb = blockSQP2.ScaledProblem(prob)
+# scalingFactors = np.ones(prob.nVar, dtype = np.float64)
+# for i in range(OCprob.ntS + 1):
+#     OCprob.set_stage_control(scalingFactors, i, 1.0)
+# scaledProb.set_scale(scalingFactors)
 
 stats = blockSQP2.SQPstats("./solver_outputs")
 
@@ -125,6 +131,7 @@ if (step_plots):
     OCprob.plot(OCprob.start_point, dpi = 150, it = 0, title=plot_title)
     ret = optimizer.run(1)
     xi = np.array(optimizer.get_xi()).reshape(-1)
+    lam = optimizer.get_dual_solution()
     i = 1
     OCprob.plot(xi, dpi = 150, it = i, title=plot_title)
     while ret == blockSQP2.SQPresults.it_finished and i < itMax:

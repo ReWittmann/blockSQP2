@@ -31,14 +31,14 @@ namespace blockSQP2{
 
 //Calculate scaling factor for free variables (Algorithm 2 from paper 2025)
 void SQPmethod::calc_free_variables_scaling(double *ret_SF){
-    int nIt, pos, nfree = prob->nVar, ind_1, scfree, scdep, count_delta = 0, count_gamma = 0;
+    int nIt, pos, ind_1, scfree, scdep, count_delta = 0, count_gamma = 0;
     double bardelta_u, bardelta_x, bargamma_u, bargamma_x, S_u, rgamma = 0., rdelta = 0.;
     
     if (prob->n_vblocks < 1) return;
-    nfree = prob->nVar;
-    for (int k = 0; k < prob->n_vblocks; k++){
-        nfree -= prob->vblocks[k].size*int(prob->vblocks[k].dependent);
-    }
+    // int nfree = prob->nVar;
+    // for (int k = 0; k < prob->n_vblocks; k++){
+    //     nfree -= prob->vblocks[k].size*int(prob->vblocks[k].dependent);
+    // }
     
     nIt = std::min(vars->n_scaleIt, 5);
     for (int j = 0; j < nIt; j++){
@@ -113,6 +113,156 @@ void SQPmethod::calc_free_variables_scaling(double *ret_SF){
     }
     return;
 }
+
+
+
+
+void SQPmethod::calc_free_variables_scaling_2(double *ret_SF){
+    int nIt, pos, ind_1, scdep;
+    std::unique_ptr<int[]> scfree, count_delta, count_gamma;
+    
+    
+    double bardelta_x, bargamma_x;
+    std::unique_ptr<double[]> bardelta_u, bargamma_u, rdelta, rgamma, S_u;
+    
+    if (prob->n_vblocks < 1) return;
+    int ind = 0, fvbsize;
+    
+    for (; ind < prob->n_vblocks; ind++){
+        if (!prob->vblocks[ind].dependent) fvbsize = prob->vblocks[ind].size;
+    }
+    for (; ind < prob->n_vblocks; ind++){
+        if (prob->vblocks[ind].size != fvbsize) throw std::logic_error("Currently, all free variables blocks must have the same size for the new scaling heuristic");
+    }
+    
+    auto set_to_zero = [lcount = fvbsize](auto* vec){for (int lind = 0; lind < lcount; lind++) vec[lind] = 0;};
+        
+    scfree = std::make_unique<int[]>(fvbsize);
+    count_delta = std::make_unique<int[]>(fvbsize); set_to_zero(count_delta.get());
+    count_gamma = std::make_unique<int[]>(fvbsize); set_to_zero(count_gamma.get());
+    
+    bardelta_u = std::make_unique<double[]>(fvbsize);
+    bargamma_u = std::make_unique<double[]>(fvbsize);
+    
+    rdelta = std::make_unique<double[]>(fvbsize); set_to_zero(rdelta.get());
+    rgamma = std::make_unique<double[]>(fvbsize); set_to_zero(rgamma.get());
+    
+    S_u = std::make_unique<double[]>(fvbsize);
+    
+    nIt = std::min(vars->n_scaleIt, 5);
+    for (int j = 0; j < nIt; j++){
+        bardelta_x = 0.; bargamma_x = 0.;
+        set_to_zero(bardelta_u.get()); set_to_zero(bargamma_u.get());
+        set_to_zero(scfree.get()); 
+        scdep = 0;
+        pos = (vars->dg_pos - nIt + 1 + j + vars->dg_nsave)%vars->dg_nsave;
+        ind_1 = 0;
+        for (int k = 0; k < prob->n_vblocks; k++){
+            for (int i = 0; i < prob->vblocks[k].size; i++){
+                if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){
+                    if (prob->vblocks[k].dependent){
+                        bardelta_x += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_x += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        scdep += 1;
+                    }
+                    else{
+                        bardelta_u[i] += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_u[i] += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        scfree[i] += 1;
+                    }
+                }
+            }
+            ind_1 += prob->vblocks[k].size;
+        }
+        
+        if (scdep > 0){
+            bardelta_x /= scdep;
+            bargamma_x /= scdep;
+            for (int i = 0; i < fvbsize; i++){
+                if (scfree[i] > 0){
+                    bardelta_u[i] /= scfree[i];
+                    bargamma_u[i] /= scfree[i];
+                }
+                else{
+                    bardelta_u[i] = 0.; bargamma_u[i] = 0.;
+                }
+            }
+        }
+        else{
+            bardelta_x = 1.0; bargamma_x = 1.0;
+        }
+        
+        
+        // if (scdep > 0 && scfree > 0){
+        //     bardelta_x /= scdep; bargamma_x /= scdep;
+        //     bardelta_u /= scfree; bargamma_u /= scfree;
+        // }
+        // else{
+        //     bardelta_u = 0.; bardelta_x = 1.0;
+        //     bargamma_u = 0.; bargamma_x = 1.0;
+        // }
+        
+        
+        for (int i = 0; i < fvbsize; i++){
+            if (bargamma_x > 5e-7 && bargamma_u[i] > 5e-7){
+                rgamma[i] += std::log(bargamma_u[i]/bargamma_x);
+                count_gamma[i] += 1;
+                if (bardelta_x > 5e-7 && bardelta_u[i] > 5e-7){
+                    rdelta[i] += std::log(bardelta_u[i]/bardelta_x);
+                    count_delta[i] += 1;
+                }
+            }
+        }
+        
+        // if (bargamma_x > 5e-7 && bargamma_u > 5e-7){
+        //     rgamma += std::log(bargamma_u/bargamma_x);
+        //     count_gamma += 1;
+        //     if (bardelta_x > 5e-7 && bardelta_u > 5e-7){
+        //         rdelta += std::log(bardelta_u/bardelta_x);
+        //         count_delta += 1;
+        //     }
+        // }
+    }
+    //If no scaling information was accumulated, rdelta is set to 1.0 => all scaling factors are 1.0
+    for (int i = 0; i < fvbsize; i++){
+        rdelta[i] = (count_delta[i] > 0) ? std::exp(rdelta[i]/count_delta[i]) : 1.0;
+        rgamma[i] = (count_gamma[i] > 0) ? std::exp(rgamma[i]/count_gamma[i]) : 1.0;
+    
+    
+    // rdelta = (count_delta > 0) ? std::exp(rdelta/count_delta) : 1.0;
+    // rgamma = (count_gamma > 0) ? std::exp(rgamma/count_gamma) : 1.0;
+    
+    
+        S_u[i] = -1.0;
+        if (rgamma[i] > 10.0){
+            S_u[i] = rgamma[i]/10.0;
+        }
+        else if (rgamma[i] < 1.0){
+            if (rdelta[i] > 1.0){
+                if (rgamma[i] < 0.1) S_u[i] = 10.0*rgamma[i];
+                else S_u[i] = std::min(1.0, rdelta[i]*rgamma[i]);
+            }
+            else{
+                S_u[i] = rgamma[i];
+            }
+        }
+    }
+    
+    ind_1 = 0;
+    for (int k = 0; k < prob->n_vblocks; k++){
+        if (!prob->vblocks[k].dependent){
+            for (int i = 0; i < prob->vblocks[k].size; i++){
+                if (S_u[i] > 0)
+                    ret_SF[ind_1 + i] *= S_u[i];
+            }
+        }
+        ind_1 += prob->vblocks[k].size;
+    }
+    
+    return;
+}
+
+
 
 // Invokation of scaling algorithms. Decide if algorithm should be invoked in this iteration and apply the scaling
 void SQPmethod::scaling_heuristic(){

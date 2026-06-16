@@ -105,9 +105,9 @@ class SQPiterate{
         Matrix AdeltaXi;                              ///< product of constraint Jacobian with deltaXi (from SOC for SOC iterations after the first one), calculated in secondOrderCorrection method as needed
         Matrix lambdaQP;                              ///< dual variables of QP
         
-        //Convex Hessian step calculated by convexification strategy
-        Matrix deltaXi_conv;
-        Matrix lambdaQP_conv;
+        //Temporary step/QP solution, holds e.g. convex Hessian step during convexification strategy loop.
+        Matrix deltaXi_temp;
+        Matrix lambdaQP_temp;
 
         Matrix trialXi;                               ///< new trial iterate (for line search)
         Matrix trialLambda;                           ///< Used temporarily if previous Lambda is still required, e.g. to calculate lambdaStepNorm

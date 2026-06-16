@@ -313,11 +313,17 @@ class ScaledProblem(Problem):
     
     def create_cxx_obj(self):
         parent_hld = self.parent.create_cxx_obj()
-        cxx_obj = self.BSQP.create_scaled_Problemspec(parent_hld.ptr)
+        cxx_obj = self.BSQP.create_scaled_Problemspec(parent_hld.cxx_obj)
         self.BSQP.scaled_Problemspec_set_scale(cxx_obj, self.scaling_factors.ctypes.data_as(c_double_p))
         deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
         return CXXobjHolder(cxx_obj, deleter, parent_hld)
-
+    
+    def unscale_variables(self, xi):
+        ret = np.array(xi, copy = True)
+        for i, s in enumerate(self.scaling_factors):
+            ret[i] = xi[i]/s
+        return ret
+    
 class TCfeasibilityProblem(Problem):
     parent : Problem
     def __init__(self, parent):
@@ -330,6 +336,6 @@ class TCfeasibilityProblem(Problem):
         
     def create_cxx_obj(self):
         parent_hld = self.parent.create_cxx_obj()
-        cxx_obj = self.BSQP.create_TCfeasibilityProblem(parent_hld.ptr)
+        cxx_obj = self.BSQP.create_TCfeasibilityProblem(parent_hld.cxx_obj)
         deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
         return CXXobjHolder(cxx_obj, deleter, parent_hld)

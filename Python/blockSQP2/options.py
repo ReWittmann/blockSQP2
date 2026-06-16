@@ -62,7 +62,9 @@ class Options(CXXobjCreator):
                  enable_QP_cancellation: bool = True,
                  automatic_scaling: bool = False,
                  enable_premature_termination: bool = False,
-                 indef_delay: int = 3):
+                 indef_delay: int = 3,
+                 test_opt_1: bool = False
+                 ):
         self.eps = eps
         self.inf = inf
         self.print_level = print_level
@@ -106,6 +108,7 @@ class Options(CXXobjCreator):
         self.automatic_scaling = automatic_scaling
         self.enable_premature_termination = enable_premature_termination
         self.indef_delay = indef_delay
+        self.test_opt_1 = test_opt_1
     
     def create_cxx_obj(self):
         BSQP = self.BSQP        
@@ -198,7 +201,12 @@ class Options(CXXobjCreator):
         if self.qpsol == "qpOASES":
             QPopts = self.qpsol_options if self.qpsol_options is not None else qpOASESoptions()
             QPsolver_options_hld = QPopts.create_cxx_obj()
-            BSQP.SQPoptions_set_qpsol_options(cxx_obj, QPsolver_options_hld.ptr)
+            BSQP.SQPoptions_set_qpsol_options(cxx_obj, QPsolver_options_hld.cxx_obj)
+        
+        BSQP.SQPoptions_set_test_opt_1(cxx_obj, c_char(self.test_opt_1))
+        BSQP.SQPoptions_set_test_opt_2(cxx_obj, c_char(self.test_opt_2))
+        BSQP.SQPoptions_set_test_val_1(cxx_obj, c_double(self.test_val_1))
+        BSQP.SQPoptions_set_test_val_2(cxx_obj, c_double(self.test_val_2))
         
         deleter = lambda ptr: self.BSQP.delete_SQPoptions(ptr)
         return CXXobjHolder(cxx_obj, deleter, QPsolver_options_hld)

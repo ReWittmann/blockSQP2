@@ -49,7 +49,7 @@ class Solver(CXXobjWrapper):
         self.SQPoptions_hld = self.Py_Opts.create_cxx_obj()        
         self.SQPstats_obj = self.Py_Stats.get_cxx_obj()
         
-        self.cxx_obj = BSQP.create_SQPmethod(self.Problemspec_hld.ptr, self.SQPoptions_hld.ptr, self.SQPstats_obj)
+        self.cxx_obj = BSQP.create_SQPmethod(self.Problemspec_hld.cxx_obj, self.SQPoptions_hld.cxx_obj, self.SQPstats_obj)
 
         if not self.cxx_obj:
             error_message = BSQP.get_error_message()
@@ -81,12 +81,12 @@ class Solver(CXXobjWrapper):
         return xi_arr
 
     def get_dual_solution(self):
-        lam_arr = np.zeros(self.prob_nVar + self.prob_nCon)
+        lam_arr = np.zeros(self.prob_nVar + self.prob_nCon, dtype = c_double)
         self.BSQP.SQPmethod_get_lambda(self.cxx_obj, lam_arr.ctypes.data_as(c_double_p))
         return lam_arr[self.prob_nVar:]
     
     def get_dual_solution_full(self):
-        lam_arr = np.zeros(self.prob_nVar + self.prob_nCon)
+        lam_arr = np.zeros(self.prob_nVar + self.prob_nCon, dtype = c_double)
         self.BSQP.SQPmethod_get_lambda(self.cxx_obj, lam_arr.ctypes.data_as(c_double_p))
         return lam_arr
     
@@ -94,7 +94,26 @@ class Solver(CXXobjWrapper):
         return self.get_primal_solution()
     def get_lambda(self):
         return self.get_dual_solution_full()
+    
+    def get_hess1_block(self, ind):
+        nBlocks = self.BSQP.Problemspec_get_nBlocks(self.Problemspec_hld.cxx_obj)
+        blockIdx = np.ctypeslib.as_array(self.BSQP.Problemspec_get_blockIdx(self.Problemspec_hld.cxx_obj), shape = (nBlocks + 1,))
+        n = blockIdx[ind + 1] - blockIdx[ind]
+        hess1_block = np.zeros((n,n), dtype = c_double) #Note: This is row major, but treated as column major. Doesn't matter here due to symmetry.
+        hess1_lower = self.BSQP.SQPmethod_get_hess1_block(self.cxx_obj, ind)
+        self.BSQP.lower_to_full(hess1_block.ctypes.data_as(c_double_p), hess1_lower, n)
+        return hess1_block
+    
+    def get_hess2_block(self, ind):
+        nBlocks = self.BSQP.Problemspec_get_nBlocks(self.Problemspec_hld.cxx_obj)
+        blockIdx = np.ctypeslib.as_array(self.BSQP.Problemspec_get_blockIdx(self.Problemspec_hld.cxx_obj), shape = (nBlocks + 1,))
+        n = blockIdx[ind + 1] - blockIdx[ind]
+        hess2_block = np.zeros((n,n), dtype = c_double) #Note: This is row major, but treated as column major. Doesn't matter here due to symmetry.
+        hess2_lower = self.BSQP.SQPmethod_get_hess2_block(self.cxx_obj, ind)
+        self.BSQP.lower_to_full(hess2_block.ctypes.data_as(c_double_p), hess2_lower, n)
+        return hess2_block
 
+    
 class BoundCorrectionSolver(Solver):
     def __init__(self, arg_prob, arg_opts, arg_stats):
         self.Py_Problem = arg_prob
@@ -109,7 +128,7 @@ class BoundCorrectionSolver(Solver):
         self.SQPoptions_hld = self.Py_Opts.create_cxx_obj()        
         self.SQPstats_obj = self.Py_Stats.get_cxx_obj()
         
-        self.cxx_obj = BSQP.create_BoundCorrectionSolver(self.Problemspec_hld.ptr, self.SQPoptions_hld.ptr, self.SQPstats_obj)
+        self.cxx_obj = BSQP.create_BoundCorrectionSolver(self.Problemspec_hld.cxx_obj, self.SQPoptions_hld.cxx_obj, self.SQPstats_obj)
         if not self.cxx_obj:
             error_message = BSQP.get_error_message()
             raise RuntimeError(cast(error_message, c_char_p).value.decode())

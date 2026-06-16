@@ -118,6 +118,44 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
     }
 }
 
+void SQPmethod::computeLowerRegularizedHessian(int idx, int maxQP){
+    if (param->conv_strategy < 1)
+        throw ParameterError("computeLowerRegularizedHessian should only be called for conv_stragegy == 1 or 2");
+    double idScale;
+    
+    if (idx == 1){
+        for (int i = 0; i < vars->nBlocks; i++){
+            vars->hess_conv[i] = vars->hess1[i];
+        }
+    }
+    idScale = vars->convKappa * std::pow(2, (-idx + 1) - (maxQP - 2)) * (1.0 - 2*(idx > 1));
+    
+    std::cout << "idScale = " << idScale << "\n";
+    if (param->conv_strategy == 1){
+        for (int i = 0; i < vars->nBlocks; i++){
+            for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
+                vars->hess_conv[i](j,j) += idScale;
+            }
+        }
+    }
+    else if (param->conv_strategy == 2){
+        int ind_b = 0, offset = 0, ind_1 = 0;
+        for (int k = 0; k < prob->n_vblocks; k++){
+            for (int i = 0; i < prob->vblocks[k].size; i++){
+                if (ind_1 + i == vars->blockIdx[ind_b + 1]){
+                    ind_b += 1;
+                    offset = ind_1 + i;
+                }
+                if (!prob->vblocks[k].dependent){
+                    vars->hess_conv[ind_b](ind_1 + i - offset, ind_1 + i - offset) += idScale;
+                }
+            }
+            ind_1 += prob->vblocks[k].size;
+        }
+    }
+    vars->hess = vars->hess_conv.get();
+}
+
 
 void SQPmethod::computeConvexHessian(){
     if (vars->hess2 == nullptr){
@@ -258,7 +296,7 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
     sub_QP->set_lin(vars->gradObj);
     sub_QP->set_use_hotstart(vars->use_homotopy);
     
-    QPresults QP_result, QP_result_conv;
+    QPresults QP_result, QP_result_temp;
     for (int l = 0; l < maxQP; l++){
         //Compute a new Hessian
         if (l > 0){
@@ -286,23 +324,42 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
             //Save the number of the first hessian for which the QP solved (even though the step may still be replaced by the step from the convex Hessian)
             vars->hess_num_accepted = l;
             vars->QP_num_accepted = l;
-            
-            //For regularized indefinite hessians, compare steplength to fallback hessian to avoid over-regularized hessians leading to small steps.
-            //Skip this for the first regularization as this tends to help lock iterates down to a region of fast convergence.
-            if (param->conv_strategy > 0 && l > 1 && l < maxQP - 1){
-                computeConvexHessian();
-                sub_QP->set_hess(vars->hess, true, vars->modified_hess_regularizationFactor);
-                sub_QP->set_timeLimit(1);
-                QP_result_conv = sub_QP->solve(vars->deltaXi_conv, vars->lambdaQP_conv);
-                if (QP_result_conv == QPresults::success){
-                    s_indf_N = l2VectorNorm(deltaXi);
-                    s_conv_N = l2VectorNorm(vars->deltaXi_conv);
-                    if (s_indf_N < param->conv_tau_H*s_conv_N){
-                        deltaXi = vars->deltaXi_conv;
-                        lambdaQP = vars->lambdaQP_conv;
-                        vars->conv_qp_solved = true;
-                        stats->qpResolve = maxQP - 1;
-                        vars->QP_num_accepted = maxQP - 1;
+            if (param->conv_strategy > 0 && l < maxQP - 1){
+                // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
+                if (l == 1 && param->test_opt_1){
+                    std::cout << "Attempting to lower kappa...\n";
+                    int j = 1;
+                    for (; j < 10; j++){
+                        computeLowerRegularizedHessian(j, maxQP);
+                        sub_QP->set_timeLimit(0);
+                        sub_QP->set_hess(vars->hess, false, 0);
+                        QP_result_temp = sub_QP->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
+                        if (QP_result_temp == QPresults::success){
+                            vars->deltaXi = vars->deltaXi_temp; 
+                            vars->lambdaQP = vars->lambdaQP_temp;
+                            continue;
+                        }
+                        else break;
+                    }
+                    vars->convKappa *= std::pow(2, 1-j);
+                }
+                //For regularized indefinite hessians, compare steplength to fallback hessian to avoid over-regularized hessians leading to small steps.
+                //Skip this for the first regularization as this tends to help lock iterates down to a region of fast convergence.
+                else if (l > 1){ 
+                    computeConvexHessian();
+                    sub_QP->set_hess(vars->hess, true, vars->modified_hess_regularizationFactor);
+                    sub_QP->set_timeLimit(1);
+                    QP_result_temp = sub_QP->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
+                    if (QP_result_temp == QPresults::success){
+                        s_indf_N = l2VectorNorm(deltaXi);
+                        s_conv_N = l2VectorNorm(vars->deltaXi_temp);
+                        if (s_indf_N < param->conv_tau_H*s_conv_N){
+                            deltaXi = vars->deltaXi_temp;
+                            lambdaQP = vars->lambdaQP_temp;
+                            vars->conv_qp_solved = true;
+                            stats->qpResolve = maxQP - 1;
+                            vars->QP_num_accepted = maxQP - 1;
+                        }
                     }
                 }
             }

@@ -144,6 +144,8 @@ class SQPmethod{
         void computeNextHessian( int idx, int maxQP );
         /// Compute a convexified hessian and store it in vars->hess2, set hess to hess2
         void computeConvexHessian();
+        /// Compute a Hessians with decreasing regularization
+        void computeLowerRegularizedHessian(int idx, int maxQP);
         /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
         void setIdentityHessian();
         
@@ -246,6 +248,7 @@ class SQPmethod{
         
         // Rescaling of the problem (only variables)
         void calc_free_variables_scaling(double *SF);
+        void calc_free_variables_scaling_2(double *SF);
         void apply_rescaling(const double *resfactors);
         void scaling_heuristic();
         

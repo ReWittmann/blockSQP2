@@ -179,8 +179,8 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     QP_num_accepted = 0;
     convKappa = param->conv_kappa_0;
     if (param->max_conv_QPs > 1){
-        deltaXi_conv.Dimension(prob->nVar);
-        lambdaQP_conv.Dimension(prob->nVar + prob->nCon);
+        deltaXi_temp.Dimension(prob->nVar);
+        lambdaQP_temp.Dimension(prob->nVar + prob->nCon);
     }
     
     // Scaling heuristic

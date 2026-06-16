@@ -168,11 +168,9 @@ class SQPoptions{
     
     //For experimental purposes
     bool test_opt_1 = false;
-    double test_opt_2 = 1.0;
-    double test_opt_3 = 2.0;
-    double test_opt_4 = 0.5;
-    bool test_opt_5 = false;
-    //int test_qp_hotstart = 0;
+    bool test_opt_2 = false;
+    double test_val_1 = 2.0;
+    double test_val_2 = 0.5;
     
     private:
     //Holder if no qpsol_options were provided

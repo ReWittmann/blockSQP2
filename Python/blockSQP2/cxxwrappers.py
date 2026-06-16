@@ -14,15 +14,15 @@ class CXXobjHolder:
     May be passed any number of CXXobjHolder holding objects that
     the held object depends on being kept alive.
     """
-    ptr : c_void_p = c_void_p(None)
+    cxx_obj : c_void_p = c_void_p(None)
     deleter : typing.Callable = lambda ptr: None
     deps : typing.List['CXXobjHolder'] = []
-    def __init__(self, ptr : c_void_p, deleter : typing.Callable[[c_void_p], None], *deps):
-        self.ptr = ptr
+    def __init__(self, cxx_obj : c_void_p, deleter : typing.Callable[[c_void_p], None], *deps):
+        self.cxx_obj = cxx_obj
         self.deleter = deleter
         self.deps = list(deps)
     def __del__(self):
-        self.deleter(self.ptr)
+        self.deleter(self.cxx_obj)
 
 class CXXobjCreator(CXXwrapper):
     """

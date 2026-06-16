@@ -378,6 +378,22 @@ CDLEXP void SQPoptions_set_indef_delay(void *ptr, int val){
     castOPT(ptr)->indef_delay = val;
 }
 
+CDLEXP void SQPoptions_set_test_opt_1(void *ptr, char val){
+    castOPT(ptr)->test_opt_1 = bool(val);
+}
+
+CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
+    castOPT(ptr)->test_opt_2 = bool(val);
+}
+
+CDLEXP void SQPoptions_set_test_val_1(void *ptr, double val){
+    castOPT(ptr)->test_val_1 = double(val);
+}
+
+CDLEXP void SQPoptions_set_test_val_2(void *ptr, double val){
+    castOPT(ptr)->test_val_2 = double(val);
+}
+
 // SQPstats
 CDLEXP void *create_SQPstats(char *pathstr){
     return static_cast<void *>(new SQPstats(pathstr));
@@ -427,6 +443,13 @@ CDLEXP int Problemspec_get_nCon(void *ptr){
 CDLEXP int Problemspec_get_nnz(void *ptr){
     return static_cast<Problemspec*>(ptr)->nnz;
 }
+CDLEXP int Problemspec_get_nBlocks(void *ptr){
+    return static_cast<Problemspec*>(ptr)->nBlocks;
+}
+CDLEXP int *Problemspec_get_blockIdx(void *ptr){
+    return static_cast<Problemspec*>(ptr)->blockIdx;
+}
+
 
 CDLEXP void Problemspec_set_bounds(void *ptr, double *arg_lb_var, double *arg_ub_var, double *arg_lb_con, double *arg_ub_con, double arg_lb_obj, double arg_ub_obj){
     castCP(ptr)->objLo = arg_lb_obj;
@@ -559,6 +582,14 @@ CDLEXP void SQPmethod_get_lambda(void *ptr, double *ret_lambda){
     Matrix lambda(static_cast<SQPmethod *>(ptr)->get_lambda());
     std::copy(lambda.array, lambda.array + lambda.m, ret_lambda);
 }
+
+CDLEXP double *SQPmethod_get_hess1_block(void *ptr, int ind){
+    return static_cast<SQPmethod *>(ptr)->vars->hess1[ind].array;
+}
+CDLEXP double *SQPmethod_get_hess2_block(void *ptr, int ind){
+    return static_cast<SQPmethod *>(ptr)->vars->hess2[ind].array;
+}
+
 
 // cblock[size]
 CDLEXP void *create_cblock_array(int size){
@@ -780,4 +811,25 @@ CDLEXP void *create_BoundCorrectionSolver(void *Problemspec_prob, void *SQPoptio
 
 CDLEXP void *create_TCfeasibilityProblem(void *parent){
     return static_cast<void*>(new TC_feasibility_Problem(static_cast<Problemspec*>(parent)));
+}
+
+
+//Some utility functions
+CDLEXP void lower_to_full(double *full, double const *lower, int n){
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j < i; j++){
+            full[i + j*n] = lower[i + j*n - (j*(j+1))/2];
+        }
+        for (int j = i; j < n; j++){
+            full[i + j*n] = lower[j + i*n - (i*(i+1))/2];
+        }
+    }   
+}
+
+CDLEXP void full_to_lower(double *lower, double const *full, int n){
+    for (int i = 0; i < n; i++){
+        for (int j = 0; j <= i; j++){
+            lower[i + j*n - (j*(j+1))/2] = full[i + j*n];
+        }
+    }
 }

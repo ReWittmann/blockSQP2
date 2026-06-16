@@ -84,6 +84,10 @@ BSQP_function_signatures = {
     "SQPoptions_set_enable_premature_termination": (None, (c_void_p, c_char)),
     "SQPoptions_set_qpsol": (None, (c_void_p, c_int)),
     "SQPoptions_set_indef_delay": (None, (c_void_p, c_int)),
+    "SQPoptions_set_test_opt_1": (None, (c_void_p, c_char)),
+    "SQPoptions_set_test_opt_2": (None, (c_void_p, c_char)),
+    "SQPoptions_set_test_val_1": (None, (c_void_p, c_double)),
+    "SQPoptions_set_test_val_2": (None, (c_void_p, c_double)),
     
     "create_SQPstats": (c_void_p, (c_char_p,)),
     "delete_SQPstats": (None, (c_void_p,)),
@@ -96,6 +100,8 @@ BSQP_function_signatures = {
     "Problemspec_get_nVar": (c_int, (c_void_p,)),
     "Problemspec_get_nCon": (c_int, (c_void_p,)),
     "Problemspec_get_nnz": (c_int, (c_void_p,)),
+    "Problemspec_get_nBlocks": (c_int, (c_void_p,)),
+    "Problemspec_get_blockIdx": (POINTER(c_int), (c_void_p,)),
     
     "Problemspec_set_bounds": (None, (c_void_p, c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double)),
     "Problemspec_set_blockIdx": (None, (c_void_p, c_void_p, c_int)),
@@ -122,6 +128,8 @@ BSQP_function_signatures = {
     "SQPmethod_finish": (None, (c_void_p,)),
     "SQPmethod_get_xi": (None, (c_void_p, c_void_p)),
     "SQPmethod_get_lambda": (None, (c_void_p, c_void_p)),
+    "SQPmethod_get_hess1_block": (POINTER(c_double), (c_void_p, c_int)),
+    "SQPmethod_get_hess2_block": (POINTER(c_double), (c_void_p, c_int)),
     
     "create_cblock_array": (c_void_p, (c_int,)),
     "delete_cblock_array": (None, (c_void_p,)),
@@ -144,36 +152,39 @@ BSQP_function_signatures = {
     "Condenser_nCon": (c_int, (c_void_p,)),
     "Condenser_num_true_cons": (c_int, (c_void_p,)),
     "Condenser_nBlocks": (c_int, (c_void_p,)),
-    "Condenser_hsizes": (c_void_p, (c_void_p,)),
+    "Condenser_hsizes": (POINTER(c_int), (c_void_p,)),
     "Condenser_condensed_nVar": (c_int, (c_void_p,)),
     "Condenser_condensed_nCon": (c_int, (c_void_p,)),
     "Condenser_condensed_nBlocks": (c_int, (c_void_p,)),
-    "Condenser_condensed_hsizes": (c_void_p, (c_void_p,)),
+    "Condenser_condensed_hsizes": (POINTER(c_int), (c_void_p,)),
     
     "create_Matrix": (c_void_p, (c_int, c_int)),
     "create_Matrix_default": (c_void_p, ()),
     "delete_Matrix": (None, (c_void_p,)),
-    "Matrix_array": (c_void_p, (c_void_p,)),
+    "Matrix_array": (POINTER(c_double), (c_void_p,)),
     
     "create_SymMatrix": (c_void_p, (c_int,)),
     "delete_SymMatrix": (None, (c_void_p,)),
-    "SymMatrix_show_array": (c_void_p, (c_void_p,)),
+    "SymMatrix_show_array": (POINTER(c_double), (c_void_p,)),
     
     "create_SymMatrix_array": (c_void_p, (c_int,)),
     "delete_SymMatrix_array": (None, (c_void_p,)),
     "SymMatrix_array_index_resize": (None, (c_void_p, c_int, c_int)),
-    "SymMatrix_array_index_array": (c_void_p, (c_void_p, c_int)),
+    "SymMatrix_array_index_array": (POINTER(c_double), (c_void_p, c_int)),
     
     "create_Sparse_Matrix": (c_void_p, (c_int, c_int, c_int)),
     "create_Sparse_Matrix_default": (c_void_p, ()),
     "Sparse_Matrix_set_structure": (None, (c_void_p, c_int, c_int, c_int)),
     "delete_Sparse_Matrix": (None, (c_void_p,)),
     "Sparse_Matrix_nnz": (c_int, (c_void_p,)),
-    "Sparse_Matrix_nz": (c_void_p, (c_void_p,)),
-    "Sparse_Matrix_row": (c_void_p, (c_void_p,)),
-    "Sparse_Matrix_colind": (c_void_p, (c_void_p,)),
+    "Sparse_Matrix_nz": (POINTER(c_double), (c_void_p,)),
+    "Sparse_Matrix_row": (POINTER(c_int), (c_void_p,)),
+    "Sparse_Matrix_colind": (POINTER(c_int), (c_void_p,)),
     "create_BoundCorrectionSolver": (c_void_p, (c_void_p, c_void_p, c_void_p)),
-    "create_TCfeasibilityProblem": (c_void_p, (c_void_p,))
+    "create_TCfeasibilityProblem": (c_void_p, (c_void_p,)),
+    
+    "full_to_lower": (None, (POINTER(c_double), POINTER(c_double), c_int)),
+    "lower_to_full": (None, (POINTER(c_double), POINTER(c_double), c_int))
 }
 
 def add_BSQP_signatures(mod_BSQP):

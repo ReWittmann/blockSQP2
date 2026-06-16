@@ -19,15 +19,15 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Lotka_Volterra_Fishing_MAYER(
-                    nt = 20,
-                    refine = 6,
+OCprob = OCProblems.Ocean(
+                    nt = 100,
+                    refine = 1,
                     parallel = True,
                     integrator = 'RK4',
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'limited-memory'
+ipopts['hessian_approximation'] = 'exact'
 ipopts['tol'] = 1e-5
 ipopts['constr_viol_tol'] = 1e-5
 ipopts['max_iter'] = itMax

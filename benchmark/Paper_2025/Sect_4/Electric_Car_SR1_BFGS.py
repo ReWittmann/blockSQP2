@@ -10,10 +10,10 @@ import blockSQP2
 
 itMax = 100
 step_plots = True
-plot_title = False
+plot_title = True
 
 import OCProblems
-OCprob = OCProblems.Electric_Car(
+OCprob = OCProblems.Cart_Pendulum(
                     nt = 100, 
                     refine = 1, 
                     parallel = False, 
@@ -35,7 +35,7 @@ opts.hess_approx = 'SR1'
 opts.sizing = 'OL'
 opts.fallback_approx = 'BFGS'
 opts.fallback_sizing = 'COL'
-opts.BFGS_damping_factor = 0.2
+opts.BFGS_damping_factor = 1/3
 
 opts.lim_mem = True
 opts.mem_size = 20
