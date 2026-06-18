@@ -31,6 +31,7 @@ Examples = [
             OCProblems.Cart_Pendulum,
             OCProblems.Catalyst_Mixing,
             OCProblems.Cushioned_Oscillation,
+            OCProblems.Ducted_Fan,
             OCProblems.Egerstedt_Standard,
             OCProblems.Electric_Car,
             OCProblems.Goddard_Rocket,
@@ -80,6 +81,85 @@ opt_CS2_new = blockSQP2.SQPoptions(
     test_opt_1 = True
     )
 
+opt_CS2_noScaling = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = False,
+    test_opt_1 = True
+    )
+
+opt_CS2_newScaling = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True
+    )
+
+
+opt_CS2_S1 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True,
+    )
+opt_CS2_S2 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.1,
+    scaling_Theta_max = 5.0
+    )
+opt_CS2_S3 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.1,
+    scaling_Theta_max = 2.0
+    )
+opt_CS2_S4 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.05,
+    scaling_Theta_max = 10.0
+    )
+
+opt_CS2_S5 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.2,
+    scaling_Theta_max = 10.0
+    )
+
+opt_CS2_S6 = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    max_filter_overrides = 0,
+    automatic_scaling = True,
+    test_opt_1 = True,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.2,
+    scaling_Theta_max = 5.0
+    )
+
 #Full structure exploitation
 opt_full = blockSQP2.SQPoptions()
 opt_full.max_conv_QPs = 4
@@ -93,9 +173,17 @@ Experiments = [
                # (opt_SR1_BFGS, "SR1-BFGS"),
                # (opt_CS0, "Convexification strategy 0"),
                # (opt_CS1, "conv. str. 1"),
-                (opt_CS2, "conv. str. 2"),
-                (opt_CS2_new, "conv. str. 2 new"),
+                # (opt_CS2, "conv. str. 2"),
+                # (opt_CS2_noScaling, "conv. str. 2 noScaling"),
+                # (opt_CS2_new, "conv. str. 2 scaling"),
+                # (opt_CS2_newScaling, "conv. str. 2. newScaling"),
                # (opt_full, "opt_full_NTP"),
+               (opt_CS2_S1, "scaling_0p1_10"),
+               (opt_CS2_S2, "scaling_0p1_5"),
+               (opt_CS2_S3, "scaling_0p1_2"),
+               (opt_CS2_S4, "scaling_0p05_10"),
+               (opt_CS2_S5, "scaling_0p2_10"),
+               (opt_CS2_S6, "scaling_0p2_5"),
                ]
 
 

@@ -2449,7 +2449,7 @@ class Particle_Steering(OCProblem):
                              a*cs.sin(u),
                              )
         
-        self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs}
+        self.ODE = {'x': x, 'p': cs.vertcat(dt,u), 'ode': dt*ode_rhs}
         self.multiple_shooting()
         self.set_objective(self.p_tf[0]*self.ntS)
         self.add_constraint(self.x_eval[1,-1] - 5, 0., 0.)

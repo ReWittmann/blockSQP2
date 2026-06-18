@@ -53,9 +53,9 @@ class SQPmethod{
         SQPstats*                stats;       ///< Statistics object for current SQP run
         
         std::unique_ptr<SQPiterate>     vars;     ///< All SQP variables for this method
-        std::unique_ptr<QPsolverBase>   sub_QP;   ///< Class wrapping an external QP solver
+        std::unique_ptr<BasicQPsolver>   sub_QP;   ///< Class wrapping an external QP solver
         
-        std::unique_ptr<std::unique_ptr<QPsolverBase>[]> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
+        std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
         std::unique_ptr<std::jthread[]> QP_threads;
         
         //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated
@@ -117,12 +117,12 @@ class SQPmethod{
         /////////////////////////////////NEW
         /// Resolve options, iteration state and call parameters and dispatch the appropriate solve[*]QP_* method. 
         //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        //int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        //int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
         //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
         //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
         virtual QPresults solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, QPsolverBase *QPS);
+        QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
         QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
         QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         

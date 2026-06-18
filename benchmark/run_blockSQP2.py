@@ -43,35 +43,37 @@ plot_title = True                           #Put name of problem in plot?
 
 start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
-opts = blockSQP2.SQPoptions()
-opts.max_QP_it = 10000
-opts.max_QP_secs = 20.0
-
-opts.max_conv_QPs = 4                       #max number of additional QPs per SQP iteration including fallback Hess QP
-opts.conv_strategy = 2                      #Convexification strategy, 2 requires passing vblocks
-opts.par_QPs = False                         #Enable parallel solution of QPs
-opts.enable_QP_cancellation = True          #Enable cancellation of long running QP threads
-opts.indef_delay = 3                        #Only use fallback Hessian in first # iterations
-
-opts.hess_approx = 'SR1'                    #'SR1'/'BFGS'/'exact'
-opts.sizing = 'OL'                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
-opts.fallback_approx = 'BFGS'               # ''   ''
-opts.fallback_sizing = 'COL'                # ''   ''
-opts.BFGS_damping_factor = 1/3
-
-opts.lim_mem = True
-opts.mem_size = 20
-opts.opt_tol = 1e-6                         #Tolerances for termination
-opts.feas_tol = 1e-6
-opts.conv_kappa_max = 8.                    #Maximum Hess regularization factor for conv. strategy, default 8.0
-
-opts.automatic_scaling = True
-
-opts.max_extra_steps = 0                    #Extra steps for improved accuracy
-opts.enable_premature_termination = False    #Enable early termination at acceptable tolerance
-opts.max_filter_overrides = 0
-
-opts.test_opt_1 = True
+opts = blockSQP2.SQPoptions(
+    max_QP_it = 10000,
+    max_QP_secs = 20.0,
+    
+    max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
+    conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
+    par_QPs = False,                        #Enable parallel solution of QPs
+    enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
+    indef_delay = 3,                        #Only use fallback Hessian in first # iterations
+    
+    hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
+    sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
+    fallback_approx = 'BFGS',               # ''   ''
+    fallback_sizing = 'COL',                # ''   ''
+    BFGS_damping_factor = 1/3,
+    
+    lim_mem = True,
+    mem_size = 20,
+    opt_tol = 1e-6,                         #Tolerances for termination
+    feas_tol = 1e-6,
+    conv_kappa_max = 8.,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
+    
+    automatic_scaling = True,
+    
+    max_extra_steps = 0,                    #Extra steps for improved accuracy
+    enable_premature_termination = False,   #Enable early termination at acceptable tolerance
+    max_filter_overrides = 0,
+    
+    test_opt_1 = True,
+    test_opt_2 = True,
+)
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()
 # QPopts.printLevel = 0                     

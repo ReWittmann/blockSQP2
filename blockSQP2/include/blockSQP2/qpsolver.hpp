@@ -68,11 +68,16 @@ enum class QPresults{
 std::string to_string(QPresults qpres);
 std::ostream& operator<<(std::ostream& os, QPresults qpres);
 
+enum class TimeLimitTypes{
+    standard = 0,
+    past_avg = 1,
+    custom = 2
+};
 
 //QP solver interface
-class QPsolverBase{
+class BasicQPsolver{
     public:
-    virtual ~QPsolverBase();
+    virtual ~BasicQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj) = 0;
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A) = 0;
@@ -81,11 +86,11 @@ class QPsolverBase{
     //Set hessian and pass on whether hessian is supposedly positive definite
     virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
     
-    virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0) = 0;
+    virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0) = 0;
     virtual void set_use_hotstart(bool use_hom) = 0;
     
     //Set QP/active set of which to hotstart from. QP solver dependent, no effect by default, very important for qpOASES
-    virtual void set_hotstart_point(QPsolverBase *hot_QP);
+    virtual void set_hotstart_point(BasicQPsolver *hot_QP);
     
     //Statistics
     virtual int get_QP_it() = 0;
@@ -109,7 +114,7 @@ class QPsolverBase{
 //	   lb_x <=  x  <= ub_x  //
 //////////////////////////////
 
-class QPsolver : public QPsolverBase{
+class QPsolver : public BasicQPsolver{
     public:
     int nVar;
     int nCon;
@@ -127,7 +132,7 @@ class QPsolver : public QPsolverBase{
     //Solution time options
     double default_time_limit, custom_time_limit;
     //0: 2.5*average of past 10, 1: default_time_limit, 2: custom_time_limit
-    int time_limit_type;
+    TimeLimitTypes timeLimitType;
     
     //Set by set_hess
     bool convex_QP;
@@ -161,7 +166,7 @@ class QPsolver : public QPsolverBase{
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
     virtual QPresults solve(Matrix &deltaXi, Matrix &lambdaQP) = 0;
     
-    virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
+    virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
     virtual void set_use_hotstart(bool use_hom);
     
     //Statistics
@@ -170,10 +175,10 @@ class QPsolver : public QPsolverBase{
 };
 
 //QP solver with condensing step.
-//Requires QPsolverBase instantiated for the condensed QPs of size cond->num_cons, cond->num_vars, ...
-class CQPsolver : public QPsolverBase{
+//Requires BasicQPsolver instantiated for the condensed QPs of size cond->num_cons, cond->num_vars, ...
+class CQPsolver : public BasicQPsolver{
     public:
-    QPsolverBase *inner_QPsol;
+    BasicQPsolver *inner_QPsol;
     bool QPsol_own;
     std::unique_ptr<Condenser> cond;
     
@@ -198,8 +203,8 @@ class CQPsolver : public QPsolverBase{
     //std::unique_ptr<Matrix[]> SOC_corretions;
     Matrix h_corr, lb_A_corr, ub_A_corr;
     
-    CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own = false);
-    CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond);
+    CQPsolver(BasicQPsolver *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own = false);
+    CQPsolver(std::unique_ptr<BasicQPsolver> arg_CQPsol, const Condenser *arg_cond);
     ~CQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj);
@@ -218,10 +223,10 @@ class CQPsolver : public QPsolverBase{
     virtual QPresults solve(Matrix &deltaXi, Matrix &lambdaQP);
     virtual void solve(std::stop_token stopRequest, std::promise<QPresults> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
     
-    virtual void set_timeLimit(int limit_type, double custom_limit_secs = -1.0);
+    virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
     void set_use_hotstart(bool use_hom);
     
-    void set_hotstart_point(QPsolverBase *hot_QP);
+    void set_hotstart_point(BasicQPsolver *hot_QP);
     void set_hotstart_point(CQPsolver *hot_QP);
     
     //Statistics
@@ -239,11 +244,11 @@ class CQPsolver : public QPsolverBase{
 
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
-QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param);
-QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
+BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param);
+BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
 
 //Create N_QP QPsolver instances for parallel solution of QPs. If N_QP is left at -1 it infers N_QP as param->max_conv_QPs + 1
-std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
+std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
 
 
 //QP solver implementations
@@ -288,7 +293,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
         void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
         
-        void set_hotstart_point(QPsolverBase *hot_QP);
+        void set_hotstart_point(BasicQPsolver *hot_QP);
         void set_hotstart_point(qpOASES_solver *hot_QP);
         
         QPresults solve(Matrix &deltaXi, Matrix &lambdaQP);

@@ -46,6 +46,8 @@ class Options(CXXobjCreator):
                  BFGS_damping_factor: float = 1./3.,
                  conv_strategy: int = 1,
                  max_conv_QPs: int = 4,
+                 conv_kappa_0: float = 1./16.,
+                 conv_kappa_max: float = 8.0,
                  enable_linesearch: bool = True,
                  max_linesearch_steps: int = 10,
                  max_consec_reduced_steps: int = 8,
@@ -61,9 +63,14 @@ class Options(CXXobjCreator):
                  par_QPs: bool = False,
                  enable_QP_cancellation: bool = True,
                  automatic_scaling: bool = False,
+                 scaling_Theta_min: float = 0.1,
+                 scaling_Theta_max: float = 10.0,
                  enable_premature_termination: bool = False,
                  indef_delay: int = 3,
-                 test_opt_1: bool = False
+                 test_opt_1: bool = False,
+                 test_opt_2: bool = False,
+                 test_val_1: float = 0.,
+                 test_val_2: float = 0.
                  ):
         self.eps = eps
         self.inf = inf
@@ -91,6 +98,8 @@ class Options(CXXobjCreator):
         self.BFGS_damping_factor = BFGS_damping_factor
         self.conv_strategy = conv_strategy
         self.max_conv_QPs = max_conv_QPs
+        self.conv_kappa_0 = conv_kappa_0
+        self.conv_kappa_max = conv_kappa_max
         self.enable_linesearch = enable_linesearch
         self.max_linesearch_steps = max_linesearch_steps
         self.max_consec_reduced_steps = max_consec_reduced_steps
@@ -106,9 +115,14 @@ class Options(CXXobjCreator):
         self.par_QPs = par_QPs
         self.enable_QP_cancellation = enable_QP_cancellation
         self.automatic_scaling = automatic_scaling
+        self.scaling_Theta_min = scaling_Theta_min
+        self.scaling_Theta_max = scaling_Theta_max
         self.enable_premature_termination = enable_premature_termination
         self.indef_delay = indef_delay
         self.test_opt_1 = test_opt_1
+        self.test_opt_2 = test_opt_2
+        self.test_val_1 = test_val_1
+        self.test_val_2 = test_val_2
     
     def create_cxx_obj(self):
         BSQP = self.BSQP        
@@ -179,11 +193,15 @@ class Options(CXXobjCreator):
         # Convexification strategy
         BSQP.SQPoptions_set_conv_strategy(cxx_obj, c_int(self.conv_strategy))
         BSQP.SQPoptions_set_max_conv_QPs(cxx_obj, c_int(self.max_conv_QPs))
+        BSQP.SQPoptions_set_conv_kappa_0(cxx_obj, c_double(self.conv_kappa_0))
+        BSQP.SQPoptions_set_conv_kappa_max(cxx_obj, c_double(self.conv_kappa_max))
         BSQP.SQPoptions_set_par_QPs(cxx_obj, c_char(self.par_QPs))
         BSQP.SQPoptions_set_enable_QP_cancellation(cxx_obj, c_char(self.enable_QP_cancellation))
         
         # Scaling
         BSQP.SQPoptions_set_automatic_scaling(cxx_obj, c_char(self.automatic_scaling))
+        BSQP.SQPoptions_set_scaling_Theta_min(cxx_obj, c_double(self.scaling_Theta_min))
+        BSQP.SQPoptions_set_scaling_Theta_max(cxx_obj, c_double(self.scaling_Theta_max))
         
         # Filter line search
         BSQP.SQPoptions_set_enable_linesearch(cxx_obj, c_char(self.enable_linesearch))

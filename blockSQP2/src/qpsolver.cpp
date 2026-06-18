@@ -49,10 +49,10 @@ std::ostream& operator<<(std::ostream &os, QPresults qpres){
     return os << "\"" << to_string(qpres) << "\"";
 }
 
-QPsolverBase::~QPsolverBase(){}
+BasicQPsolver::~BasicQPsolver(){}
 
-void QPsolverBase::set_hotstart_point(QPsolverBase *hot_QP){return;};
-void QPsolverBase::solve(std::stop_token stopRequest, std::promise<QPresults> QP_result, Matrix &deltaXi, Matrix &lambdaQP){QP_result.set_value(solve(deltaXi, lambdaQP));}
+void BasicQPsolver::set_hotstart_point(BasicQPsolver *hot_QP){return;};
+void BasicQPsolver::solve(std::stop_token stopRequest, std::promise<QPresults> QP_result, Matrix &deltaXi, Matrix &lambdaQP){QP_result.set_value(solve(deltaXi, lambdaQP));}
 
 
 //QPsolver base class implemented methods
@@ -60,7 +60,7 @@ QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, const QPsolv
     //For managing QP solution times
     default_time_limit = Qparam->max_QP_secs;
     custom_time_limit = Qparam->max_QP_secs;
-    time_limit_type = 0;
+    timeLimitType = TimeLimitTypes::past_avg;
     skip_timeRecord = false;
 
     dur_pos = 9; dur_count = 0;
@@ -85,9 +85,9 @@ void QPsolver::set_constr(double *const jac_nz, int *const jac_row, int *const j
     throw NotImplementedError("QPsolver::set_constr(const Sparse_Matrix &constr_jac)");
 }
 
-void QPsolver::set_timeLimit(int limit_type, double custom_limit_secs){
-    time_limit_type = limit_type;
-    if (time_limit_type == 2){
+void QPsolver::set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs){
+    timeLimitType = limitType;
+    if (timeLimitType == TimeLimitTypes::custom){
         if (custom_limit_secs <= 0.0){
             std::cout << "WARNING: Custom time limit selected but no valid custom limit passed!\n";
             custom_limit_secs = default_time_limit;
@@ -124,7 +124,7 @@ void QPsolver::reset_timeRecord(){
     QPtime_avg = default_time_limit/2.5;
 }
 
-CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own):
+CQPsolver::CQPsolver(BasicQPsolver *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own):
         inner_QPsol(arg_CQPsol), QPsol_own(arg_QPsol_own), cond(Condenser::layout_copy(arg_cond)), 
         hess_qp(new SymMatrix[cond->num_hessblocks]), convex_QP(false), regF(0.0), h_qp(cond->num_vars),
         lb_x(cond->num_vars), ub_x(cond->num_vars), lb_A(cond->num_cons), ub_A(cond->num_cons),
@@ -154,7 +154,7 @@ CQPsolver::CQPsolver(QPsolverBase *arg_CQPsol, const Condenser *arg_cond, bool a
         ub_A_corr.Dimension(cond->condensed_num_cons);
     }
 }
-CQPsolver::CQPsolver(std::unique_ptr<QPsolverBase> arg_CQPsol, const Condenser *arg_cond):
+CQPsolver::CQPsolver(std::unique_ptr<BasicQPsolver> arg_CQPsol, const Condenser *arg_cond):
     CQPsolver(arg_CQPsol.release(), arg_cond, true){}
 
 CQPsolver::~CQPsolver(){if (QPsol_own) delete inner_QPsol;}
@@ -285,10 +285,10 @@ void CQPsolver::solve(std::stop_token stopRequest, std::promise<QPresults> QP_re
 }
 
 
-void CQPsolver::set_timeLimit(int limit_type, double custom_limit_secs){inner_QPsol->set_timeLimit(limit_type, custom_limit_secs);}
+void CQPsolver::set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs){inner_QPsol->set_timeLimit(limitType, custom_limit_secs);}
 void CQPsolver::set_use_hotstart(bool use_hom){inner_QPsol->set_use_hotstart(use_hom);}
 
-void CQPsolver::set_hotstart_point(QPsolverBase *hot_QP){
+void CQPsolver::set_hotstart_point(BasicQPsolver *hot_QP){
     if (dynamic_cast<CQPsolver*>(hot_QP) != nullptr){
         set_hotstart_point(static_cast<CQPsolver*>(hot_QP));
     }
@@ -396,7 +396,7 @@ QPresults CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, co
         inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_corr, ub_A_corr);
         inner_QPsol->set_lin(h_corr);
         
-        inner_QPsol->set_timeLimit(0);
+        inner_QPsol->set_timeLimit(TimeLimitTypes::past_avg);
         static_cast<QPsolver*>(inner_QPsol)->recordTime(false);
         
         std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
@@ -472,13 +472,13 @@ QPsolver *create_QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *
 
 
 //Helper method to create an QP solver class for an SQPmethod
-QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param){
+BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param){
     return create_QPsolver(prob, vars, param->qpsol_options);
 }
 
-QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam){
+BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam){
     int n_QP, m_QP, n_hess_QP, *blockIdx;
-    QPsolverBase *QPsol = nullptr;
+    BasicQPsolver *QPsol = nullptr;
     if (prob->cond == nullptr){
         m_QP = prob->nCon;
         n_QP = prob->nVar;
@@ -513,16 +513,16 @@ QPsolverBase *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, c
 }
 
 
-std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
+std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
-    std::unique_ptr<std::unique_ptr<QPsolverBase>[]> QPsols_par = std::make_unique<std::unique_ptr<QPsolverBase>[]>(N_QP);
+    std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
     
     #ifdef SOLVER_MUMPS
     if (param->qpsol != QPsolvers::qpOASES){
     #endif
     
         for (int i = 0; i < N_QP; i++){
-            QPsols_par[i] = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars, param->qpsol_options));
+            QPsols_par[i] = std::unique_ptr<BasicQPsolver>(create_QPsolver(prob, vars, param->qpsol_options));
         }
         return QPsols_par;
     
@@ -530,7 +530,7 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
     }
     //Work around the MUMPS sparse solver not being thread safe (Currently only possible on linux and windows)
     int n_QP, m_QP, n_hess_QP, *blockIdx;
-    QPsolverBase *QPsol = nullptr;
+    BasicQPsolver *QPsol = nullptr;
     if (prob->cond == nullptr){
         m_QP = prob->nCon;
         n_QP = prob->nVar;
@@ -549,12 +549,12 @@ std::unique_ptr<std::unique_ptr<QPsolverBase>[]> create_QPsolvers_par(const Prob
     for (int i = 0; i < N_QP - 1; i++){
         QPsol = new qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
         if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
-        QPsols_par[i] = std::unique_ptr<QPsolverBase>(QPsol);
+        QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
     }
     
     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
     if (prob->cond != nullptr) QPsol = new CQPsolver(QPsol, prob->cond, true);
-    QPsols_par[N_QP - 1] = std::unique_ptr<QPsolverBase>(QPsol);
+    QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
     
     return QPsols_par;
     #endif
@@ -756,7 +756,7 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def, double regula
     return;
 }
 
-void qpOASES_solver::set_hotstart_point(QPsolverBase *hot_QP){
+void qpOASES_solver::set_hotstart_point(BasicQPsolver *hot_QP){
     if (dynamic_cast<qpOASES_solver*>(hot_QP) != nullptr){
         set_hotstart_point(static_cast<qpOASES_solver*>(hot_QP));
     }
@@ -782,9 +782,9 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     
     //Set time limit to prevent wasting time on ill conditioned QPs:
     // 0 - limit by 2.5*(average solution time), 2 - limit by custom time, else - limit by maximum time set in options
-    if (time_limit_type == 0)
+    if (timeLimitType == TimeLimitTypes::past_avg)
         QPtime = std::min(2.5*QPtime_avg, default_time_limit);
-    else if (time_limit_type == 2)
+    else if (timeLimitType == TimeLimitTypes::custom)
         QPtime = custom_time_limit;
     else
         QPtime = default_time_limit;
@@ -1008,9 +1008,9 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
     //Set time limit to prevent wasting time on ill conditioned QPs:
     // 0 - limit by 2.5*(average solution time), 2 - limit by custom time, else - limit by maximum time set in options
-    if (time_limit_type == 0)
+    if (timeLimitType == TimeLimitTypes::past_avg)
         model->set(GRB_DoubleParam_TimeLimit, std::min(2.5*QPtime_avg, default_time_limit));
-    else if (time_limit_type == 2)
+    else if (timeLimitType == TimeLimitTypes::custom)
         model->set(GRB_DoubleParam_TimeLimit, custom_time_limit);
     else
         model->set(GRB_DoubleParam_TimeLimit, default_time_limit);
@@ -1168,9 +1168,9 @@ QPresults qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
     //Set time limit to prevent wasting time on ill conditioned QPs:
     // 0 - limit by 2.5*(average solution time), 2 - limit by custom time, else - limit by maximum time set in options
-    if (time_limit_type == 0)
+    if (timeLimitType == TimeLimitTypes::past_avg)
         settings.time_limit = std::min(2.5*QPtime_avg, default_time_limit);
-    else if (time_limit_type == 2)
+    else if (timeLimitType == TimeLimitTypes::custom)
         settings.time_limit = custom_time_limit;
     else
         settings.time_limit = default_time_limit;

@@ -79,7 +79,6 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions,
         if COND:
             prob.cond = cond
         
-        prob.complete()
         stats = blockSQP2.SQPstats("./solver_outputs")        
         t0 = time.monotonic()
         optimizer = blockSQP2.SQPmethod(prob, opts, stats)

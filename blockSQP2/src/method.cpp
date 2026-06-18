@@ -85,7 +85,7 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     vars = std::make_unique<SQPiterate>(prob, param);
 
     // Create a solver object for quadratic subproblems.
-    sub_QP = std::unique_ptr<QPsolverBase>(create_QPsolver(prob, vars.get(), param->qpsol_options));
+    sub_QP = std::unique_ptr<BasicQPsolver>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     
     // If parallel solution of QPs is enabled, use dedicated QPsolver instances instead
     if (param->par_QPs){

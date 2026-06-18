@@ -337,6 +337,12 @@ CDLEXP void SQPoptions_set_conv_strategy(void *ptr, int val){
 CDLEXP void SQPoptions_set_max_conv_QPs(void *ptr, int val){
     castOPT(ptr)->max_conv_QPs = val;
 }
+CDLEXP void SQPoptions_set_conv_kappa_0(void *ptr, double val){
+    castOPT(ptr)->conv_kappa_0 = val;
+}
+CDLEXP void SQPoptions_set_conv_kappa_max(void *ptr, double val){
+    castOPT(ptr)->conv_kappa_max = val;
+}
 CDLEXP void SQPoptions_set_hess_regularization_factor(void *ptr, double val){
     castOPT(ptr)->reg_factor = val;
 }
@@ -348,6 +354,12 @@ CDLEXP void SQPoptions_set_qpsol_options(void *ptr, QPsolver_options *QPopts){
 }
 CDLEXP void SQPoptions_set_automatic_scaling(void *ptr, char val){
     castOPT(ptr)->automatic_scaling = bool(val);
+}
+CDLEXP void SQPoptions_set_scaling_Theta_min(void *ptr, double val){
+    castOPT(ptr)->scaling_Theta_min = val;
+}
+CDLEXP void SQPoptions_set_scaling_Theta_max(void *ptr, double val){
+    castOPT(ptr)->scaling_Theta_max = val;
 }
 CDLEXP void SQPoptions_set_max_filter_overrides(void *ptr, int val){
     castOPT(ptr)->max_filter_overrides = val;
