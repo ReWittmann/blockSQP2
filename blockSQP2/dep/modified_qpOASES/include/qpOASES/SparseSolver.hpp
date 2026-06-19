@@ -514,7 +514,7 @@ class MumpsSparseSolver_2: public SparseSolver{
 
 		/** Copy constructor (deep copy). */
 		MumpsSparseSolver_2(	const MumpsSparseSolver_2& rhs		/**< Rhs object. */
-							);
+							) = delete;
 
 		/** Destructor. */
 		virtual ~MumpsSparseSolver_2( );

@@ -42,7 +42,7 @@ include(FetchContent)
 FetchContent_Declare(
 	SCIV_MUMPS_SUPERBUILD
 	GIT_REPOSITORY https://github.com/scivision/mumps-superbuild.git
-	GIT_TAG df62d7630760f3efd608f19c8e2002542897f7a9  # v5.8.2.1
+	GIT_TAG 3b79a655b7abc62ee5bef56782925580e68bf284  # v5.8.2.1
 )
 
 # set(gemmt OFF)
@@ -56,7 +56,10 @@ if(WIN32)
 	set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Os")
 else()
 	set(MUMPS_find_static OFF)
-	set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} -Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
+	# set(CMAKE_Fortran_FLAGS ${CMAKE_Fortran_FLAGS} $<$<CONFIG:Debug>:-O0 -g> $<$<CONFIG:Release>:-Os>)
+	set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -O0 -g")
+	set(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE} -Os")
+	#-Os) #Likely to be loaded several times with dlmopen + no noticeable performance difference compared to -O3
 endif()
 set(MUMPS_intsize64 OFF) #We use 32bit-integer BLAS (LP64), so this must be OFF
 
@@ -93,7 +96,7 @@ target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE __NO_COPYRIGHT__)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS LAPACK::LAPACK BLAS::BLAS) #
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
-	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE -O3 INTERFACE -Wno-overloaded-virtual)
+	target_compile_options(qpOASES PUBLIC -fPIC PRIVATE $<$<CONFIG:Debug>:-O0 -g> $<$<CONFIG:Release>:-O3> INTERFACE -Wno-overloaded-virtual)
 	if (NOT APPLE)
 		target_link_libraries(qpOASES PUBLIC -lgfortran)
 	endif()
@@ -102,7 +105,8 @@ ELSEIF(WIN32)
 	if(MINGW)
 		target_compile_options(qpOASES PRIVATE -DWIN32 
 			-Wall -pedantic -Wfloat-equal -Wshadow 
-			-O3 -finline-functions
+			$<$<CONFIG:Debug>:-O0>
+    		$<$<CONFIG:Release>:-O3 -finline-functions>
 			INTERFACE -Wno-overloaded-virtual
 		)
 	endif()
@@ -214,7 +218,9 @@ if (UNIX)
 	endif()
 	target_compile_options(blockSQP2 PRIVATE 
 		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
-		-O3
+		#-O3
+		$<$<CONFIG:Debug>:-O0 -g -DMATRIX_DEBUG>
+    	$<$<CONFIG:Release>:-O3>
 		# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
 		# -DMATRIX_DEBUG -O0 -g
 		)
@@ -223,7 +229,9 @@ elseif(WIN32)
 	if(MINGW)
 		target_compile_options(blockSQP2 PRIVATE 
 			-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
-			-O3
+			$<$<CONFIG:Debug>:-O0>
+			$<$<CONFIG:Release>:-O3 -DMATRIX_DEBUG>
+			# -O3
 			# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
 			)
 	endif()
@@ -426,13 +434,17 @@ if(PYTHON_INTERFACE)
 		target_compile_options(pyblockSQP2 PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden
-					-O3
+					# -O3
+					$<$<CONFIG:Debug>:-O0 -g>
+    				$<$<CONFIG:Release>:-O3>
 					)
 	elseif(MINGW)
 		target_compile_options(pyblockSQP2 PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden
-					-O3
+					# -O3
+					$<$<CONFIG:Debug>:-O0 -g>
+    				$<$<CONFIG:Release>:-O3>
 					)
 		target_link_libraries(pyblockSQP2 PRIVATE -static)
 	endif()
@@ -462,7 +474,9 @@ if(JULIA_INTERFACE)
 		target_compile_options(blockSQP2_jl PRIVATE 
 					-Wall -Wextra -Wno-unused-parameter
 					-fvisibility=hidden
-					-O3
+					# -O3
+					$<$<CONFIG:Debug>:-O0 -g>
+    				$<$<CONFIG:Release>:-O3>
 					)
 		target_link_libraries(blockSQP2_jl PRIVATE -static)
 	endif()

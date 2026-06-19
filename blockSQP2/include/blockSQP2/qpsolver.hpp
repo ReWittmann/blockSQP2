@@ -148,7 +148,7 @@ class QPsolver : public BasicQPsolver{
     virtual ~QPsolver();
     
     //Time recording utility shared by all QP solvers
-    void recordTime(double solTime);
+    void record_time(double solTime);
     void reset_timeRecord();
     
     //Setters for QP data. Only one of the setters for the constraint matrix (dense or sparse) is required

@@ -168,6 +168,32 @@ opt_full.automatic_scaling = True
 opt_full.par_QPs = True
 
 
+opt_CS2_par = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    par_QPs = True,
+    max_filter_overrides = 0, 
+    automatic_scaling = True, 
+    test_opt_1 = False,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.1,
+    scaling_Theta_max = 5.0
+    )
+
+opt_CS2_par_new = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    par_QPs = True,
+    max_filter_overrides = 0, 
+    automatic_scaling = True, 
+    test_opt_1 = True,
+    test_opt_2 = True,
+    scaling_Theta_min = 0.1,
+    scaling_Theta_max = 5.0
+    )
+
+
+
 #Select option sets to test for
 Experiments = [
                # (opt_SR1_BFGS, "SR1-BFGS"),
@@ -178,12 +204,16 @@ Experiments = [
                 # (opt_CS2_new, "conv. str. 2 scaling"),
                 # (opt_CS2_newScaling, "conv. str. 2. newScaling"),
                # (opt_full, "opt_full_NTP"),
-               (opt_CS2_S1, "scaling_0p1_10"),
-               (opt_CS2_S2, "scaling_0p1_5"),
-               (opt_CS2_S3, "scaling_0p1_2"),
-               (opt_CS2_S4, "scaling_0p05_10"),
-               (opt_CS2_S5, "scaling_0p2_10"),
-               (opt_CS2_S6, "scaling_0p2_5"),
+               
+               # (opt_CS2_S1, "scaling_0p1_10"),
+               # (opt_CS2_S2, "scaling_0p1_5"),
+               # (opt_CS2_S3, "scaling_0p1_2"),
+               # (opt_CS2_S4, "scaling_0p05_10"),
+               # (opt_CS2_S5, "scaling_0p2_10"),
+               # (opt_CS2_S6, "scaling_0p2_5"),
+               
+               (opt_CS2_par, "par"),
+               (opt_CS2_par_new, "par_new")
                ]
 
 

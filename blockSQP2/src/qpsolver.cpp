@@ -105,7 +105,7 @@ int QPsolver::get_QP_it(){return 0;}
 double QPsolver::get_solutionTime(){return solution_durations[dur_pos];}
 
 
-void QPsolver::recordTime(double solTime){
+void QPsolver::record_time(double solTime){
     //std::cout << "recorded time " << solTime << "\n";
     dur_pos = (dur_pos + 1)%10;
     solution_durations[dur_pos] = solTime;
@@ -397,7 +397,7 @@ QPresults CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, co
         inner_QPsol->set_lin(h_corr);
         
         inner_QPsol->set_timeLimit(TimeLimitTypes::past_avg);
-        static_cast<QPsolver*>(inner_QPsol)->recordTime(false);
+        static_cast<QPsolver*>(inner_QPsol)->record_time(false);
         
         std::chrono::steady_clock::time_point T0 = std::chrono::steady_clock::now();
         QP_result = inner_QPsol->solve(xi_cond, lambda_cond);
@@ -766,6 +766,7 @@ void qpOASES_solver::set_hotstart_point(BasicQPsolver *hot_QP){
 void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
     if (nVar != hot_QP->nVar || nCon != hot_QP->nCon)
         throw std::invalid_argument("Error setting hotstart point: QPs have different dimensions");
+    if (this == hot_QP) return;
     *qp = *(hot_QP->qp);
     return;
 }
@@ -827,7 +828,7 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         
         qp->getPrimalSolution(deltaXi.array);
         qp->getDualSolution(lambdaQP.array);
-        if (!skip_timeRecord) recordTime(QPtime);
+        if (!skip_timeRecord) record_time(QPtime);
         else skip_timeRecord = false;
 
         QP_it += 1;
@@ -1034,7 +1035,7 @@ int gurobi_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
             lambdaQP(nVar + i) += QP_cons_ub[i].get(GRB_DoubleAttr_Pi);
         }
 
-        if (!skip_timeRecord) recordTime(model->get(GRB_DoubleAttr_Runtime));
+        if (!skip_timeRecord) record_time(model->get(GRB_DoubleAttr_Runtime));
         else skip_timeRecord = false;
 
         return QPresults::success;
@@ -1192,7 +1193,7 @@ QPresults qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
             lambdaQP(i) = -sol.y(nCon + i);
         }
 
-        if (!skip_timeRecord) recordTime(info.run_time);
+        if (!skip_timeRecord) record_time(info.run_time);
         else skip_timeRecord = false;
 
         return QPresults::success;

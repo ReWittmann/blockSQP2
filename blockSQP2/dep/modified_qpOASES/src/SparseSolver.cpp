@@ -1698,10 +1698,10 @@ MumpsSparseSolver_2::MumpsSparseSolver_2(void *arg_fptr_dmumps_c) : SparseSolver
 /*
  *	M u m p s S p a r s e S o l v e r
  */
-MumpsSparseSolver_2::MumpsSparseSolver_2( const MumpsSparseSolver_2& rhs )
-{
-	copy( rhs );
-}
+// MumpsSparseSolver_2::MumpsSparseSolver_2( const MumpsSparseSolver_2& rhs )
+// {
+// 	copy( rhs );
+// }
 
 
 /*
@@ -2092,7 +2092,7 @@ returnValue MumpsSparseSolver_2::copy( 	const MumpsSparseSolver_2& rhs
 	else
 		jcn_mumps = 0;
 	
-	fptr_dmumps_c = rhs.fptr_dmumps_c;
+	// fptr_dmumps_c = rhs.fptr_dmumps_c;
 	
 	return SUCCESSFUL_RETURN;
 }

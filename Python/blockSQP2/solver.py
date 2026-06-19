@@ -66,7 +66,7 @@ class Solver(CXXobjWrapper):
 
         if ret == -1000:
             error_message = self.BSQP.get_error_message()
-            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
+            raise RuntimeError(cast(error_message, c_char_p).value.decode())
         return SQPresults(ret)
 
     def finish(self):
