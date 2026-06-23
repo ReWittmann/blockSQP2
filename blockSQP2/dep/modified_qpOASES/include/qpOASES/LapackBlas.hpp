@@ -48,8 +48,8 @@
 	#define ST_EXPAND3(l1, l2, l3) , size_t(l1), size_t(l2), size_t(l3)
 	#define STRLENS3(l1, l2, l3) ST_EXPAND3(l1, l2, l3)
 #else
-	#define STRLENS1(l1, l2, l3) 
-	#define STRLENS2(l1, l2, l3) 
+	#define STRLENS1(l1) 
+	#define STRLENS2(l1, l2) 
 	#define STRLENS3(l1, l2, l3) 
 #endif
 

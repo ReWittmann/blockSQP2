@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Cart_Pendulum(
+OCprob = OCProblems.Hang_Glider(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -36,12 +36,12 @@ OCprob = OCProblems.Cart_Pendulum(
                     )
 
 itMax = 100                                   #max number of steps
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 
 
-start = OCprob.start_point                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
+start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
@@ -120,7 +120,7 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 # scaledProb = blockSQP2.ScaledProblem(prob)
 # scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 # for i in range(OCprob.ntS + 1):
-#     OCprob.set_stage_control(scalingFactors, i, 1.0)
+#     OCprob.set_stage_control(scalingFactors, i, 10.0)
 # scaledProb.set_scale(scalingFactors)
 
 stats = blockSQP2.SQPstats("./solver_outputs")
@@ -147,7 +147,7 @@ else:
 t1 = time.monotonic()
 if not step_plots:
     xi = np.array(optimizer.get_xi()).reshape(-1)
-    # OCprob.plot(xi, dpi=200, title=plot_title)
+    OCprob.plot(xi, dpi=200, title=plot_title)
 
 time.sleep(0.01)
 print(t1 - t0, "s")

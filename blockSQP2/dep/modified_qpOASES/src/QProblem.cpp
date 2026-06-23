@@ -5019,6 +5019,7 @@ returnValue QProblem::performStep(	const real_t* const delta_g,
 	tau = 1.0;
 	BC_idx = -1;
 	BC_status = ST_UNDEFINED;
+	BC_isBound = BT_FALSE;
 
 	int_t BC_idx_tmp = -1;
 

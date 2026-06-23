@@ -212,7 +212,7 @@ Experiments = [
                # (opt_CS2_S5, "scaling_0p2_10"),
                # (opt_CS2_S6, "scaling_0p2_5"),
                
-               (opt_CS2_par, "par"),
+               # (opt_CS2_par, "par"),
                (opt_CS2_par_new, "par_new")
                ]
 
