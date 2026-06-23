@@ -23,7 +23,7 @@
 
 
 /**
- *	\file include/qpOASES/SparseSolver.hpp
+ *	\file include/qpOASES/LinearSolver.hpp
  *	\author Andreas Waechter, Dennis Janka
  *	\version 3.2
  *	\date 2012-2017
@@ -60,24 +60,24 @@ BEGIN_NAMESPACE_QPOASES
  *	\version 3.2
  *	\date 2012-2017
  */
-class SparseSolver
+class LinearSolver
 {
 	/*
 	 *	PUBLIC MEMBER FUNCTIONS
 	 */
 	public:
 		/** Default constructor. */
-		SparseSolver( );
+		LinearSolver( );
 
 		/** Copy constructor (deep copy). */
-		SparseSolver(	const SparseSolver& rhs		/**< Rhs object. */
+		LinearSolver(	const LinearSolver& rhs		/**< Rhs object. */
 						);
 
 		/** Destructor. */
-		virtual ~SparseSolver( );
+		virtual ~LinearSolver( );
 
 		/** Assignment operator (deep copy). */
-		virtual SparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+		virtual LinearSolver& operator=(	const LinearSolver& rhs	/**< Rhs object. */
 											);
 
 		/** Set new matrix data.  The matrix is to be provided
@@ -121,13 +121,64 @@ class SparseSolver
 
 		/** Copies all members from given rhs object.
 		 *  \return SUCCESSFUL_RETURN */
-		returnValue copy(	const SparseSolver& rhs	/**< Rhs object. */
+		returnValue copy(	const LinearSolver& rhs	/**< Rhs object. */
 							);
 
 	/*
 	 *	PROTECTED MEMBER VARIABLES
 	 */
 	protected:
+};
+
+
+
+class DenseLinearSolver : public LinearSolver{
+	public:
+	DenseLinearSolver();
+	DenseLinearSolver(const DenseLinearSolver &rhs);
+	virtual ~DenseLinearSolver();
+	virtual DenseLinearSolver& operator=(const LinearSolver &rhs);
+	virtual returnValue setMatrixData(	int_t dim,					/**< Dimension of the linear system. */
+										int_t numNonzeros,			/**< Number of nonzeros in the matrix. */
+										const int_t* const airn,		/**< Row indices for each matrix entry. */
+										const int_t* const acjn,		/**< Column indices for each matrix entry. */
+										const real_t* const avals	/**< Values for each matrix entry. */
+										);
+
+	/** Compute factorization of current matrix.  This method must be called before solve.*/
+	virtual returnValue factorize();
+
+	/** Solve linear system with most recently set matrix data. */
+	virtual returnValue solve( int_t dim,				/**< Dimension of the linear system. */
+								const real_t* const rhs, /**< Values for the right hand side. */
+								real_t* const sol		/**< Solution of the linear system. */
+								);
+
+	/** Clears all data structures. */
+	virtual returnValue reset();
+
+	/** Return the number of negative eigenvalues. */
+	virtual int_t getNegativeEigenvalues();
+
+	/** Return the rank after a factorization */
+	virtual int_t getRank();
+	
+	protected:
+		/** Frees all allocated memory.
+		 *  \return SUCCESSFUL_RETURN */
+		returnValue clear( );
+
+		/** Copies all members from given rhs object.
+		 *  \return SUCCESSFUL_RETURN */
+		returnValue copy(const DenseLinearSolver& rhs);
+		
+	private:
+		int_t dim;
+		double* A;          // dense column-major matrix
+		int_t* ipiv;          // LAPACK pivots
+		int_t neig;
+		int_t rank;
+		bool have_factorization;
 };
 
 
@@ -140,7 +191,7 @@ class SparseSolver
  *	\version 3.2
  *	\date 2012-2017
  */
-class Ma27SparseSolver: public SparseSolver
+class Ma27SparseSolver: public LinearSolver
 {
 	/*
 	 *	PUBLIC MEMBER FUNCTIONS
@@ -157,7 +208,7 @@ class Ma27SparseSolver: public SparseSolver
 		virtual ~Ma27SparseSolver( );
 
 		/** Assignment operator (deep copy). */
-		virtual Ma27SparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+		virtual Ma27SparseSolver& operator=(	const LinearSolver& rhs	/**< Rhs object. */
 												);
 
 		/** Set new matrix data.  The matrix is to be provided
@@ -254,7 +305,7 @@ class Ma27SparseSolver: public SparseSolver
  *	\version 3.2
  *	\date 2013-2017
  */
-class Ma57SparseSolver: public SparseSolver
+class Ma57SparseSolver: public LinearSolver
 {
 	/*
 	 *	PUBLIC MEMBER FUNCTIONS
@@ -271,7 +322,7 @@ class Ma57SparseSolver: public SparseSolver
 		virtual ~Ma57SparseSolver( );
 
 		/** Assignment operator (deep copy). */
-		virtual Ma57SparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+		virtual Ma57SparseSolver& operator=(	const LinearSolver& rhs	/**< Rhs object. */
 												);
 
 		/** Set new matrix data.  The matrix is to be provided
@@ -369,7 +420,7 @@ class Ma57SparseSolver: public SparseSolver
  *	\date 2022
  */ 
 
-class MumpsSparseSolver: public SparseSolver
+class MumpsSparseSolver: public LinearSolver
 {
 	/*
 	 *	PUBLIC MEMBER FUNCTIONS
@@ -386,7 +437,7 @@ class MumpsSparseSolver: public SparseSolver
 		virtual ~MumpsSparseSolver( );
 
 		/** Assignment operator (deep copy). */
-		virtual MumpsSparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+		virtual MumpsSparseSolver& operator=(	const LinearSolver& rhs	/**< Rhs object. */
 												);
 
 		/** Set new matrix data.  The matrix is to be provided
@@ -504,7 +555,7 @@ class MumpsSparseSolver: public SparseSolver
 };
 
 
-class MumpsSparseSolver_2: public SparseSolver{
+class MumpsSparseSolver_2: public LinearSolver{
 	/*
 	 *	PUBLIC MEMBER FUNCTIONS
 	 */
@@ -520,7 +571,7 @@ class MumpsSparseSolver_2: public SparseSolver{
 		virtual ~MumpsSparseSolver_2( );
 
 		/** Assignment operator (deep copy). */
-		virtual MumpsSparseSolver_2& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+		virtual MumpsSparseSolver_2& operator=(	const LinearSolver& rhs	/**< Rhs object. */
 												);
 
 		/** Set new matrix data.  The matrix is to be provided
@@ -677,13 +728,13 @@ inline void ComputeMemIncrease(
 
 #ifdef SOLVER_SPRAL
 
-class SpralSparseSolver : public SparseSolver
+class SpralSparseSolver : public LinearSolver
 {
 	public:
 		SpralSparseSolver();
 		SpralSparseSolver(const SpralSparseSolver& rhs);
 		virtual ~SpralSparseSolver( );
-		virtual SpralSparseSolver& operator=(	const SparseSolver& rhs	/**< Rhs object. */
+		virtual SpralSparseSolver& operator=(	const LinearSolver& rhs	/**< Rhs object. */
 											);
 
 		/** Set new matrix data.  The matrix is to be provided
@@ -753,8 +804,6 @@ class SpralSparseSolver : public SparseSolver
 
 
 
-#ifdef SOLVER_NONE
-
 /**
  *	\brief Implementation of a dummy sparse solver. An error is thrown if a factorization is attempted.
  *
@@ -762,7 +811,7 @@ class SpralSparseSolver : public SparseSolver
  *	\version 3.2
  *	\date 2015-2017
  */
-class DummySparseSolver: public SparseSolver
+class DummySparseSolver: public LinearSolver
 {
 	/*
 	 *	PUBLIC MEMBER FUNCTIONS
@@ -788,7 +837,6 @@ class DummySparseSolver: public SparseSolver
 									);
 };
 
-#endif /* SOLVER_NONE */
 
 
 END_NAMESPACE_QPOASES

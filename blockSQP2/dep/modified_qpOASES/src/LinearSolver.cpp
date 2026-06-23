@@ -23,7 +23,7 @@
 
 
 /**
- *	\file src/SparseSolver.cpp
+ *	\file src/LinearSolver.cpp
  *	\author Andreas Waechter, Dennis Janka
  *	\version 3.2
  *	\date 2012-2017
@@ -39,8 +39,11 @@
  */
 
 
-#include <qpOASES/SparseSolver.hpp>
+#include <qpOASES/LinearSolver.hpp>
+#include <qpOASES/LapackBlas.hpp>
 #include <iostream>
+#include <stdexcept>
+// #include <algorithm>
 
 #ifndef __MATLAB__
 	# include <cstdarg>
@@ -93,7 +96,7 @@ BEGIN_NAMESPACE_QPOASES
 /*
  *	S p a r s e S o l v e r
  */
-SparseSolver::SparseSolver( )
+LinearSolver::LinearSolver( )
 {
 }
 
@@ -101,7 +104,7 @@ SparseSolver::SparseSolver( )
 /*
  *	S p a r s e S o l v e r
  */
-SparseSolver::SparseSolver( const SparseSolver& rhs )
+LinearSolver::LinearSolver( const LinearSolver& rhs )
 {
 	copy( rhs );
 }
@@ -110,7 +113,7 @@ SparseSolver::SparseSolver( const SparseSolver& rhs )
 /*
  *	~ S p a r s e S o l v e r
  */
-SparseSolver::~SparseSolver( )
+LinearSolver::~LinearSolver( )
 {
 	clear( );
 }
@@ -119,7 +122,7 @@ SparseSolver::~SparseSolver( )
 /*
  *	o p e r a t o r =
  */
-SparseSolver& SparseSolver::operator=( const SparseSolver& rhs )
+LinearSolver& LinearSolver::operator=( const LinearSolver& rhs )
 {
 	if ( this != &rhs )
 	{
@@ -133,7 +136,7 @@ SparseSolver& SparseSolver::operator=( const SparseSolver& rhs )
 /*
  *	r e s e t
  */
-returnValue SparseSolver::reset( )
+returnValue LinearSolver::reset( )
 {
 	return SUCCESSFUL_RETURN;
 }
@@ -141,7 +144,7 @@ returnValue SparseSolver::reset( )
 /*
  *	g e t N e g a t i v e E i g e n v a l u e s
  */
-int_t SparseSolver::getNegativeEigenvalues( )
+int_t LinearSolver::getNegativeEigenvalues( )
 {
 	return -1;
 }
@@ -149,7 +152,7 @@ int_t SparseSolver::getNegativeEigenvalues( )
 /*
  *	g e t R a n k
  */
-int_t SparseSolver::getRank( )
+int_t LinearSolver::getRank( )
 {
 	return -1;
 }
@@ -157,7 +160,7 @@ int_t SparseSolver::getRank( )
 /*
  *	g e t Z e r o P i v o t s
  */
-returnValue SparseSolver::getZeroPivots( int_t *&zeroPivots )
+returnValue LinearSolver::getZeroPivots( int_t *&zeroPivots )
 {
 	if ( zeroPivots ) delete[] zeroPivots;
 	zeroPivots = 0;
@@ -172,7 +175,7 @@ returnValue SparseSolver::getZeroPivots( int_t *&zeroPivots )
 /*
  *	c l e a r
  */
-returnValue SparseSolver::clear( )
+returnValue LinearSolver::clear( )
 {
 	return SUCCESSFUL_RETURN;
 }
@@ -181,11 +184,264 @@ returnValue SparseSolver::clear( )
 /*
  *	c o p y
  */
-returnValue SparseSolver::copy( 	const SparseSolver& rhs
+returnValue LinearSolver::copy( 	const LinearSolver& rhs
 									)
 {
 	return SUCCESSFUL_RETURN;
 }
+
+
+
+
+//#####################
+DenseLinearSolver::DenseLinearSolver(): 
+		LinearSolver(){
+    A = nullptr;
+    ipiv = nullptr;
+
+    dim = -1;
+    neig = -1;
+    rank = -1;
+
+    have_factorization = false;
+}
+
+DenseLinearSolver::DenseLinearSolver(const DenseLinearSolver& rhs)
+    : LinearSolver(rhs)
+{
+    A = 0;
+    ipiv = 0;
+
+    copy(rhs);
+}
+
+DenseLinearSolver::~DenseLinearSolver(){
+    clear();
+}
+
+DenseLinearSolver& DenseLinearSolver::operator=( const LinearSolver& rhs )
+{
+	const DenseLinearSolver* dense_rhs = dynamic_cast<const DenseLinearSolver*>(&rhs);
+	if (!dense_rhs)
+	{
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in DenseLinearSolver& DenseLinearSolver::operator=( const LinearSolver& rhs )\n");
+		throw; /* TODO: More elegant exit? */
+	}
+	if ( this != dense_rhs )
+	{
+		clear( );
+		LinearSolver::operator=( rhs );
+		copy( *dense_rhs );
+	}
+	return *this;
+}
+
+returnValue DenseLinearSolver::copy(const DenseLinearSolver& rhs)
+{
+    dim = rhs.dim;
+    neig = rhs.neig;
+    rank = rhs.rank;
+    have_factorization = rhs.have_factorization;
+
+    if (rhs.A != nullptr && dim > 0){
+        A = new double[dim*dim];
+        memcpy(A, rhs.A, dim*dim*sizeof(double));
+    }
+    else A = nullptr;
+
+    if (rhs.ipiv != nullptr && dim > 0){
+        ipiv = new int[dim];
+        memcpy(ipiv, rhs.ipiv, dim*sizeof(int));
+    }
+    else ipiv = nullptr;
+
+    return SUCCESSFUL_RETURN;
+}
+
+returnValue DenseLinearSolver::clear(){
+    delete [] A;
+    delete [] ipiv;
+
+    A = 0;
+    ipiv = 0;
+
+    dim = -1;
+    neig = -1;
+    rank = -1;
+
+    have_factorization = false;
+
+    return SUCCESSFUL_RETURN;
+}
+
+returnValue DenseLinearSolver::reset(){
+    clear();
+    return SUCCESSFUL_RETURN;
+}
+
+returnValue DenseLinearSolver::setMatrixData(
+    	int_t dim_, int_t numNonzeros,
+    	const int_t* const airn,
+    	const int_t* const acjn,
+    	const real_t* const avals){
+    reset();
+
+    dim = dim_;
+
+    if (dim == 0) return SUCCESSFUL_RETURN;
+
+    A = new double[dim*dim];
+    std::fill(A, A + dim*dim, 0.0);
+    for (int_t k = 0; k < numNonzeros; ++k){
+        int_t i = airn[k];
+        int_t j = acjn[k];
+        double v = avals[k];
+
+        A[i + j*dim] = v;
+        if (i != j)
+            A[j + i*dim] = v;
+    }
+    return SUCCESSFUL_RETURN;
+}
+
+
+returnValue DenseLinearSolver::factorize()
+{
+    if (dim == 0)
+    {
+        neig = 0;
+        rank = 0;
+        have_factorization = true;
+        return SUCCESSFUL_RETURN;
+    }
+
+    delete [] ipiv;
+    ipiv = new int[dim];
+
+    int n = static_cast<int>(dim);
+    int lda = n;
+    int info;
+
+    double work_query;
+    int lwork = -1;
+	
+	SYTRF("L", &n, A, &lda, ipiv, &work_query, &lwork, &info STRLENS1(1));
+    // dsytrf_("L",
+    //         &n,
+    //         A,
+    //         &lda,
+    //         ipiv,
+    //         &work_query,
+    //         &lwork,
+    //         &info);
+
+    lwork = static_cast<int>(work_query);
+
+    // std::vector<double> work(lwork);
+	double *work = new double[lwork];
+
+	SYTRF("L", &n, A, &lda, ipiv, work, &lwork, &info STRLENS1(1));
+    // dsytrf_("L",
+    //         &n,
+    //         A,
+    //         &lda,
+    //         ipiv,
+    //         work,
+    //         &lwork,
+    //         &info);
+
+    if (info > 0)
+    {
+        rank = info - 1;
+        return RET_KKT_MATRIX_SINGULAR;
+    }
+
+    if (info < 0)
+        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
+
+    rank = dim;
+
+    //
+    // Count negative eigenvalues from D
+    //
+    neig = 0;
+    for (int i = 0; i < n;){
+        if (ipiv[i] > 0){
+            // 1x1 pivot
+			neig += int(A[i + i*lda] < 0.0);
+			i++;
+        }
+        else{
+            // 2x2 pivot block
+            double d11 = A[i + i*lda];
+            double d21 = A[(i+1) + i*lda];
+            double d22 = A[(i+1) + (i+1)*lda];
+
+            double tr  = d11 + d22;
+            double det = d11*d22 - d21*d21;
+			
+			neig += int(det < 0.0); // one positive, one negative
+			neig += int(det >= 0.0 && tr < 0.0);// both negative
+            // if (det < 0.0)
+            // {
+            //     // one positive, one negative
+            //     neig += 1;
+            // }
+            // else if (tr < 0.0)
+            // {
+            //     //
+            //     // both negative
+            //     //
+            //     neig += 2;
+            // }
+            i += 2;
+        }
+    }
+    have_factorization = true;
+    return SUCCESSFUL_RETURN;
+}
+ 
+returnValue DenseLinearSolver::solve(int_t dim_, const real_t* const rhs, real_t* const sol){
+    if (dim_ != dim)
+        return THROWERROR(RET_INVALID_ARGUMENTS);
+
+    if (!have_factorization)
+        return THROWERROR(RET_INVALID_ARGUMENTS);
+
+    int n = static_cast<int>(dim);
+    int nrhs = 1;
+    int lda = n;
+    int ldb = n;
+    int info;
+
+    memcpy(sol, rhs, n*sizeof(double));
+	
+	SYTRS("L", &n, &nrhs, A, &lda, ipiv, sol, &ldb, &info STRLENS1(1));
+    // dsytrs_("L",
+    //         &n,
+    //         &nrhs,
+    //         A,
+    //         &lda,
+    //         ipiv,
+    //         sol,
+    //         &ldb,
+    //         &info);
+
+    if (info != 0)
+        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
+
+    return SUCCESSFUL_RETURN;
+}
+
+int_t DenseLinearSolver::getNegativeEigenvalues(){
+    return have_factorization ? neig : -1;
+}
+
+int DenseLinearSolver::getRank(){
+    return rank;
+}
+
+
 
 #ifdef SOLVER_MA27
 
@@ -226,7 +482,7 @@ extern "C" {
 /*
  *	M a 2 7 S p a r s e S o l v e r
  */
-Ma27SparseSolver::Ma27SparseSolver( ) : SparseSolver()
+Ma27SparseSolver::Ma27SparseSolver( ) : LinearSolver()
 {
 	a_ma27 = 0;
 	irn_ma27 = 0;
@@ -264,18 +520,18 @@ Ma27SparseSolver::~Ma27SparseSolver( )
 /*
  *	o p e r a t o r =
  */
-Ma27SparseSolver& Ma27SparseSolver::operator=( const SparseSolver& rhs )
+Ma27SparseSolver& Ma27SparseSolver::operator=( const LinearSolver& rhs )
 {
 	const Ma27SparseSolver* ma27_rhs = dynamic_cast<const Ma27SparseSolver*>(&rhs);
 	if (!ma27_rhs)
 	{
-		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in Ma27SparseSolver& Ma27SparseSolver::operator=( const SparseSolver& rhs )\n");
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in Ma27SparseSolver& Ma27SparseSolver::operator=( const LinearSolver& rhs )\n");
 		throw; /* TODO: More elegant exit? */
 	}
 	if ( this != ma27_rhs )
 	{
 		clear( );
-		SparseSolver::operator=( rhs );
+		LinearSolver::operator=( rhs );
 		copy( *ma27_rhs );
 	}
 
@@ -462,7 +718,7 @@ returnValue Ma27SparseSolver::solve( int_t dim_,
 returnValue Ma27SparseSolver::reset( )
 {
 	/* AW: We probably want to avoid resetting factorization in QProblem */
-	if ( SparseSolver::reset( ) != SUCCESSFUL_RETURN )
+	if ( LinearSolver::reset( ) != SUCCESSFUL_RETURN )
 		return THROWERROR( RET_RESET_FAILED );
 
 	clear( );
@@ -692,7 +948,7 @@ extern "C"
 /*
  *	M a 5 7 S p a r s e S o l v e r
  */
-Ma57SparseSolver::Ma57SparseSolver( ) : SparseSolver()
+Ma57SparseSolver::Ma57SparseSolver( ) : LinearSolver()
 {
 	a_ma57 = 0;
 	irn_ma57 = 0;
@@ -741,18 +997,18 @@ Ma57SparseSolver::~Ma57SparseSolver( )
 /*
  *	o p e r a t o r =
  */
-Ma57SparseSolver& Ma57SparseSolver::operator=( const SparseSolver& rhs )
+Ma57SparseSolver& Ma57SparseSolver::operator=( const LinearSolver& rhs )
 {
 	const Ma57SparseSolver* ma57_rhs = dynamic_cast<const Ma57SparseSolver*>(&rhs);
 	if (!ma57_rhs)
 	{
-		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in Ma57SparseSolver& Ma57SparseSolver::operator=( const SparseSolver& rhs )\n");
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in Ma57SparseSolver& Ma57SparseSolver::operator=( const LinearSolver& rhs )\n");
 		throw; /* TODO: More elegant exit? */
 	}
 	if ( this != ma57_rhs )
 	{
 		clear( );
-		SparseSolver::operator=( rhs );
+		LinearSolver::operator=( rhs );
 		copy( *ma57_rhs );
 	}
 
@@ -973,7 +1229,7 @@ returnValue Ma57SparseSolver::solve(	int_t dim_,
 returnValue Ma57SparseSolver::reset( )
 {
 	/* AW: We probably want to avoid resetting factorization in QProblem */
-	if ( SparseSolver::reset( ) != SUCCESSFUL_RETURN )
+	if ( LinearSolver::reset( ) != SUCCESSFUL_RETURN )
 		return THROWERROR( RET_RESET_FAILED );
 
 	clear( );
@@ -1167,7 +1423,7 @@ static void MPIfini(void)
  */
 
 
-MumpsSparseSolver::MumpsSparseSolver( ) : SparseSolver()
+MumpsSparseSolver::MumpsSparseSolver( ) : LinearSolver()
 {
 	a_mumps = 0;
 	irn_mumps = 0;
@@ -1249,18 +1505,18 @@ MumpsSparseSolver::~MumpsSparseSolver( )
 /*
  *	o p e r a t o r =
  */
-MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )
+MumpsSparseSolver& MumpsSparseSolver::operator=( const LinearSolver& rhs )
 {
 	const MumpsSparseSolver* mumps_rhs = dynamic_cast<const MumpsSparseSolver*>(&rhs);
 	if (!mumps_rhs)
 	{
-		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )\n");
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const LinearSolver& rhs )\n");
 		throw; /* TODO: More elegant exit? */
 	}
 	if ( this != mumps_rhs )
 	{
 		clear( );
-		SparseSolver::operator=( rhs );
+		LinearSolver::operator=( rhs );
 		copy( *mumps_rhs );
 	}
 
@@ -1520,7 +1776,7 @@ returnValue MumpsSparseSolver::solve(	int_t dim_,
 returnValue MumpsSparseSolver::reset( )
 {
 	/* AW: We probably want to avoid resetting factorization in QProblem */
-	if ( SparseSolver::reset( ) != SUCCESSFUL_RETURN )
+	if ( LinearSolver::reset( ) != SUCCESSFUL_RETURN )
 		return THROWERROR( RET_RESET_FAILED );
 
 	clear( );
@@ -1652,7 +1908,7 @@ int dload_MUMPS_MPI(const char* MUMPS_libdir,
 
 
 
-MumpsSparseSolver_2::MumpsSparseSolver_2(void *arg_fptr_dmumps_c) : SparseSolver(), fptr_dmumps_c(arg_fptr_dmumps_c){
+MumpsSparseSolver_2::MumpsSparseSolver_2(void *arg_fptr_dmumps_c) : LinearSolver(), fptr_dmumps_c(arg_fptr_dmumps_c){
 
 	a_mumps = 0;
 	irn_mumps = 0;
@@ -1725,18 +1981,18 @@ MumpsSparseSolver_2::~MumpsSparseSolver_2( )
 /*
  *	o p e r a t o r =
  */
-MumpsSparseSolver_2& MumpsSparseSolver_2::operator=( const SparseSolver& rhs )
+MumpsSparseSolver_2& MumpsSparseSolver_2::operator=( const LinearSolver& rhs )
 {
 	const MumpsSparseSolver_2* mumps_rhs = dynamic_cast<const MumpsSparseSolver_2*>(&rhs);
 	if (!mumps_rhs)
 	{
-		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )\n");
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const LinearSolver& rhs )\n");
 		throw; /* TODO: More elegant exit? */
 	}
 	if ( this != mumps_rhs )
 	{
 		clear( );
-		SparseSolver::operator=( rhs );
+		LinearSolver::operator=( rhs );
 		copy( *mumps_rhs );
 	}
 
@@ -1992,7 +2248,7 @@ returnValue MumpsSparseSolver_2::solve(	int_t dim_,
 returnValue MumpsSparseSolver_2::reset( )
 {
 	/* AW: We probably want to avoid resetting factorization in QProblem */
-	if ( SparseSolver::reset( ) != SUCCESSFUL_RETURN )
+	if ( LinearSolver::reset( ) != SUCCESSFUL_RETURN )
 		return THROWERROR( RET_RESET_FAILED );
 
 	clear( );
@@ -2015,6 +2271,7 @@ int_t MumpsSparseSolver_2::getNegativeEigenvalues( )
  *	g e t R a n k
  */
 int_t MumpsSparseSolver_2::getRank(){
+	throw std::logic_error(std::string("getRank was called, rank deficiency = ") + std::to_string(static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1]) + std::string("\n"));
 	return dim - static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1];
 }
 
@@ -2145,7 +2402,7 @@ returnValue SpralSparseSolver::clear(){
 }
 
 returnValue SpralSparseSolver::reset(){
-	if (SparseSolver::reset() != SUCCESSFUL_RETURN)
+	if (LinearSolver::reset() != SUCCESSFUL_RETURN)
 		return THROWERROR(RET_RESET_FAILED);
 
 	clear();
@@ -2157,16 +2414,16 @@ SpralSparseSolver::~SpralSparseSolver(){
 	clear();
 }
 
-SpralSparseSolver &SpralSparseSolver::operator=(const SparseSolver& rhs){
+SpralSparseSolver &SpralSparseSolver::operator=(const LinearSolver& rhs){
 	const SpralSparseSolver *spral_rhs = dynamic_cast<const SpralSparseSolver*>(&rhs);
 	if (spral_rhs == nullptr){
-		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const SparseSolver& rhs )\n");
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in MumpsSparseSolver& MumpsSparseSolver::operator=( const LinearSolver& rhs )\n");
 		throw;
 	}
 	
 	if (this != spral_rhs){
 		clear();
-		SparseSolver::operator=(rhs);
+		LinearSolver::operator=(rhs);
 		copy(*spral_rhs);
 	}
 	return *this;
@@ -2266,8 +2523,6 @@ int_t SpralSparseSolver::getRank(){
 
 
 
-#ifdef SOLVER_NONE
-
 returnValue DummySparseSolver::setMatrixData( 	int_t dim, /**< Dimension of the linear system. */
 												int_t numNonzeros, /**< Number of nonzeros in the matrix. */
 												const int_t* const airn, /**< Row indices for each matrix entry. */
@@ -2291,7 +2546,6 @@ returnValue DummySparseSolver::solve(	int_t dim, /**< Dimension of the linear sy
 	return THROWERROR(RET_NO_SPARSE_SOLVER);
 }
 
-#endif /* SOLVER_NONE */
 
 END_NAMESPACE_QPOASES
 

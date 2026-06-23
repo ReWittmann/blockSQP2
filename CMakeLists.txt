@@ -74,7 +74,7 @@ FetchContent_MakeAvailable(SCIV_MUMPS_SUPERBUILD)
 set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP2/dep/modified_qpOASES)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
-	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
+	${qpOASES_MODDED_DIR}/src/LinearSolver.cpp
 	${qpOASES_MODDED_DIR}/src/Bounds.cpp             
 	${qpOASES_MODDED_DIR}/src/MessageHandling.cpp   
 	${qpOASES_MODDED_DIR}/src/SQProblem.cpp
