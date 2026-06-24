@@ -203,8 +203,8 @@ class CQPsolver : public BasicQPsolver{
     //std::unique_ptr<Matrix[]> SOC_corretions;
     Matrix h_corr, lb_A_corr, ub_A_corr;
     
-    CQPsolver(BasicQPsolver *arg_CQPsol, const Condenser *arg_cond, bool arg_QPsol_own = false);
-    CQPsolver(std::unique_ptr<BasicQPsolver> arg_CQPsol, const Condenser *arg_cond);
+    CQPsolver(BasicQPsolver *arg_CQPsol, Condenser *arg_cond, bool arg_QPsol_own = false);
+    CQPsolver(std::unique_ptr<BasicQPsolver> arg_CQPsol, Condenser *arg_cond);
     ~CQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj);
@@ -259,7 +259,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
         
         std::unique_ptr<qpOASES::SQProblem> qp;
         std::unique_ptr<qpOASES::SQProblem> qpSave;
-        std::unique_ptr<qpOASES::SQProblem>  qpCheck; 
+        std::unique_ptr<qpOASES::SQProblem> qpCheck; 
         
         std::unique_ptr<qpOASES::Matrix> A_qp;
         std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;

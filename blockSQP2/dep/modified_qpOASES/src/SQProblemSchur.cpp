@@ -114,9 +114,8 @@ SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, 
 {
 	/* The interface to the sparse linear solver.  In the long run,
 	   different linear solvers might be optionally chosen. */
-	   
 	switch (_linSolType){
-		case LST_LAPACK: linSol = new DenseLinearSolver(); break;
+		case LST_LAPACK: linSol = new LapackDenseSolver(); break;
 	#ifdef SOLVER_MA57
 		case LST_MA57: linSol = new Ma57SparseSolver(); break;
 	#elif defined SOLVER_MA27
@@ -125,14 +124,24 @@ SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, 
 		case LST_MUMPS: linSol = arg_fptr_dmumps_c == nullptr ? static_cast<LinearSolver*>(new MumpsSparseSolver()) : static_cast<LinearSolver*>(new MumpsSparseSolver_2(arg_fptr_dmumps_c)); break;
 	#elif defined SOLVER_SPRAL
 		case LST_SPRAL: linSol = new SpralSparseSolver(); break;
-	#elif defined SOLVER_NONE
-		case LST_NONE: linSol = new DummySparseSolver(); break;
 	#endif
+		case LST_NONE: linSol = new DummySparseSolver(); break;
+		case LST_ANY:
+			#ifdef SOLVER_MA57
+				linSol = new Ma57SparseSolver(); break;
+			#elif defined SOLVER_MA27
+				linSol = new Ma27SparseSolver(); break;
+			#elif defined SOLVER_MUMPS
+				linSol = arg_fptr_dmumps_c == nullptr ? static_cast<LinearSolver*>(new MumpsSparseSolver()) : static_cast<LinearSolver*>(new MumpsSparseSolver_2(arg_fptr_dmumps_c)); break;
+			#elif defined SOLVER_SPRAL
+				linSol = new SpralSparseSolver(); break;
+			#endif
+			linSol = new LapackDenseSolver(); break;
 		default:
-			printf("WARNING: The selected linear solver was not available. Setting DummySparseSolver\n");
-			linSol = new DummySparseSolver(); break;
+			printf("WARNING: The selected linear solver for SQProblemSchur was not available. Setting DummySparseSolver. The QP solution will likely fail.\n");
+			linSol = new DummySparseSolver();
 	}
-// if (_linSolType == LST_LAPACK) linSol = new DenseLinearSolver();
+// if (_linSolType == LST_LAPACK) linSol = new LapackDenseSolver();
 // #ifdef SOLVER_MA57
 // 	if (_linSolType == LST_MA57) linSol = new Ma57SparseSolver();
 // #elif defined SOLVER_MA27

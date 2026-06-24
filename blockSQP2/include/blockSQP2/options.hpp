@@ -188,7 +188,7 @@ class SQPoptions{
     //Checks for inconsistent options. Throw ParameterError if inconsistent options are detected. Calls complete_QP_options.
     void optionsConsistency();
     //Set default QP solver options and copy over some options from the SQP options. Assumes options are consistent. Automatically called by optionsConsistency
-    void complete_QP_options();
+    void complete_QP_options(Problemspec *problem);
 };
 
 
@@ -200,7 +200,9 @@ class QPsolver_options{
     double inf;
     double max_QP_secs;
     int max_QP_it;
-
+    
+    bool condensed;
+    
     protected:
     QPsolver_options(QPsolvers SOL);
     public:

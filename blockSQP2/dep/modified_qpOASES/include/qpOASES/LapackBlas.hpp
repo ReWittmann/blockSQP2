@@ -38,8 +38,8 @@
 	#define POTRF dpotrf_
 	#define TRTRS dtrtrs_
 	#define TRCON dtrcon_
-	#define SYTRF dsytrf_
-	#define SYTRS dsytrs_
+	#define SYTRF dsytrf_rook_
+	#define SYTRS dsytrs_rook_
 #endif // __USE_SINGLE_PRECISION__
 
 #ifdef LAPACK_FORTRAN_STRLEN_END

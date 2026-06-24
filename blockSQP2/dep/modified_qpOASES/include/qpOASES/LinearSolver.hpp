@@ -44,6 +44,7 @@
 #include <sstream>
 
 #include <qpOASES/Utils.hpp>
+#include <qpOASES/LapackBlas.hpp>
 
 #ifdef SOLVER_SPRAL
 	#include "spral.h"
@@ -131,13 +132,12 @@ class LinearSolver
 };
 
 
-
-class DenseLinearSolver : public LinearSolver{
+class LapackDenseSolver : public LinearSolver{
 	public:
-	DenseLinearSolver();
-	DenseLinearSolver(const DenseLinearSolver &rhs);
-	virtual ~DenseLinearSolver();
-	virtual DenseLinearSolver& operator=(const LinearSolver &rhs);
+	LapackDenseSolver();
+	LapackDenseSolver(const LapackDenseSolver &rhs);
+	virtual ~LapackDenseSolver();
+	virtual LapackDenseSolver& operator=(const LinearSolver &rhs);
 	virtual returnValue setMatrixData(	int_t dim,					/**< Dimension of the linear system. */
 										int_t numNonzeros,			/**< Number of nonzeros in the matrix. */
 										const int_t* const airn,		/**< Row indices for each matrix entry. */
@@ -170,12 +170,14 @@ class DenseLinearSolver : public LinearSolver{
 
 		/** Copies all members from given rhs object.
 		 *  \return SUCCESSFUL_RETURN */
-		returnValue copy(const DenseLinearSolver& rhs);
+		returnValue copy(const LapackDenseSolver& rhs);
 		
 	private:
 		int_t dim;
-		double* A;          // dense column-major matrix
-		int_t* ipiv;          // LAPACK pivots
+		double* A;
+		lapack_int lwork;
+		double *work;
+		lapack_int* ipiv;
 		int_t neig;
 		int_t rank;
 		bool have_factorization;

@@ -423,6 +423,22 @@ set_target_properties(example_condensing
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
 )
 
+add_executable(example_dsytrf blockSQP2/examples/example_dsytrf.cpp)
+target_link_libraries(example_dsytrf blockSQP2 LAPACK::LAPACK BLAS::BLAS)
+target_include_directories(example_dsytrf PRIVATE ${qpOASES_MODDED_DIR}/include)
+set_target_properties(example_dsytrf
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
+)
+
+add_executable(example_dsytrf_2 blockSQP2/examples/example_dsytrf_2.cpp)
+target_link_libraries(example_dsytrf_2 blockSQP2 LAPACK::LAPACK BLAS::BLAS)
+target_include_directories(example_dsytrf_2 PRIVATE ${qpOASES_MODDED_DIR}/include)
+set_target_properties(example_dsytrf_2
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
+)
+
 
 option(PYTHON_INTERFACE "build python interface" ON)
 if(PYTHON_INTERFACE)

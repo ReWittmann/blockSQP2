@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Hang_Glider(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -36,7 +36,7 @@ OCprob = OCProblems.Hang_Glider(
                     )
 
 itMax = 100                                   #max number of steps
-step_plots = True                           #Plot each iterate?
+step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 
@@ -112,7 +112,7 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 #Recommended: Dont pass condenser to activate condensing, 
 #but pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
-# prob.condenser = condenser
+prob.condenser = condenser
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)

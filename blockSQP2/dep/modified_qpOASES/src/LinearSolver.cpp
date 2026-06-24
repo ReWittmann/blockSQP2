@@ -193,38 +193,33 @@ returnValue LinearSolver::copy( 	const LinearSolver& rhs
 
 
 
-//#####################
-DenseLinearSolver::DenseLinearSolver(): 
-		LinearSolver(){
-    A = nullptr;
-    ipiv = nullptr;
 
-    dim = -1;
-    neig = -1;
-    rank = -1;
 
-    have_factorization = false;
-}
+LapackDenseSolver::LapackDenseSolver(): 
+		LinearSolver(), 
+		dim(-1),
+		A(nullptr),
+		lwork(-1),
+		work(nullptr),
+		ipiv(nullptr),
+		neig(-1),
+		rank(-1),
+		have_factorization(false){}
 
-DenseLinearSolver::DenseLinearSolver(const DenseLinearSolver& rhs)
-    : LinearSolver(rhs)
-{
-    A = 0;
-    ipiv = 0;
-
+LapackDenseSolver::LapackDenseSolver(const LapackDenseSolver& rhs): 
+		LinearSolver(rhs){
     copy(rhs);
 }
 
-DenseLinearSolver::~DenseLinearSolver(){
+LapackDenseSolver::~LapackDenseSolver(){
     clear();
 }
 
-DenseLinearSolver& DenseLinearSolver::operator=( const LinearSolver& rhs )
-{
-	const DenseLinearSolver* dense_rhs = dynamic_cast<const DenseLinearSolver*>(&rhs);
+LapackDenseSolver& LapackDenseSolver::operator=( const LinearSolver& rhs ){
+	const LapackDenseSolver* dense_rhs = dynamic_cast<const LapackDenseSolver*>(&rhs);
 	if (!dense_rhs)
 	{
-		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in DenseLinearSolver& DenseLinearSolver::operator=( const LinearSolver& rhs )\n");
+		fprintf(getGlobalMessageHandler()->getOutputFile(),"Error in LapackDenseSolver& LapackDenseSolver::operator=( const LinearSolver& rhs )\n");
 		throw; /* TODO: More elegant exit? */
 	}
 	if ( this != dense_rhs )
@@ -236,9 +231,9 @@ DenseLinearSolver& DenseLinearSolver::operator=( const LinearSolver& rhs )
 	return *this;
 }
 
-returnValue DenseLinearSolver::copy(const DenseLinearSolver& rhs)
-{
+returnValue LapackDenseSolver::copy(const LapackDenseSolver& rhs){
     dim = rhs.dim;
+	lwork = rhs.lwork;
     neig = rhs.neig;
     rank = rhs.rank;
     have_factorization = rhs.have_factorization;
@@ -250,22 +245,30 @@ returnValue DenseLinearSolver::copy(const DenseLinearSolver& rhs)
     else A = nullptr;
 
     if (rhs.ipiv != nullptr && dim > 0){
-        ipiv = new int[dim];
+        ipiv = new lapack_int[dim];
         memcpy(ipiv, rhs.ipiv, dim*sizeof(int));
     }
     else ipiv = nullptr;
+	
+	if (rhs.work != nullptr && lwork > 0){
+		work = new double[lwork];
+	}
+	else work = nullptr;
 
     return SUCCESSFUL_RETURN;
 }
 
-returnValue DenseLinearSolver::clear(){
-    delete [] A;
-    delete [] ipiv;
+returnValue LapackDenseSolver::clear(){
+    delete[] A;
+    delete[] ipiv;
+	delete[] work;
 
-    A = 0;
-    ipiv = 0;
+    A = nullptr;
+    ipiv = nullptr;
+	work = nullptr;
 
     dim = -1;
+	lwork = -1;
     neig = -1;
     rank = -1;
 
@@ -274,38 +277,39 @@ returnValue DenseLinearSolver::clear(){
     return SUCCESSFUL_RETURN;
 }
 
-returnValue DenseLinearSolver::reset(){
+returnValue LapackDenseSolver::reset(){
     clear();
     return SUCCESSFUL_RETURN;
 }
 
-returnValue DenseLinearSolver::setMatrixData(
+returnValue LapackDenseSolver::setMatrixData(
     	int_t dim_, int_t numNonzeros,
     	const int_t* const airn,
     	const int_t* const acjn,
     	const real_t* const avals){
     reset();
-
     dim = dim_;
-
     if (dim == 0) return SUCCESSFUL_RETURN;
-
+			
+	ipiv = new lapack_int[dim];
+	std::fill(ipiv, ipiv + dim, 0.0);
     A = new double[dim*dim];
     std::fill(A, A + dim*dim, 0.0);
     for (int_t k = 0; k < numNonzeros; ++k){
-        int_t i = airn[k];
-        int_t j = acjn[k];
+        int_t i = airn[k] - 1;
+        int_t j = acjn[k] - 1;
         double v = avals[k];
-
-        A[i + j*dim] = v;
+        
+		//Duplicate entries MUST be summed up.
+		A[i + j*dim] += v;
         if (i != j)
-            A[j + i*dim] = v;
-    }
+            A[j + i*dim] += v;
+    }	
     return SUCCESSFUL_RETURN;
 }
 
 
-returnValue DenseLinearSolver::factorize()
+returnValue LapackDenseSolver::factorize()
 {
     if (dim == 0)
     {
@@ -315,49 +319,33 @@ returnValue DenseLinearSolver::factorize()
         return SUCCESSFUL_RETURN;
     }
 
-    delete [] ipiv;
-    ipiv = new int[dim];
+    // delete [] ipiv;
+    // ipiv = new lapack_int[dim];
 
-    int n = static_cast<int>(dim);
-    int lda = n;
-    int info;
+    lapack_int n = static_cast<lapack_int>(dim);
+    lapack_int lda = n;
+    lapack_int info;
 
     double work_query;
-    int lwork = -1;
-	
 	SYTRF("L", &n, A, &lda, ipiv, &work_query, &lwork, &info STRLENS1(1));
-    // dsytrf_("L",
-    //         &n,
-    //         A,
-    //         &lda,
-    //         ipiv,
-    //         &work_query,
-    //         &lwork,
-    //         &info);
-
-    lwork = static_cast<int>(work_query);
-
-    // std::vector<double> work(lwork);
-	double *work = new double[lwork];
+	lapack_int newlwork = static_cast<lapack_int>(work_query);
+	
+	if (lapack_int newlwork = static_cast<lapack_int>(work_query) > lwork){
+    	lwork = newlwork;
+		delete[] work;
+		work = new double[lwork];
+	}
 
 	SYTRF("L", &n, A, &lda, ipiv, work, &lwork, &info STRLENS1(1));
-    // dsytrf_("L",
-    //         &n,
-    //         A,
-    //         &lda,
-    //         ipiv,
-    //         work,
-    //         &lwork,
-    //         &info);
-
+	
     if (info > 0)
-    {
+    {std::cout << "Error, matrix is singular\n";
         rank = info - 1;
         return RET_KKT_MATRIX_SINGULAR;
     }
 
-    if (info < 0)
-        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
+    if (info < 0){std::cout << "Error, factorization failed\n";
+        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);}
 
     rank = dim;
 
@@ -380,20 +368,8 @@ returnValue DenseLinearSolver::factorize()
             double tr  = d11 + d22;
             double det = d11*d22 - d21*d21;
 			
-			neig += int(det < 0.0); // one positive, one negative
-			neig += int(det >= 0.0 && tr < 0.0);// both negative
-            // if (det < 0.0)
-            // {
-            //     // one positive, one negative
-            //     neig += 1;
-            // }
-            // else if (tr < 0.0)
-            // {
-            //     //
-            //     // both negative
-            //     //
-            //     neig += 2;
-            // }
+			neig += int(det < 0.0);
+			neig += int(det >= 0.0 && tr < 0.0);
             i += 2;
         }
     }
@@ -401,43 +377,34 @@ returnValue DenseLinearSolver::factorize()
     return SUCCESSFUL_RETURN;
 }
  
-returnValue DenseLinearSolver::solve(int_t dim_, const real_t* const rhs, real_t* const sol){
+returnValue LapackDenseSolver::solve(int_t dim_, const real_t* const rhs, real_t* const sol){
     if (dim_ != dim)
         return THROWERROR(RET_INVALID_ARGUMENTS);
 
     if (!have_factorization)
         return THROWERROR(RET_INVALID_ARGUMENTS);
 
-    int n = static_cast<int>(dim);
-    int nrhs = 1;
-    int lda = n;
-    int ldb = n;
-    int info;
+    lapack_int n = static_cast<lapack_int>(dim);
+    lapack_int nrhs = 1;
+    lapack_int lda = n;
+    lapack_int ldb = n;
+    lapack_int info;
 
     memcpy(sol, rhs, n*sizeof(double));
 	
 	SYTRS("L", &n, &nrhs, A, &lda, ipiv, sol, &ldb, &info STRLENS1(1));
-    // dsytrs_("L",
-    //         &n,
-    //         &nrhs,
-    //         A,
-    //         &lda,
-    //         ipiv,
-    //         sol,
-    //         &ldb,
-    //         &info);
 
     if (info != 0)
         return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
-
+		
     return SUCCESSFUL_RETURN;
 }
 
-int_t DenseLinearSolver::getNegativeEigenvalues(){
+int_t LapackDenseSolver::getNegativeEigenvalues(){
     return have_factorization ? neig : -1;
 }
 
-int DenseLinearSolver::getRank(){
+int LapackDenseSolver::getRank(){
     return rank;
 }
 

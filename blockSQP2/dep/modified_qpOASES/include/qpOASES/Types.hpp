@@ -290,6 +290,7 @@ enum SchurUpdateType
 };
 
 enum LinearSolverType{
+	LST_ANY,
 	LST_NONE,
 	LST_LAPACK,
 	LST_MA27,

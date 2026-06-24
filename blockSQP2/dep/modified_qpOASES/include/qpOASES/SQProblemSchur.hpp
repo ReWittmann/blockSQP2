@@ -88,7 +88,7 @@ class SQProblemSchur : public SQProblem
 						int_t _nC,		  						/**< Number of constraints. */
 						HessianType _hessianType = HST_UNKNOWN,	/**< Type of Hessian matrix. */
 						int_t maxSchurUpdates = 75,				/**< Maximal number of Schur updates */
-						LinearSolverType _linSolType = LST_MUMPS,
+						LinearSolverType _linSolType = LST_ANY,
 						void *arg_fptr_dmumps_c = nullptr
 						);
 

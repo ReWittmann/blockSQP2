@@ -77,7 +77,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions,
         prob, cond, HOLD = create_prob_cond(OCprob)
         prob.x_start = start_it
         if COND:
-            prob.cond = cond
+            prob.condenser = cond
         
         stats = blockSQP2.SQPstats("./solver_outputs")        
         t0 = time.monotonic()

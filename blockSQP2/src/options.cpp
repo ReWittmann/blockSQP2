@@ -67,6 +67,7 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
         throw ParameterError("Using exact Hessian for now requires passing blockIdx to Problemspec and enabling block updates through SQPoptions");
     
     optionsConsistency();
+    complete_QP_options(problem);
 }
 
 void SQPoptions::optionsConsistency(){
@@ -137,11 +138,9 @@ void SQPoptions::optionsConsistency(){
     if (lim_mem && mem_size > 200){
         std::cout << "WARNING: Large value of mem_size (> 200). Performance may be impeded\n";
     }   
-    
-    complete_QP_options();
 }
 
-void SQPoptions::complete_QP_options(){
+void SQPoptions::complete_QP_options(Problemspec *problem){
     //Create default options if no options have been passed
     if (qpsol_options == nullptr){
         if (qpsol == QPsolvers::qpOASES) held_qpsol_options = std::make_unique<qpOASES_options>();
@@ -156,7 +155,9 @@ void SQPoptions::complete_QP_options(){
     if (qpsol_options->inf == std::numeric_limits<double>::infinity()) qpsol_options->inf = inf;  
     if (qpsol_options->max_QP_secs == 10.) qpsol_options->max_QP_secs = max_QP_secs;
     if (qpsol_options->max_QP_it == std::numeric_limits<int>::max()) qpsol_options->max_QP_it = max_QP_it;
-
+    
+    qpsol_options->condensed = (problem->cond != nullptr);
+        
     //Infer solver specific options from SQPoptions
     //  Infer qpOASES sparsityLevel
     if (qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
@@ -171,6 +172,7 @@ QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
     inf = std::numeric_limits<double>::infinity();
     max_QP_secs = 10.;
     max_QP_it = std::numeric_limits<int>::max();
+    condensed = false;
 }
 QPsolver_options::~QPsolver_options(){}
 

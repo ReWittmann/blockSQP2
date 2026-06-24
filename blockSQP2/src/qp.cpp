@@ -646,9 +646,9 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         // double s_prev = 0.;
         for (; j < 5; j++){
             computeLowerRegularizedHessian(j, maxQP);
-            sub_QP->set_timeLimit(TimeLimitTypes::past_avg);
-            sub_QP->set_hess(vars->hess, false, 0);
-            QPresults QP_result_temp = sub_QP->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
+            sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);
+            sub_QPs_par[1]->set_hess(vars->hess, false, 0);
+            QPresults QP_result_temp = sub_QPs_par[1]->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
             if (QP_result_temp == QPresults::success){
                 deltaXi = vars->deltaXi_temp; 
                 lambdaQP = vars->lambdaQP_temp;
