@@ -34,15 +34,6 @@ using namespace std::chrono;
 
 #ifdef QPSOLVER_QPOASES
     #include "qpOASES.hpp"
-    
-    // namespace qpOASES{
-    //     class Options;
-        
-    //     class SQProblem;
-        
-    //     class Matrix;
-    //     class SymmetricMatrix;
-    // }
 #endif
 
 #ifdef QPSOLVER_GUROBI
@@ -76,7 +67,7 @@ enum class TimeLimitTypes{
 
 //QP solver interface
 class BasicQPsolver{
-    public:
+    public:    
     virtual ~BasicQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj) = 0;
@@ -84,13 +75,15 @@ class BasicQPsolver{
     virtual void set_constr(const Matrix &constr_jac) = 0;
     virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind) = 0;
     //Set hessian and pass on whether hessian is supposedly positive definite
-    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false) = 0;
     
     virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0) = 0;
     virtual void set_use_hotstart(bool use_hom) = 0;
     
     //Set QP/active set of which to hotstart from. QP solver dependent, no effect by default, very important for qpOASES
     virtual void set_hotstart_point(BasicQPsolver *hot_QP);
+    virtual void set_reg(double arg) = 0;              // Set regularization factor for the current Hessian
+    virtual double get_reg() = 0;
     
     //Statistics
     virtual int get_QP_it() = 0;
@@ -137,6 +130,10 @@ class QPsolver : public BasicQPsolver{
     //Set by set_hess
     bool convex_QP;
     
+    double regF;        //Regularization factor
+    double convex_regF; //Regularization factor for convex QPs
+    
+    
     //One time QP solving options (reset if a QP solve is successful)
     //bool record_time;
     bool skip_timeRecord;
@@ -160,7 +157,7 @@ class QPsolver : public BasicQPsolver{
     virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
     
     //Set hessian and pass on whether hessian is supposedly positive definite
-    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0) = 0;
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false) = 0;
     
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
@@ -168,23 +165,56 @@ class QPsolver : public BasicQPsolver{
     
     virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
     virtual void set_use_hotstart(bool use_hom);
+    virtual double get_reg();
     
     //Statistics
     virtual int get_QP_it();
     virtual double get_solutionTime();
 };
 
-//QP solver with condensing step.
-//Requires BasicQPsolver instantiated for the condensed QPs of size cond->num_cons, cond->num_vars, ...
-class CQPsolver : public BasicQPsolver{
+
+class BasicCQPsolver : public BasicQPsolver{
     public:
     BasicQPsolver *inner_QPsol;
+    Condenser *condenser;
     bool QPsol_own;
-    std::unique_ptr<Condenser> cond;
+    bool condenser_own;
+    
+    Matrix xi_cond, lambda_cond;
+    
+    double regF;
+    bool reg_updated;
+    
+    bool cond_h_updated, cond_hess_updated, cond_A_updated, cond_bounds_updated;
+    
+    BasicCQPsolver(BasicQPsolver *arg_CQPsol, Condenser *arg_cond, bool arg_QPsol_own, bool arg_cond_own);
+    virtual ~BasicCQPsolver();
+    
+    virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
+    void set_use_hotstart(bool use_hom);
+    
+    void set_hotstart_point(BasicQPsolver *hot_QP);
+    void set_hotstart_point(BasicCQPsolver *hot_QP);
+    void set_reg(double arg);
+    double get_reg();
+    
+    //Statistics
+    virtual int get_QP_it();
+    virtual double get_solutionTime();
+};
+
+
+//QP solver with condensing step.
+//Requires BasicQPsolver instantiated for the condensed QPs of size cond->num_cons, cond->num_vars, ...
+class CQPsolver : public BasicCQPsolver{
+    public:
+    // BasicQPsolver *inner_QPsol;
+    // Condenser *condenser;
+    // bool QPsol_own;
+    // bool condenser_own;
     
     std::unique_ptr<SymMatrix[]> hess_qp;
     bool convex_QP;
-    double regF;
     
     Matrix h_qp, lb_x, ub_x, lb_A, ub_A;
     Sparse_Matrix sparse_A_qp;
@@ -193,19 +223,26 @@ class CQPsolver : public BasicQPsolver{
     Matrix h_cond, lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond;
     Sparse_Matrix sparse_A_cond;
     
-    Matrix xi_cond, lambda_cond;
+    // Matrix xi_cond, lambda_cond;
     
-    //Flags indicating which data was updates, may avoid unnecessary work
-    bool h_updated, A_updated, bounds_updated, hess_updated;
+    //Flags indicating which data was updated, may avoid unnecessary work
+    bool h_updated, hess_updated, A_updated, bounds_updated;
+    
+    //Function to update cond_*_updated.
+    // bool cond_h_updated, cond_hess_updated, cond_A_updated, cond_bounds_updated;
+    
+    // double regF;
+    // bool reg_updated;
+    
+    std::vector<BasicCQPsolver*> shared_CQPsols;
     
     //
     std::unique_ptr<Matrix[]> corrections;
-    //std::unique_ptr<Matrix[]> SOC_corretions;
+    std::unique_ptr<Matrix[]> SOC_corretions;
     Matrix h_corr, lb_A_corr, ub_A_corr;
     
-    CQPsolver(BasicQPsolver *arg_CQPsol, Condenser *arg_cond, bool arg_QPsol_own = false);
-    CQPsolver(std::unique_ptr<BasicQPsolver> arg_CQPsol, Condenser *arg_cond);
-    ~CQPsolver();
+    CQPsolver(BasicQPsolver *arg_CQPsol, Condenser *arg_cond, bool arg_QPsol_own, bool arg_cond_own);
+    virtual ~CQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj);
     virtual void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
@@ -214,31 +251,45 @@ class CQPsolver : public BasicQPsolver{
     virtual void set_constr(const Matrix &constr_jac);
     virtual void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
     
-    //Set hessian and pass on whether hessian is supposedly positive definite
-    virtual void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
-
+    //Set Hessian and pass on whether Hessian is supposedly positive definite
+    virtual void set_hess(SymMatrix *const hess, bool pos_def = false);
+    
+    // void invoke_condenser();
     //Solve the QP and write the primal/dual result in deltaXi/lambdaQP.
     //IMPORTANT: deltaXi and lambdaQP have to remain unchanged if the QP solution fails.
     void setup_inner_QPsol(Matrix &deltaXi, Matrix &lambdaQP);
     virtual QPresults solve(Matrix &deltaXi, Matrix &lambdaQP);
     virtual void solve(std::stop_token stopRequest, std::promise<QPresults> QP_result, Matrix &deltaXi, Matrix &lambdaQP);
     
-    virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
-    void set_use_hotstart(bool use_hom);
+    // virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
+    // void set_use_hotstart(bool use_hom);
     
-    void set_hotstart_point(BasicQPsolver *hot_QP);
-    void set_hotstart_point(CQPsolver *hot_QP);
+    // void set_hotstart_point(BasicQPsolver *hot_QP);
+    // void set_hotstart_point(CQPsolver *hot_QP);
+    // void set_reg(double arg);
+    // double get_reg();
     
-    //Statistics
-    virtual int get_QP_it();
-    virtual double get_solutionTime();
+    // //Statistics
+    // virtual int get_QP_it();
+    // virtual double get_solutionTime();
+    
+    void add_shared(BasicCQPsolver *arg_shared);
+    void remove_shared(BasicCQPsolver *arg_shared);
     
     //Correction
     QPresults bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
     
     QPresults correction_solve(Matrix &deltaXi, Matrix &lambdaQP);
-    //int SOC_bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);
+    //int SOC_bound_correction(const Matrix &xi, const Matrix &lb_var, const Matrix &ub_var, Matrix &deltaXi_corr, Matrix &lambdaQP_corr);    
+};
+
+//CQPsolver using the condenser of another CQPsolver. This is possible because regularizing a condensed Hessian does not require data changes in the condenser.
+class SharedCQPsolver : public BasicCQPsolver{
+    public:
+    CQPsolver *CQPsol;
     
+    SharedCQPsolver(CQPsolver *CQPsol, BasicQPsolver *arg_CQPsol, bool arg_QPsol_own);
+    virtual ~SharedCQPsolver();
 };
 
 
@@ -262,6 +313,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
         std::unique_ptr<qpOASES::SQProblem> qpCheck; 
         
         std::unique_ptr<qpOASES::Matrix> A_qp;
+        
         std::unique_ptr<qpOASES::SymmetricMatrix> H_qp;
         
         std::unique_ptr<double[]> h_qp;                                       // linear term in objective
@@ -291,10 +343,12 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
 
         void set_constr(const Matrix &constr_jac);
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
+        void set_hess(SymMatrix *const hess, bool pos_def = false);
         
         void set_hotstart_point(BasicQPsolver *hot_QP);
         void set_hotstart_point(qpOASES_solver *hot_QP);
+        
+        virtual void set_reg(double arg);
         
         QPresults solve(Matrix &deltaXi, Matrix &lambdaQP);
         //int solve(std::stop_token stopRequest, bool *hasFinished, int *result, Matrix &deltaXi, Matrix &lambdaQP);
@@ -335,13 +389,15 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
 
         gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, gurobi_options *QPopts);
         ~gurobi_solver();
-
+        
+        void set_reg(double arg);
+        
         void set_lin(const Matrix &grad_obj);
         void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
 
         void set_constr(const Matrix &constr_jac);
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
+        void set_hess(SymMatrix *const hess, bool pos_def = false);
 
         QP_result solve(Matrix &deltaXi, Matrix &lambdaQP);
 
@@ -365,13 +421,15 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
 
         qpalm_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, qpalm_options *QPopts);
         ~qpalm_solver();
-
+        
+        void set_reg(double arg);
+        
         void set_lin(const Matrix &grad_obj);
         void set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A);
 
         void set_constr(const Matrix &constr_jac);
         void set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind);
-        void set_hess(SymMatrix *const hess, bool pos_def = false, double regularizationFactor = 0.0);
+        void set_hess(SymMatrix *const hess, bool pos_def = false);
 
         QP_result solve(Matrix &deltaXi, Matrix &lambdaQP);
 

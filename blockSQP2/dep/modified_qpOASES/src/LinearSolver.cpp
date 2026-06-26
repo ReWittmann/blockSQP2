@@ -338,25 +338,20 @@ returnValue LapackDenseSolver::factorize()
 
 	SYTRF("L", &n, A, &lda, ipiv, work, &lwork, &info STRLENS1(1));
 	
-    if (info > 0)
-    {std::cout << "Error, matrix is singular\n";
+    if (info > 0){
         rank = info - 1;
         return RET_KKT_MATRIX_SINGULAR;
     }
-
-    if (info < 0){std::cout << "Error, factorization failed\n";
-        return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);}
+    if (info < 0) return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
 
     rank = dim;
-
-    //
+	
     // Count negative eigenvalues from D
-    //
     neig = 0;
     for (int i = 0; i < n;){
         if (ipiv[i] > 0){
             // 1x1 pivot
-			neig += int(A[i + i*lda] < 0.0);
+			neig += int_t(A[i + i*lda] < 0.0);
 			i++;
         }
         else{
@@ -368,8 +363,8 @@ returnValue LapackDenseSolver::factorize()
             double tr  = d11 + d22;
             double det = d11*d22 - d21*d21;
 			
-			neig += int(det < 0.0);
-			neig += int(det >= 0.0 && tr < 0.0);
+			neig += int_t(det < 0.0);
+			neig += int_t(det >= 0.0 && tr < 0.0);
             i += 2;
         }
     }

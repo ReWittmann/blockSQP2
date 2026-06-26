@@ -111,7 +111,7 @@ BSQP_function_signatures = {
     "Problemspec_set_blockIdx": (None, (c_void_p, c_void_p, c_int)),
     "Problemspec_set_vblocks": (None, (c_void_p, c_void_p, c_int)),
     "Problemspec_pass_vblocks": (None, (c_void_p, c_void_p, c_int)),
-    "Problemspec_set_cond": (None, (c_void_p, c_void_p)),
+    "Problemspec_set_condenser": (None, (c_void_p, c_void_p)),
     "Problemspec_set_closure": (None, (c_void_p, c_void_p)),
     
     "Problemspec_set_dense_init": (None, (c_void_p, BSQP_callback_signatures['initialize_dense'])),

@@ -194,7 +194,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     n_scaleIt = 0;
     
     //Derived from parameters
-    modified_hess_regularizationFactor = param->reg_factor;
+    // modified_hess_regularizationFactor = param->reg_factor;
     
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;

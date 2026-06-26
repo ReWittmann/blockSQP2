@@ -73,7 +73,7 @@ class SQPmethod{
         Matrix rest_lambdaQP;
         
     protected:
-        bool                     initCalled = false;  ///< indicates if init() has been called (necessary for run())
+        bool initCalled = false;  ///< indicates if init() has been called (necessary for run())
         
     public:
         /// Construct a method for a given problem and set of algorithmic options
@@ -121,22 +121,19 @@ class SQPmethod{
         //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
         //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
+        // Dispatch to best solveQP variant based on parameters, options, iteration state etc.
         virtual QPresults solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
-        QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        
+            QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
+            QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+            QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+            
+            // QPresults solveQP_seq_default(Matrix &deltaXi, Matrix &lambdaQP);
+            // QPresults solveQP_seq_2(Matrix &deltaXi, Matrix &lambdaQP);
+            
+            // QPresults solveQP_par_default(Matrix &deltaXi, Matrix &lambdaQP);
+            // QPresults solveQP_par_cond(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Sequentially try to solve increasingly convexified QPs. 
-        //virtual int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        /////////////////////////////////
-        
-        //virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        //virtual int solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        
-        /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
-        //virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
-        
         virtual QPresults solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
         

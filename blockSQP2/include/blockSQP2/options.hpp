@@ -201,6 +201,7 @@ class QPsolver_options{
     double max_QP_secs;
     int max_QP_it;
     
+    double reg_factor;
     bool condensed;
     
     protected:

@@ -58,7 +58,7 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
     if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
     
-    if (problem->cond != nullptr && !block_hess)
+    if (problem->condenser != nullptr && !block_hess)
         throw ParameterError("Condenser passed, but block updates not enabled");
     
     if (block_hess == 2)
@@ -155,8 +155,9 @@ void SQPoptions::complete_QP_options(Problemspec *problem){
     if (qpsol_options->inf == std::numeric_limits<double>::infinity()) qpsol_options->inf = inf;  
     if (qpsol_options->max_QP_secs == 10.) qpsol_options->max_QP_secs = max_QP_secs;
     if (qpsol_options->max_QP_it == std::numeric_limits<int>::max()) qpsol_options->max_QP_it = max_QP_it;
+    if (qpsol_options->reg_factor == 0.0) qpsol_options->reg_factor = reg_factor; 
     
-    qpsol_options->condensed = (problem->cond != nullptr);
+    qpsol_options->condensed = (problem->condenser != nullptr);
         
     //Infer solver specific options from SQPoptions
     //  Infer qpOASES sparsityLevel
@@ -173,6 +174,7 @@ QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
     max_QP_secs = 10.;
     max_QP_it = std::numeric_limits<int>::max();
     condensed = false;
+    reg_factor = 0.0;
 }
 QPsolver_options::~QPsolver_options(){}
 

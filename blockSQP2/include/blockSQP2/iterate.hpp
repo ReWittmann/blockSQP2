@@ -157,7 +157,7 @@ class SQPiterate{
         
 
         //Derived options
-        double modified_hess_regularizationFactor;
+        // double modified_hess_regularizationFactor;
 
         //Step backup. Used during extra step phase to save the best iterate
         bool it_saved;

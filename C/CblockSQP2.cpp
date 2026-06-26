@@ -500,8 +500,8 @@ CDLEXP void Problemspec_pass_vblocks(void *ptr, void *arg_vblocks, int arg_n_vbl
     castCP(ptr)->vblocks = static_cast<vblock *>(arg_vblocks);
 }
 
-CDLEXP void Problemspec_set_cond(void *ptr, void *Condenser_cond){
-    castCP(ptr)->cond = static_cast<Condenser*>(Condenser_cond);
+CDLEXP void Problemspec_set_condenser(void *ptr, void *Condenser_obj){
+    castCP(ptr)->condenser = static_cast<Condenser*>(Condenser_obj);
 }
 
 CDLEXP void Problemspec_set_closure(void *ptr, void *arg_closure){

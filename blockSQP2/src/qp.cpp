@@ -130,7 +130,6 @@ void SQPmethod::computeLowerRegularizedHessian(int idx, int maxQP){
     }
     idScale = vars->convKappa * std::pow(2, -idx - (maxQP - 2)) * (1.0 - 2*(idx > 0));
     
-    std::cout << "idx = " << idx << ", idScale = " << idScale << "\n";
     if (param->conv_strategy == 1){
         for (int i = 0; i < vars->nBlocks; i++){
             for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
@@ -306,12 +305,12 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
         }
         if (l == maxQP - 1){
             //Pass hessian and inform QP solver of supposed convexity
-            sub_QP->set_hess(vars->hess, true, vars->modified_hess_regularizationFactor);
+            sub_QP->set_hess(vars->hess, true);
             sub_QP->set_timeLimit(TimeLimitTypes::standard);
         }
         else{
             sub_QP->set_timeLimit(TimeLimitTypes::past_avg);
-            sub_QP->set_hess(vars->hess, false, 0);
+            sub_QP->set_hess(vars->hess, false);
         }
         
         QP_result = sub_QP->solve(deltaXi, lambdaQP);
@@ -332,7 +331,7 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
                     for (; j < 5; j++){
                         computeLowerRegularizedHessian(j, maxQP);
                         sub_QP->set_timeLimit(TimeLimitTypes::past_avg);
-                        sub_QP->set_hess(vars->hess, false, 0);
+                        sub_QP->set_hess(vars->hess, false);
                         QP_result_temp = sub_QP->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
                         if (QP_result_temp == QPresults::success){
                             deltaXi = vars->deltaXi_temp; 
@@ -347,7 +346,7 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
                 //For regularized indefinite hessians, compare steplength to fallback hessian to avoid over-regularized hessians leading to small steps.
                 else if (l > 1){ 
                     computeConvexHessian();
-                    sub_QP->set_hess(vars->hess, true, vars->modified_hess_regularizationFactor);
+                    sub_QP->set_hess(vars->hess, true);
                     sub_QP->set_timeLimit(TimeLimitTypes::standard);
                     QP_result_temp = sub_QP->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
                     if (QP_result_temp == QPresults::success){
@@ -624,7 +623,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     //     for (; j < 10; j++){
     //         computeLowerRegularizedHessian(j, maxQP);
     //         sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);
-    //         sub_QPs_par[1]->set_hess(vars->hess, false, 0);
+    //         sub_QPs_par[1]->set_hess(vars->hess, false);
     //         QPresults QP_result_temp = sub_QPs_par[1]->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
     //         if (QP_result_temp == QPresults::success){
     //             deltaXi = vars->deltaXi_temp; 
@@ -647,7 +646,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         for (; j < 5; j++){
             computeLowerRegularizedHessian(j, maxQP);
             sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);
-            sub_QPs_par[1]->set_hess(vars->hess, false, 0);
+            sub_QPs_par[1]->set_hess(vars->hess, false);
             QPresults QP_result_temp = sub_QPs_par[1]->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
             if (QP_result_temp == QPresults::success){
                 deltaXi = vars->deltaXi_temp; 
@@ -676,18 +675,6 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         lambdaQP = vars->par_QP_sols_dual[vars->hess_num_accepted];
         vars->QP_num_accepted = vars->hess_num_accepted;
     }
-    //Always true if above conditions are false
-    // if (s_indf_N >= param->conv_tau_H*s_conv_N){
-    //     deltaXi = vars->par_QP_sols_prim[vars->hess_num_accepted];
-    //     lambdaQP = vars->par_QP_sols_dual[vars->hess_num_accepted];
-    //     vars->QP_num_accepted = vars->hess_num_accepted;
-    // }
-    // else{
-    //     deltaXi = vars->par_QP_sols_prim[maxQP - 1];
-    //     lambdaQP = vars->par_QP_sols_dual[maxQP - 1];
-    //     stats->qpResolve = maxQP - 1;
-    //     vars->QP_num_accepted = maxQP - 1;
-    // }
     
     vars->conv_qp_solved = (vars->QP_num_accepted == (maxQP - 1));
     stats->qpIterations = sub_QPs_par[vars->QP_num_accepted]->get_QP_it();

@@ -286,7 +286,7 @@ class Problem(CXXobjCreator):
             BSQP.Problemspec_pass_vblocks(cxx_obj, vblock_array, c_int(len(self.vblocks)))
         
         if self.condenser is not None:
-            BSQP.Problemspec_set_cond(cxx_obj, self.condenser.get_cxx_obj())
+            BSQP.Problemspec_set_condenser(cxx_obj, self.condenser.get_cxx_obj())
         
         deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
         return CXXobjHolder(cxx_obj, deleter)
