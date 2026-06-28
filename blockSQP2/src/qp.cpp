@@ -255,8 +255,8 @@ QPresults SQPmethod::solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_
     
     QPS->set_hess(vars->hess, true);
     if (param->sparse)
-        QPS->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
-        // QPS->set_constr(vars->sparse_constrJac);
+        // QPS->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
+        QPS->set_constr(vars->sparse_constrJac);
     else
         QPS->set_constr(vars->constrJac);
     
@@ -287,8 +287,8 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
     vars->conv_qp_solved = false;
 
     if (param->sparse)
-        sub_QP->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
-        // sub_QP->set_constr(vars->sparse_constrJac);
+        // sub_QP->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
+        sub_QP->set_constr(vars->sparse_constrJac);
     else
         sub_QP->set_constr(vars->constrJac);
     
@@ -397,8 +397,8 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         if (j > 0) computeNextHessian(j, maxQP);
         
         if (param->sparse)
-            sub_QPs_par[j]->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
-            // sub_QPs_par[j]->set_constr(vars->sparse_constrJac);        
+            // sub_QPs_par[j]->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
+            sub_QPs_par[j]->set_constr(vars->sparse_constrJac);        
         else
             sub_QPs_par[j]->set_constr(vars->constrJac);
         sub_QPs_par[j]->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
@@ -704,7 +704,7 @@ QPresults SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
 
 QPresults bound_correction_method::bound_correction(Matrix &deltaXi_corr, Matrix &lambdaQP_corr){
     BasicQPsolver *correction_QP = param->par_QPs ? sub_QPs_par[vars->QP_num_accepted].get() : sub_QP.get();
-    return static_cast<BasicCQPsolver*>(correction_QP)->bound_correction(vars->xi, prob->lb_var, prob->ub_var, deltaXi_corr, lambdaQP_corr);
+    return static_cast<CQPsolver*>(correction_QP)->bound_correction(vars->xi, prob->lb_var, prob->ub_var, deltaXi_corr, lambdaQP_corr);
 }
 
 
@@ -714,7 +714,7 @@ QPresults bound_correction_method::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQ
     updateStepBoundsSOC();
     SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
 
-    QPresults QP_result = static_cast<BasicCQPsolver*>(SOC_QP)->correction_solve(deltaXi, lambdaQP);
+    QPresults QP_result = static_cast<CQPsolver*>(SOC_QP)->correction_solve(deltaXi, lambdaQP);
     stats->qpIterations += SOC_QP->get_QP_it();
     return QP_result;
 }

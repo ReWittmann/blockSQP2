@@ -165,6 +165,7 @@ void BasicCQPsolver::set_hotstart_point(BasicCQPsolver *hot_QP){
 
 
 void BasicCQPsolver::set_reg(double arg){
+    if (regF < 0.0) throw std::invalid_argument("BasicCQPsolver::set_reg - regularization factor < 0 invalid");
     regF = arg;
     reg_updated = true;
 }
@@ -260,6 +261,7 @@ void CQPsolver::set_hess(SymMatrix *const hess, bool pos_def){
     }
     hess_updated = true;
     set_reg(0.);
+    // reg_updated = false;
 }
 
 void CQPsolver::set_constr(const Matrix &constr_jac){
@@ -348,10 +350,11 @@ void CQPsolver::setup_inner_QPsol(Matrix &deltaXi, Matrix &lambdaQP){
     if (h_cond_updated) inner_QPsol->set_lin(h_cond);
     if (hess_cond_updated) inner_QPsol->set_hess(hess_cond.get(), convex_QP);
     if (A_cond_updated) inner_QPsol->set_constr(sparse_A_cond.nz.get(), sparse_A_cond.row.get(), sparse_A_cond.colind.get());
-    if (bounds_updated) inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    if (bounds_cond_updated) inner_QPsol->set_bounds(lb_x_cond, ub_x_cond, lb_A_cond, ub_A_cond);
+    
     set_cond_update_flags(false, false, false, false);
     
-    if (reg_updated && regF != 0.0) inner_QPsol->set_reg(regF);
+    if (reg_updated) inner_QPsol->set_reg(regF);
     reg_updated = false;
 }
 
