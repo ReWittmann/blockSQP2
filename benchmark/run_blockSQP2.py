@@ -49,7 +49,7 @@ opts = blockSQP2.SQPoptions(
     
     max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
-    par_QPs = True,                        #Enable parallel solution of QPs
+    par_QPs = False,                        #Enable parallel solution of QPs
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
