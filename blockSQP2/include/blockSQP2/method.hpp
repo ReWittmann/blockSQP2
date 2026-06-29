@@ -128,14 +128,18 @@ class SQPmethod{
             QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
             
             // QPresults solveQP_seq_default(Matrix &deltaXi, Matrix &lambdaQP);
-            // QPresults solveQP_seq_2(Matrix &deltaXi, Matrix &lambdaQP);
+            QPresults solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
             
             // QPresults solveQP_par_default(Matrix &deltaXi, Matrix &lambdaQP);
-            // QPresults solveQP_par_cond(Matrix &deltaXi, Matrix &lambdaQP);
+            QPresults solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Sequentially try to solve increasingly convexified QPs. 
         virtual QPresults solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
+        //For idx = 1,..., maxQP - 2, compute series of increasing Hessian regularization factors.
+        double computeRegularizationFactor(int idx, int maxQP);
+        //For idx = 0,..., compute series of decreasing Hessian regularization factors.
+        double computeLowerRegularizationFactor(int idx, int maxQP);
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         void computeNextHessian( int idx, int maxQP );
@@ -145,7 +149,6 @@ class SQPmethod{
         void computeLowerRegularizedHessian(int idx, int maxQP);
         /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
         void setIdentityHessian();
-        
         
         // Filter line search, restoration phase and associated heuristics
         /// No enable_linesearch strategy
@@ -214,10 +217,9 @@ class SQPmethod{
         // void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
         void calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
-        // void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
+        
         void calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizingType, SymMatrix *hess);
-        // void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
-        // void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
+        void calcHessianUpdateLimitedMemory_seq(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         void calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         void par_inner_update_loop(Hessians updateType, Sizings sizingType, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
         

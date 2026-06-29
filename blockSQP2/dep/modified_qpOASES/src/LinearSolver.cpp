@@ -42,6 +42,8 @@
 #include <qpOASES/LinearSolver.hpp>
 #include <qpOASES/LapackBlas.hpp>
 #include <iostream>
+#include <chrono>
+using namespace std::chrono;
 #include <stdexcept>
 // #include <algorithm>
 
@@ -310,7 +312,7 @@ returnValue LapackDenseSolver::setMatrixData(
 
 
 returnValue LapackDenseSolver::factorize()
-{
+{steady_clock::time_point T0 = steady_clock::now();
     if (dim == 0)
     {
         neig = 0;
@@ -369,10 +371,13 @@ returnValue LapackDenseSolver::factorize()
         }
     }
     have_factorization = true;
+	steady_clock::time_point T1 = steady_clock::now();
+	std::cout << "Factorizing with LAPACK took " << duration_cast<microseconds>(T1 - T0) << "\n";
     return SUCCESSFUL_RETURN;
 }
  
 returnValue LapackDenseSolver::solve(int_t dim_, const real_t* const rhs, real_t* const sol){
+	steady_clock::time_point T0 = steady_clock::now();
     if (dim_ != dim)
         return THROWERROR(RET_INVALID_ARGUMENTS);
 
@@ -391,7 +396,9 @@ returnValue LapackDenseSolver::solve(int_t dim_, const real_t* const rhs, real_t
 
     if (info != 0)
         return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
-		
+	
+	steady_clock::time_point T1 = steady_clock::now();
+	std::cout << "Solving with LAPACK took " << duration_cast<microseconds>(T1 - T0) << "\n";
     return SUCCESSFUL_RETURN;
 }
 
@@ -1532,7 +1539,7 @@ returnValue MumpsSparseSolver::setMatrixData(	int_t dim_,
  *	f a c t o r i z e
  */
 returnValue MumpsSparseSolver::factorize( )
-{
+{steady_clock::time_point T0 = steady_clock::now();
 	if ( dim == 0 )
 	{
 		have_factorization = true;
@@ -1679,7 +1686,8 @@ returnValue MumpsSparseSolver::factorize( )
 
 
 	have_factorization = true;
-
+	steady_clock::time_point T1 = steady_clock::now();
+	std::cout << "Factorizing with MUMPS took " << duration_cast<microseconds>(T1 - T0) << "\n";
 	return SUCCESSFUL_RETURN;
 }
 
@@ -1692,7 +1700,7 @@ returnValue MumpsSparseSolver::solve(	int_t dim_,
 										real_t* const sol
 										)
 {
-
+	steady_clock::time_point T0 = steady_clock::now();
     // printf("in solve (MUMPS)\n");
 	/* consistency check */
 	if ( dim_ != dim )
@@ -1728,7 +1736,8 @@ returnValue MumpsSparseSolver::solve(	int_t dim_,
         MyPrintf("Error=%i returned from MUMPS in Solve.\n", error);
         return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
     }
-
+	steady_clock::time_point T1 = steady_clock::now();
+	std::cout << "Solving with MUMPS took " << duration_cast<microseconds>(T1 - T0) << "\n";
 	return SUCCESSFUL_RETURN;
 }
 

@@ -43,13 +43,16 @@ plot_title = True                           #Put name of problem in plot?
 
 start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
+QPopts = blockSQP2.qpOASES_options(
+    sparsityLevel = 2
+    )
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
     
     max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
-    par_QPs = True,                        #Enable parallel solution of QPs
+    par_QPs = False,                        #Enable parallel solution of QPs
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
@@ -73,6 +76,9 @@ opts = blockSQP2.SQPoptions(
     
     test_opt_1 = True,
     test_opt_2 = True,
+    
+    qpsol = 'qpOASES',
+    qpsol_options = QPopts
 )
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()

@@ -341,10 +341,12 @@ void SQPmethod::calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMa
 }
 
 void SQPmethod::calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizingType, SymMatrix *hess){
+    calcHessianUpdateLimitedMemory_par(updateType, sizingType, hess);
+}
+
+void SQPmethod::calcHessianUpdateLimitedMemory_seq(Hessians updateType, Sizings sizingType, SymMatrix *hess){
     int iBlock;
     int n_updates, pos, posOldest;
-    // int hessDamped, hessSkipped;
-    // double averageSizingFactor;
     int nBlocks = vars->nBlocks - int(skip_last_block(hess));
     // Statistics: how often is damping active, what is the average COL sizing factor?
     stats->hessDamped = 0;
@@ -363,23 +365,11 @@ void SQPmethod::calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizi
         
         for (int i = 0; i < n_updates; i++){
             pos = (posOldest + i) % vars->dg_nsave;
-            // Save statistics, we want to record them only for the most recent update
-            // averageSizingFactor = stats->averageSizingFactor;
-            // hessDamped = stats->hessDamped;
-            // hessSkipped = stats->hessSkipped;
             
             // Selective sizing before the update
             if (sizingType == Sizings::COL && i > 0)
                 sizeHessianCOL(pos, iBlock, hess);
             calcQN(updateType, pos, iBlock, hess);
-            // stats->nTotalUpdates++;
-            // Count damping statistics only for the most recent update
-            // if (pos != vars->dg_pos){
-            //     stats->hessDamped = hessDamped;
-            //     stats->hessSkipped = hessSkipped;
-            //     if (sizingType == Sizings::COL)
-            //         stats->averageSizingFactor = averageSizingFactor;
-            // }
             
             //If too many updates are skipped during limited memory update, reset Hessian and restart from next limited memory update
             if (vars->noUpdateCounter[iBlock] > param->max_consec_skipped_updates){
@@ -511,13 +501,12 @@ void SQPmethod::calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping){
     double thetaPowell = 0.0;
     int damped;
     int Bsize = vars->blockIdx[iBlock + 1] - vars->blockIdx[iBlock];
-    //double myEps = 1.0e4 * param->eps;
 
     /* Work with a local copy of gamma because damping may need to change gamma.
      * Note that vars->gamma needs to remain unchanged!
      * This may be important in a limited memory context:
      * When information is "forgotten", B_i-1 is different and the
-     *  original gamma might lead to an undamped update with the new B_i-1! */
+     * original gamma might lead to an undamped update with the new B_i-1! */
     delta.Submatrix(vars->deltaMat, Bsize, 1, vars->blockIdx[iBlock], dpos);
     gamma2.Dimension(Bsize, 1);
     for (int i = 0; i < Bsize; i++){

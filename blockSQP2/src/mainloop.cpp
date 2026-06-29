@@ -411,21 +411,15 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             //Subvectors deltaNorm and deltaGamma will be updated as needed when calculating the hessian approximation
             //Skip update for the indefinite hessian when we only solve convex QPs. Delay update for convex hessian when we try indefinite Hessian first
             if (vars->conv_qp_only && vars->hess2 != nullptr){
-            // if ((vars->conv_qp_only || stats->itCount <= param->indef_delay) && vars->hess2 != nullptr){
-                // if (param->fallback_approx <= 2)
                 if (is_update(param->fallback_approx))
-                    calcHessianUpdateLimitedMemory_par(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
+                    calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
                 vars->hess2_updated = true;
             }
             else{
-                //if (param->exact_hess < 2){
-                    //Calculate/Update first (pos. indefinite) hessian
-                    // if (param->hess_approx <= 2 || param->hess_approx > 6)
                     if (is_update(param->hess_approx))
-                        calcHessianUpdateLimitedMemory_par(param->hess_approx, param->sizing, vars->hess1.get());
+                        calcHessianUpdateLimitedMemory(param->hess_approx, param->sizing, vars->hess1.get());
                     else if (param->hess_approx == Hessians::finite_diff)
                         calcFiniteDiffHessian(vars->hess1.get());
-                //}
                 vars->hess2_updated = false;
             }
         }
@@ -445,7 +439,6 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         }
         
         //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
-        //if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == 0 && stats->itCount > 1 && !vars->conv_qp_only){
         if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == StepTypes::linesearch && stats->itCount > param->indef_delay && !vars->conv_qp_only){
             if (param->max_conv_QPs > 2){
                 //If more than one convexified indefinite QP is tried, shift convexification factor of the successful QP to the last attempted convexified QP.
@@ -463,8 +456,6 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         //The scaling factor adjustment in one line of code
         //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->max_conv_QPs + 1 + (param->max_conv_QPs - 3) * (vars->hess_num_accepted == param->max_conv_QPs))*(param->max_conv_QPs > 2) + (1 - 2*(vars->hess_num_accepted < param->max_conv_QPs))*(param->max_conv_QPs <= 2))) * (param->conv_strategy >= 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->conv_strategy < 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
         vars->hess = vars->hess1.get();
-        
-        //stats->itCount++;
         skipLineSearch = false;
     }
 

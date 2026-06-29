@@ -666,7 +666,10 @@ Matrix Matrix::operator*(const Matrix &M2) const{
     //
 
     double *array_3 = new double[m * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
+    // if (M2.n == 1)
+    //     BSQP_BLASFUNC(cblas_dgemv(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1)));
+    // else
+        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
     return Matrix(m, M2.n, array_3);
 }
 
