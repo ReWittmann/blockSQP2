@@ -398,7 +398,7 @@ returnValue LapackDenseSolver::solve(int_t dim_, const real_t* const rhs, real_t
         return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
 	
 	steady_clock::time_point T1 = steady_clock::now();
-	std::cout << "Solving with LAPACK took " << duration_cast<microseconds>(T1 - T0) << "\n";
+	// std::cout << "Solving with LAPACK took " << duration_cast<microseconds>(T1 - T0) << "\n";
     return SUCCESSFUL_RETURN;
 }
 

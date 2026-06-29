@@ -212,8 +212,9 @@ class QPsolver_options{
 
 class qpOASES_options : public QPsolver_options{
     public:
-    int sparsityLevel;                   ///< Method used by qpOASES: -1 (default): Infer from SQPoptions, 0 - qpOASES::SQProblem (dense), 1 - qpOASES::SQProblem (sparse), 2 - schur.
-
+    // int sparsityLevel;                   ///< Method used by qpOASES: -1 (default): Infer from SQPoptions, 0 - qpOASES::SQProblem (dense), 1 - qpOASES::SQProblem (sparse), 2 - schur.
+    int matrixSparsity;            // -1 (default): Choose automatically, 0: Dense matrices and factorizations, 1: Sparse matrices and factorizations
+    
     //See qpOASES documentation
     int printLevel;                 ///< print level of qpOASES sub-qp solver, 0 = PL_NONE, 1 = PL_LOW, 2 = PL_MEDIUM, 3 = PL_HIGH
     double terminationTolerance;    ///< Termination tolerance of qp-subproblem solver qpOASES

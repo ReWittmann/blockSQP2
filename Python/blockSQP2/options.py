@@ -3,15 +3,15 @@ from typing import Optional
 from .cxxwrappers import CXXobjCreator, CXXobjHolder
 
 class qpOASESoptions(CXXobjCreator):
-    def __init__(self, sparsityLevel: int = 2, printLevel: int = 0, terminationTolerance: float = 5.0e6 * 2.221e-16):
-        self.sparsityLevel = sparsityLevel
+    def __init__(self, matrixSparsity: int = -1, printLevel: int = 0, terminationTolerance: float = 5.0e6 * 2.221e-16):
+        self.matrixSparsity = matrixSparsity
         self.printLevel = printLevel
         self.terminationTolerance = terminationTolerance
     def create_cxx_obj(self):
         BSQP = self.BSQP
         
         cxx_obj = BSQP.create_qpOASES_options()
-        BSQP.qpOASES_options_set_sparsityLevel(cxx_obj, c_int(self.sparsityLevel))
+        BSQP.qpOASES_options_set_matrixSparsity(cxx_obj, c_int(self.matrixSparsity))
         BSQP.qpOASES_options_set_printLevel(cxx_obj, c_int(self.printLevel))
         BSQP.qpOASES_options_set_terminationTolerance(cxx_obj, c_double(self.terminationTolerance))
         

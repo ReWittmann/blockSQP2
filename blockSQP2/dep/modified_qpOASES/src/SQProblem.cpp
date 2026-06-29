@@ -118,12 +118,13 @@ returnValue SQProblem::hotstart(	SymmetricMatrix *H_new, const real_t* const g_n
 		starttime = getCPUtime( );
 	}
 
-
+steady_clock::time_point T0 = steady_clock::now();
 	/* I) UPDATE QP MATRICES AND VECTORS */
 	if ( setupNewAuxiliaryQP( H_new,A_new,lb_new,ub_new,lbA_new,ubA_new ) != SUCCESSFUL_RETURN ) {
 		return THROWERROR( RET_SETUP_AUXILIARYQP_FAILED );
 	}
-
+steady_clock::time_point T1 = steady_clock::now();
+std::cout << "setupNewAuxiliaryQP took " << duration_cast<microseconds>(T1 - T0) << "\n";
 
 	/* II) PERFORM USUAL HOMOTOPY */
 

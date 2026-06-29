@@ -151,8 +151,8 @@ CDLEXP void *create_qpOASES_options(){
     return static_cast<void *>(new qpOASES_options());
 }
 
-CDLEXP void qpOASES_options_set_sparsityLevel(void *opts, int val){
-    static_cast<qpOASES_options *>(opts)->sparsityLevel = val;
+CDLEXP void qpOASES_options_set_matrixSparsity(void *opts, int val){
+    static_cast<qpOASES_options *>(opts)->matrixSparsity = val;
 }
 
 CDLEXP void qpOASES_options_set_printLevel(void *opts, int val){

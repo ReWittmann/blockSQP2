@@ -43,9 +43,9 @@ plot_title = True                           #Put name of problem in plot?
 
 start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 ################################
-QPopts = blockSQP2.qpOASES_options(
-    sparsityLevel = 2
-    )
+# QPopts = blockSQP2.qpOASES_options(
+#     sparsityLevel = 2
+#     )
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
@@ -78,7 +78,7 @@ opts = blockSQP2.SQPoptions(
     test_opt_2 = True,
     
     qpsol = 'qpOASES',
-    qpsol_options = QPopts
+    # qpsol_options = QPopts
 )
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()

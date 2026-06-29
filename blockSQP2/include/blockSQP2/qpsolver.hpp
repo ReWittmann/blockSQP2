@@ -316,6 +316,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
     class qpOASES_solver : public QPsolver{
         public:
         qpOASES::Options opts;
+        bool sparseMatrices;
         
         std::unique_ptr<qpOASES::SQProblem> qp;
         std::unique_ptr<qpOASES::SQProblem> qpSave;

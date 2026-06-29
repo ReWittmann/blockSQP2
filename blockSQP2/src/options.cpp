@@ -92,18 +92,6 @@ void SQPoptions::optionsConsistency(){
     if (last_block_approx != Hessians::last_block_default && last_block_approx != Hessians::exact && last_block_approx != Hessians::pos_def_exact)
         throw ParameterError("last_block_approx can only be last_block_default, exact or pos_def_exact");
     
-    //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
-    if (is_indefinite(hess_approx) || is_indefinite(last_block_approx)){
-        if (qpsol == QPsolvers::qpOASES){
-            if (qpsol_options == nullptr || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
-                if (!sparse) throw ParameterError("Indefinite Hessians not supported for dense qpOASES (derived from SQPoptions::sparse = 0, as no or default qpOASES_options::sparsityLevel was given)");
-            }
-            else if (static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel != 2)
-                throw ParameterError("Indefinite Hessians only supported for qpOASES with Schur-complement approach (qpOASES_options::sparsityLevel = 2)");
-        }
-        else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
-    }
-    
     if (par_QPs){
         #ifdef BSQP_PAR_QPS_DISABLED
             throw ParameterError("Option par_QPs = true --> error, parallel solution of QPs is disabled in this build.");
@@ -158,13 +146,6 @@ void SQPoptions::complete_QP_options(Problemspec *problem){
     if (qpsol_options->reg_factor == 0.0) qpsol_options->reg_factor = reg_factor; 
     
     qpsol_options->condensed = (problem->condenser != nullptr);
-        
-    //Infer solver specific options from SQPoptions
-    //  Infer qpOASES sparsityLevel
-    if (qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
-        if (!sparse) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
-        else         static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
-    }
 }
 
 
@@ -179,7 +160,7 @@ QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
 QPsolver_options::~QPsolver_options(){}
 
 qpOASES_options::qpOASES_options(): QPsolver_options(QPsolvers::qpOASES){
-    sparsityLevel = -1;
+    matrixSparsity = -1;
     printLevel = 0;
     terminationTolerance = 5.0e6*2.221e-16;
 }

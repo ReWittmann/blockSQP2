@@ -32,7 +32,7 @@ BSQP_function_signatures = {
     "delete_QPsolver_options": (None, (c_void_p,)),
     
     "create_qpOASES_options": (c_void_p, ()),
-    "qpOASES_options_set_sparsityLevel": (None, (c_void_p, c_int)),
+    "qpOASES_options_set_matrixSparsity": (None, (c_void_p, c_int)),
     "qpOASES_options_set_printLevel": (None, (c_void_p, c_int)),
     "qpOASES_options_set_terminationTolerance": (None, (c_void_p, c_double)),
     

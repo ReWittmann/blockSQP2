@@ -822,22 +822,25 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
 
 qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts):
                     QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
-    if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel < -1)
-        throw ParameterError("qpOASES_solver class cannot choose sparsityLevel automatically, set to 0 - dense, 1 - sparse or 2 - schur");
-    else if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel < 0 || static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 2)
-        throw ParameterError("Invalid value sparsityLevel option for qpOASES_solver");
-    
-    if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel < 2){
-        qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
-        qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
-        qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+        
+    // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel < 2){
+    //     qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+    //     qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+    //     qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
+    // }
+    // else{
+        // qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
+    switch (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity){
+        case 0: sparseMatrices = false; break;
+        case 1: sparseMatrices = true; break;
+        case -1: sparseMatrices = n_QP_hessblocks > 10; break;
+        default: throw ParameterError(std::string("qpOASES_options::matrixSparsity has an invalid value of ") + std::to_string(sparseMatrices) + std::string(", should be -1 for auto, 0 for dense, 1 for sparse"));
     }
-    else{
-        qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
-        qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
-        qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
-        qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
-    }
+    qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
+    qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
+    qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
+    qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
+// }
     
     init_QP_common(blockIdx);
 }
@@ -856,7 +859,8 @@ void qpOASES_solver::init_QP_common(int *blockIdx){
     A_qp_row = nullptr;
     A_qp_colind = nullptr;
     
-    if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
+    // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
+    if (sparseMatrices){
         int hess_nzCount = 0;
         for (int i = 0; i < nHess; i++){
             hess_nzCount += (blockIdx[i+1] - blockIdx[i])*(blockIdx[i+1] - blockIdx[i]);
@@ -897,9 +901,6 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
         qpOASES_MUMPS_solver::qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
                                                                         int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c):
                                                 qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
-            if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel != 2)
-                throw ParameterError("Invalid value sparsityLevel option for qpOASES_MUMPS_solver");
-            
             qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
             qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
             qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
@@ -937,7 +938,8 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def){
     convex_QP = pos_def;
     double regFactor = convex_QP ? convex_regF : 0.0;
     
-    if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
+    // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
+    if (sparseMatrices){
         convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
         H_qp = std::make_unique<qpOASES::SymSparseMat>(nVar, nVar, hess_row.get(), hess_colind.get(), hess_nz.get());
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
@@ -1049,15 +1051,15 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
         ret = qp->init(H_qp.get(), h_qp.get(), A_qp.get(), lb.get(), ub.get(), lbA.get(), ubA.get(), QP_it, &QPtime);
     
     if (!convex_QP && ret == qpOASES::SUCCESSFUL_RETURN){
-        if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel == 2){
+        // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel == 2){
             *dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()) = *dynamic_cast<qpOASES::SQProblemSchur*>(qp.get());
             ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qpCheck.get()));
             //ret = solAna.checkCurvatureOnStronglyActiveConstraints(dynamic_cast<qpOASES::SQProblemSchur*>(qp.get()));
-        }
-        else{
-            *qpCheck = *qp;
-            ret = solAna.checkCurvatureOnStronglyActiveConstraints(qpCheck.get());
-        }
+        // }
+        // else{
+        //     *qpCheck = *qp;
+        //     ret = solAna.checkCurvatureOnStronglyActiveConstraints(qpCheck.get());
+        // }
     }
     steady_clock::time_point T1 = steady_clock::now();
     std::cout << "Calling qpOASES solve took " << duration_cast<microseconds>(T1-T0) << "\n";
