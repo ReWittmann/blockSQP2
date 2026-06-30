@@ -35,7 +35,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 
-itMax = 100                                   #max number of steps
+itMax = 100                                  #max number of steps
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
@@ -52,7 +52,7 @@ opts = blockSQP2.SQPoptions(
     
     max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
-    par_QPs = False,                        #Enable parallel solution of QPs
+    par_QPs = True,                        #Enable parallel solution of QPs
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
@@ -76,6 +76,7 @@ opts = blockSQP2.SQPoptions(
     
     test_opt_1 = True,
     test_opt_2 = True,
+    test_opt_3 = True,
     
     qpsol = 'qpOASES',
     # qpsol_options = QPopts
@@ -93,7 +94,7 @@ vblocks = [blockSQP2.vblock(size, dep) for size, dep in zip(OCprob.vBlock_sizes,
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
 targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
-condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 0)
 
 
 #Define blockSQP Problemspec
@@ -153,7 +154,7 @@ else:
 t1 = time.monotonic()
 if not step_plots:
     xi = np.array(optimizer.get_xi()).reshape(-1)
-    OCprob.plot(xi, dpi=200, title=plot_title)
+    # OCprob.plot(xi, dpi=200, title=plot_title)
 
 time.sleep(0.01)
 print(t1 - t0, "s")

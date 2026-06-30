@@ -90,6 +90,7 @@ BSQP_function_signatures = {
     "SQPoptions_set_indef_delay": (None, (c_void_p, c_int)),
     "SQPoptions_set_test_opt_1": (None, (c_void_p, c_char)),
     "SQPoptions_set_test_opt_2": (None, (c_void_p, c_char)),
+    "SQPoptions_set_test_opt_3": (None, (c_void_p, c_char)),
     "SQPoptions_set_test_val_1": (None, (c_void_p, c_double)),
     "SQPoptions_set_test_val_2": (None, (c_void_p, c_double)),
     

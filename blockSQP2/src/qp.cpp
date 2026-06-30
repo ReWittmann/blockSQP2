@@ -350,7 +350,10 @@ QPresults SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
                            && hess_type == 0
                            );
     if (QP_loop_active){
-        if (param->par_QPs) return solveQP_par(deltaXi, lambdaQP);
+        if (param->par_QPs){
+            if (param->test_opt_3 && prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_par_cond_reduced(deltaXi, lambdaQP);
+            return solveQP_par(deltaXi, lambdaQP);
+        }
         if (prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_seq_cond_reduced(deltaXi, lambdaQP);
         return solveQP_seq(deltaXi, lambdaQP);
     }
@@ -750,7 +753,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     //     vars->QP_num_accepted = vars->hess_num_accepted;
     // }
     // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-    if (vars->hess_num_accepted == 1 && param->test_opt_1){
+    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_1){
         int j = 0;
         // double s_prev = 0.;
         for (; j < 5; j++){
@@ -880,10 +883,176 @@ QPresults SQPmethod::solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
 
 
 QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP){
+    int maxQP = param->max_conv_QPs + 1;
+    steady_clock::time_point T0, T1;
     
+    std::promise<QPresults> QP_results_p[PAR_QP_MAX];
+    std::future<QPresults> QP_results_f[PAR_QP_MAX];
+    for (int j = 0; j < maxQP - 1; j++) QP_results_f[j] = QP_results_p[j].get_future();
+    
+    std::future_status QP_results_fs[PAR_QP_MAX];
+    QPresults QP_results[PAR_QP_MAX];
+    for (int j = 0; j < maxQP; j++) QP_results[j] = QPresults::undef;
+    
+    // VERY important if using qpOASES solver, else SR1-QP always fails for some reason    
+    std::cout << "vars->hess_num_accepted = " << vars->hess_num_accepted << "\n";
+    for (int j = 0; j < vars->hess_num_accepted; j++){
+        sub_QPs_par[j]->set_hotstart_point(sub_QPs_par[vars->hess_num_accepted].get());
+    }
+    
+    updateStepBounds();
+    
+    if (param->sparse)  sub_QPs_par[0]->set_constr(vars->sparse_constrJac);        
+    else                sub_QPs_par[0]->set_constr(vars->constrJac);
+    sub_QPs_par[0]->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
+    sub_QPs_par[0]->set_lin(vars->gradObj);
+    sub_QPs_par[0]->set_use_hotstart(vars->use_homotopy);
+    sub_QPs_par[0]->set_timeLimit(TimeLimitTypes::past_avg);
+    sub_QPs_par[0]->set_hess(vars->hess1.get());
+    
+    if (param->sparse)  sub_QPs_par[maxQP - 1]->set_constr(vars->sparse_constrJac);        
+    else                sub_QPs_par[maxQP - 1]->set_constr(vars->constrJac);
+    sub_QPs_par[maxQP - 1]->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
+    sub_QPs_par[maxQP - 1]->set_lin(vars->gradObj);
+    sub_QPs_par[maxQP - 1]->set_use_hotstart(vars->use_homotopy);
+    sub_QPs_par[maxQP - 1]->set_timeLimit(TimeLimitTypes::standard);
+    computeConvexHessian();
+    sub_QPs_par[maxQP - 1]->set_hess(vars->hess2.get(), true);
+    
+    QP_threads[0] = std::jthread(
+        [](BasicCQPsolver *arg_CQPS){
+            arg_CQPS->invoke_condensing();
+        },
+        static_cast<BasicCQPsolver*>(sub_QPs_par[0].get())
+        );
+    QP_threads[0].join();
+    static_cast<BasicCQPsolver*>(sub_QPs_par[maxQP - 1].get())->invoke_condensing();
+    
+    for (int j = 0; j < maxQP - 1; j++){
+        if (j > 0){
+            double regF = computeRegularizationFactor(j, maxQP);
+            sub_QPs_par[j]->set_reg(regF);
+        }
+        
+        QP_threads[j] = std::jthread(
+            [](std::stop_token stp, BasicQPsolver *arg_QPS, std::promise<QPresults> arg_PRM, Matrix &arg_1, Matrix &arg_2){
+                arg_QPS->solve(stp, std::move(arg_PRM), arg_1, arg_2);
+            },
+            sub_QPs_par[j].get(), std::move(QP_results_p[j]), std::ref(vars->par_QP_sols_prim[j]), std::ref(vars->par_QP_sols_dual[j])
+        );
+        
+        QP_threads[j].join();
+    }
+
+    T0 = steady_clock::now();
+    QP_results[maxQP - 1] = sub_QPs_par[maxQP - 1]->solve(vars->par_QP_sols_prim[maxQP - 1], vars->par_QP_sols_dual[maxQP - 1]);
+    T1 = steady_clock::now();
+    
+    // Set time at which still running QPs get terminated. 
+    // To prevent too many "good" QPs from being terminated, increase allowed time with successive terminations
+    //steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1 + vars->N_QP_cancels)).count() + 2000);
+    
+    steady_clock::time_point TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(1.0 + 0.5*vars->N_QP_cancels)).count() + 2000);
+    
+    bool QP_cancelled = false;
+    // if (param->enable_QP_cancellation){
+    //     //SR1 QP almost always succeeds/fails fast, so join it. Wait + stop/join QPs until one successfully solved
+    //     QP_threads[0].join();
+    //     QP_results[0] = QP_results_f[0].get();
+    //     if (QP_results[0] == QPresults::success){
+    //         for (int k = 1; k < maxQP - 1; k++){
+    //             QP_threads[k].request_stop();
+    //         }
+    //     }
+    //     else{
+    //         for (int j = 1; j < maxQP - 1; j++){
+    //             QP_results_fs[j] = QP_results_f[j].wait_until(TF);
+    //             if (QP_results_fs[j] != std::future_status::ready){
+    //                 QP_threads[j].request_stop();
+    //                 QP_cancelled = true;
+    //             }
+    //             else{
+    //                 QP_results[j] = QP_results_f[j].get();
+    //                 if (QP_results[j] == QPresults::success){
+    //                     for (int k = j + 1; k < maxQP - 1; k++){
+    //                         QP_threads[k].request_stop();
+    //                     }
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+        
+    //     for (int j = 1; j < maxQP - 1; j++)
+    //         QP_threads[j].join();
+    // }
+    // else{
+        for (int j = maxQP - 2; j>= 0; j--){
+            // QP_threads[j].join();
+            QP_results[j] = QP_results_f[j].get();
+        }
+    // }
+    
+    vars->hess_num_accepted = -1;
+    stats->qpResolve = -1;
+    for (int j = 0; j < maxQP; j++){
+        if (QP_results[j] == QPresults::success){
+            stats->qpResolve = j;
+            vars->hess_num_accepted = j;
+            break;
+        }
+    }
+    
+    // If no QP was accepted, return error of convex fallback QP
+    if (vars->hess_num_accepted == -1)
+        return QP_results[maxQP - 1];
+    
+    // Increment/reset counter of successive QP terminations
+    vars->N_QP_cancels = (1 + vars->N_QP_cancels) * int(QP_cancelled);
+    
+    // If second or later convexified QP was accepted, compare step with that of the BFGS QP
+    bool sol_set = false;
+    
+    // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
+    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_1){
+        int j = 0;
+        for (; j < 5; j++){
+            computeLowerRegularizedHessian(j, maxQP);
+            sub_QPs_par[1]->set_reg(computeLowerRegularizationFactor(j, maxQP));
+            sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);
+            QPresults QP_result_temp = sub_QPs_par[1]->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
+            if (QP_result_temp == QPresults::success){
+                deltaXi = vars->deltaXi_temp; 
+                lambdaQP = vars->lambdaQP_temp;
+                sol_set = true;
+            }
+            else break;
+        }
+        vars->convKappa *= std::pow(2, -j);
+        vars->QP_num_accepted = vars->hess_num_accepted;
+    }
+    else if (vars->hess_num_accepted > 1 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == QPresults::success){
+        double s_indf_N = l2VectorNorm(vars->par_QP_sols_prim[vars->hess_num_accepted]);
+        double s_conv_N = l2VectorNorm(vars->par_QP_sols_prim[maxQP - 1]);
+        if (s_indf_N < param->conv_tau_H*s_conv_N){
+            deltaXi = vars->par_QP_sols_prim[maxQP - 1];
+            lambdaQP = vars->par_QP_sols_dual[maxQP - 1];
+            sol_set = true;
+            stats->qpResolve = maxQP - 1;
+            vars->QP_num_accepted = maxQP - 1;
+        }
+    }
+    if (!sol_set){
+        deltaXi = vars->par_QP_sols_prim[vars->hess_num_accepted];
+        lambdaQP = vars->par_QP_sols_dual[vars->hess_num_accepted];
+        vars->QP_num_accepted = vars->hess_num_accepted;
+    }
+    
+    vars->conv_qp_solved = (vars->QP_num_accepted == (maxQP - 1));
+    stats->qpIterations = sub_QPs_par[vars->QP_num_accepted]->get_QP_it();
+    stats->rejectedSR1 += vars->hess_num_accepted;
+    return QPresults::success;
 }
-// QPresults solveQP_par_default(Matrix &deltaXi, Matrix &lambdaQP);
-// QPresults solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
         
 
 

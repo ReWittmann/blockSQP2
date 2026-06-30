@@ -171,6 +171,7 @@ class SQPoptions{
     //For experimental purposes
     bool test_opt_1 = false;
     bool test_opt_2 = false;
+    bool test_opt_3 = false;
     double test_val_1 = 2.0;
     double test_val_2 = 0.5;
     

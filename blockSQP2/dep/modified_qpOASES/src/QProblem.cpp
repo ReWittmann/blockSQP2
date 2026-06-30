@@ -553,14 +553,12 @@ returnValue QProblem::hotstart(	const real_t* const g_new,
 			}
 			else
 				pcputime_rem = 0;
-steady_clock::time_point T0 = steady_clock::now();
+			
 			/* Automatically call standard solveQP if regularisation is not active. */
 			returnvalue = solveRegularisedQP(	g_new,lb_new_far,ub_new_far,lbA_new_far,ubA_new_far,
 												nWSR,pcputime_rem,nWSR_performed,
 												isFirstCall
 												);
-steady_clock::time_point T1 = steady_clock::now();
-std::cout << "solveRegularisedQP took " << duration_cast<microseconds>(T1 - T0) << "\n";
 			nWSR_performed  = nWSR;
 			cputime_needed += cputime_remaining;
 			isFirstCall     = BT_FALSE;
@@ -1585,13 +1583,11 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 		#endif
 
 		/* 2) Determination of shift direction of the gradient and the (constraints') bounds. */
-		steady_clock::time_point T0 = steady_clock::now();
 		returnvalue = determineDataShift(	g_new,lbA_new,ubA_new,lb_new,ub_new,
 											delta_g,delta_lbA,delta_ubA,delta_lb,delta_ub,
 											Delta_bC_isZero, Delta_bB_isZero
 											);
-		steady_clock::time_point T1 = steady_clock::now();
-		std::cout << "determineDataShift took " << duration_cast<microseconds>(T1 - T0) << "\n";
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1611,8 +1607,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 												Delta_bC_isZero, Delta_bB_isZero,
 												delta_xFX,delta_xFR,delta_yAC,delta_yFX
 												);
-		steady_clock::time_point T2 = steady_clock::now();
-		std::cout << "determineStepDirection took " << duration_cast<microseconds>(T2 - T1) << "\n";
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1633,8 +1628,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 									delta_xFX,delta_xFR,delta_yAC,delta_yFX,
 									BC_idx,BC_status,BC_isBound
 									);
-		steady_clock::time_point T3 = steady_clock::now();
-		std::cout << "performStep took " << duration_cast<microseconds>(T3 - T2) << "\n";
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1654,8 +1648,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 		nC = getNC( );
 
 		homotopyLength = getRelativeHomotopyLength( g_new,lb_new,ub_new,lbA_new,ubA_new );
-		steady_clock::time_point T4 = steady_clock::now();
-		std::cout << "getRelativeHomotopyLength took " << duration_cast<microseconds>(T4 - T3) << "\n";
+		
 		if ( homotopyLength <= options.terminationTolerance )
 		{
 			status = QPS_SOLVED;
@@ -1677,8 +1670,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 
 		/* 6) Change active set. */
 		returnvalue = changeActiveSet( BC_idx,BC_status,BC_isBound );
-		steady_clock::time_point T5 = steady_clock::now();
-		std::cout << "changeActiveSet took " << duration_cast<microseconds>(T5 - T4) << "\n";
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1739,8 +1731,6 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 			  && ((iter+1) % options.enableDriftCorrection == 0) )
 				performDriftCorrection( );  /* always returns SUCCESSFUL_RETURN */
 		}
-		steady_clock::time_point T6 = steady_clock::now();
-		std::cout << "rest took " << duration_cast<microseconds>(T6 - T5) << "\n";
 	}
 
 	delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;

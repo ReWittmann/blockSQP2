@@ -595,6 +595,20 @@ returnValue DenseMatrix::addToDiag( real_t alpha )
 
 	return SUCCESSFUL_RETURN;
 }
+returnValue DenseMatrix::addToDiagI(real_t alpha, int_t ind){
+	if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+	val[ind*(leaDim+1)] += alpha;
+	return SUCCESSFUL_RETURN;
+}
+returnValue DenseMatrix::addToDiagIndices(real_t alpha, int_t *indices, int_t il){
+	int_t i;
+	for (i = 0; i < il; i++){
+		int_t ind = indices[i];
+		if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+		val[indices[ind]*(leaDim+1)] += alpha;
+	}
+	return SUCCESSFUL_RETURN;
+}
 
 
 returnValue DenseMatrix::writeToFile( FILE* output_file, const char* prefix ) const
@@ -1376,6 +1390,42 @@ returnValue SparseMatrix::addToDiag( real_t alpha )
 	return SUCCESSFUL_RETURN;
 }
 
+returnValue SparseMatrix::addToDiagI(real_t alpha, int_t ind){
+	long i;
+	if (jd == 0)
+		return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+	if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+	if ( isZero( alpha ) == BT_FALSE )
+	{	
+		if (ir[jd[ind]] == ind){
+			val[jd[ind]] += alpha;
+		}
+		else return RET_NO_DIAGONAL_AVAILABLE;
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SparseMatrix::addToDiagIndices(real_t alpha, int_t *indices, int_t il){
+	long i;
+
+	if ( jd == 0 )
+		return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+
+	if ( isZero( alpha ) == BT_FALSE )
+	{
+		for (i = 0; i < il; i++){
+			int_t ind = indices[i];
+			if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+			if (ir[jd[ind]] == ind)
+				val[jd[ind]] += alpha;
+			else
+				return RET_NO_DIAGONAL_AVAILABLE;
+		}
+	}
+
+	return SUCCESSFUL_RETURN;
+}
 
 sparse_int_t* SparseMatrix::createDiagInfo( )
 {
@@ -2075,6 +2125,44 @@ returnValue SparseMatrixRow::addToDiag( real_t alpha )
 
 	return SUCCESSFUL_RETURN;
 }
+
+returnValue SparseMatrixRow::addToDiagI(real_t alpha, int_t ind){
+	long i;
+	if (jd == 0)
+		return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+	if ( isZero( alpha ) == BT_FALSE )
+	{	if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+		if (ic[jd[ind]] == ind){
+			val[jd[ind]] += alpha;
+		}
+		else return RET_NO_DIAGONAL_AVAILABLE;
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SparseMatrixRow::addToDiagIndices(real_t alpha, int_t *indices, int_t il){
+	long i;
+
+	if ( jd == 0 )
+		return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+
+	if ( isZero( alpha ) == BT_FALSE )
+	{
+		for (i = 0; i < il; i++)
+		{
+			int_t ind = indices[i];
+			if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+			if (ic[jd[ind]] == ind)
+				val[jd[ind]] += alpha;
+			else
+				return RET_NO_DIAGONAL_AVAILABLE;
+		}
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
 
 
 sparse_int_t* SparseMatrixRow::createDiagInfo( )

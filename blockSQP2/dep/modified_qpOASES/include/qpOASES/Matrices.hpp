@@ -242,7 +242,10 @@ class Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										) = 0;
-
+		
+		virtual returnValue addToDiagI( real_t alpha, int_t ind) = 0;
+		
+		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il) = 0;
 		/** Allocates and creates dense matrix array in row major format.
 		 *
 		 *  Note: Calling function has to free allocated memory!
@@ -471,8 +474,8 @@ class DenseMatrix : public virtual Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										);
-
-
+		virtual returnValue addToDiagI( real_t alpha, int_t ind);
+		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il);
 		/** Allocates and creates dense matrix array in row major format.
 		 *
 		 *  Note: Calling function has to free allocated memory!
@@ -706,7 +709,8 @@ class SparseMatrix : public virtual Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										);
-
+		virtual returnValue addToDiagI( real_t alpha, int_t ind);
+		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il);
 		/** Create jd field from ir and jc.
 		 *  \return Pointer to jd. */
 		sparse_int_t* createDiagInfo();
@@ -892,7 +896,9 @@ class SparseMatrixRow : public virtual Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										);
-
+		virtual returnValue addToDiagI(	real_t alpha, int_t ind
+								);
+		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il);
 		/** Create jd field from ir and jc.
 		 *  \return Pointer to jd. */
 		sparse_int_t* createDiagInfo();

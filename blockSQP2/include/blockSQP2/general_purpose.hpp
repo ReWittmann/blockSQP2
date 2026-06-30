@@ -54,16 +54,16 @@ double estimateSmallestEigenvalue( const Matrix &B );
 //int inverse( const Matrix &A, Matrix &Ainv );
 
 //Convert block Hessian to sparse. IMPORTANT: Sparse entries must include the entire diagonal.
-void convertHessian(SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian(SymMatrix const* hess, int nBlocks, int nVar, double regularizationFactor,
     double *&hessNz);
-void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian(double eps, SymMatrix const* hess_, int nBlocks, int nVar, double regularizationFactor,
     double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_);
 
 //Convert block Hessian to sparse, assume sufficient memory has been allocated to hessNz. IMPORTANT: Sparse entries must include the entire diagonal.
-void convertHessian_noalloc(SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian_noalloc(SymMatrix const* hess, int nBlocks, int nVar, double regularizationFactor,
     double *hessNz);
 
-void convertHessian_noalloc(double eps, SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian_noalloc(double eps, SymMatrix const* hess_, int nBlocks, int nVar, double regularizationFactor,
     double *hessNz_, int *hessIndRow_, int *hessIndCol_, int *hessIndLo_);
     
 } // namespace blockSQP2

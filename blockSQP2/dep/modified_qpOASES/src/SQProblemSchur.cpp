@@ -3037,7 +3037,6 @@ returnValue SQProblemSchur::determineStepDirection2(	const real_t* const delta_g
 			}
 
 		}
-
 		delete [] sol;
 		delete [] rhs;
 	}

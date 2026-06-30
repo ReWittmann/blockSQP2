@@ -398,6 +398,10 @@ CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
     castOPT(ptr)->test_opt_2 = bool(val);
 }
 
+CDLEXP void SQPoptions_set_test_opt_3(void *ptr, char val){
+    castOPT(ptr)->test_opt_3 = bool(val);
+}
+
 CDLEXP void SQPoptions_set_test_val_1(void *ptr, double val){
     castOPT(ptr)->test_val_1 = double(val);
 }

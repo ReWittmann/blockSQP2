@@ -382,7 +382,7 @@ double lInfConstraintNorm(const Matrix &xi, const Matrix &constr, const Matrix &
 
 
 
-void convertHessian(SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian(SymMatrix const* hess, int nBlocks, int nVar, double regularizationFactor,
                                             double *&hessNz){
     if (hessNz == NULL)
         hessNz = new double[nVar * nVar];
@@ -419,7 +419,7 @@ void convertHessian(SymMatrix *const hess, int nBlocks, int nVar, double regular
 }
 
 
-void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian(double eps, SymMatrix const* hess_, int nBlocks, int nVar, double regularizationFactor,
                              double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
     int iBlock, count, colCountTotal, rowOffset, i, j;
     int nnz, nCols, nRows;
@@ -492,7 +492,7 @@ void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, d
 
 
 
-void convertHessian_noalloc(SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian_noalloc(SymMatrix const* hess, int nBlocks, int nVar, double regularizationFactor,
                                             double *hessNz){
     int bsize, bstart = 0, ind = 0;
     //Iterate over hessian blocks
@@ -526,7 +526,7 @@ void convertHessian_noalloc(SymMatrix *const hess, int nBlocks, int nVar, double
 }
 
 
-void convertHessian_noalloc(double eps, SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian_noalloc(double eps, SymMatrix const* hess_, int nBlocks, int nVar, double regularizationFactor,
                              double *hessNz_, int *hessIndRow_, int *hessIndCol_, int *hessIndLo_ ){
     int iBlock, count, colCountTotal, rowOffset, i, j;
     int nCols, nRows;

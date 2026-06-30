@@ -69,6 +69,7 @@ class Options(CXXobjCreator):
                  indef_delay: int = 3,
                  test_opt_1: bool = False,
                  test_opt_2: bool = False,
+                 test_opt_3: bool = False,
                  test_val_1: float = 0.,
                  test_val_2: float = 0.
                  ):
@@ -121,6 +122,7 @@ class Options(CXXobjCreator):
         self.indef_delay = indef_delay
         self.test_opt_1 = test_opt_1
         self.test_opt_2 = test_opt_2
+        self.test_opt_3 = test_opt_3
         self.test_val_1 = test_val_1
         self.test_val_2 = test_val_2
     
@@ -223,6 +225,7 @@ class Options(CXXobjCreator):
         
         BSQP.SQPoptions_set_test_opt_1(cxx_obj, c_char(self.test_opt_1))
         BSQP.SQPoptions_set_test_opt_2(cxx_obj, c_char(self.test_opt_2))
+        BSQP.SQPoptions_set_test_opt_3(cxx_obj, c_char(self.test_opt_3))
         BSQP.SQPoptions_set_test_val_1(cxx_obj, c_double(self.test_val_1))
         BSQP.SQPoptions_set_test_val_2(cxx_obj, c_double(self.test_val_2))
         

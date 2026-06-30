@@ -93,6 +93,7 @@ class BasicQPsolver{
     //Set QP/active set of which to hotstart from. QP solver dependent, no effect by default, very important for qpOASES
     virtual void set_hotstart_point(BasicQPsolver *hot_QP);
     virtual void set_reg(double arg) = 0;              // Set regularization factor for the current Hessian
+    // virtual void set_reg_indices(int *arg) = 0;
     virtual double get_reg() = 0;
     
     //Statistics
@@ -238,7 +239,7 @@ class CQPsolver : public BasicCQPsolver{
     
     std::vector<SharedCQPsolver*> shared_CQPsols;
     
-    CQPsolver(BasicQPsolver *arg_CQPsol, Condenser *arg_cond, bool arg_QPsol_own, bool arg_cond_own);
+    CQPsolver(BasicQPsolver *arg_inner_QPsol, Condenser *arg_cond, bool arg_QPsol_own, bool arg_cond_own);
     virtual ~CQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj);
@@ -281,7 +282,7 @@ class SharedCQPsolver : public BasicCQPsolver{
     public:
     CQPsolver *CQPsol;
     
-    SharedCQPsolver(CQPsolver *CQPsol, BasicQPsolver *arg_CQPsol, bool arg_QPsol_own);
+    SharedCQPsolver(CQPsolver *CQPsol, BasicQPsolver *arg_inner_QPsol, bool arg_QPsol_own);
     virtual ~SharedCQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj);
@@ -309,6 +310,7 @@ inline BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate 
 
 //Create N_QP QPsolver instances for parallel solution of QPs. If N_QP is left at -1 it infers N_QP as param->max_conv_QPs + 1
 std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
+std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int N_QP = -1);
 
 
 //QP solver implementations

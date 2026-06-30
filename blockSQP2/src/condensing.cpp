@@ -590,7 +590,7 @@ int Condenser::get_hessblock_index(int v_ind){
 			return i;
 		}
 	}
-    throw std::invalid_argument("Variable-block start " + std::to_string(v_ind) + " not matching hessian block start/end");
+    throw std::logic_error("Variable-block start " + std::to_string(v_ind) + " not matching hessian block start/end");
 }
 
 
