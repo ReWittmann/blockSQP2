@@ -669,7 +669,11 @@ Matrix Matrix::operator*(const Matrix &M2) const{
     // if (M2.n == 1)
     //     BSQP_BLASFUNC(cblas_dgemv(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1)));
     // else
+    if (M2.n > 1)
         BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
+    else
+        BSQP_BLASFUNC(cblas_dgemv)(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1));
+    
     return Matrix(m, M2.n, array_3);
 }
 

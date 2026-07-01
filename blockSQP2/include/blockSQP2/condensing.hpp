@@ -238,9 +238,11 @@ class Condenser{
     Matrix lb_dep_var;
     Matrix ub_dep_var;
 
+    Condenser();
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
 	Condenser(Condenser &&C);
 	virtual ~Condenser();
+    void setup();
     
     //Construct a new Condenser sharing the layout data of an existing condenser.
     static Condenser *layout_copy(const Condenser *CND);
@@ -282,11 +284,11 @@ class Condenser{
     void single_hess_condense(int tnum, const SymMatrix *const sub_hess);
 
     //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
-    void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full);
+    void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const;
 
     //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
     void single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda);
+                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
 
     
     //Update condensed QP with a new hessian
@@ -311,20 +313,29 @@ class Condenser{
 //Condenser holding its own layout information
 class holding_Condenser : public Condenser{
     public:
+    holding_Condenser();
     holding_Condenser(
                         std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
                         std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
                         std::unique_ptr<int[]> HSIZES, int n_HBLOCKS, 
                         std::unique_ptr<condensing_target[]> TARGETS, int n_TARGETS, 
                         int DEP_BOUNDS = 2);
-	std::unique_ptr<vblock[]> auto_vblocks;
-    std::unique_ptr<cblock[]> auto_cblocks;
-	std::unique_ptr<int[]> auto_hess_block_sizes;
-	std::unique_ptr<condensing_target[]> auto_targets;
+	std::unique_ptr<vblock[]> vblocks_hold;
+    std::unique_ptr<cblock[]> cblocks_hold;
+	std::unique_ptr<int[]> hess_block_sizes_hold;
+	std::unique_ptr<condensing_target[]> targets_hold;
 };
 
 //holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS = 2);
 
+class PartialCondenser : public holding_Condenser{
+    vblock *vblocks_orig;
+    cblock *cblocks_orig;
+    int *hess_block_sizes_orig;
+    condensing_target *targets_orig;
+    int n_targets_orig;
+    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_split, int DEP_BOUNDS = 2);
+};
 
 
 } // namespace blockSQP2

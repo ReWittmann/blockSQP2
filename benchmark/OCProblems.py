@@ -154,6 +154,8 @@ class OCProblem:
     lbx : list #lower state bound
     ubx : list #upper state bound
     
+    state_bounds_implicit : bool
+    
     #Integrator data
     integration_method : str
     parallel : bool
@@ -219,6 +221,7 @@ class OCProblem:
         
         self.ntS = nt
         self.ntR = refine
+        self.state_bounds_implicit = False
         
         self.build_problem()
         
@@ -3179,6 +3182,7 @@ class Lotka_OED(OCProblem):
         tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
+        self.state_bounds_implicit = True
         
         S = cs.MX.sym('S', 9)
         x1, x2, G11, G12, G21, G22, F11, F12, F22 = cs.vertsplit(S)

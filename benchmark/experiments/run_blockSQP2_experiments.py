@@ -32,18 +32,18 @@ Examples = [
             OCProblems.Catalyst_Mixing,
             OCProblems.Cushioned_Oscillation,
             OCProblems.Ducted_Fan,
-            OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
-            OCProblems.Hang_Glider,
-            OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Time_Optimal_Car,
-            OCProblems.Tubular_Reactor,
-            OCProblems.Lotka_OED,
+            # OCProblems.Egerstedt_Standard,
+            # OCProblems.Electric_Car,
+            # OCProblems.Goddard_Rocket,
+            # OCProblems.Hang_Glider,
+            # OCProblems.Hanging_Chain,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Quadrotor_Helicopter,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Time_Optimal_Car,
+            # OCProblems.Tubular_Reactor,
+            # OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -184,15 +184,16 @@ opt_CS2_par_new = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
     conv_strategy = 2,
     par_QPs = True,
-    max_filter_overrides = 0, 
+    max_filter_overrides = 2, 
     automatic_scaling = True, 
     test_opt_1 = True,
     test_opt_2 = True,
+    test_opt_3 = True,
     scaling_Theta_min = 0.1,
     scaling_Theta_max = 5.0
     )
 
-
+condensing = True
 
 #Select option sets to test for
 Experiments = [
@@ -213,7 +214,7 @@ Experiments = [
                # (opt_CS2_S6, "scaling_0p2_5"),
                
                # (opt_CS2_par, "par"),
-               (opt_CS2_par_new, "par_new")
+               (opt_CS2_par_new, "par_new_cond")
                ]
 
 
@@ -242,7 +243,7 @@ else:
 titles = [EXP_name for _, EXP_name in Experiments]
 OCP_experiment.print_heading(out, titles)
 for OCclass in Examples:        
-    OCprob = OCclass(nt = 100, integrator = 'RK4', parallel = True)
+    OCprob = OCclass(nt = 40, integrator = 'RK4', parallel = True)
     itMax = 200
     titles = []
     EXP_N_SQP = []
@@ -250,7 +251,7 @@ for OCclass in Examples:
     EXP_type_sol = []
     n_EXP = 0
     for EXP_opts, EXP_name in Experiments:
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, COND = True)
+        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, COND = condensing)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)

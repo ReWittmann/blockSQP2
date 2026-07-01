@@ -59,7 +59,7 @@ condensing_target::condensing_target():
     n_stages(0), first_free(0), vblock_end(0), first_cond(0), cblock_end(0){
     }
 
-
+Condenser::Condenser(){}
 
 Condenser::Condenser(
 	vblock* VBLOCKS,            int n_VBLOCKS,
@@ -68,9 +68,11 @@ Condenser::Condenser(
 	condensing_target* TARGETS, int n_TARGETS,
 	int DEP_BOUNDS):
 		num_cblocks(n_CBLOCKS), num_vblocks(n_VBLOCKS), num_hessblocks(n_HBLOCKS), num_targets(n_TARGETS),
-		cblocks(CBLOCKS), vblocks(VBLOCKS), hess_block_sizes(HSIZES), targets(TARGETS), add_dep_bounds(DEP_BOUNDS)
-		{
+		cblocks(CBLOCKS), vblocks(VBLOCKS), hess_block_sizes(HSIZES), targets(TARGETS), add_dep_bounds(DEP_BOUNDS){
+    setup();
+}
 
+void Condenser::setup(){
             //Sanitize inputs
             for (int tnum = 0; tnum < num_targets; tnum++){
                 if (targets[tnum].cblock_end > num_cblocks || targets[tnum].first_cond < 0){
@@ -777,11 +779,11 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     // Set match_sense to the sign before x_k in the matching, slices of B_Jac require the opposite sign.
     // double match_sense = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
     Data.matching_sign = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
-    #ifdef __cpp_lib_format
-        if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
-    #else
-        if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
-    #endif
+    // #ifdef __cpp_lib_format
+    //     if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
+    // #else
+    //     if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
+    // #endif
     Data.matching_sign = std::round(Data.matching_sign);
     
 	//Extract relevant subvectors and -matrices
@@ -795,11 +797,11 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 
 	for (int i = 1; i<n_stages; i++){
         double matching_sign = B_Jac(Data.cond_ranges[i], Data.alt_vranges[2*i+1]);
-        #ifdef __cpp_lib_format
-            if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
-        #else
-            if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
-        #endif
+        // #ifdef __cpp_lib_format
+        //     if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
+        // #else
+        //     if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
+        // #endif
         if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1,...) = 0 or all F(x_k-1,...) - x_k+1 = 0");
         
 		Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
@@ -1186,7 +1188,7 @@ void Condenser::single_hess_condense(int tnum, const SymMatrix *const sub_hess){
     return;
 }
 
-void Condenser::convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full){
+void Condenser::convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const{
     std::vector<Matrix> O_xi_cond(num_targets + 1);
     std::vector<Matrix> T_xi_cond(num_targets);
     std::vector<Matrix> O_mu(num_targets + 1);
@@ -1273,7 +1275,7 @@ void Condenser::convex_combination_recover(const Matrix &xi_cond, const Matrix &
 }
 
 void Condenser::single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda){
+                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const {
     int n_stages = targets[tnum].n_stages;
     condensing_data &Data = targets_data[tnum];
 
@@ -1897,6 +1899,7 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
 }
 
 
+holding_Condenser::holding_Condenser(){}
 holding_Condenser::holding_Condenser(
                     std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
                     std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
@@ -1904,8 +1907,83 @@ holding_Condenser::holding_Condenser(
                     std::unique_ptr<condensing_target[]> TARGETS, int n_TARGETS, 
                     int DEP_BOUNDS):
                         Condenser(VBLOCKS.get(), n_VBLOCKS, CBLOCKS.get(), n_CBLOCKS, HSIZES.get(), n_HBLOCKS, TARGETS.get(), n_TARGETS, DEP_BOUNDS),
-                        auto_vblocks(std::move(VBLOCKS)), auto_cblocks(std::move(CBLOCKS)), auto_hess_block_sizes(std::move(HSIZES)), auto_targets(std::move(TARGETS))
+                        vblocks_hold(std::move(VBLOCKS)), cblocks_hold(std::move(CBLOCKS)), hess_block_sizes_hold(std::move(HSIZES)), targets_hold(std::move(TARGETS))
                         {}
+
+
+
+
+
+
+
+PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_split, int DEP_BOUNDS):
+        vblocks_orig(VBLOCKS), cblocks_orig(CBLOCKS), hess_block_sizes_orig(HSIZES), targets_orig(TARGETS), 
+        n_targets_orig(n_TARGETS){
+    
+    num_cblocks = n_CBLOCKS;
+    num_vblocks = n_VBLOCKS;
+    num_hessblocks = n_HBLOCKS;
+    num_targets = n_TARGETS*n_split;
+    
+    vblocks_hold = std::make_unique<vblock[]>(n_VBLOCKS);
+    for (int i = 0; i < num_vblocks; i++) vblocks_hold[i] = vblocks_orig[i];
+    
+    cblocks_hold = std::make_unique<cblock[]>(n_CBLOCKS);
+    for (int i = 0; i < num_cblocks; i++) cblocks_hold[i] = cblocks_orig[i];
+    
+    hess_block_sizes_hold = std::make_unique<int[]>(n_HBLOCKS);
+    for (int i = 0; i < num_hessblocks; i++) hess_block_sizes_hold[i] = hess_block_sizes_orig[i];
+    
+    // targets_hold = std::make_unique<condensing_target []>(n_TARGETS);
+    // for (int i = 0; i < num_targets; i++) targets_hold[i] = targets_orig[i];
+    
+    targets_hold = std::make_unique<condensing_target[]>(n_TARGETS*n_split);
+    int targets_ind = 0;
+    
+    int new_vstart, new_vend, new_cstart, new_cend, new_nstages;
+    
+    std::unique_ptr<int[]> split_ind = std::make_unique<int[]>(n_split + 1);
+    split_ind[0] = 0;
+    for (int tnum = 0; tnum < n_targets_orig; tnum++){
+        for (int i = 1; i < n_split + 1; i++){
+            split_ind[i] = int(targets_orig[tnum].n_stages * i / n_split);
+        }
+        
+        int start_ind = targets_orig[tnum].first_free, stage_ind = 0;
+        bool dep = false;
+        
+        int j = targets_orig[tnum].first_free; //vblocks running index
+        new_vstart = j;
+        new_cstart = targets_orig[tnum].first_cond;
+        
+        for (int i = 1; i < n_split + 1; i++){
+            for (; stage_ind < split_ind[i]; stage_ind++){
+                for (; vblocks_orig[j].dependent; j++){}
+                for (; !vblocks_orig[j].dependent; j++){}
+            }
+            
+            new_vend = j;
+            new_nstages = split_ind[i] - split_ind[i-1];
+            new_cend = new_cstart + new_nstages;
+            targets_hold[targets_ind++] = condensing_target(new_nstages, new_vstart, new_vend, new_cstart, new_cend);
+            
+            if (i < n_split){
+                new_vstart = new_vend;
+                new_cstart = new_cend;
+                for (; vblocks_orig[j].dependent; j++){vblocks_orig[j].dependent = false;}
+                for (; !vblocks_orig[j].dependent; j++){}
+                stage_ind += 1;
+            }
+        }
+    }
+    
+    cblocks = cblocks_hold.get();
+    vblocks = vblocks_hold.get();
+    hess_block_sizes = hess_block_sizes_hold.get();
+    targets = targets_hold.get();
+}
+
+
 
 
 //Moved to restoration.cpp

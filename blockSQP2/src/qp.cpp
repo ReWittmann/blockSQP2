@@ -948,7 +948,7 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
         sub_QPs_par[j]->set_use_hotstart(vars->use_homotopy);
     }
     
-    steady_clock::time_point TT0 = steady_clock::now();
+    // steady_clock::time_point TT0 = steady_clock::now();
     QP_threads[0] = std::jthread(
         [](BasicCQPsolver *arg_CQPS){
             arg_CQPS->invoke_condensing();
@@ -958,8 +958,8 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     // QP_threads[0].join();
     static_cast<BasicCQPsolver*>(sub_QPs_par[maxQP - 1].get())->invoke_condensing();
     QP_threads[0].join();
-    steady_clock::time_point TT1 = steady_clock::now();
-    std::cout << "Condensing took " << duration_cast<microseconds>(TT1 - TT0) << "\n";
+    // steady_clock::time_point TT1 = steady_clock::now();
+    // std::cout << "Condensing took " << duration_cast<microseconds>(TT1 - TT0) << "\n";
     
     for (int j = 0; j < maxQP - 1; j++){
         if (j > 0){

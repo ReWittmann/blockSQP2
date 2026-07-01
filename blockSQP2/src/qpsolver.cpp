@@ -177,29 +177,29 @@ double BasicCQPsolver::get_reg(){
 
 
 QPresults BasicCQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
-    steady_clock::time_point T0 = steady_clock::now();
+    // steady_clock::time_point T0 = steady_clock::now();
     setup_inner_QPsol(deltaXi, lambdaQP);
-    steady_clock::time_point T1 = steady_clock::now();
+    // steady_clock::time_point T1 = steady_clock::now();
     QPresults QPret = inner_QPsol->solve(xi_cond, lambda_cond);
-    steady_clock::time_point T2 = steady_clock::now();
-    std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << ", solving the QP took " << duration_cast<microseconds>(T2 - T1) << "\n";
+    // steady_clock::time_point T2 = steady_clock::now();
+    // std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << ", solving the QP took " << duration_cast<microseconds>(T2 - T1) << "\n";
     if (QPret == QPresults::success)
         condenser->recover_var_mult(xi_cond, lambda_cond, deltaXi, lambdaQP);
     return QPret;
 }
 
 void BasicCQPsolver::solve(std::stop_token stopRequest, std::promise<QPresults> QP_result, Matrix &deltaXi, Matrix &lambdaQP){
-    steady_clock::time_point T0 = steady_clock::now();
+    // steady_clock::time_point T0 = steady_clock::now();
     setup_inner_QPsol(deltaXi, lambdaQP);
-    steady_clock::time_point T1 = steady_clock::now();
+    // steady_clock::time_point T1 = steady_clock::now();
     
     std::promise<QPresults> QP_result_cond_p;
     std::future<QPresults> QP_result_cond_f = QP_result_cond_p.get_future();
     QPresults QP_result_cond;
     
     inner_QPsol->solve(stopRequest, std::move(QP_result_cond_p), xi_cond, lambda_cond);
-    steady_clock::time_point T2 = steady_clock::now();
-    std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << ", solving the QP took " << duration_cast<microseconds>(T2 - T1) << "\n";
+    // steady_clock::time_point T2 = steady_clock::now();
+    // std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << ", solving the QP took " << duration_cast<microseconds>(T2 - T1) << "\n";
     
     QP_result_cond = QP_result_cond_f.get();
     
@@ -881,10 +881,11 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     sparseMatrices = !Qparam->condensed;
     qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
 
+    int maxSchur = 15 + 35*int(LST != qpOASES::LST_LAPACK);
     // qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_ANY : qpOASES::LST_LAPACK;
-    qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
-    qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
-    qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
+    qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST));
+    qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST));
+    qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST));
     
     init_QP_common(blockIdx);
 }
