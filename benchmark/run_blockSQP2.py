@@ -77,7 +77,7 @@ opts = blockSQP2.SQPoptions(
     
     test_opt_1 = True,
     test_opt_2 = True,
-    test_opt_3 = True,
+    test_opt_3 = False,
     
     qpsol = 'qpOASES',
     # qpsol_options = QPopts
