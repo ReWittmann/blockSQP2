@@ -1981,6 +1981,7 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOC
     vblocks = vblocks_hold.get();
     hess_block_sizes = hess_block_sizes_hold.get();
     targets = targets_hold.get();
+    setup();
 }
 
 
