@@ -53,7 +53,7 @@ opts = blockSQP2.SQPoptions(
     
     max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
-    par_QPs = True,                        #Enable parallel solution of QPs
+    par_QPs = False,                        #Enable parallel solution of QPs
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
@@ -77,7 +77,7 @@ opts = blockSQP2.SQPoptions(
     
     test_opt_1 = True,
     test_opt_2 = True,
-    test_opt_3 = False,
+    test_opt_3 = True,
     
     qpsol = 'qpOASES',
     # qpsol_options = QPopts
@@ -120,7 +120,7 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 #Recommended: Dont pass condenser to activate condensing, 
 #but pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
-# prob.condenser = condenser
+prob.condenser = condenser
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)

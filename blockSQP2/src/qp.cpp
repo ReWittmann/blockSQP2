@@ -484,7 +484,6 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
 
 
 QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
-    std::cout << "solveQP_par\n";
     int maxQP = param->max_conv_QPs + 1;
     steady_clock::time_point T0, T1;
     

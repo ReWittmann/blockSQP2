@@ -879,7 +879,6 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     if (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity != -1)
         throw ParameterError("Values of qpOASES_options::matrixSparsity other that -1 are currently unsupported");
     sparseMatrices = !Qparam->condensed;
-    std::cout << "sparseMatrices = " << sparseMatrices << "\n";
     qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
 
     // qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_ANY : qpOASES::LST_LAPACK;
@@ -904,7 +903,6 @@ void qpOASES_solver::init_QP_common(int *blockIdx){
     A_qp_row = nullptr;
     A_qp_colind = nullptr;
     
-    // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
     if (sparseMatrices){
         int hess_nzCount = 0;
         for (int i = 0; i < nHess; i++){
@@ -935,7 +933,6 @@ void qpOASES_solver::init_QP_common(int *blockIdx){
     opts.numRefinementSteps = 2;
     opts.epsLITests =  2.2204e-08;
     opts.terminationTolerance = static_cast<const qpOASES_options*>(Qparam)->terminationTolerance;
-    std::cout << "opts.terminationTolerance = " << opts.terminationTolerance << "\n";
 }
 
 
@@ -953,7 +950,7 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
             qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
             qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
             qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
-            
+            sparseMatrices = !Qparam->condensed;
             init_QP_common(blockIdx);    
         }
     #else
@@ -968,7 +965,6 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
 void qpOASES_solver::set_reg(double arg){
     double delta_regF = arg - regF;
     regF += delta_regF;
-    throw;
     if (H_qp == nullptr) throw std::logic_error("qpOASES_solver::set_reg - error, a Hessian must be set before a regularization");
     qpOASES::returnValue ret = H_qp->addToDiag(delta_regF);
     if (ret != qpOASES::SUCCESSFUL_RETURN) throw std::logic_error("addToDiag failed\n");
@@ -986,15 +982,15 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def){
     double regFactor = convex_QP ? convex_regF : 0.0;
     
     // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
-    // if (sparseMatrices){
+    if (sparseMatrices){
         convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
         H_qp = std::make_unique<qpOASES::SymSparseMat>(nVar, nVar, hess_row.get(), hess_colind.get(), hess_nz.get());
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
-    // }
-    // else{
-    //     convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
-    //     H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
-    // }
+    }
+    else{
+        convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
+        H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
+    }
     matrices_changed = true;
     regF = 0.0;
     return;
@@ -1088,7 +1084,6 @@ void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
     if (nVar != hot_QP->nVar || nCon != hot_QP->nCon)
         throw std::invalid_argument("Error setting hotstart point: QPs have different dimensions");
     if (this == hot_QP) return;
-    std::cout << "qpOASES_solver::set_hotstart_point\n";
     *qp = *(hot_QP->qp);
     return;
 }
