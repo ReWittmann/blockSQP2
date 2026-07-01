@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Hang_Glider(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -36,7 +36,7 @@ OCprob = OCProblems.Hang_Glider(
                     )
 
 itMax = 100                                   #max number of steps
-step_plots = True                           #Plot each iterate?
+step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 
