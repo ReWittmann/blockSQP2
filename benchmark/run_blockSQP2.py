@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -41,8 +41,8 @@ step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 
 
-start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
-# start = OCprob.start_point
+# start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
+start = OCprob.start_point
 ################################
 # QPopts = blockSQP2.qpOASES_options(
 #     sparsityLevel = 2
@@ -120,7 +120,7 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 #Recommended: Dont pass condenser to activate condensing, 
 #but pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
-prob.condenser = condenser
+# prob.condenser = condenser
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
