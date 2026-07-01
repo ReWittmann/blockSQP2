@@ -265,12 +265,12 @@ class Condenser{
 
     //Recovery of dependent variables and condition-lagrange-multipliers from qp-solution X_cond
 	void recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_cond,
-                            Matrix &xi_full, Matrix &lambda_full);
+                            Matrix &xi_full, Matrix &lambda_full) const;
 
     //Recover dependent variables and continuity condition multipliers for a single condensable structure
     //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
     void single_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda);
+                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
 
 
 

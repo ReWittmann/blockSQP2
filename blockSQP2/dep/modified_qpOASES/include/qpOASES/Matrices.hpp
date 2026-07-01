@@ -246,6 +246,8 @@ class Matrix
 		virtual returnValue addToDiagI( real_t alpha, int_t ind) = 0;
 		
 		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il) = 0;
+		
+		virtual real_t sum() = 0;
 		/** Allocates and creates dense matrix array in row major format.
 		 *
 		 *  Note: Calling function has to free allocated memory!
@@ -476,6 +478,7 @@ class DenseMatrix : public virtual Matrix
 										);
 		virtual returnValue addToDiagI( real_t alpha, int_t ind);
 		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il);
+		virtual real_t sum();
 		/** Allocates and creates dense matrix array in row major format.
 		 *
 		 *  Note: Calling function has to free allocated memory!
@@ -711,6 +714,7 @@ class SparseMatrix : public virtual Matrix
 										);
 		virtual returnValue addToDiagI( real_t alpha, int_t ind);
 		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il);
+		virtual real_t sum();
 		/** Create jd field from ir and jc.
 		 *  \return Pointer to jd. */
 		sparse_int_t* createDiagInfo();
@@ -899,6 +903,7 @@ class SparseMatrixRow : public virtual Matrix
 		virtual returnValue addToDiagI(	real_t alpha, int_t ind
 								);
 		virtual returnValue addToDiagIndices(real_t alpha, int_t *indices, int_t il);
+		virtual real_t sum();
 		/** Create jd field from ir and jc.
 		 *  \return Pointer to jd. */
 		sparse_int_t* createDiagInfo();

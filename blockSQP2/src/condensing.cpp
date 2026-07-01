@@ -928,7 +928,7 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 
 
 void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_cond,
-                                    Matrix &xi_full, Matrix &lambda_full){
+                                    Matrix &xi_full, Matrix &lambda_full) const {
 
     std::vector<Matrix> O_xi_cond(num_targets + 1);
     std::vector<Matrix> T_xi_cond(num_targets);
@@ -1017,7 +1017,7 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
 }
 
 void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda){
+                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const {
     int n_stages = targets[tnum].n_stages;
     condensing_data &Data = targets_data[tnum];
 

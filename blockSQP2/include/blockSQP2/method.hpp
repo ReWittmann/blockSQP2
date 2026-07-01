@@ -126,7 +126,6 @@ class SQPmethod{
             QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
             QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
-            
             // QPresults solveQP_seq_default(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
             

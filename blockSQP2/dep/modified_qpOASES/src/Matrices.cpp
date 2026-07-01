@@ -610,6 +610,11 @@ returnValue DenseMatrix::addToDiagIndices(real_t alpha, int_t *indices, int_t il
 	return SUCCESSFUL_RETURN;
 }
 
+real_t DenseMatrix::sum(){
+	real_t acc = 0;
+	for (int_t i = 0; i < nRows*nCols; i++) acc += val[i];
+	return acc;
+}
 
 returnValue DenseMatrix::writeToFile( FILE* output_file, const char* prefix ) const
 {
@@ -1427,6 +1432,12 @@ returnValue SparseMatrix::addToDiagIndices(real_t alpha, int_t *indices, int_t i
 	return SUCCESSFUL_RETURN;
 }
 
+real_t SparseMatrix::sum(){
+	real_t acc = 0;
+	for (int_t i = 0; i < jc[nCols]; i++) acc += val[i];
+	return acc;
+}
+
 sparse_int_t* SparseMatrix::createDiagInfo( )
 {
 	sparse_int_t i, j;
@@ -2163,7 +2174,11 @@ returnValue SparseMatrixRow::addToDiagIndices(real_t alpha, int_t *indices, int_
 	return SUCCESSFUL_RETURN;
 }
 
-
+real_t SparseMatrixRow::sum(){
+	real_t acc = 0;
+	for (int_t i = 0; i < jr[nCols]; i++) acc += val[i];
+	return acc;
+}
 
 sparse_int_t* SparseMatrixRow::createDiagInfo( )
 {
