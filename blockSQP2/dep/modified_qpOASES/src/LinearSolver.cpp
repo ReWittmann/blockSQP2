@@ -1534,7 +1534,7 @@ returnValue MumpsSparseSolver::setMatrixData(	int_t dim_,
  *	f a c t o r i z e
  */
 returnValue MumpsSparseSolver::factorize( )
-{std::cout << "MumpsSparseSolver::factorize\n";
+{
 	if ( dim == 0 )
 	{
 		have_factorization = true;
@@ -2008,7 +2008,7 @@ returnValue MumpsSparseSolver_2::setMatrixData(	int_t dim_,
  *	f a c t o r i z e
  */
 returnValue MumpsSparseSolver_2::factorize( )
-{std::cout << "MumpsSparseSolver_2::factorize\n";
+{
 	if ( dim == 0 )
 	{
 		have_factorization = true;

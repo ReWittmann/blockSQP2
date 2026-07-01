@@ -882,9 +882,9 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
 
     // qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_ANY : qpOASES::LST_LAPACK;
-    qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 15, LST));
-    qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 15, LST));
-    qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 15, LST));
+    qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
+    qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
+    qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, LST));
     
     init_QP_common(blockIdx);
 }
@@ -1079,7 +1079,7 @@ void qpOASES_solver::set_hotstart_point(BasicQPsolver *hot_QP){
     if (dynamic_cast<qpOASES_solver*>(hot_QP) != nullptr){
         set_hotstart_point(static_cast<qpOASES_solver*>(hot_QP));
     }
-    return;
+    else throw std::invalid_argument("qpOASES_solver::set_hotstart_point: Expected qpOASES_solver");
 }
 
 void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
