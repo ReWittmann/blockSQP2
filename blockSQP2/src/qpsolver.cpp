@@ -484,9 +484,9 @@ QPresults CQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_var, co
             
             //Add difference between dependent state values from QP solution and integration for target tnum
             ind_1 = 0;
-            ind_2 = condenser->vranges[condenser->targets[tnum].first_free];
+            ind_2 = condenser->vranges[condenser->targets[tnum].vblock_start];
             
-            for (int i = condenser->targets[tnum].first_free; i < condenser->targets[tnum].vblock_end; i++){
+            for (int i = condenser->targets[tnum].vblock_start; i < condenser->targets[tnum].vblock_end; i++){
                 if (condenser->vblocks[i].dependent){
                     for (int j = 0; j < condenser->vblocks[i].size; j++){
                         xi_s = xi(ind_2 + j) + deltaXi_corr(ind_2 + j);
@@ -659,9 +659,9 @@ QPresults SharedCQPsolver::bound_correction(const Matrix &xi, const Matrix &lb_v
             
             //Add difference between dependent state values from QP solution and integration for target tnum
             ind_1 = 0;
-            ind_2 = condenser->vranges[condenser->targets[tnum].first_free];
+            ind_2 = condenser->vranges[condenser->targets[tnum].vblock_start];
             
-            for (int i = condenser->targets[tnum].first_free; i < condenser->targets[tnum].vblock_end; i++){
+            for (int i = condenser->targets[tnum].vblock_start; i < condenser->targets[tnum].vblock_end; i++){
                 if (condenser->vblocks[i].dependent){
                     for (int j = 0; j < condenser->vblocks[i].size; j++){
                         xi_s = xi(ind_2 + j) + deltaXi_corr(ind_2 + j);
@@ -742,7 +742,7 @@ BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, 
         m_QP = prob->condenser->condensed_num_cons;
         n_QP = prob->condenser->condensed_num_vars;
         n_hess_QP = prob->condenser->condensed_num_hessblocks;
-        blockIdx = prob->condenser->condensed_blockIdx;
+        blockIdx = prob->condenser->condensed_blockIdx.get();
     }
     
     #ifdef QPSOLVER_QPOASES
@@ -795,7 +795,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
         m_QP = prob->condenser->condensed_num_cons;
         n_QP = prob->condenser->condensed_num_vars;
         n_hess_QP = prob->condenser->condensed_num_hessblocks;
-        blockIdx = prob->condenser->condensed_blockIdx;
+        blockIdx = prob->condenser->condensed_blockIdx.get();
     }
     
     load_mumps_libs(N_QP - 1);
@@ -824,7 +824,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
     m_QP = prob->condenser->condensed_num_cons;
     n_QP = prob->condenser->condensed_num_vars;
     n_hess_QP = prob->condenser->condensed_num_hessblocks;
-    blockIdx = prob->condenser->condensed_blockIdx;
+    blockIdx = prob->condenser->condensed_blockIdx.get();
     
     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
     QPsol = new CQPsolver(QPsol, Condenser::layout_copy(prob->condenser), true, true);

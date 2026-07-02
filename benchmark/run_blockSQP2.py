@@ -77,7 +77,7 @@ opts = blockSQP2.SQPoptions(
     
     test_opt_1 = True,
     test_opt_2 = True,
-    test_opt_3 = True,
+    test_opt_3 = False,
     
     qpsol = 'qpOASES',
     # qpsol_options = QPopts
@@ -94,9 +94,14 @@ opts = blockSQP2.SQPoptions(
 vblocks = [blockSQP2.vblock(size, dep) for size, dep in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies)]
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
-targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
-condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 0)
 
+targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
+
+ctarget_data = [99, 1, 200, 1, 100]
+targets2 = [blockSQP2.condensing_target(*ctarget_data)]
+
+# condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
+condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
 
 #Define blockSQP Problemspec
 #See class OCProblems.OCProblem and blockSQP2/Problem.py for field specifications

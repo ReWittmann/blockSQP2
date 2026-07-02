@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
+#include <thread>
 
 
 namespace blockSQP2{
@@ -38,6 +39,7 @@ struct vblock{
 	int size;
 	bool dependent;
 	bool removed;
+    
 };
 
 //Future: Have more general dependency graphs for variables for advanced condensing in more than one pass
@@ -80,11 +82,11 @@ struct condensing_target{
 	//Number of intermediate shooting stages
 	int n_stages;
 	//First free variable block that following dependent blocks depend on
-	int first_free;
+	int vblock_start;
 	//End of variable blocks of target/first vblock not corresponding to target and associated hessian blocks
 	int vblock_end;
 	//First and last continuity conditions
-	int first_cond;
+	int cblock_start;
 	int cblock_end;
 };
 
@@ -177,7 +179,7 @@ struct condensing_data{
 class Condenser{
 
     public:
-    //Constructor arguments
+    ///Constructor arguments///
 	int num_cblocks;
 	int num_vblocks;
 	int num_hessblocks;
@@ -188,7 +190,12 @@ class Condenser{
 	int* hess_block_sizes;
 	condensing_target* targets;
     
-    //Layout data calculated from constructor arguments
+	//Additional option: How should dependent variable bounds be added to the condensed QP:
+    //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
+    int add_dep_bounds;
+    
+    
+    ///Layout data calculated from constructor arguments by calling the "setup" method///
 	int num_vars;
 	int num_cons;
     int condensed_num_vars;
@@ -197,32 +204,29 @@ class Condenser{
 
     int condensed_num_hessblocks;
 
-	int* cranges;
-	int* vranges;
+	std::unique_ptr<int[]> cranges;
+	std::unique_ptr<int[]> vranges;
 
-	int* c_starts;
-	int* c_ends;
-	int* v_starts;
-	int* v_ends;
-	int* h_starts;
-	int* h_ends;
-    int* condensed_v_starts;
-    int* condensed_v_ends;
+	std::unique_ptr<int[]> c_starts;
+	std::unique_ptr<int[]> c_ends;
+	std::unique_ptr<int[]> v_starts;
+	std::unique_ptr<int[]> v_ends;
+	std::unique_ptr<int[]> h_starts;
+	std::unique_ptr<int[]> h_ends;
+    std::unique_ptr<int[]> condensed_v_starts;
+    std::unique_ptr<int[]> condensed_v_ends;
 
-	int* hess_block_ranges;
+	std::unique_ptr<int[]> hess_block_ranges;
 
-    int* condensed_hess_block_sizes;
-    int* condensed_blockIdx;
+    std::unique_ptr<int[]> condensed_hess_block_sizes;
+    std::unique_ptr<int[]> condensed_blockIdx;
 
-	//Additional option: How should dependent variable bounds be added to the condensed QP:
-    //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
-	int add_dep_bounds;
 	//Number of constraints and conditions of original QP, if dependent variable bounds are kept, else number of "true" constraints
 	int condensed_num_cons;
 
     ///QP specific data
 	//QP-specific data for each condensable variable-condition-structure
-	condensing_data *targets_data;
+	std::unique_ptr<condensing_data[]> targets_data;
 
     //Slices of the gradient of the objective
     std::vector<Matrix> T_grad_obj;
@@ -237,6 +241,8 @@ class Condenser{
     //Bounds on dependent variables in condensed QP, which can be manually added to a QP condensed with option add_dep_bounds = 1
     Matrix lb_dep_var;
     Matrix ub_dep_var;
+    
+    std::unique_ptr<std::jthread[]> target_threads;
 
     Condenser();
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
@@ -263,7 +269,7 @@ class Condenser{
 
 	//Condensing for a single block of variables and conditions with condensable structure
     void single_condense(int tnum, const Matrix &grad_obj, const Sparse_Matrix &B_Jac, const SymMatrix *const sub_hess,
-                            const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con);
+                            const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con) const;
 
     //Recovery of dependent variables and condition-lagrange-multipliers from qp-solution X_cond
 	void recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_cond,
@@ -328,13 +334,14 @@ class holding_Condenser : public Condenser{
 
 //holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS = 2);
 
-class PartialCondenser : public holding_Condenser{
-    vblock *vblocks_orig;
-    cblock *cblocks_orig;
-    int *hess_block_sizes_orig;
+class PartialCondenser : public Condenser{
+    public:
     condensing_target *targets_orig;
     int n_targets_orig;
+    std::unique_ptr<condensing_target[]> targets_hold;
+    
     PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_split, int DEP_BOUNDS = 2);
+    virtual ~PartialCondenser();
 };
 
 

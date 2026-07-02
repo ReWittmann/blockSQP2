@@ -1744,7 +1744,7 @@ Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
 Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start){
     #ifdef MATRIX_DEBUG
     if (start + M1.n > N){
-        throw std::invalid_argument("lr_zero_pad: Matrix not in given bounds at given position");
+        throw std::invalid_argument(std::string("lr_zero_pad: Matrix of size2 n = ") + std::to_string(M1.n) + std::string(" not in given bounds ") + std::to_string(0) + std::string(", ") + std::to_string(N) + std::string(" at given position ") + std::to_string(start));
     }
     #endif
     

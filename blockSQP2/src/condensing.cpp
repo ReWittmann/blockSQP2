@@ -46,17 +46,17 @@ cblock::cblock(): size(0), removed(false)
 {}
 
 condensing_target::condensing_target(int N_stages, int ffree, int B_end, int fcond, int C_end):
-	n_stages(N_stages), first_free(ffree), vblock_end(B_end), first_cond(fcond), cblock_end(C_end){
-		if (vblock_end <= first_free || cblock_end <= first_cond){
+	n_stages(N_stages), vblock_start(ffree), vblock_end(B_end), cblock_start(fcond), cblock_end(C_end){
+		if (vblock_end <= vblock_start || cblock_end <= cblock_start){
             throw std::invalid_argument("vblock end index must be greater than index of first free variable block and cblock end index must be greater than index of first condition");
 		}
-		if (cblock_end - first_cond != n_stages){
+		if (cblock_end - cblock_start != n_stages){
             throw std::invalid_argument("Number of stages must be equal to number of conditions in given range");
 		}
 	}
 
 condensing_target::condensing_target():
-    n_stages(0), first_free(0), vblock_end(0), first_cond(0), cblock_end(0){
+    n_stages(0), vblock_start(0), vblock_end(0), cblock_start(0), cblock_end(0){
     }
 
 Condenser::Condenser(){}
@@ -73,270 +73,310 @@ Condenser::Condenser(
 }
 
 void Condenser::setup(){
-            //Sanitize inputs
-            for (int tnum = 0; tnum < num_targets; tnum++){
-                if (targets[tnum].cblock_end > num_cblocks || targets[tnum].first_cond < 0){
-                    throw std::invalid_argument("Condenser: Target " + std::to_string(tnum) + " condition blocks range out of bounds");
+    //Sanitize inputs
+    for (int tnum = 0; tnum < num_targets; tnum++){
+        if (targets[tnum].cblock_end > num_cblocks || targets[tnum].cblock_start < 0){
+            throw std::invalid_argument("Condenser: Target " + std::to_string(tnum) + " condition blocks range out of bounds");
+        }
+
+        if (targets[tnum].vblock_end > num_vblocks || targets[tnum].vblock_start < 0){
+            throw std::invalid_argument("Condenser: Target " + std::to_string(tnum) + " variable blocks range out of bounds");
+        }
+
+        if (targets[tnum].n_stages != targets[tnum].cblock_end - targets[tnum].cblock_start){
+            throw std::invalid_argument("Condenser: Number of target condition blocks must be equal to number of stages");
+        }
+    }
+
+    //Initialize data concerning the full QP
+    cranges = std::make_unique<int[]>(num_cblocks + 1);
+    vranges = std::make_unique<int[]>(num_vblocks + 1);
+
+    c_starts = std::make_unique<int[]>(num_targets);
+    c_ends = std::make_unique<int[]>(num_targets);
+    v_starts = std::make_unique<int[]>(num_targets);
+    v_ends = std::make_unique<int[]>(num_targets);
+    h_starts = std::make_unique<int[]>(num_targets);
+    h_ends = std::make_unique<int[]>(num_targets);
+    condensed_v_starts = std::make_unique<int[]>(num_targets);
+    condensed_v_ends = std::make_unique<int[]>(num_targets);
+
+    hess_block_ranges = std::make_unique<int[]>(num_hessblocks + 1);
+    targets_data = std::make_unique<condensing_data[]>(num_targets);
+    std::sort(targets, targets+num_targets, [](condensing_target T1, condensing_target T2) -> bool{return T1.vblock_start < T2.vblock_start;});
+    T_Slices.reserve(num_targets);
+    T_grad_obj.reserve(num_targets);
+    O_Slices.reserve(num_targets + 1);
+    O_grad_obj.reserve(num_targets + 1);
+
+    vranges[0] = 0;
+    for (int i = 1; i<= num_vblocks; i++){
+        vranges[i] = vranges[i-1] + vblocks[i-1].size;
+    }
+    num_vars = vranges[num_vblocks];
+
+    cranges[0] = 0;
+    for (int i = 1; i<= num_cblocks; i++){
+        cranges[i] = cranges[i-1] + cblocks[i-1].size;
+    }
+    num_cons = cranges[num_cblocks];
+
+    hess_block_ranges[0] = 0;
+    for (int i = 1; i<= num_hessblocks; i++){
+        hess_block_ranges[i] = hess_block_ranges[i-1] + hess_block_sizes[i-1];
+    }
+
+    v_starts[0] = vranges[targets[0].vblock_start];
+    v_ends[0] = vranges[targets[0].vblock_end];
+    c_starts[0] = cranges[targets[0].cblock_start];
+    c_ends[0] = cranges[targets[0].cblock_end];
+    for (int i = 1; i < num_targets; i++){
+        v_starts[i] = vranges[targets[i].vblock_start];
+        v_ends[i] = vranges[targets[i].vblock_end];
+        c_starts[i] = cranges[targets[i].cblock_start];
+        c_ends[i] = cranges[targets[i].cblock_end];
+        if (v_starts[i] < v_ends[i-1] || c_starts[i] < c_ends[i-1]){
+            throw std::invalid_argument("Shooting-structure variable/condition-slices overlapping!");
+        }
+    }
+
+    for (int i = 0; i < num_targets; i++){
+        h_starts[i] = get_hessblock_index(v_starts[i]);
+        h_ends[i] = get_hessblock_index(v_ends[i]);
+    }
+
+    //Set condensing conditions as removed
+    for (int i = 0; i < num_targets; i++){
+        for (int j = targets[i].cblock_start; j < targets[i].cblock_end; j++){
+            cblocks[j].removed = true;
+        }
+    }
+
+
+    // int num_free;
+    // int offset = 0;
+    // for (int tnum = 0; tnum < num_targets; tnum++){
+    //     condensed_v_starts[tnum] = v_starts[tnum] - offset;
+    //     num_free = 0;
+    //     for (int i = targets[tnum].vblock_start; i<targets[tnum].vblock_end; i++){
+    //         if (vblocks[i].dependent){
+    //             offset += vblocks[i].size;
+    //         }
+    //         else{
+    //             num_free += vblocks[i].size;
+    //         }
+    //     }
+    //     condensed_v_ends[tnum] = condensed_v_starts[tnum] + num_free;
+    // }
+    // condensed_num_vars = num_vars - offset;
+
+    num_true_cons = num_cons;
+    condensed_num_hessblocks = num_hessblocks;
+    for (int i = 0; i < num_targets; i++){
+        num_true_cons -= c_ends[i] - c_starts[i];
+        condensed_num_hessblocks -= h_ends[i] - h_starts[i] - 1;
+    }
+
+    if (add_dep_bounds){
+        condensed_num_cons = num_cons;
+    }
+    else{
+        condensed_num_cons = num_true_cons;
+    }
+
+    //Initialize data for individual condensing target structures
+
+    int ind;
+    int f_ind;
+    int d_ind;
+    bool dep;
+    int n_stages;
+    for (int tnum = 0; tnum < num_targets; tnum++){
+
+        n_stages = targets[tnum].n_stages;
+        //Generate layout-information
+        targets_data[tnum].alt_vranges.resize(n_stages * 2 + 2);
+        targets_data[tnum].cond_ranges.resize(n_stages + 1);
+        targets_data[tnum].free_sizes.resize(n_stages + 1);
+        targets_data[tnum].cond_sizes.resize(n_stages);
+
+        targets_data[tnum].alt_vranges[0] = 0;
+        targets_data[tnum].alt_vranges[1] = 0;
+        targets_data[tnum].free_sizes[0] = 0;
+        targets_data[tnum].n_free = 0;
+        targets_data[tnum].n_dep = 0;
+        ind = 1;
+        f_ind = 0;
+        d_ind = 0;
+        dep = false;
+        
+        
+        int i = targets[tnum].vblock_start;
+        
+        for (; vblocks[i].dependent; i++){
+            //Partial condensing: Initial vblocks dependent, but should be kept in condensed QP.
+            // vblocks[i].removed = false;
+            targets_data[tnum].alt_vranges[ind] += vblocks[i].size;
+            targets_data[tnum].free_sizes[f_ind] += vblocks[i].size;
+            targets_data[tnum].n_free += vblocks[i].size;
+        }
+        for (; !vblocks[i].dependent; i++){
+            // vblocks[i].removed = false;
+            targets_data[tnum].alt_vranges[ind] += vblocks[i].size;
+            targets_data[tnum].free_sizes[f_ind] += vblocks[i].size;
+            targets_data[tnum].n_free += vblocks[i].size;
+        }
+        
+        // for (int i = targets[tnum].vblock_start; i<targets[tnum].vblock_end; i++){
+        for (; i<targets[tnum].vblock_end; i++){
+            if (dep == vblocks[i].dependent){
+                targets_data[tnum].alt_vranges[ind] += vblocks[i].size;
+
+                if (!vblocks[i].dependent){
+                    targets_data[tnum].free_sizes[f_ind] += vblocks[i].size;
+                    targets_data[tnum].n_free += vblocks[i].size;
                 }
-
-                if (targets[tnum].vblock_end > num_vblocks || targets[tnum].first_free < 0){
-                    throw std::invalid_argument("Condenser: Target " + std::to_string(tnum) + " variable blocks range out of bounds");
+                else{
+                    targets_data[tnum].n_dep += vblocks[i].size;
+                    vblocks[i].removed = true;
                 }
-
-                if (targets[tnum].n_stages != targets[tnum].cblock_end - targets[tnum].first_cond){
-                    throw std::invalid_argument("Condenser: Number of target condition blocks must be equal to number of stages");
-                }
-            }
-
-            //Initialize data concerning the full QP
-			cranges = new int[num_cblocks+1];
-			vranges = new int[num_vblocks+1];
-
-			c_starts = new int[num_targets];
-			c_ends = new int[num_targets];
-			v_starts = new int[num_targets];
-			v_ends = new int[num_targets];
-			h_starts = new int[num_targets];
-			h_ends = new int[num_targets];
-			condensed_v_starts = new int[num_targets];
-			condensed_v_ends = new int[num_targets];
-
-			hess_block_ranges = new int[num_hessblocks+1];
-			targets_data = new condensing_data[num_targets];
-			std::sort(targets, targets+num_targets, [](condensing_target T1, condensing_target T2) -> bool{return T1.first_free < T2.first_free;});
-            T_Slices.reserve(num_targets);
-            T_grad_obj.reserve(num_targets);
-            O_Slices.reserve(num_targets + 1);
-            O_grad_obj.reserve(num_targets + 1);
-
-			vranges[0] = 0;
-			for (int i = 1; i<= num_vblocks; i++){
-				vranges[i] = vranges[i-1] + vblocks[i-1].size;
-			}
-			num_vars = vranges[num_vblocks];
-
-			cranges[0] = 0;
-			for (int i = 1; i<= num_cblocks; i++){
-				cranges[i] = cranges[i-1] + cblocks[i-1].size;
-			}
-			num_cons = cranges[num_cblocks];
-
-			hess_block_ranges[0] = 0;
-			for (int i = 1; i<= num_hessblocks; i++){
-				hess_block_ranges[i] = hess_block_ranges[i-1] + hess_block_sizes[i-1];
-			}
-
-			v_starts[0] = vranges[targets[0].first_free];
-			v_ends[0] = vranges[targets[0].vblock_end];
-			c_starts[0] = cranges[targets[0].first_cond];
-			c_ends[0] = cranges[targets[0].cblock_end];
-			for (int i = 1; i < num_targets; i++){
-				v_starts[i] = vranges[targets[i].first_free];
-				v_ends[i] = vranges[targets[i].vblock_end];
-				c_starts[i] = cranges[targets[i].first_cond];
-				c_ends[i] = cranges[targets[i].cblock_end];
-				if (v_starts[i] < v_ends[i-1] || c_starts[i] < c_ends[i-1]){
-					throw std::invalid_argument("Shooting-structure variable/condition-slices overlapping!");
-				}
-			}
-
-            for (int i = 0; i < num_targets; i++){
-                h_starts[i] = get_hessblock_index(v_starts[i]);
-                h_ends[i] = get_hessblock_index(v_ends[i]);
-            }
-
-            //Set condensing conditions as removed
-            for (int i = 0; i < num_targets; i++){
-                for (int j = targets[i].first_cond; j < targets[i].cblock_end; j++){
-                    cblocks[j].removed = true;
-				}
-            }
-
-
-            int num_free;
-            int offset = 0;
-			for (int tnum = 0; tnum < num_targets; tnum++){
-                condensed_v_starts[tnum] = v_starts[tnum] - offset;
-                num_free = 0;
-                for (int i = targets[tnum].first_free; i<targets[tnum].vblock_end; i++){
-                    if (vblocks[i].dependent){
-                        offset += vblocks[i].size;
-                    }
-                    else{
-                        num_free += vblocks[i].size;
-                    }
-                }
-                condensed_v_ends[tnum] = condensed_v_starts[tnum] + num_free;
-			}
-            condensed_num_vars = num_vars - offset;
-
-            num_true_cons = num_cons;
-            condensed_num_hessblocks = num_hessblocks;
-            for (int i = 0; i < num_targets; i++){
-                num_true_cons -= c_ends[i] - c_starts[i];
-                condensed_num_hessblocks -= h_ends[i] - h_starts[i] - 1;
-            }
-
-            if (add_dep_bounds){
-                condensed_num_cons = num_cons;
             }
             else{
-                condensed_num_cons = num_true_cons;
-            }
+                dep = vblocks[i].dependent;
+                ind++;
+                targets_data[tnum].alt_vranges[ind] = targets_data[tnum].alt_vranges[ind - 1] + vblocks[i].size;
 
-            //Initialize data for individual condensing target structures
-
-			int ind;
-			int f_ind;
-			int d_ind;
-			bool dep;
-			int n_stages;
-			for (int tnum = 0; tnum < num_targets; tnum++){
-
-                n_stages = targets[tnum].n_stages;
-                //Generate layout-information
-				targets_data[tnum].alt_vranges.resize(n_stages * 2 + 2);
-				targets_data[tnum].cond_ranges.resize(n_stages + 1);
-				targets_data[tnum].free_sizes.resize(n_stages + 1);
-				targets_data[tnum].cond_sizes.resize(n_stages);
-
-				targets_data[tnum].alt_vranges[0] = 0;
-				targets_data[tnum].alt_vranges[1] = 0;
-				targets_data[tnum].free_sizes[0] = 0;
-				targets_data[tnum].n_free = 0;
-				targets_data[tnum].n_dep = 0;
-				ind = 1;
-				f_ind = 0;
-				d_ind = 0;
-				dep = false;
-				for (int i = targets[tnum].first_free; i<targets[tnum].vblock_end; i++){
-					if (dep == vblocks[i].dependent){
-						targets_data[tnum].alt_vranges[ind] += vblocks[i].size;
-
-                        if (!vblocks[i].dependent){
-                            targets_data[tnum].free_sizes[f_ind] += vblocks[i].size;
-                            targets_data[tnum].n_free += vblocks[i].size;
-                        }
-                        else{
-                            targets_data[tnum].n_dep += vblocks[i].size;
-                        }
-					}
-					else{
-						dep = vblocks[i].dependent;
-						ind++;
-						targets_data[tnum].alt_vranges[ind] = targets_data[tnum].alt_vranges[ind - 1] + vblocks[i].size;
-
-                        if (!vblocks[i].dependent){
-                            f_ind++;
-                            if (f_ind > n_stages){
-                                throw std::invalid_argument("Condenser: Number of free slices following dependent slices cannot be greater then the number of stages");
-                            }
-
-                            targets_data[tnum].free_sizes[f_ind] = vblocks[i].size;
-                            targets_data[tnum].n_free += vblocks[i].size;
-                        }
-                        else{
-                            targets_data[tnum].n_dep += vblocks[i].size;
-                            d_ind++;
-                        }
-					}
-				}
-
-				if (vblocks[targets[tnum].vblock_end - 1].dependent){
-                    targets_data[tnum].free_sizes[n_stages] = 0;
-                    targets_data[tnum].alt_vranges[2*n_stages + 1] = targets_data[tnum].alt_vranges[2*n_stages];
-				}
-
-                //sanitizing
-				if (targets[tnum].n_stages != d_ind){
-                    throw std::invalid_argument("Condenser: Number of dependent variable slices inbetween free variable blocks does not match number of stages");
-				}
-
-
-				for (int i = 0; i < n_stages; i++){
-					targets_data[tnum].cond_ranges[i] = cranges[targets[tnum].first_cond + i];
-					targets_data[tnum].cond_sizes[i] = cblocks[targets[tnum].first_cond + i].size;
-				}
-				targets_data[tnum].cond_ranges[n_stages] = cranges[targets[tnum].cblock_end];
-
-
-                //sanitizing
-                for (int i = 0; i < n_stages; i++){
-                    if (targets_data[tnum].cond_sizes[i] != targets_data[tnum].alt_vranges[2*i + 2] - targets_data[tnum].alt_vranges[2*i + 1]){
-                        throw std::invalid_argument("Condenser: Number of dependent variables of each stage must match number of defining conditions");
+                if (!vblocks[i].dependent){
+                    f_ind++;
+                    if (f_ind > n_stages){
+                        throw std::invalid_argument("Condenser: Number of free slices following dependent slices cannot be greater then the number of stages");
                     }
+
+                    targets_data[tnum].free_sizes[f_ind] = vblocks[i].size;
+                    targets_data[tnum].n_free += vblocks[i].size;
                 }
-
-
-				//Allocate matrices and vectors for the condensing algorithm
-                targets_data[tnum].A_k.resize(n_stages - 1);
-                targets_data[tnum].B_k.resize(n_stages);
-                targets_data[tnum].c_k.resize(n_stages);
-                targets_data[tnum].r_k.resize(n_stages + 1);
-                targets_data[tnum].q_k.resize(n_stages);
-
-                targets_data[tnum].R_k.resize(n_stages + 1);
-                targets_data[tnum].Q_k.resize(n_stages);
-                targets_data[tnum].S_k.resize(n_stages);
-
-
-                int *m_sizes = new int[n_stages];
-                int *n_sizes = new int[n_stages + 1];
-                int *h_sizes = new int[n_stages + 1];
-                for (int i = 0; i < n_stages; i++){
-                    m_sizes[i] = targets_data[tnum].cond_sizes[i];
-                    n_sizes[i] = targets_data[tnum].free_sizes[i];
-                    h_sizes[i] = targets_data[tnum].free_sizes[i];
+                else{
+                    targets_data[tnum].n_dep += vblocks[i].size;
+                    vblocks[i].removed = true;
+                    d_ind++;
                 }
-                n_sizes[n_stages] = targets_data[tnum].free_sizes[n_stages];
-                h_sizes[n_stages] = targets_data[tnum].free_sizes[n_stages];
-
-                targets_data[tnum].g_k.resize(n_stages);
-                targets_data[tnum].G.Dimension(n_stages, n_stages + 1, m_sizes, n_sizes);
-                targets_data[tnum].h_k.resize(n_stages + 1);
-                targets_data[tnum].H.Dimension(n_stages + 1, n_stages + 1, h_sizes, h_sizes);
-
-                targets_data[tnum].J_free_k.resize(n_stages + 1);
-                targets_data[tnum].J_dep_k.resize(n_stages);
-
-                targets_data[tnum].J_d_CSR_k.resize(n_stages);
-                targets_data[tnum].J_reduced_k.resize(n_stages + 1);
-
-                //Allocate additional matrices and vectors in case an additional QP with fallback hessian needs to be condensed
-                int *h_sizes_2 = new int[n_stages + 1];
-                for (int i = 0; i <= n_stages; i++){
-                    h_sizes_2[i] = targets_data[tnum].free_sizes[i];
-                }
-
-                targets_data[tnum].R_k_2.resize(n_stages + 1);
-                targets_data[tnum].Q_k_2.resize(n_stages);
-                targets_data[tnum].S_k_2.resize(n_stages);
-                targets_data[tnum].h_k_2.resize(n_stages + 1);
-                targets_data[tnum].H_2.Dimension(n_stages + 1, n_stages + 1, h_sizes_2, h_sizes_2);
-			}
-
-            condensed_hess_block_sizes = new int[condensed_num_hessblocks];
-            int ind_1 = 0;
-            int ind_2 = 0;
-            for (int tnum = 0; tnum < num_targets; tnum++){
-                for (int i = 0; i < h_starts[tnum] - ind_2; i++){
-                    condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
-                }
-                ind_1 += h_starts[tnum] - ind_2;
-                condensed_hess_block_sizes[ind_1] = targets_data[tnum].n_free;
-                ind_1++;
-                ind_2 = h_ends[tnum];
             }
-            for (int i = 0; i < num_hessblocks - ind_2; i++){
-                condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
-            }
+        }
 
-            condensed_blockIdx = new int[condensed_num_hessblocks + 1];
-            condensed_blockIdx[0] = 0;
-            for (int i = 1; i < condensed_num_hessblocks + 1; i++){
-                condensed_blockIdx[i] = condensed_blockIdx[i-1] + condensed_hess_block_sizes[i-1];
+        if (vblocks[targets[tnum].vblock_end - 1].dependent){
+            targets_data[tnum].free_sizes[n_stages] = 0;
+            targets_data[tnum].alt_vranges[2*n_stages + 1] = targets_data[tnum].alt_vranges[2*n_stages];
+        }
+
+        //sanitizing
+        if (targets[tnum].n_stages != d_ind){
+            throw std::invalid_argument("Condenser: Number of dependent variable slices inbetween free variable blocks does not match number of stages");
+        }
+
+
+        for (int i = 0; i < n_stages; i++){
+            targets_data[tnum].cond_ranges[i] = cranges[targets[tnum].cblock_start + i];
+            targets_data[tnum].cond_sizes[i] = cblocks[targets[tnum].cblock_start + i].size;
+        }
+        targets_data[tnum].cond_ranges[n_stages] = cranges[targets[tnum].cblock_end];
+
+
+        //sanitizing
+        for (int i = 0; i < n_stages; i++){
+            if (targets_data[tnum].cond_sizes[i] != targets_data[tnum].alt_vranges[2*i + 2] - targets_data[tnum].alt_vranges[2*i + 1]){
+                throw std::invalid_argument("Condenser: Number of dependent variables of each stage must match number of defining conditions");
             }
-		}
+        }
+
+
+        //Allocate matrices and vectors for the condensing algorithm
+        targets_data[tnum].A_k.resize(n_stages - 1);
+        targets_data[tnum].B_k.resize(n_stages);
+        targets_data[tnum].c_k.resize(n_stages);
+        targets_data[tnum].r_k.resize(n_stages + 1);
+        targets_data[tnum].q_k.resize(n_stages);
+
+        targets_data[tnum].R_k.resize(n_stages + 1);
+        targets_data[tnum].Q_k.resize(n_stages);
+        targets_data[tnum].S_k.resize(n_stages);
+
+
+        int *m_sizes = new int[n_stages];
+        int *n_sizes = new int[n_stages + 1];
+        int *h_sizes = new int[n_stages + 1];
+        for (int i = 0; i < n_stages; i++){
+            m_sizes[i] = targets_data[tnum].cond_sizes[i];
+            n_sizes[i] = targets_data[tnum].free_sizes[i];
+            h_sizes[i] = targets_data[tnum].free_sizes[i];
+        }
+        n_sizes[n_stages] = targets_data[tnum].free_sizes[n_stages];
+        h_sizes[n_stages] = targets_data[tnum].free_sizes[n_stages];
+
+        targets_data[tnum].g_k.resize(n_stages);
+        targets_data[tnum].G.Dimension(n_stages, n_stages + 1, m_sizes, n_sizes);
+        targets_data[tnum].h_k.resize(n_stages + 1);
+        targets_data[tnum].H.Dimension(n_stages + 1, n_stages + 1, h_sizes, h_sizes);
+
+        targets_data[tnum].J_free_k.resize(n_stages + 1);
+        targets_data[tnum].J_dep_k.resize(n_stages);
+
+        targets_data[tnum].J_d_CSR_k.resize(n_stages);
+        targets_data[tnum].J_reduced_k.resize(n_stages + 1);
+
+        //Allocate additional matrices and vectors in case an additional QP with fallback hessian needs to be condensed
+        int *h_sizes_2 = new int[n_stages + 1];
+        for (int i = 0; i <= n_stages; i++){
+            h_sizes_2[i] = targets_data[tnum].free_sizes[i];
+        }
+
+        targets_data[tnum].R_k_2.resize(n_stages + 1);
+        targets_data[tnum].Q_k_2.resize(n_stages);
+        targets_data[tnum].S_k_2.resize(n_stages);
+        targets_data[tnum].h_k_2.resize(n_stages + 1);
+        targets_data[tnum].H_2.Dimension(n_stages + 1, n_stages + 1, h_sizes_2, h_sizes_2);
+    }
+
+    condensed_hess_block_sizes = std::make_unique<int[]>(condensed_num_hessblocks);
+    int ind_1 = 0;
+    int ind_2 = 0;
+    for (int tnum = 0; tnum < num_targets; tnum++){
+        for (int i = 0; i < h_starts[tnum] - ind_2; i++){
+            condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
+        }
+        ind_1 += h_starts[tnum] - ind_2;
+        condensed_hess_block_sizes[ind_1] = targets_data[tnum].n_free;
+        ind_1++;
+        ind_2 = h_ends[tnum];
+    }
+    for (int i = 0; i < num_hessblocks - ind_2; i++){
+        condensed_hess_block_sizes[ind_1 + i] = hess_block_sizes[ind_2 + i];
+    }
+
+    condensed_blockIdx = std::make_unique<int[]>(condensed_num_hessblocks + 1);
+    condensed_blockIdx[0] = 0;
+    for (int i = 1; i < condensed_num_hessblocks + 1; i++){
+        condensed_blockIdx[i] = condensed_blockIdx[i-1] + condensed_hess_block_sizes[i-1];
+    }
+    
+    int num_free;
+    int offset = 0;
+    for (int tnum = 0; tnum < num_targets; tnum++){
+        condensed_v_starts[tnum] = v_starts[tnum] - offset;
+        num_free = 0;
+        for (int i = targets[tnum].vblock_start; i<targets[tnum].vblock_end; i++){
+            if (vblocks[i].removed){
+                offset += vblocks[i].size;
+            }
+            else{
+                num_free += vblocks[i].size;
+            }
+        }
+        condensed_v_ends[tnum] = condensed_v_starts[tnum] + num_free;
+    }
+    condensed_num_vars = num_vars - offset;
+    
+    target_threads = std::make_unique<std::jthread[]>(num_targets - 1);
+}
 /*
 Condenser(const Condenser &C){
     num_cblocks = C.num_cblocks;
@@ -370,38 +410,38 @@ Condenser::Condenser(Condenser &&C){
     condensed_num_vars = C.condensed_num_vars;
     num_true_cons = C.num_true_cons;
     condensed_num_hessblocks = C.condensed_num_hessblocks;
-    condensed_hess_block_sizes = C.condensed_hess_block_sizes;
-    condensed_blockIdx = C.condensed_blockIdx;
+    condensed_hess_block_sizes = std::move(C.condensed_hess_block_sizes);
+    condensed_blockIdx = std::move(C.condensed_blockIdx);
 
-    cranges = C.cranges;
-    vranges = C.vranges;
-	c_starts = C.c_starts;
-	c_ends = C.c_ends;
-	v_starts = C.v_starts;
-	v_ends = C.v_ends;
-	h_starts = C.h_starts;
-	h_ends = C.h_ends;
-    condensed_v_starts = C.condensed_v_starts;
-    condensed_v_ends = C.condensed_v_ends;
-	hess_block_ranges = C.hess_block_ranges;
+    cranges = std::move(C.cranges);
+    vranges = std::move(C.vranges);
+	c_starts = std::move(C.c_starts);
+	c_ends = std::move(C.c_ends);
+	v_starts = std::move(C.v_starts);
+	v_ends = std::move(C.v_ends);
+	h_starts = std::move(C.h_starts);
+	h_ends = std::move(C.h_ends);
+    condensed_v_starts = std::move(C.condensed_v_starts);
+    condensed_v_ends = std::move(C.condensed_v_ends);
+	hess_block_ranges = std::move(C.hess_block_ranges);
 
-    C.cranges = nullptr;
-    C.vranges = nullptr;
-    C.c_starts = nullptr;
-    C.c_ends = nullptr;
-    C.v_starts = nullptr;
-    C.v_ends = nullptr;
-    C.h_starts = nullptr;
-    C.h_ends = nullptr;
-    C.condensed_v_starts = nullptr;
-    C.condensed_v_ends = nullptr;
-    C.hess_block_ranges = nullptr;
+    // C.cranges = nullptr;
+    // C.vranges = nullptr;
+    // C.c_starts = nullptr;
+    // C.c_ends = nullptr;
+    // C.v_starts = nullptr;
+    // C.v_ends = nullptr;
+    // C.h_starts = nullptr;
+    // C.h_ends = nullptr;
+    // C.condensed_v_starts = nullptr;
+    // C.condensed_v_ends = nullptr;
+    // C.hess_block_ranges = nullptr;
 
     add_dep_bounds = C.add_dep_bounds;
     condensed_num_cons = C.condensed_num_cons;
 
-    targets_data = C.targets_data;
-    C.targets_data = nullptr;
+    targets_data = std::move(C.targets_data);
+    // C.targets_data = nullptr;
 
     T_grad_obj = std::move(C.T_grad_obj);
     O_grad_obj = std::move(C.O_grad_obj);
@@ -415,21 +455,21 @@ Condenser::Condenser(Condenser &&C){
 
 
 Condenser::~Condenser(){
-	delete[] cranges;
-	delete[] vranges;
+	// delete[] cranges;
+	// delete[] vranges;
 
-	delete[] c_starts;
-	delete[] c_ends;
-	delete[] v_starts;
-	delete[] v_ends;
-	delete[] h_starts;
-	delete[] h_ends;
-    delete[] condensed_hess_block_sizes;
-    delete[] condensed_blockIdx;
-	delete[] condensed_v_starts;
-	delete[] condensed_v_ends;
-    delete[] hess_block_ranges;
-    delete[] targets_data;
+	// delete[] c_starts;
+	// delete[] c_ends;
+	// delete[] v_starts;
+	// delete[] v_ends;
+	// delete[] h_starts;
+	// delete[] h_ends;
+    // delete[] condensed_hess_block_sizes;
+    // delete[] condensed_blockIdx;
+	// delete[] condensed_v_starts;
+	// delete[] condensed_v_ends;
+    // delete[] hess_block_ranges;
+    // delete[] targets_data;
 
 }
 /*
@@ -651,9 +691,23 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
 
     for (int i = 0; i < num_targets; i++){
         single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
-        O_Slices[i].remove_rows(c_starts, c_ends, num_targets);
+        O_Slices[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
     }
-    O_Slices[num_targets].remove_rows(c_starts, c_ends, num_targets);
+    O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+    
+    
+    // for (int tnum = 0; tnum < num_targets - 1; tnum++){
+    //     target_threads[tnum] = std::jthread(&Condenser::single_condense, this, tnum, T_grad_obj[tnum], T_Slices[tnum],
+    //                                         &(hess[h_starts[tnum]]), T_lb_var[tnum], T_ub_var[tnum], lb_con);
+    //     std::cout << "jthread condense\n";
+    //     O_Slices[tnum].remove_rows(c_starts, c_ends, num_targets);
+    // }
+    // int ntm1 = num_targets - 1;
+    // single_condense(ntm1, T_grad_obj[ntm1], T_Slices[ntm1], &(hess[h_starts[ntm1]]), T_lb_var[ntm1], T_ub_var[ntm1], lb_con);
+    // O_Slices[ntm1].remove_rows(c_starts, c_ends, num_targets);
+    // O_Slices[num_targets].remove_rows(c_starts, c_ends, num_targets);
+    
+    // for (int tnum = 0; tnum < num_targets - 1; tnum++) target_threads[tnum].join();
 
 
 
@@ -683,8 +737,8 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
     }
 
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
-    Matrix reduced_lb_con = lb_con.without_rows(c_starts, c_ends, num_targets);
-    Matrix reduced_ub_con = ub_con.without_rows(c_starts, c_ends, num_targets);
+    Matrix reduced_lb_con = lb_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
+    Matrix reduced_ub_con = ub_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
 
     for (int i = 0; i < num_targets; i++){
         reduced_lb_con -= targets_data[i].Jtimes_g;
@@ -770,7 +824,7 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
 }
 
 
-void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_Matrix &B_Jac, const SymMatrix *const sub_hess, const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con){
+void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_Matrix &B_Jac, const SymMatrix *const sub_hess, const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con) const {
 
 	int n_stages = targets[tnum].n_stages;
 	condensing_data &Data = targets_data[tnum];
@@ -880,14 +934,14 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     Data.h = vertcat(Data.h_k);
 
 	Data.J_free_k[0] = B_Jac.get_slice(0, B_Jac.m, 0, Data.alt_vranges[1]);
-	Data.J_free_k[0].remove_rows(c_starts, c_ends, num_targets);
+	Data.J_free_k[0].remove_rows(c_starts.get(), c_ends.get(), num_targets);
 	F_lb_k[0] = B_lb_var.get_slice(0, Data.alt_vranges[1], 0, 1);
 	F_ub_k[0] = B_ub_var.get_slice(0, Data.alt_vranges[1], 0, 1);
 	for (int i = 1; i <= n_stages; i++){
 		Data.J_dep_k[i-1] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
 		Data.J_free_k[i] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
-        Data.J_dep_k[i-1].remove_rows(c_starts, c_ends, num_targets);
-        Data.J_free_k[i].remove_rows(c_starts, c_ends, num_targets);
+        Data.J_dep_k[i-1].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+        Data.J_free_k[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
 
 		D_lb_k[i-1] = B_lb_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
 		D_ub_k[i-1] = B_ub_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
@@ -1467,8 +1521,8 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
     }
     
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
-    Matrix reduced_lb_con = lb_con.without_rows(c_starts, c_ends, num_targets);
-    Matrix reduced_ub_con = ub_con.without_rows(c_starts, c_ends, num_targets);
+    Matrix reduced_lb_con = lb_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
+    Matrix reduced_ub_con = ub_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
     for (int i = 0; i < num_targets; i++){
         reduced_lb_con -= targets_data[i].Jtimes_g;
         reduced_ub_con -= targets_data[i].Jtimes_g;
@@ -1599,8 +1653,8 @@ void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con
     }
 
 //Assemble reduced constraint-bounds (without dependent-variable bounds)
-    Matrix reduced_lb_con = lb_con.without_rows(c_starts, c_ends, num_targets);
-    Matrix reduced_ub_con = ub_con.without_rows(c_starts, c_ends, num_targets);
+    Matrix reduced_lb_con = lb_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
+    Matrix reduced_ub_con = ub_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
     for (int i = 0; i < num_targets; i++){
         reduced_lb_con -= targets_data[i].Jtimes_g;
         reduced_ub_con -= targets_data[i].Jtimes_g;
@@ -1916,26 +1970,22 @@ holding_Condenser::holding_Condenser(
 
 
 
-PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_split, int DEP_BOUNDS):
-        vblocks_orig(VBLOCKS), cblocks_orig(CBLOCKS), hess_block_sizes_orig(HSIZES), targets_orig(TARGETS), 
-        n_targets_orig(n_TARGETS){
-    
-    num_cblocks = n_CBLOCKS;
+PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, 
+                                   cblock* CBLOCKS, int n_CBLOCKS, 
+                                   int* HSIZES, int n_HBLOCKS, 
+                                   condensing_target* TARGETS, int n_TARGETS, 
+                                   int n_split, int DEP_BOUNDS):
+        targets_orig(TARGETS), n_targets_orig(n_TARGETS){
+    add_dep_bounds = DEP_BOUNDS;
+    vblocks = VBLOCKS;
     num_vblocks = n_VBLOCKS;
+    cblocks = CBLOCKS;
+    num_cblocks = n_CBLOCKS;
+    hess_block_sizes = HSIZES;
     num_hessblocks = n_HBLOCKS;
+    
     num_targets = n_TARGETS*n_split;
     
-    vblocks_hold = std::make_unique<vblock[]>(n_VBLOCKS);
-    for (int i = 0; i < num_vblocks; i++) vblocks_hold[i] = vblocks_orig[i];
-    
-    cblocks_hold = std::make_unique<cblock[]>(n_CBLOCKS);
-    for (int i = 0; i < num_cblocks; i++) cblocks_hold[i] = cblocks_orig[i];
-    
-    hess_block_sizes_hold = std::make_unique<int[]>(n_HBLOCKS);
-    for (int i = 0; i < num_hessblocks; i++) hess_block_sizes_hold[i] = hess_block_sizes_orig[i];
-    
-    // targets_hold = std::make_unique<condensing_target []>(n_TARGETS);
-    // for (int i = 0; i < num_targets; i++) targets_hold[i] = targets_orig[i];
     
     targets_hold = std::make_unique<condensing_target[]>(n_TARGETS*n_split);
     int targets_ind = 0;
@@ -1948,43 +1998,35 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOC
         for (int i = 1; i < n_split + 1; i++){
             split_ind[i] = int(targets_orig[tnum].n_stages * i / n_split);
         }
+        int stage_ind = 0;
+        int j = targets_orig[tnum].vblock_start; //vblocks running index
         
-        int start_ind = targets_orig[tnum].first_free, stage_ind = 0;
-        bool dep = false;
-        
-        int j = targets_orig[tnum].first_free; //vblocks running index
         new_vstart = j;
-        new_cstart = targets_orig[tnum].first_cond;
-        
+        new_cstart = targets_orig[tnum].cblock_start;
+        std::cout << "j = " << j << "\n";
         for (int i = 1; i < n_split + 1; i++){
             for (; stage_ind < split_ind[i]; stage_ind++){
-                for (; vblocks_orig[j].dependent; j++){}
-                for (; !vblocks_orig[j].dependent; j++){}
+                for (; vblocks[j].dependent; j++){}
+                for (; !vblocks[j].dependent; j++){}
             }
             
             new_vend = j;
-            new_nstages = split_ind[i] - split_ind[i-1];
+            new_nstages = split_ind[i] - split_ind[i-1] - 1;
             new_cend = new_cstart + new_nstages;
+            
+            std::cout << "new_nstages = " << new_nstages << ", new_vstart = " << new_vstart << ", new_vend = " << new_vend << ", new_cstart = " << new_cstart << ", new_cend = " << new_cend << "\n";
             targets_hold[targets_ind++] = condensing_target(new_nstages, new_vstart, new_vend, new_cstart, new_cend);
             
-            if (i < n_split){
-                new_vstart = new_vend;
-                new_cstart = new_cend;
-                for (; vblocks_orig[j].dependent; j++){vblocks_orig[j].dependent = false;}
-                for (; !vblocks_orig[j].dependent; j++){}
-                stage_ind += 1;
-            }
+            new_vstart = new_vend;
+            new_cstart = new_cend + 1;
         }
     }
     
-    cblocks = cblocks_hold.get();
-    vblocks = vblocks_hold.get();
-    hess_block_sizes = hess_block_sizes_hold.get();
     targets = targets_hold.get();
     setup();
 }
 
-
+PartialCondenser::~PartialCondenser(){}
 
 
 //Moved to restoration.cpp

@@ -27,11 +27,11 @@ import OCProblems
 
 
 Examples = [
-            OCProblems.Batch_Reactor,
-            OCProblems.Cart_Pendulum,
-            OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
-            OCProblems.Ducted_Fan,
+            # OCProblems.Batch_Reactor,
+            # OCProblems.Cart_Pendulum,
+            # OCProblems.Catalyst_Mixing,
+            # OCProblems.Cushioned_Oscillation,
+            # OCProblems.Ducted_Fan,
             # OCProblems.Egerstedt_Standard,
             # OCProblems.Electric_Car,
             # OCProblems.Goddard_Rocket,
@@ -43,7 +43,7 @@ Examples = [
             # OCProblems.Three_Tank_Multimode,
             # OCProblems.Time_Optimal_Car,
             # OCProblems.Tubular_Reactor,
-            # OCProblems.Lotka_OED,
+            OCProblems.Lotka_OED,
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -243,7 +243,7 @@ else:
 titles = [EXP_name for _, EXP_name in Experiments]
 OCP_experiment.print_heading(out, titles)
 for OCclass in Examples:        
-    OCprob = OCclass(nt = 40, integrator = 'RK4', parallel = True)
+    OCprob = OCclass(nt = 100, integrator = 'RK4', parallel = True)
     itMax = 200
     titles = []
     EXP_N_SQP = []

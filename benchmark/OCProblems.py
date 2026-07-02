@@ -3495,21 +3495,21 @@ class Batch_Distillation(OCProblem):
                       'm':0.1,
                       'mC':0.1
                       }
-    tscale = 1e1 #1e2
-    uscale = 1.0 #1.0
+    # tscale = 1e1 #1e2
+    # uscale = 1.0 #1.0
     M0scale = 1e-2
     MDscale = 1e-2
     xDscale = 1e2
-    xCscale = 2.0
-    x0scale = 2.0
+    # xCscale = 2.0
+    # x0scale = 2.0
     
-    # tscale = 1.0
-    # uscale = 1.0
+    tscale = 1.0
+    uscale = 1.0
     # M0scale = 1.0
     # MDscale = 1.0
     # xDscale = 1.0
-    # xCscale = 1.0
-    # x0scale = 1.0
+    xCscale = 1.0
+    x0scale = 1.0
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)

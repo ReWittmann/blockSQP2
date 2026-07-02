@@ -642,11 +642,11 @@ CDLEXP void delete_target_array(void *ptr){
     delete[] static_cast<condensing_target *>(ptr);
 }
 
-CDLEXP void target_array_set(void *ptr, int index, int n_stages, int first_free, int vblock_end, int first_cond, int cblock_end){
+CDLEXP void target_array_set(void *ptr, int index, int n_stages, int vblock_start, int vblock_end, int cblock_start, int cblock_end){
     static_cast<condensing_target *>(ptr)[index].n_stages = n_stages;
-    static_cast<condensing_target *>(ptr)[index].first_free = first_free;
+    static_cast<condensing_target *>(ptr)[index].vblock_start = vblock_start;
     static_cast<condensing_target *>(ptr)[index].vblock_end = vblock_end;
-    static_cast<condensing_target *>(ptr)[index].first_cond = first_cond;
+    static_cast<condensing_target *>(ptr)[index].cblock_start = cblock_start;
     static_cast<condensing_target *>(ptr)[index].cblock_end = cblock_end;
 }
 
@@ -728,8 +728,21 @@ CDLEXP int Condenser_condensed_nBlocks(void *ptr){
 }
 
 CDLEXP int *Condenser_condensed_hsizes(void *ptr){
-    return castCND(ptr)->condensed_hess_block_sizes;
+    return castCND(ptr)->condensed_hess_block_sizes.get();
 }
+
+
+CDLEXP void *create_PartialCondenser(void *arg_vblocks, int N_vblocks, void *arg_cblocks, int N_cblocks, void *arg_hsizes, int N_hsizes, void *arg_targets, int N_targets, int n_split, int arg_dep_bounds){
+    try{
+        return static_cast<void*>(new PartialCondenser(static_cast<vblock *>(arg_vblocks), N_vblocks, static_cast<cblock *>(arg_cblocks), N_cblocks, static_cast<int *>(arg_hsizes), N_hsizes, static_cast<condensing_target *>(arg_targets), N_targets, n_split, arg_dep_bounds));
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return nullptr;
+}
+
 
 // Matrix
 CDLEXP void *create_Matrix(int m, int n){

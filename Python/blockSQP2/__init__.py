@@ -34,7 +34,7 @@ CXXwrapper.BSQP = BSQP
 from .solver import Solver, SQPresults, BoundCorrectionSolver
 from .problem import Problem, ScaledProblem, TCfeasibilityProblem
 from .options import qpOASESoptions, Options
-from .condenser import Sparse_Matrix, vblock, cblock, condensing_target, Condenser
+from .condenser import Sparse_Matrix, vblock, cblock, condensing_target, Condenser, PartialCondenser
 from .stats import Stats
 
 #Some backwards compatibility to original pybind11 based interface

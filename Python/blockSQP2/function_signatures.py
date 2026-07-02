@@ -162,6 +162,7 @@ BSQP_function_signatures = {
     "Condenser_condensed_nCon": (c_int, (c_void_p,)),
     "Condenser_condensed_nBlocks": (c_int, (c_void_p,)),
     "Condenser_condensed_hsizes": (POINTER(c_int), (c_void_p,)),
+    "create_PartialCondenser": (c_void_p, (c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_int, c_int)),
     
     "create_Matrix": (c_void_p, (c_int, c_int)),
     "create_Matrix_default": (c_void_p, ()),
