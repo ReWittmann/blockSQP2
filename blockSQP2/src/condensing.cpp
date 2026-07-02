@@ -2010,8 +2010,15 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
                 for (; !vblocks[j].dependent; j++){}
             }
             
-            new_vend = j;
-            new_nstages = split_ind[i] - split_ind[i-1] - 1;
+            if (i < n_split){
+                new_vend = j;
+                new_nstages = split_ind[i] - split_ind[i-1] - 1;
+            }
+            else{
+                new_vend = targets_orig[tnum].vblock_end;
+                new_nstages = split_ind[n_split] - split_ind[n_split - 1];
+            }
+            
             new_cend = new_cstart + new_nstages;
             
             std::cout << "new_nstages = " << new_nstages << ", new_vstart = " << new_vstart << ", new_vend = " << new_vend << ", new_cstart = " << new_cstart << ", new_cend = " << new_cend << "\n";
