@@ -34,6 +34,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+using namespace std::chrono;
 
 namespace blockSQP2{
 
@@ -173,40 +174,49 @@ Matrix::Matrix(Matrix&& M){
     M.tflag = 0;
 }*/
 
-Matrix &Matrix::operator=( const Matrix &A )
-{
-    int i, j;
-    //printf("assignment operator\n");
+Matrix &Matrix::operator=(const Matrix &A){
     Ecount++;
-
-    if ( this != &A )
-    {
-        if ( !tflag )
-        {
-
+    if (this == &A) return *this;
+    
+    if (!tflag){
+        if (m != A.m || n != A.n || ldim != A.ldim){
             deallocate();
-
             m = A.m;
             n = A.n;
             ldim = A.m;
-
             allocate();
-
-            for ( i = 0; i < m; i++ )
-                for ( j = 0; j < n ; j++ )
-                    (*this)(i,j) = A(i,j);
         }
-        else
-        {
-            if ( m != A.m || n != A.n )
-                throw std::invalid_argument(std::string("Matrix::operator=: Cannot assign matrix of size (") + std::to_string(A.m) + "," + std::to_string(A.n) + ") to submatrix of size (" + std::to_string(m) + ", " + std::to_string(n) + ")");
-
-            for ( i = 0; i < m; i++ )
-                for ( j = 0; j < n ; j++ )
-                    (*this)(i,j) = A(i,j);
+        
+        for (int j = 0; j < n ; j++){
+            for (int i = 0; i < m; i++){
+                (*this)(i,j) = A(i,j);
+            }
         }
     }
+    else{
+        #ifdef MATRIX_DEBUG
+        if (m != A.m || n != A.n) throw std::invalid_argument(std::string("Matrix::operator=: Cannot assign matrix of size (") + std::to_string(A.m) + "," + std::to_string(A.n) + ") to submatrix of size (" + std::to_string(m) + ", " + std::to_string(n) + ")");
+        #endif
+        
+        for (int j = 0; j < n ; j++){
+            for (int i = 0; i < m; i++){
+                (*this)(i,j) = A(i,j);
+            }
+        }
+    }
+    return *this;
+}
 
+
+Matrix &Matrix::operator=(Matrix &&A){
+    if (this == &A) return *this;
+    if (tflag || A.tflag) return ((*this) = A);
+    
+    deallocate();
+    m = A.m;
+    n = A.n;
+    ldim = A.ldim;
+    array = A.release();
     return *this;
 }
 
@@ -215,15 +225,15 @@ Matrix &Matrix::operator=(const SymMatrix &A){
     Ecount++;
 
     if (!tflag){
-        deallocate();
-
-        m = A.m;
-        n = A.m;
-        ldim = m;
-
-        allocate();
-        for (int i = 0; i < m; i++){
-            for (int j = 0; j < n ; j++){
+        if (m != A.m || n != A.m || ldim != A.ldim){
+            deallocate();
+            m = A.m;
+            n = A.m;
+            ldim = m;
+            allocate();
+        }
+        for (int j = 0; j < n ; j++){
+            for (int i = 0; i < m; i++){
                 (*this)(i,j) = A(i,j);
             }
         }
@@ -232,9 +242,9 @@ Matrix &Matrix::operator=(const SymMatrix &A){
         #ifdef MATRIX_DEBUG
         if (m != A.m || n != A.m) throw std::invalid_argument("Matrix::operator=: Cannot assign to submatrix of different dimension");
         #endif
-
-        for (int i = 0; i < m; i++){
-            for (int j = 0; j < n ; j++){
+        
+        for (int j = 0; j < n ; j++){
+            for (int i = 0; i < m; i++){
                 (*this)(i,j) = A(i,j);
             }
         }
@@ -242,32 +252,6 @@ Matrix &Matrix::operator=(const SymMatrix &A){
     return *this;
 }
 
-
-/*
-void Matrix::operator=(Matrix &&A){
-    if (tflag){
-        //invoke copy constructor
-        (*this) = A;
-    }
-
-    if (m != A.m || n != A.n || ldim != A.ldim)
-        deallocate();
-        m = A.m;
-        n = A.n;
-        ldim = A.ldim;
-
-    m = A.m;
-    n = A.n;
-    ldim = A.ldim;
-    array = A.array;
-
-    A.m = 0;
-    A.n = 0;
-    A.ldim = 0;
-    A.array = nullptr;
-
-    return;
-}*/
 
 Matrix::~Matrix( void )
 {
@@ -298,7 +282,9 @@ Matrix::~Matrix( void )
 // }
 
 double *Matrix::release(){
+    #ifdef MATRIX_DEBUG
     if (tflag) throw std::runtime_error("Submatrix cannot release it's memory.");
+    #endif
     double *ret = array;
     array = nullptr;
     m = 0; n = 0; ldim = 0; tflag = 0;
@@ -653,10 +639,10 @@ void Matrix::operator-=(const Matrix &M2){
 	return;
 }
 
-void Matrix::operator*=(const double alpha){
+void Matrix::operator*=(const double alpha) const {
     if (alpha == 1.) return;
-    for (int i = 0; i < m; i++){
-        for (int j = 0; j < n; j++){
+    for (int j = 0; j < n; j++){
+        for (int i = 0; i < m; i++){
             (*this)(i,j) *= alpha;
         }
     }
@@ -684,7 +670,7 @@ Matrix vertcat(std::vector<Matrix> M_k){
     int ind;
     for (int j = 0; j<n; j++){
         ind = 0;
-        for (std::vector<Matrix>::size_type k = 0; k<M_k.size(); k++){
+        for (std::vector<Matrix>::size_type k = 0; k < M_k.size(); k++){
             for (int i = 0; i<M_k[k].m; i++){
                 array[ind + i + j*m] = M_k[k](i,j);
             }
@@ -847,19 +833,24 @@ SymMatrix &SymMatrix::Arraymatrix(int M, double *ARRAY, int LDIM){
 
 SymMatrix &SymMatrix::operator=(const SymMatrix &M2){
     if (m != M2.m){
-        delete[] array;
-        array = new double[(M2.m * (M2.m + 1))/2];
+        deallocate();
+        m = M2.m;
+        ldim = M2.ldim;
+        allocate();
+        // delete[] array;
+        // array = new double[(M2.m * (M2.m + 1))/2];
     }
 
-    m = M2.m;
-    ldim = m;
+    // m = M2.m;
+    // ldim = m;
 
     for (int j = 0; j < m; j++){
         for(int i = j; i < m; i++){
+            // (*this)(i,j) = M2(i,j);
             array[i + j*ldim - (j*(j+1))/2] = M2(i,j);
         }
     }
-
+    
     return *this;
 }
 
@@ -1249,6 +1240,7 @@ void Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int n_end, Sp
     
     nnz = 0;
 	for (int j = n_start; j < n_end; j++){
+        A.colind[j - n_start] = nnz;
 		for (int i = colind[j]; i < colind[j+1]; i++){
 			if (row[i] >= m_start && row[i] < m_end){
                 A.row[nnz] = row[i] - m_start;
@@ -1256,7 +1248,6 @@ void Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int n_end, Sp
 				nnz++;
 			}
         }
-		A.colind[j - n_start] = nnz;
 	}
 }
 
@@ -1529,14 +1520,14 @@ Sparse_Matrix Sparse_Matrix::without_nz_rows(int *starts, int *ends, int nblocks
 		throw std::invalid_argument( "slice end must be greater than start and slices must be non-overlapping and sorted by starting index" );
 	}
 	#endif
-
+    
 	std::vector<double> NZ_v = {};
 	std::vector<int> ROW_v = {};
 	std::vector<int> COLIND_v = {0};
 	COLIND_v.reserve(n+1);
 	int c_ind = 0;
 	bool in_slice;
-
+    
 	for (int k = 0; k<n; k++){
 		for (int j = colind[k]; j<colind[k+1]; j++){
 			in_slice = false;
@@ -1554,11 +1545,11 @@ Sparse_Matrix Sparse_Matrix::without_nz_rows(int *starts, int *ends, int nblocks
 		}
 		COLIND_v.push_back(c_ind);
 	}
-
+    
 	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(c_ind);
 	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(c_ind);
 	std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(n+1);
-
+    
     std::copy(NZ_v.begin(), NZ_v.end(), M_nz.get());
     std::copy(ROW_v.begin(), ROW_v.end(), M_row.get());
     std::copy(COLIND_v.begin(), COLIND_v.end(), M_colind.get());
@@ -1895,6 +1886,12 @@ void LT_Block_Matrix::allocate(){
     else if ((array = new Matrix[len]) == nullptr){
         throw std::runtime_error("LT_Block_Matrix::allocate failed");
     }
+    
+    for (int i = 0; i < m; i++){
+        for (int j = 0; j <= i; j++){
+            array[i + j*m - (j*(j+1))/2].Dimension(m_block_sizes[i], n_block_sizes[j]);
+        }
+    }
 }
 
 LT_Block_Matrix::LT_Block_Matrix(int M, int *m_sizes, int *n_sizes){
@@ -1922,7 +1919,7 @@ LT_Block_Matrix::LT_Block_Matrix(){
 	n_block_sizes = nullptr;
 }
 
-LT_Block_Matrix::~LT_Block_Matrix(void){
+LT_Block_Matrix::~LT_Block_Matrix(){
 	delete[] array;
 	if (m_block_sizes == n_block_sizes){
 		delete[] m_block_sizes;
@@ -1945,24 +1942,17 @@ void LT_Block_Matrix::set(int i, int j, const Matrix &M){
 		throw std::invalid_argument( "LT_Block_Matrix.set: cannot set matrix in upper triangle block (" + std::to_string(i) + ", " + std::to_string(j) + ")");
 	}
 	#endif
-
 	array[i + j*m - (j*(j+1))/2] = M;
-
-	return;
-
 }
 
-const Matrix &LT_Block_Matrix::operator() (int i, int j) const{
+const Matrix &LT_Block_Matrix::operator()(int i, int j) const {
     #ifdef MATRIX_DEBUG
 	if (i >= m || j >= n){
 		throw std::invalid_argument( "LT_Block_Matrix(,): received out of bounds matrix indizes (" + std::to_string(i) + ", " + std::to_string(j) + ") for blockmatrix of shape ("  + std::to_string(m) + ", " + std::to_string(n) + ")");
 	}
 	#endif
-
-	if (i >= j){
-		return array[i + j*m - (j*(j+1))/2];
-	}
-    throw std::invalid_argument("Cannot access upper part of LT_Block_Matrix");
+	if (i >= j) [[likely]] return array[i + j*m - (j*(j+1))/2];
+    throw std::invalid_argument("Cannot access upper diagonal part of LT_Block_Matrix");
 }
 
 LT_Block_Matrix &LT_Block_Matrix::operator=(const LT_Block_Matrix &M){

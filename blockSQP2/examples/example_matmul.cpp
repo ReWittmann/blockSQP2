@@ -23,7 +23,7 @@ using namespace std::chrono;
 #define BSQP_BLASFUNC(a) BSQP_EXPAND_CONCAT(a, BSQP_CBLAS_SUFFIX) // #####!!! READ THIS !!!#####: If this is in an error message: Invalid cblas suffix. Check cblas.h, and use -DBSQP_CBLAS_SUFFIX= instead of -DBSQP_CBLAS_SUFFIX if there is no suffix.
 
 
-#define DIM 3
+#define DIM 100
 
 
 
@@ -217,6 +217,20 @@ int main(){
     T1 = steady_clock::now();
     std::cout << "cblas nxn took " << duration_cast<nanoseconds>(T1 - T0) << "\n";
     
+    
+    T0 = steady_clock::now();
+    for (int j = 0; j < DIM; j++){
+        for (int i = 0; i < DIM; i++){
+            A2[i + j*DIM] *= 2.1;
+        }
+    }
+    T1 = steady_clock::now();
+    std::cout << "Manual scaling took " << duration_cast<nanoseconds>(T1 - T0) << "\n";
+    
+    T0 = steady_clock::now();
+    BSQP_BLASFUNC(cblas_dscal)(blasint(DIM*DIM), 2.1, A2, blasint(1));
+    T1 = steady_clock::now();
+    std::cout << "dscal took " << duration_cast<nanoseconds>(T1 - T0) << "\n";
     
     // else
     //     BSQP_BLASFUNC(cblas_dgemv)(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1));

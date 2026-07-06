@@ -126,6 +126,9 @@ struct condensing_data{
 	std::vector<Matrix> h_k; //h_0, ..., h_{n_stages}
 	LT_Block_Matrix H;       //(n_stages + 1) x (n_stages + 1)
     
+    // std::unique_ptr<double[]> w_ik;
+    // std::unique_ptr<double[]> W_ik;
+    
 	//Horizontal slices of (horizontal jacobian slice corresponding to target variables), separated in free- and dependent-variable-slices,
 	//without continuity conditions
     std::vector<Sparse_Matrix> J_free_k; //J_f_0, ..., J_f_{n_stages}
@@ -228,21 +231,33 @@ class Condenser{
 	//QP-specific data for each condensable variable-condition-structure
 	std::unique_ptr<condensing_data[]> targets_data;
 
-    //Slices of the gradient of the objective
-    std::vector<Matrix> T_grad_obj;
-    std::vector<Matrix> O_grad_obj;
+    // //Slices of the gradient of the objective
+    // std::vector<Matrix> T_grad_obj;
+    // std::vector<Matrix> O_grad_obj;
 
-	//Horizontal slices of linear constraints matrix (Jacobian) for T-target variables and O-other variables
-	std::vector<Sparse_Matrix> T_Slices;
-    std::vector<Sparse_Matrix> O_Slices;
+	// //Horizontal slices of linear constraints matrix (Jacobian) for T-target variables and O-other variables
+	// std::vector<Sparse_Matrix> T_Slices;
+    // std::vector<Sparse_Matrix> O_Slices;
+    
+    //Slices of the gradient of the objective
+    std::unique_ptr<Matrix[]> T_grad_obj;
+    std::unique_ptr<Matrix[]> O_grad_obj;
+    
+    std::unique_ptr<Sparse_Matrix[]> T_Slices;
+    std::unique_ptr<Sparse_Matrix[]> O_Slices;
+    std::unique_ptr<Matrix[]> T_lb_var;
+    std::unique_ptr<Matrix[]> T_ub_var;
+    std::unique_ptr<Matrix[]> O_lb_var;
+    std::unique_ptr<Matrix[]> O_ub_var;
+    
+    
+    std::unique_ptr<std::jthread[]> target_threads;
 
     ///Condensed QP data
 
     //Bounds on dependent variables in condensed QP, which can be manually added to a QP condensed with option add_dep_bounds = 1
     Matrix lb_dep_var;
     Matrix ub_dep_var;
-    
-    std::unique_ptr<std::jthread[]> target_threads;
 
     Condenser();
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
@@ -286,15 +301,15 @@ class Condenser{
     //They are modded versions of the four primary methods above, so currently there is still a lot of code duplication
 
     //Update condensed QP with a different hessian. This also affects the linear term in the condensed QP.
-    void fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2);
-    void single_hess_condense(int tnum, const SymMatrix *const sub_hess);
+    // void fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2);
+    // void single_hess_condense(int tnum, const SymMatrix *const sub_hess);
 
-    //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
-    void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const;
+    // //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
+    // void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const;
 
-    //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
-    void single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
+    // //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
+    // void single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
+    //                         Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
 
     
     //Update condensed QP with a new hessian

@@ -105,10 +105,10 @@ void Condenser::setup(){
     hess_block_ranges = std::make_unique<int[]>(num_hessblocks + 1);
     targets_data = std::make_unique<condensing_data[]>(num_targets);
     std::sort(targets, targets+num_targets, [](condensing_target T1, condensing_target T2) -> bool{return T1.vblock_start < T2.vblock_start;});
-    T_Slices.reserve(num_targets);
-    T_grad_obj.reserve(num_targets);
-    O_Slices.reserve(num_targets + 1);
-    O_grad_obj.reserve(num_targets + 1);
+    // T_Slices.reserve(num_targets);
+    // T_grad_obj.reserve(num_targets);
+    // O_Slices.reserve(num_targets + 1);
+    // O_grad_obj.reserve(num_targets + 1);
 
     vranges[0] = 0;
     for (int i = 1; i<= num_vblocks; i++){
@@ -376,6 +376,17 @@ void Condenser::setup(){
     }
     condensed_num_vars = num_vars - offset;
     
+    
+    T_grad_obj = std::make_unique<Matrix[]>(num_targets);
+    O_grad_obj = std::make_unique<Matrix[]>(num_targets + 1);
+    
+    T_Slices = std::make_unique<Sparse_Matrix[]>(num_targets);
+    O_Slices = std::make_unique<Sparse_Matrix[]>(num_targets + 1);
+    T_lb_var = std::make_unique<Matrix[]>(num_targets);
+    T_ub_var = std::make_unique<Matrix[]>(num_targets);
+    O_lb_var = std::make_unique<Matrix[]>(num_targets + 1);
+    O_ub_var = std::make_unique<Matrix[]>(num_targets + 1);
+    
     target_threads = std::make_unique<std::jthread[]>(num_targets - 1);
 }
 /*
@@ -641,45 +652,73 @@ int Condenser::get_hessblock_index(int v_ind){
 void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_jac, const SymMatrix *const hess, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con,
     Matrix &condensed_h, Sparse_Matrix &condensed_Jacobian, SymMatrix *condensed_hess, Matrix &condensed_lb_var, Matrix &condensed_ub_var, Matrix &condensed_lb_con, Matrix &condensed_ub_con
 ){
-	T_Slices.resize(0);
-	O_Slices.resize(0);
-	T_grad_obj.resize(0);
-	O_grad_obj.resize(0);
+	// T_Slices.resize(0);
+	// O_Slices.resize(0);
+	// T_grad_obj.resize(0);
+	// O_grad_obj.resize(0);
 
-    std::vector<Matrix> T_lb_var;
-    std::vector<Matrix> T_ub_var;
-    std::vector<Matrix> O_lb_var;
-    std::vector<Matrix> O_ub_var;
-    T_lb_var.reserve(num_targets);
-    T_ub_var.reserve(num_targets);
-    O_lb_var.reserve(num_targets + 1);
-    O_ub_var.reserve(num_targets + 1);
+    // std::vector<Matrix> T_lb_var;
+    // std::vector<Matrix> T_ub_var;
+    // std::vector<Matrix> O_lb_var;
+    // std::vector<Matrix> O_ub_var;
+    // T_lb_var.reserve(num_targets);
+    // T_ub_var.reserve(num_targets);
+    // O_lb_var.reserve(num_targets + 1);
+    // O_ub_var.reserve(num_targets + 1);
 
-	O_Slices.push_back(con_jac.get_slice(0, con_jac.m, 0, v_starts[0]));
-    O_lb_var.push_back(lb_var.get_slice(0, v_starts[0], 0, 1));
-    O_ub_var.push_back(ub_var.get_slice(0, v_starts[0], 0, 1));
-    O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
+	// O_Slices.push_back(con_jac.get_slice(0, con_jac.m, 0, v_starts[0]));
+    // O_lb_var.push_back(lb_var.get_slice(0, v_starts[0], 0, 1));
+    // O_ub_var.push_back(ub_var.get_slice(0, v_starts[0], 0, 1));
+    // O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
 
-	T_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_starts[0], v_ends[0]));
-    T_lb_var.push_back(lb_var.get_slice(v_starts[0], v_ends[0], 0, 1));
-    T_ub_var.push_back(ub_var.get_slice(v_starts[0], v_ends[0], 0, 1));
-    T_grad_obj.push_back(grad_obj.get_slice(v_starts[0], v_ends[0], 0, 1));
+	// T_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_starts[0], v_ends[0]));
+    // T_lb_var.push_back(lb_var.get_slice(v_starts[0], v_ends[0], 0, 1));
+    // T_ub_var.push_back(ub_var.get_slice(v_starts[0], v_ends[0], 0, 1));
+    // T_grad_obj.push_back(grad_obj.get_slice(v_starts[0], v_ends[0], 0, 1));
 
+	// for (int i = 1; i < num_targets; i++){
+    //     O_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_ends[i-1], v_starts[i]));
+    //     O_lb_var.push_back(lb_var.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+    //     O_ub_var.push_back(ub_var.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+    //     O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+
+    //     T_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_starts[i], v_ends[i]));
+    //     T_lb_var.push_back(lb_var.get_slice(v_starts[i], v_ends[i], 0, 1));
+    //     T_ub_var.push_back(ub_var.get_slice(v_starts[i], v_ends[i], 0, 1));
+    //     T_grad_obj.push_back(grad_obj.get_slice(v_starts[i], v_ends[i], 0, 1));
+	// }
+	// O_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_ends[num_targets - 1], num_vars));
+    // O_lb_var.push_back(lb_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
+    // O_ub_var.push_back(ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
+    // O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
+    
+    
+    con_jac.get_slice(0, con_jac.m, 0, v_starts[0], O_Slices[0]);
+    lb_var.get_slice(0, v_starts[0], 0, 1, O_lb_var[0]);
+    ub_var.get_slice(0, v_starts[0], 0, 1, O_ub_var[0]);
+    grad_obj.get_slice(0, v_starts[0], 0, 1, O_grad_obj[0]);
+    
+	con_jac.get_slice(0, con_jac.m, v_starts[0], v_ends[0], T_Slices[0]);
+    lb_var.get_slice(v_starts[0], v_ends[0], 0, 1, T_lb_var[0]);
+    ub_var.get_slice(v_starts[0], v_ends[0], 0, 1, T_ub_var[0]);
+    grad_obj.get_slice(v_starts[0], v_ends[0], 0, 1, T_grad_obj[0]);
+    
 	for (int i = 1; i < num_targets; i++){
-        O_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_ends[i-1], v_starts[i]));
-        O_lb_var.push_back(lb_var.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-        O_ub_var.push_back(ub_var.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-        O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+        con_jac.get_slice(0, con_jac.m, v_ends[i-1], v_starts[i], O_Slices[i]);
+        lb_var.get_slice(v_ends[i-1], v_starts[i], 0, 1, O_lb_var[i]);
+        ub_var.get_slice(v_ends[i-1], v_starts[i], 0, 1, O_ub_var[i]);
+        grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1, O_grad_obj[i]);
 
-        T_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_starts[i], v_ends[i]));
-        T_lb_var.push_back(lb_var.get_slice(v_starts[i], v_ends[i], 0, 1));
-        T_ub_var.push_back(ub_var.get_slice(v_starts[i], v_ends[i], 0, 1));
-        T_grad_obj.push_back(grad_obj.get_slice(v_starts[i], v_ends[i], 0, 1));
+        con_jac.get_slice(0, con_jac.m, v_starts[i], v_ends[i], T_Slices[i]);
+        lb_var.get_slice(v_starts[i], v_ends[i], 0, 1, T_lb_var[i]);
+        ub_var.get_slice(v_starts[i], v_ends[i], 0, 1, T_ub_var[i]);
+        grad_obj.get_slice(v_starts[i], v_ends[i], 0, 1, T_grad_obj[i]);
 	}
-	O_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_ends[num_targets - 1], num_vars));
-    O_lb_var.push_back(lb_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-    O_ub_var.push_back(ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-    O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
+	con_jac.get_slice(0, con_jac.m, v_ends[num_targets - 1], num_vars, O_Slices[num_targets]);
+    lb_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_lb_var[num_targets]);
+    ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_ub_var[num_targets]);
+    grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_grad_obj[num_targets]);
+    
 
     //Assert that lower and upper bounds of condensing conditions are equal
     for (int tnum = 0; tnum < num_targets; tnum++){
@@ -840,14 +879,20 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     Data.matching_sign = std::round(Data.matching_sign);
     
 	//Extract relevant subvectors and -matrices
-	Data.B_k[0] = B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1]).dense();
+	// Data.B_k[0] = B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1]).dense();
+    // Data.B_k[0] *= -Data.matching_sign; //
+    // Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    // Data.c_k[0] *= Data.matching_sign;
+	// Data.r_k[0] = grad_obj.get_slice(Data.alt_vranges[0], Data.alt_vranges[1]);
+    
+	B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1], Data.B_k[0]);
     Data.B_k[0] *= -Data.matching_sign; //
-    Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.c_k[0]);
     Data.c_k[0] *= Data.matching_sign;
-	Data.r_k[0] = grad_obj.get_slice(Data.alt_vranges[0], Data.alt_vranges[1]);
-
+	grad_obj.get_slice(Data.alt_vranges[0], Data.alt_vranges[1], Data.r_k[0]);
+    
 	Data.R_k[0] = sub_hess[0];
-
+    
 	for (int i = 1; i<n_stages; i++){
         double matching_sign = B_Jac(Data.cond_ranges[i], Data.alt_vranges[2*i+1]);
         // #ifdef __cpp_lib_format
@@ -857,66 +902,129 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
         // #endif
         if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1,...) = 0 or all F(x_k-1,...) - x_k+1 = 0");
         
-		Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
+		// Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
+        // Data.B_k[i] *= -Data.matching_sign;
+		// Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+        // Data.c_k[i] *= Data.matching_sign;
+		// Data.r_k[i] = grad_obj.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
+        
+		// Data.A_k[i-1] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).dense();
+        // Data.A_k[i-1] *= -Data.matching_sign;
+        
+		// Data.q_k[i-1] = grad_obj.get_slice(Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
+        
+		// Data.R_k[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+		// Data.Q_k[i-1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
+		// Data.S_k[i-1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i]- Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+        
+        
+		B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], Data.B_k[i]);
         Data.B_k[i] *= -Data.matching_sign;
-		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+		lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.c_k[i]);
         Data.c_k[i] *= Data.matching_sign;
-		Data.r_k[i] = grad_obj.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
-
-		Data.A_k[i-1] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).dense();
+		grad_obj.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], Data.r_k[i]);
+        
+		B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i], Data.A_k[i-1]);
         Data.A_k[i-1] *= -Data.matching_sign;
-
-		Data.q_k[i-1] = grad_obj.get_slice(Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
-
-		Data.R_k[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-		Data.Q_k[i-1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
-		Data.S_k[i-1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i]- Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-	}
-
-	Data.q_k[n_stages - 1] = grad_obj.get_slice(Data.alt_vranges[2*n_stages - 1], Data.alt_vranges[2*n_stages]);
-	Data.r_k[n_stages] = grad_obj.get_slice(Data.alt_vranges[2*n_stages], Data.alt_vranges[2*n_stages+1]);
-
-	Data.R_k[n_stages] = sub_hess[n_stages].get_slice(Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1]);
-	Data.Q_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], 0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1]);
-	Data.S_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages-1]);
-
+        
+		grad_obj.get_slice(Data.alt_vranges[2*i-1], Data.alt_vranges[2*i], Data.q_k[i-1]);
+        
+		sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.R_k[i]);
+		sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.Q_k[i-1]);
+	    sub_hess[i].get_slice(0, Data.alt_vranges[2*i]- Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.S_k[i-1]);
+    }
+    
+	// Data.q_k[n_stages - 1] = grad_obj.get_slice(Data.alt_vranges[2*n_stages - 1], Data.alt_vranges[2*n_stages]);
+	// Data.r_k[n_stages] = grad_obj.get_slice(Data.alt_vranges[2*n_stages], Data.alt_vranges[2*n_stages+1]);
+    
+	// Data.R_k[n_stages] = sub_hess[n_stages].get_slice(Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1]);
+	// Data.Q_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], 0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1]);
+	// Data.S_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages-1]);
+    
+	grad_obj.get_slice(Data.alt_vranges[2*n_stages - 1], Data.alt_vranges[2*n_stages], Data.q_k[n_stages - 1]);
+	grad_obj.get_slice(Data.alt_vranges[2*n_stages], Data.alt_vranges[2*n_stages+1], Data.r_k[n_stages]);
+    
+	sub_hess[n_stages].get_slice(Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1], Data.R_k[n_stages]);
+	sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], 0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.Q_k[n_stages - 1]);
+	sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages-1], Data.S_k[n_stages - 1]);
+    
+    
 	std::vector<Matrix> w_k(n_stages);
 	std::vector<Matrix> W_ik(n_stages);
-
-
+    
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
 	for (int i = 1; i < n_stages; i++){
-		Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+		// Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+        Data.g_k[i] = Data.c_k[i];
+        mult_to(Data.A_k[i-1], Data.g_k[i-1], Data.g_k[i]);
 	}
 
 	//calculate G
+	// for (int i = 0; i<n_stages; i++){
+	// 	Data.G.set(i,i, Data.B_k[i]);
+	// 	for (int k = i+1; k < n_stages; k++){
+	// 		Data.G.set(k, i, Data.A_k[k-1]*Data.G(k-1,i));
+	// 	}
+	// }
+    
 	for (int i = 0; i<n_stages; i++){
 		Data.G.set(i,i, Data.B_k[i]);
 		for (int k = i+1; k < n_stages; k++){
+            // Data.G(k,i) *= 0.;
+            // mult_to(Data.A_k[k-1], Data.G(k-1,i), Data.G(k,i), 0.);
 			Data.G.set(k, i, Data.A_k[k-1]*Data.G(k-1,i));
 		}
 	}
 
 	//calculate h
-	Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-	w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
+    
+    Data.h_k[n_stages] = Data.r_k[n_stages];
+    Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
+    
+    
+	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+    w_k[n_stages - 1] = Data.q_k[n_stages - 1];
+    mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
 
 	for (int k = n_stages-1; k >=1; k--){
-		Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-		w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+		// Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
+		// w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+        
+        Data.h_k[k] = Data.r_k[k];
+        Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
+        Tmult_to(Data.B_k[k], w_k[k], Data.h_k[k]);
+       
+        w_k[k-1] = Data.q_k[k-1];
+        mult_to(Data.Q_k[k-1], Data.g_k[k-1], w_k[k-1]);
+        Tmult_to(Data.A_k[k-1], w_k[k], w_k[k-1]);
 	}
-	Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
+	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
+    Data.h_k[0] = Data.r_k[0];
+    Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
+    
 
 	//calculate H
 	for (int i = 0; i < n_stages; i++){
-		W_ik[n_stages-1] = Data.Q_k[n_stages-1] * Data.G(n_stages-1, i);
-		Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages-1]) * Data.G(n_stages-1, i));
+		// W_ik[n_stages-1] = Data.Q_k[n_stages-1] * Data.G(n_stages-1, i);
+		// Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages-1]) * Data.G(n_stages-1, i));
+        mult(Data.Q_k[n_stages - 1], Data.G(n_stages - 1, i), W_ik[n_stages - 1]);
+        Tmult_to(Data.S_k[n_stages - 1], Data.G(n_stages - 1, i), Data.H(n_stages, i), 0.);
+        
 		for (int k = n_stages-1; k >= i+1; k--){
-			Data.H.set(k,i, Transpose(Data.S_k[k-1])*Data.G(k-1, i) + Transpose(Data.B_k[k])*W_ik[k]);
-			W_ik[k-1] = Transpose(Data.A_k[k-1])*W_ik[k] + Data.Q_k[k-1]*Data.G(k-1,i);
+			// Data.H.set(k,i, Transpose(Data.S_k[k-1])*Data.G(k-1, i) + Transpose(Data.B_k[k])*W_ik[k]);
+			// W_ik[k-1] = Transpose(Data.A_k[k-1])*W_ik[k] + Data.Q_k[k-1]*Data.G(k-1,i);
+            Tmult_to(Data.S_k[k-1], Data.G(k-1, i), Data.H(k,i), 0.);
+            Tmult_to(Data.B_k[k], W_ik[k], Data.H(k,i));
+            
+            Tmult(Data.A_k[k-1], W_ik[k], W_ik[k-1]);
+            mult_to(Data.Q_k[k-1], Data.G(k-1,i), W_ik[k-1]);
 		}
-		Data.H.set(i, i, Data.R_k[i] + Transpose(Data.B_k[i])*W_ik[i]);
+		// Data.H.set(i, i, Data.R_k[i] + Transpose(Data.B_k[i])*W_ik[i]);
+        
+        Data.H.set(i, i, Data.R_k[i]);
+        Tmult_to(Data.B_k[i], W_ik[i], Data.H(i,i));
 	}
 	Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
 
@@ -932,20 +1040,36 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     Data.g = vertcat(Data.g_k);
     Data.h = vertcat(Data.h_k);
 
-	Data.J_free_k[0] = B_Jac.get_slice(0, B_Jac.m, 0, Data.alt_vranges[1]);
+	// Data.J_free_k[0] = B_Jac.get_slice(0, B_Jac.m, 0, Data.alt_vranges[1]);
+	// Data.J_free_k[0].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+	// F_lb_k[0] = B_lb_var.get_slice(0, Data.alt_vranges[1], 0, 1);
+	// F_ub_k[0] = B_ub_var.get_slice(0, Data.alt_vranges[1], 0, 1);
+	// for (int i = 1; i <= n_stages; i++){
+	// 	Data.J_dep_k[i-1] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
+	// 	Data.J_free_k[i] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
+    //     Data.J_dep_k[i-1].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+    //     Data.J_free_k[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+
+	// 	D_lb_k[i-1] = B_lb_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
+	// 	D_ub_k[i-1] = B_ub_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
+	// 	F_lb_k[i] = B_lb_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1);
+    //     F_ub_k[i] = B_ub_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1);
+	// }
+    
+	B_Jac.get_slice(0, B_Jac.m, 0, Data.alt_vranges[1], Data.J_free_k[0]);
 	Data.J_free_k[0].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-	F_lb_k[0] = B_lb_var.get_slice(0, Data.alt_vranges[1], 0, 1);
-	F_ub_k[0] = B_ub_var.get_slice(0, Data.alt_vranges[1], 0, 1);
+	B_lb_var.get_slice(0, Data.alt_vranges[1], 0, 1, F_lb_k[0]);
+	B_ub_var.get_slice(0, Data.alt_vranges[1], 0, 1, F_ub_k[0]);
 	for (int i = 1; i <= n_stages; i++){
-		Data.J_dep_k[i-1] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
-		Data.J_free_k[i] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
+		B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i-1], Data.alt_vranges[2*i], Data.J_dep_k[i-1]);
+		B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], Data.J_free_k[i]);
         Data.J_dep_k[i-1].remove_rows(c_starts.get(), c_ends.get(), num_targets);
         Data.J_free_k[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
 
-		D_lb_k[i-1] = B_lb_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
-		D_ub_k[i-1] = B_ub_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
-		F_lb_k[i] = B_lb_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1);
-        F_ub_k[i] = B_ub_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1);
+		B_lb_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1, D_lb_k[i-1]);
+		B_ub_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1, D_ub_k[i-1]);
+		B_lb_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1, F_lb_k[i]);
+        B_ub_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1, F_ub_k[i]);
 	}
 
     //Calculate J_reduced = J_free + J_dep * G = J_free + J_dep * inv(A) * B
@@ -1003,34 +1127,44 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     //Get slices corresponding to targets free variables and other free variables
     int ind = 0;
     for (int i = 0; i < num_targets; i++){
-        O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
-        T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+        // O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
+        // T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
 
-        O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
-        T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+        // O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
+        // T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+        
+        xi_cond.get_slice(ind, condensed_v_starts[i], O_xi_cond[i]);
+        xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_xi_cond[i]);
+
+        lambda_cond.get_slice(ind, condensed_v_starts[i], O_mu[i]);
+        lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_mu[i]);
 
         ind = condensed_v_ends[i];
     }
-    O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-    O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-
+    // O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
+    // O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
+    
+    xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_xi_cond[num_targets]);
+    lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_mu[num_targets]);
 
     //Slice constraint multipliers to later insert continuity condition multipliers
     ind = 0;
     int ind_2 = condensed_num_vars;
     for (int i = 0; i < num_targets; i++){
-        O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
+        // O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
+        lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind, O_sigma[i]);
         ind_2 += c_starts[i] - ind;
         ind = c_ends[i];
     }
-    O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
-
+    // O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
+    lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind, O_sigma[num_targets]);
 
     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
     ind = condensed_num_vars + num_true_cons;
     if (add_dep_bounds){
         for (int i = 0; i < num_targets; i++){
-            T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+            // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+            lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
             ind += targets_data[i].n_dep;
         }
     }
@@ -1089,28 +1223,39 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
-        xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        // xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i], xi_free_k[i]);
         s_ind += Data.free_sizes[i];
     }
 
     //Get multipliers for each stage-state bound
     s_ind = 0;
     for (int i = 0; i < n_stages; i++){
-        lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
+        // lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
+        lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i], lambda_k[i]);
         s_ind += Data.cond_sizes[i];
     }
 
     //Get multipliers for free variable bounds for each stage
     s_ind = 0;
     for (int i = 0; i <= n_stages; i++){
-        mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        // mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        mu.get_slice(s_ind, s_ind + Data.free_sizes[i], mu_k[i]);
         s_ind += Data.free_sizes[i];
     }
 
     //Recover dependent variables
-    xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0];
+    // xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0];
+    // for (int i = 1; i < n_stages; i++){
+    //     xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i];
+    // }
+    
+    xi_dep_k[0] = Data.c_k[0];
+    mult_to(Data.B_k[0], xi_free_k[0], xi_dep_k[0]);
     for (int i = 1; i < n_stages; i++){
-        xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i];
+        xi_dep_k[i] = Data.c_k[i]; 
+        mult_to(Data.A_k[i-1], xi_dep_k[i-1], xi_dep_k[i]);
+        mult_to(Data.B_k[i], xi_free_k[i], xi_dep_k[i]);
     }
 
     //Assemble original vector of free and dependent variables and corresponding vector of bound-constraint multipliers
@@ -1135,22 +1280,34 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
     }
 
     //If there are no free variables in the final stage N, S_N and xi_free_N have second and first dimension zero respectively and cannot be multiplied. We have to manually omit the term
+    // if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0)
+    //     nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+    // else
+    //     nu_k[n_stages - 1] = Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
     
-    if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0)
-        nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
-    else
-        nu_k[n_stages - 1] = Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
-    
+    nu_k[n_stages - 1] = Data.q_k[n_stages - 1];
+    nu_k[n_stages - 1] -= lambda_k[n_stages - 1]; 
+    nu_k[n_stages - 1] -= J_T_sigma;
+    mult_to(Data.Q_k[n_stages - 1], xi_dep_k[n_stages - 1], nu_k[n_stages - 1]);
+    if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0){
+        mult_to(Data.S_k[n_stages - 1], xi_free_k[n_stages], nu_k[n_stages - 1]);
+    }
+        
     for (int i = n_stages - 2; i>= 0; i--){
         if (num_true_cons == 0){
             J_T_sigma.Dimension(Data.cond_sizes[i]);
             J_T_sigma.Initialize(0.);
         }
-        else{
-            J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
-        }
+        else J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
 
-        nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
+        // nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
+            
+        nu_k[i] = Data.q_k[i];
+        nu_k[i] -= lambda_k[i];
+        nu_k[i] -= J_T_sigma;
+        Tmult_to(Data.A_k[i], nu_k[i+1], nu_k[i]);
+        mult_to(Data.Q_k[i], xi_dep_k[i], nu_k[i]);
+        mult_to(Data.S_k[i], xi_free_k[i+1], nu_k[i]);
     }
     
     nu = vertcat(nu_k);
@@ -1162,254 +1319,254 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
 }
 
 
-void Condenser::fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2){
+// void Condenser::fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2){
 
-    for (int tnum = 0; tnum < num_targets; tnum++){
-        single_hess_condense(tnum, hess_2 + h_starts[tnum]);
-    }
+//     for (int tnum = 0; tnum < num_targets; tnum++){
+//         single_hess_condense(tnum, hess_2 + h_starts[tnum]);
+//     }
 
-    //if (condensed_hess_2 == nullptr) condensed_hess_2 = new SymMatrix[condensed_num_hessblocks];
+//     //if (condensed_hess_2 == nullptr) condensed_hess_2 = new SymMatrix[condensed_num_hessblocks];
     
 
-    //Assemble second condensed block hessian
-    int ind_1 = 0;
-    int ind_2 = 0;
+//     //Assemble second condensed block hessian
+//     int ind_1 = 0;
+//     int ind_2 = 0;
 
-    for (int tnum = 0; tnum < num_targets; tnum++){
-        for (int i = 0; i < h_starts[tnum] - ind_2; i++){
-            condensed_hess_2[ind_1 + i] = hess_2[ind_2 + i];
-        }
-        ind_1 += h_starts[tnum] - ind_2;
-        ind_2 = h_ends[tnum];
-        condensed_hess_2[ind_1] = targets_data[tnum].H_dense_2;
-        ind_1++;
-    }
-    for (int i = 0; i < num_hessblocks - ind_2; i++){
-        condensed_hess_2[ind_1 + i] = hess_2[ind_2 + i];
-    }
+//     for (int tnum = 0; tnum < num_targets; tnum++){
+//         for (int i = 0; i < h_starts[tnum] - ind_2; i++){
+//             condensed_hess_2[ind_1 + i] = hess_2[ind_2 + i];
+//         }
+//         ind_1 += h_starts[tnum] - ind_2;
+//         ind_2 = h_ends[tnum];
+//         condensed_hess_2[ind_1] = targets_data[tnum].H_dense_2;
+//         ind_1++;
+//     }
+//     for (int i = 0; i < num_hessblocks - ind_2; i++){
+//         condensed_hess_2[ind_1 + i] = hess_2[ind_2 + i];
+//     }
 
-    //Assemble second linear term vector h_2
-    std::vector<Matrix> condensed_h_k_2(2*num_targets + 1);
-    for (int tnum = 0; tnum < num_targets; tnum++){
-        condensed_h_k_2[2*tnum] = O_grad_obj[tnum];
-        condensed_h_k_2[2*tnum + 1] = targets_data[tnum].h_2;
-    }
-    condensed_h_k_2[2*num_targets] = O_grad_obj[num_targets];
+//     //Assemble second linear term vector h_2
+//     std::vector<Matrix> condensed_h_k_2(2*num_targets + 1);
+//     for (int tnum = 0; tnum < num_targets; tnum++){
+//         condensed_h_k_2[2*tnum] = O_grad_obj[tnum];
+//         condensed_h_k_2[2*tnum + 1] = targets_data[tnum].h_2;
+//     }
+//     condensed_h_k_2[2*num_targets] = O_grad_obj[num_targets];
 
-    condensed_h_2 = vertcat(condensed_h_k_2);
-}
-
-
-void Condenser::single_hess_condense(int tnum, const SymMatrix *const sub_hess){
-    condensing_data &Data = targets_data[tnum];
-
-    int n_stages = targets[tnum].n_stages;
-
-    Data.R_k_2[0] = sub_hess[0];
-    for (int i = 1; i <= n_stages; i++){
-        Data.Q_k_2[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
-        Data.S_k_2[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-        Data.R_k_2[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-    }
-
-    //Calculate new h
-    std::vector<Matrix> w_k(n_stages);
-    w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k_2[n_stages - 1] * Data.g_k[n_stages - 1];
-
-    Data.h_k_2[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k_2[n_stages - 1]) * Data.g_k[n_stages - 1];
-    for (int k = n_stages - 1; k > 0; k--){
-        Data.h_k_2[k] = Data.r_k[k] + Transpose(Data.S_k_2[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k]) * w_k[k];
-        w_k[k-1] = Data.Q_k_2[k-1] * Data.g_k[k-1] + Data.q_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-    }
-    Data.h_k_2[0] = Data.r_k[0] + Transpose(Data.B_k[0]) * w_k[0];
-
-    //Calculate new H
-    for (int i = 0; i < n_stages; i++){
-        w_k[n_stages - 1] = Data.Q_k_2[n_stages - 1] * Data.G(n_stages - 1, i);
-        Data.H_2.set(n_stages, i, Transpose(Data.S_k_2[n_stages - 1]) * Data.G(n_stages - 1,i));
-        for (int k = n_stages - 1; k > i; k--){
-            Data.H_2.set(k, i, Transpose(Data.S_k_2[k-1]) * Data.G(k-1,i) + Transpose(Data.B_k[k]) * w_k[k]);
-            w_k[k-1] = Data.Q_k_2[k-1] * Data.G(k-1, i) + Transpose(Data.A_k[k-1]) * w_k[k];
-        }
-        Data.H_2.set(i,i, Data.R_k_2[i] + Transpose(Data.B_k[i])*w_k[i]);
-    }
-    Data.H_2.set(n_stages, n_stages, Data.R_k_2[n_stages]);
-
-    Data.h_2 = vertcat(Data.h_k_2);
-    Data.H_2.to_sym(Data.H_dense_2);
-
-    return;
-}
-
-void Condenser::convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const{
-    std::vector<Matrix> O_xi_cond(num_targets + 1);
-    std::vector<Matrix> T_xi_cond(num_targets);
-    std::vector<Matrix> O_mu(num_targets + 1);
-    std::vector<Matrix> T_mu(num_targets);
-    std::vector<Matrix> T_lambda(num_targets);
-    std::vector<Matrix> O_sigma(num_targets + 1);
-    Matrix sigma = lambda_cond.get_slice(condensed_num_vars, condensed_num_vars + num_true_cons);
-
-    std::vector<Matrix> T_xi_full(num_targets);
-    std::vector<Matrix> T_nu(num_targets);
-    std::vector<Matrix> T_mu_lambda(num_targets);
-
-    std::vector<Matrix> xi_full_k(2*num_targets + 1);
-    std::vector<Matrix> lambda_full_k(2*(2*num_targets + 1));
-
-    //Get slices corresponding to targets free variables and other free variables
-    int ind = 0;
-    for (int i = 0; i < num_targets; i++){
-        O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
-        T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-        O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
-        T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-        ind = condensed_v_ends[i];
-    }
-    O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-    O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
+//     condensed_h_2 = vertcat(condensed_h_k_2);
+// }
 
 
-    //Slice constraint multipliers to later insert continuity condition multipliers
-    ind = 0;
-    int ind_2 = condensed_num_vars;
-    for (int i = 0; i < num_targets; i++){
-        O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
-        ind_2 += c_starts[i] - ind;
-        ind = c_ends[i];
-    }
-    O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
+// void Condenser::single_hess_condense(int tnum, const SymMatrix *const sub_hess){
+//     condensing_data &Data = targets_data[tnum];
+
+//     int n_stages = targets[tnum].n_stages;
+
+//     Data.R_k_2[0] = sub_hess[0];
+//     for (int i = 1; i <= n_stages; i++){
+//         Data.Q_k_2[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
+//         Data.S_k_2[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+//         Data.R_k_2[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+//     }
+
+//     //Calculate new h
+//     std::vector<Matrix> w_k(n_stages);
+//     w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k_2[n_stages - 1] * Data.g_k[n_stages - 1];
+
+//     Data.h_k_2[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k_2[n_stages - 1]) * Data.g_k[n_stages - 1];
+//     for (int k = n_stages - 1; k > 0; k--){
+//         Data.h_k_2[k] = Data.r_k[k] + Transpose(Data.S_k_2[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k]) * w_k[k];
+//         w_k[k-1] = Data.Q_k_2[k-1] * Data.g_k[k-1] + Data.q_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+//     }
+//     Data.h_k_2[0] = Data.r_k[0] + Transpose(Data.B_k[0]) * w_k[0];
+
+//     //Calculate new H
+//     for (int i = 0; i < n_stages; i++){
+//         w_k[n_stages - 1] = Data.Q_k_2[n_stages - 1] * Data.G(n_stages - 1, i);
+//         Data.H_2.set(n_stages, i, Transpose(Data.S_k_2[n_stages - 1]) * Data.G(n_stages - 1,i));
+//         for (int k = n_stages - 1; k > i; k--){
+//             Data.H_2.set(k, i, Transpose(Data.S_k_2[k-1]) * Data.G(k-1,i) + Transpose(Data.B_k[k]) * w_k[k]);
+//             w_k[k-1] = Data.Q_k_2[k-1] * Data.G(k-1, i) + Transpose(Data.A_k[k-1]) * w_k[k];
+//         }
+//         Data.H_2.set(i,i, Data.R_k_2[i] + Transpose(Data.B_k[i])*w_k[i]);
+//     }
+//     Data.H_2.set(n_stages, n_stages, Data.R_k_2[n_stages]);
+
+//     Data.h_2 = vertcat(Data.h_k_2);
+//     Data.H_2.to_sym(Data.H_dense_2);
+
+//     return;
+// }
+
+// void Condenser::convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const{
+//     std::vector<Matrix> O_xi_cond(num_targets + 1);
+//     std::vector<Matrix> T_xi_cond(num_targets);
+//     std::vector<Matrix> O_mu(num_targets + 1);
+//     std::vector<Matrix> T_mu(num_targets);
+//     std::vector<Matrix> T_lambda(num_targets);
+//     std::vector<Matrix> O_sigma(num_targets + 1);
+//     Matrix sigma = lambda_cond.get_slice(condensed_num_vars, condensed_num_vars + num_true_cons);
+
+//     std::vector<Matrix> T_xi_full(num_targets);
+//     std::vector<Matrix> T_nu(num_targets);
+//     std::vector<Matrix> T_mu_lambda(num_targets);
+
+//     std::vector<Matrix> xi_full_k(2*num_targets + 1);
+//     std::vector<Matrix> lambda_full_k(2*(2*num_targets + 1));
+
+//     //Get slices corresponding to targets free variables and other free variables
+//     int ind = 0;
+//     for (int i = 0; i < num_targets; i++){
+//         O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
+//         T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+
+//         O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
+//         T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+
+//         ind = condensed_v_ends[i];
+//     }
+//     O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
+//     O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
 
 
-    //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
-    ind = condensed_num_vars + num_true_cons;
-    if (add_dep_bounds){
-        for (int i = 0; i < num_targets; i++){
-            T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
-            ind += targets_data[i].n_dep;
-        }
-    }
-    else{
-        for (int i = 0; i < num_targets; i++){
-            T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
-        }
-    }
+//     //Slice constraint multipliers to later insert continuity condition multipliers
+//     ind = 0;
+//     int ind_2 = condensed_num_vars;
+//     for (int i = 0; i < num_targets; i++){
+//         O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
+//         ind_2 += c_starts[i] - ind;
+//         ind = c_ends[i];
+//     }
+//     O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
 
-    //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
-    //assemble multipliers for free and dependent variable bounds
-    for (int i = 0; i < num_targets; i++){
-        single_convex_combination_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, t, T_xi_full[i], T_nu[i], T_mu_lambda[i]);
-    }
 
-    //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
-    for (int i = 0; i < num_targets; i++){
-        xi_full_k[2*i] = O_xi_cond[i];
-        xi_full_k[2*i + 1] = T_xi_full[i];
-        lambda_full_k[2*i] = O_mu[i];
-        lambda_full_k[2*i + 1] = T_mu_lambda[i];
-    }
-    xi_full_k[2*num_targets] = O_xi_cond[num_targets];
-    lambda_full_k[2*num_targets] = O_mu[num_targets];
+//     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
+//     ind = condensed_num_vars + num_true_cons;
+//     if (add_dep_bounds){
+//         for (int i = 0; i < num_targets; i++){
+//             T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+//             ind += targets_data[i].n_dep;
+//         }
+//     }
+//     else{
+//         for (int i = 0; i < num_targets; i++){
+//             T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+//         }
+//     }
 
-    //Append constraint and condition multipliers to bound-constraint multipliers
-    ind = 2*num_targets + 1;
-    for (int i = 0; i < num_targets; i++){
-        lambda_full_k[ind + 2*i] = O_sigma[i];
-        lambda_full_k[ind + 2*i + 1] = T_nu[i];
-    }
-    lambda_full_k[ind + 2*num_targets] = O_sigma[num_targets];
+//     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
+//     //assemble multipliers for free and dependent variable bounds
+//     for (int i = 0; i < num_targets; i++){
+//         single_convex_combination_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, t, T_xi_full[i], T_nu[i], T_mu_lambda[i]);
+//     }
 
-    xi_full = vertcat(xi_full_k);
-    lambda_full = vertcat(lambda_full_k);
+//     //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
+//     for (int i = 0; i < num_targets; i++){
+//         xi_full_k[2*i] = O_xi_cond[i];
+//         xi_full_k[2*i + 1] = T_xi_full[i];
+//         lambda_full_k[2*i] = O_mu[i];
+//         lambda_full_k[2*i + 1] = T_mu_lambda[i];
+//     }
+//     xi_full_k[2*num_targets] = O_xi_cond[num_targets];
+//     lambda_full_k[2*num_targets] = O_mu[num_targets];
 
-    return;
-}
+//     //Append constraint and condition multipliers to bound-constraint multipliers
+//     ind = 2*num_targets + 1;
+//     for (int i = 0; i < num_targets; i++){
+//         lambda_full_k[ind + 2*i] = O_sigma[i];
+//         lambda_full_k[ind + 2*i + 1] = T_nu[i];
+//     }
+//     lambda_full_k[ind + 2*num_targets] = O_sigma[num_targets];
 
-void Condenser::single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const {
-    int n_stages = targets[tnum].n_stages;
-    condensing_data &Data = targets_data[tnum];
+//     xi_full = vertcat(xi_full_k);
+//     lambda_full = vertcat(lambda_full_k);
 
-    std::vector<Matrix> xi_free_k(n_stages + 1);
-    std::vector<Matrix> xi_dep_k(n_stages);
-    std::vector<Matrix> nu_k(n_stages);
-    std::vector<Matrix> lambda_k(n_stages);
-    std::vector<Matrix> mu_k(n_stages + 1);
-    std::vector<Matrix> xi_full_k(2*n_stages + 1);
-    std::vector<Matrix> mu_lambda_k(2*n_stages + 1);
+//     return;
+// }
 
-    int s_ind = 0;
-    //int dep_size;
+// void Condenser::single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
+//                             Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const {
+//     int n_stages = targets[tnum].n_stages;
+//     condensing_data &Data = targets_data[tnum];
 
-    //Get free variables of each stage
-    for (int i = 0; i <= n_stages; i++){
-        xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
-        s_ind += Data.free_sizes[i];
-    }
+//     std::vector<Matrix> xi_free_k(n_stages + 1);
+//     std::vector<Matrix> xi_dep_k(n_stages);
+//     std::vector<Matrix> nu_k(n_stages);
+//     std::vector<Matrix> lambda_k(n_stages);
+//     std::vector<Matrix> mu_k(n_stages + 1);
+//     std::vector<Matrix> xi_full_k(2*n_stages + 1);
+//     std::vector<Matrix> mu_lambda_k(2*n_stages + 1);
 
-    //Get multipliers for each stage-state bound
-    s_ind = 0;
-    for (int i = 0; i < n_stages; i++){
-        lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
-        s_ind += Data.cond_sizes[i];
-    }
+//     int s_ind = 0;
+//     //int dep_size;
 
-    //Get multipliers for free variable bounds for each stage
-    s_ind = 0;
-    for (int i = 0; i <= n_stages; i++){
-        mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
-        s_ind += Data.free_sizes[i];
-    }
+//     //Get free variables of each stage
+//     for (int i = 0; i <= n_stages; i++){
+//         xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+//         s_ind += Data.free_sizes[i];
+//     }
 
-    //Recover dependent variables
-    xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0];
-    for (int i = 1; i < n_stages; i++){
-        xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i];
-    }
+//     //Get multipliers for each stage-state bound
+//     s_ind = 0;
+//     for (int i = 0; i < n_stages; i++){
+//         lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
+//         s_ind += Data.cond_sizes[i];
+//     }
 
-    //Assemble original vector of free and dependent variables and corresponding vector of bound-constraint multipliers
-    for (int i = 0; i < n_stages; i++){
-        xi_full_k[2*i] = xi_free_k[i];
-        xi_full_k[2*i + 1] = xi_dep_k[i];
-        mu_lambda_k[2*i] = mu_k[i];
-        mu_lambda_k[2*i + 1] = lambda_k[i];
-    }
-    xi_full_k[2*n_stages] = xi_free_k[n_stages];
-    mu_lambda_k[2*n_stages] = mu_k[n_stages];
+//     //Get multipliers for free variable bounds for each stage
+//     s_ind = 0;
+//     for (int i = 0; i <= n_stages; i++){
+//         mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+//         s_ind += Data.free_sizes[i];
+//     }
 
-    //Calculate adjoint variables backward in time
-    //Definition of Lagrangian: 0.5 xT H x + qT * x + lambdaT * x + muT * (Ax - b) + sigmaT J
+//     //Recover dependent variables
+//     xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0];
+//     for (int i = 1; i < n_stages; i++){
+//         xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i];
+//     }
 
-    Matrix J_T_sigma(Data.cond_sizes[n_stages-1]);
-    if (num_true_cons == 0){
-        J_T_sigma.Initialize(0.);
-    }
-    else{
-        J_T_sigma = transpose_multiply(Data.J_dep_k[n_stages - 1], sigma);
-    }
+//     //Assemble original vector of free and dependent variables and corresponding vector of bound-constraint multipliers
+//     for (int i = 0; i < n_stages; i++){
+//         xi_full_k[2*i] = xi_free_k[i];
+//         xi_full_k[2*i + 1] = xi_dep_k[i];
+//         mu_lambda_k[2*i] = mu_k[i];
+//         mu_lambda_k[2*i + 1] = lambda_k[i];
+//     }
+//     xi_full_k[2*n_stages] = xi_free_k[n_stages];
+//     mu_lambda_k[2*n_stages] = mu_k[n_stages];
 
-    nu_k[n_stages - 1] = (Data.S_k[n_stages - 1]*(1-t) + Data.S_k_2[n_stages - 1]*t) * xi_free_k[n_stages] + (Data.Q_k[n_stages - 1]*(1-t) + Data.Q_k_2[n_stages - 1]*t) * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
-    for (int i = n_stages - 2; i>= 0; i--){
-        if (num_true_cons == 0){
-            J_T_sigma.Dimension(Data.cond_sizes[i]);
-            J_T_sigma.Initialize(0.);
-        }
-        else{
-            J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
-        }
+//     //Calculate adjoint variables backward in time
+//     //Definition of Lagrangian: 0.5 xT H x + qT * x + lambdaT * x + muT * (Ax - b) + sigmaT J
 
-        nu_k[i] = (Data.S_k[i]*(1-t) + Data.S_k_2[i]*t) * xi_free_k[i+1] + (Data.Q_k[i]*(1-t) + Data.Q_k_2[i]*t) * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
-    }
+//     Matrix J_T_sigma(Data.cond_sizes[n_stages-1]);
+//     if (num_true_cons == 0){
+//         J_T_sigma.Initialize(0.);
+//     }
+//     else{
+//         J_T_sigma = transpose_multiply(Data.J_dep_k[n_stages - 1], sigma);
+//     }
 
-    nu = vertcat(nu_k);
-    nu *= Data.matching_sign;
-    xi_full = vertcat(xi_full_k);
-    mu_lambda = vertcat(mu_lambda_k);
+//     nu_k[n_stages - 1] = (Data.S_k[n_stages - 1]*(1-t) + Data.S_k_2[n_stages - 1]*t) * xi_free_k[n_stages] + (Data.Q_k[n_stages - 1]*(1-t) + Data.Q_k_2[n_stages - 1]*t) * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+//     for (int i = n_stages - 2; i>= 0; i--){
+//         if (num_true_cons == 0){
+//             J_T_sigma.Dimension(Data.cond_sizes[i]);
+//             J_T_sigma.Initialize(0.);
+//         }
+//         else{
+//             J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
+//         }
 
-    return;
-}
+//         nu_k[i] = (Data.S_k[i]*(1-t) + Data.S_k_2[i]*t) * xi_free_k[i+1] + (Data.Q_k[i]*(1-t) + Data.Q_k_2[i]*t) * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
+//     }
+
+//     nu = vertcat(nu_k);
+//     nu *= Data.matching_sign;
+//     xi_full = vertcat(xi_full_k);
+//     mu_lambda = vertcat(mu_lambda_k);
+
+//     return;
+// }
 
 
 
@@ -1457,35 +1614,93 @@ void Condenser::single_new_hess_condense(int tnum, const SymMatrix *const sub_he
     int n_stages = targets[tnum].n_stages;
 
     Data.R_k[0] = sub_hess[0];
+    // for (int i = 1; i <= n_stages; i++){
+    //     Data.R_k[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+    //     Data.Q_k[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
+    //     Data.S_k[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+    // }
+    
     for (int i = 1; i <= n_stages; i++){
-        Data.Q_k[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
-        Data.S_k[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-        Data.R_k[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
+        sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i + 1] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i + 1] - Data.alt_vranges[2*i - 1], Data.R_k[i]);
+        sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.Q_k[i - 1]);
+        sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i + 1] - Data.alt_vranges[2*i - 1], Data.S_k[i - 1]);
     }
 
-    //Calculate new h
+    // //Calculate new h
     std::vector<Matrix> w_k(n_stages);
-    w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+    // w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+    
+    // Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
+    // for (int k = n_stages - 1; k > 0; k--){
+    //     Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k]) * w_k[k];
+    //     w_k[k-1] = Data.Q_k[k-1] * Data.g_k[k-1] + Data.q_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+    // }
+    // Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0]) * w_k[0];
 
-    Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-    for (int k = n_stages - 1; k > 0; k--){
-        Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k]) * w_k[k];
-        w_k[k-1] = Data.Q_k[k-1] * Data.g_k[k-1] + Data.q_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-    }
-    Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0]) * w_k[0];
+    // //Calculate new H
+    // for (int i = 0; i < n_stages; i++){
+    //     w_k[n_stages - 1] = Data.Q_k[n_stages - 1] * Data.G(n_stages - 1, i);
+    //     Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages - 1]) * Data.G(n_stages - 1,i));
+    //     for (int k = n_stages - 1; k > i; k--){
+    //         Data.H.set(k, i, Transpose(Data.S_k[k-1]) * Data.G(k-1,i) + Transpose(Data.B_k[k]) * w_k[k]);
+    //         w_k[k-1] = Data.Q_k[k-1] * Data.G(k-1, i) + Transpose(Data.A_k[k-1]) * w_k[k];
+    //     }
+    //     Data.H.set(i,i, Data.R_k[i] + Transpose(Data.B_k[i])*w_k[i]);
+    // }
+    // Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
+    
+	//calculate h
+	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
+    
+    Data.h_k[n_stages] = Data.r_k[n_stages];
+    Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
+    
+    
+	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+    w_k[n_stages - 1] = Data.q_k[n_stages - 1];
+    mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
 
-    //Calculate new H
-    for (int i = 0; i < n_stages; i++){
-        w_k[n_stages - 1] = Data.Q_k[n_stages - 1] * Data.G(n_stages - 1, i);
-        Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages - 1]) * Data.G(n_stages - 1,i));
-        for (int k = n_stages - 1; k > i; k--){
-            Data.H.set(k, i, Transpose(Data.S_k[k-1]) * Data.G(k-1,i) + Transpose(Data.B_k[k]) * w_k[k]);
-            w_k[k-1] = Data.Q_k[k-1] * Data.G(k-1, i) + Transpose(Data.A_k[k-1]) * w_k[k];
-        }
-        Data.H.set(i,i, Data.R_k[i] + Transpose(Data.B_k[i])*w_k[i]);
-    }
-    Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
-
+	for (int k = n_stages-1; k >=1; k--){
+		// Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
+		// w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+        
+        Data.h_k[k] = Data.r_k[k];
+        Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
+        Tmult_to(Data.B_k[k], w_k[k], Data.h_k[k]);
+       
+        w_k[k-1] = Data.q_k[k-1];
+        mult_to(Data.Q_k[k-1], Data.g_k[k-1], w_k[k-1]);
+        Tmult_to(Data.A_k[k-1], w_k[k], w_k[k-1]);
+	}
+	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
+    Data.h_k[0] = Data.r_k[0];
+    Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
+    
+    std::vector<Matrix> W_ik(n_stages);
+	//calculate H
+	for (int i = 0; i < n_stages; i++){
+		// W_ik[n_stages-1] = Data.Q_k[n_stages-1] * Data.G(n_stages-1, i);
+		// Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages-1]) * Data.G(n_stages-1, i));
+        mult(Data.Q_k[n_stages - 1], Data.G(n_stages - 1, i), W_ik[n_stages - 1]);
+        Tmult_to(Data.S_k[n_stages - 1], Data.G(n_stages - 1, i), Data.H(n_stages, i), 0.);
+        
+		for (int k = n_stages-1; k >= i+1; k--){
+			// Data.H.set(k,i, Transpose(Data.S_k[k-1])*Data.G(k-1, i) + Transpose(Data.B_k[k])*W_ik[k]);
+			// W_ik[k-1] = Transpose(Data.A_k[k-1])*W_ik[k] + Data.Q_k[k-1]*Data.G(k-1,i);
+            Tmult_to(Data.S_k[k-1], Data.G(k-1, i), Data.H(k,i), 0.);
+            Tmult_to(Data.B_k[k], W_ik[k], Data.H(k,i));
+            
+            Tmult(Data.A_k[k-1], W_ik[k], W_ik[k-1]);
+            mult_to(Data.Q_k[k-1], Data.G(k-1,i), W_ik[k-1]);
+		}
+		// Data.H.set(i, i, Data.R_k[i] + Transpose(Data.B_k[i])*W_ik[i]);
+        
+        Data.H.set(i, i, Data.R_k[i]);
+        Tmult_to(Data.B_k[i], W_ik[i], Data.H(i,i));
+	}
+	Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
+    
+    
     Data.h = vertcat(Data.h_k);
     Data.H.to_sym(Data.H_dense);
 
@@ -1498,14 +1713,21 @@ void Condenser::single_new_hess_condense(int tnum, const SymMatrix *const sub_he
 
 void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const Matrix &ub_con, Matrix &condensed_h, Matrix &condensed_lb_con, Matrix &condensed_ub_con){
 
-	O_grad_obj.resize(0);
+	// O_grad_obj.resize(0);
 
-    O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
+    // O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
+	// for (int i = 1; i < num_targets; i++){
+    //     O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+	// }
+    // O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
+    
+    grad_obj.get_slice(0, v_starts[0], 0, 1, O_grad_obj[0]);
 	for (int i = 1; i < num_targets; i++){
-        O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+        grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1, O_grad_obj[i]);
 	}
-    O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-
+    grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_grad_obj[num_targets]);
+    
+    
     //Assert that lower and upper bounds of condensing conditions are equal
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
@@ -1585,41 +1807,74 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
 void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
 	int n_stages = targets[tnum].n_stages;
 	condensing_data &Data = targets_data[tnum];
-
-
+    
+    
 	//Extract the updated c_k
-	Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
-    Data.c_k[0] *= Data.matching_sign;
+	// Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    // Data.c_k[0] *= Data.matching_sign;
 
+	// for (int i = 1; i<n_stages; i++){
+	// 	Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+    //     Data.c_k[i] *= Data.matching_sign;
+	// }
+    
+	lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.c_k[0]);
+    Data.c_k[0] *= Data.matching_sign;
+    
 	for (int i = 1; i<n_stages; i++){
-		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+		lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.c_k[i]);
         Data.c_k[i] *= Data.matching_sign;
 	}
-
-
+    
+    
 	std::vector<Matrix> w_k(n_stages);
-
+    
     //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
 	//calculate g
+	// Data.g_k[0] = Data.c_k[0];
+	// for (int i = 1; i < n_stages; i++){
+	// 	Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+	// }
 	Data.g_k[0] = Data.c_k[0];
 	for (int i = 1; i < n_stages; i++){
-		Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+		// Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+        Data.g_k[i] = Data.c_k[i];
+        mult_to(Data.A_k[i-1], Data.g_k[i-1], Data.g_k[i]);
 	}
+    
     
 	//calculate h
-	Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-	w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
+	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
 
-	for (int k = n_stages-1; k >=1; k--){
-		Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-		w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-	}
-	Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
+	// for (int k = n_stages-1; k >=1; k--){
+	// 	Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
+	// 	w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+	// }
+	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
     
-
+    Data.h_k[n_stages] = Data.r_k[n_stages];
+    Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
+    
+    w_k[n_stages - 1] = Data.q_k[n_stages - 1];
+    mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
+    
+	for (int k = n_stages-1; k >=1; k--){
+        Data.h_k[k] = Data.r_k[k];
+        Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
+        Tmult_to(Data.B_k[k], w_k[k], Data.h_k[k]);
+       
+        w_k[k-1] = Data.q_k[k-1];
+        mult_to(Data.Q_k[k-1], Data.g_k[k-1], w_k[k-1]);
+        Tmult_to(Data.A_k[k-1], w_k[k], w_k[k-1]);
+	}
+    Data.h_k[0] = Data.r_k[0];
+    Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
+    
+    
     Data.g = vertcat(Data.g_k);
     Data.h = vertcat(Data.h_k);
-
+    
     Sparse_Matrix J_d(horzcat(Data.J_dep_k));
     Data.Jtimes_g = sparse_dense_multiply(J_d, Data.g).dense();
     
@@ -1630,14 +1885,20 @@ void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
 
 void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con, const Matrix &ub_con, const Matrix *const target_corrections, Matrix &condensed_h, Matrix &condensed_lb_con, Matrix &condensed_ub_con){
 
-	O_grad_obj.resize(0);
+	// O_grad_obj.resize(0);
 
-    O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
+    // O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
+	// for (int i = 1; i < num_targets; i++){
+    //     O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+	// }
+    // O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
+    
+    grad_obj.get_slice(0, v_starts[0], 0, 1, O_grad_obj[0]);
 	for (int i = 1; i < num_targets; i++){
-        O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
+        grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1, O_grad_obj[i]);
 	}
-    O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-
+    grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_grad_obj[num_targets]);
+    
     //Assert that lower and upper bounds of condensing conditions are equal
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
@@ -1723,14 +1984,18 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
 	std::vector<Matrix> corr_k(n_stages);
 	int ind_1 = 0;
     for (int i = 0; i < n_stages; i++){
-        corr_k[i] = correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i]);
+        // corr_k[i] = correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i]);
+        correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i], corr_k[i]);
+        
         ind_1 += Data.cond_sizes[i];
     }
 
-	Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+	// Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.c_k[0]);
     Data.c_k[0] *= Data.matching_sign;
 	for (int i = 1; i<n_stages; i++){
-		Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+		// Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
+        lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.c_k[i]);
         Data.c_k[i] *= Data.matching_sign;
 	}
 
@@ -1742,7 +2007,9 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
 	for (int i = 1; i < n_stages; i++){
-		Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+		// Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
+        Data.g_k[i] = Data.c_k[i];
+        mult_to(Data.A_k[i-1], Data.g_k[i-1], Data.g_k[i]);
 	}
 
     //Add corrections
@@ -1751,19 +2018,38 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
     }
 
 	//calculate h
-	Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-	w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
+	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
+	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
 
-	for (int k = n_stages-1; k >=1; k--){
-		Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-		w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+	// for (int k = n_stages-1; k >=1; k--){
+	// 	Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
+	// 	w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
+	// }
+	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
+    
+    
+    Data.h_k[n_stages] = Data.r_k[n_stages];
+    Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
+    
+    w_k[n_stages - 1] = Data.q_k[n_stages - 1];
+    mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
+
+	for (int k = n_stages-1; k >=1; k--){        
+        Data.h_k[k] = Data.r_k[k];
+        Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
+        Tmult_to(Data.B_k[k], w_k[k], Data.h_k[k]);
+       
+        w_k[k-1] = Data.q_k[k-1];
+        mult_to(Data.Q_k[k-1], Data.g_k[k-1], w_k[k-1]);
+        Tmult_to(Data.A_k[k-1], w_k[k], w_k[k-1]);
 	}
-	Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
-
-
+    Data.h_k[0] = Data.r_k[0];
+    Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
+    
+    
     Data.g = vertcat(Data.g_k);
     Data.h = vertcat(Data.h_k);
-
+    
     Sparse_Matrix J_d(horzcat(Data.J_dep_k));
     Data.Jtimes_g = sparse_dense_multiply(J_d, Data.g).dense();
 
@@ -1791,35 +2077,50 @@ void Condenser::recover_correction_var_mult(const Matrix &xi_cond, const Matrix 
 
     //Get slices corresponding to targets free variables and other free variables
     int ind = 0;
-    for (int i = 0; i < num_targets; i++){
-        O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
-        T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+    // for (int i = 0; i < num_targets; i++){
+    //     O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
+    //     T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
 
-        O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
-        T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+    //     O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
+    //     T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
+
+    //     ind = condensed_v_ends[i];
+    // }
+    // O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
+    // O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
+    
+    for (int i = 0; i < num_targets; i++){
+        xi_cond.get_slice(ind, condensed_v_starts[i], O_xi_cond[i]);
+        xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_xi_cond[i]);
+
+        lambda_cond.get_slice(ind, condensed_v_starts[i], O_mu[i]);
+        lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_mu[i]);
 
         ind = condensed_v_ends[i];
     }
-    O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-    O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-
-
+    xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_xi_cond[num_targets]);
+    lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_mu[num_targets]);
+    
+    
     //Slice constraint multipliers to later insert continuity condition multipliers
     ind = 0;
     int ind_2 = condensed_num_vars;
     for (int i = 0; i < num_targets; i++){
-        O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
+        // O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
+        lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind, O_sigma[i] );
         ind_2 += c_starts[i] - ind;
         ind = c_ends[i];
     }
-    O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
+    // O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
+    lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind, O_sigma[num_targets]);
 
 
     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
     ind = condensed_num_vars + num_true_cons;
     if (add_dep_bounds){
         for (int i = 0; i < num_targets; i++){
-            T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+            // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+            lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
             ind += targets_data[i].n_dep;
         }
     }
@@ -1828,13 +2129,13 @@ void Condenser::recover_correction_var_mult(const Matrix &xi_cond, const Matrix 
             T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
         }
     }
-
+    
     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
     //assemble multipliers for free and dependent variable bounds
     for (int i = 0; i < num_targets; i++){
         single_correction_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, target_corrections[i], T_xi_full[i], T_nu[i], T_mu_lambda[i]);
     }
-
+    
     //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
     for (int i = 0; i < num_targets; i++){
         xi_full_k[2*i] = O_xi_cond[i];
@@ -1877,21 +2178,24 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
-        xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        // xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i], xi_free_k[i]);
         s_ind += Data.free_sizes[i];
     }
 
     //Get multipliers for each stage-state bound
     s_ind = 0;
     for (int i = 0; i < n_stages; i++){
-        lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
+        // lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
+        lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i], lambda_k[i]);
         s_ind += Data.cond_sizes[i];
     }
 
     //Get multipliers for free variable bounds for each stage
     s_ind = 0;
     for (int i = 0; i <= n_stages; i++){
-        mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        // mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
+        mu.get_slice(s_ind, s_ind + Data.free_sizes[i], mu_k[i]);
         s_ind += Data.free_sizes[i];
     }
 
@@ -1899,16 +2203,27 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
 	std::vector<Matrix> corr_k(n_stages);
 	int ind_1 = 0;
     for (int i = 0; i < n_stages; i++){
-        corr_k[i] = correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i]);
+        // corr_k[i] = correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i]);
+        correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i], corr_k[i]);
         ind_1 += Data.cond_sizes[i];
     }
 
     //Recover dependent variables
-    xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0] + corr_k[0];
+    // xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0] + corr_k[0];
+    // for (int i = 1; i < n_stages; i++){
+    //     xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i] + corr_k[i];
+    // }
+    
+    xi_dep_k[0] = Data.c_k[0];
+    xi_dep_k[0] += corr_k[0];
+    mult_to(Data.B_k[0], xi_free_k[0], xi_dep_k[0]);
     for (int i = 1; i < n_stages; i++){
-        xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i] + corr_k[i];
+        xi_dep_k[i] = Data.c_k[i];
+        xi_dep_k[i] += corr_k[i];
+        mult_to(Data.A_k[i-1], xi_dep_k[i-1], xi_dep_k[i]);
+        mult_to(Data.B_k[i], xi_free_k[i], xi_dep_k[i]);
     }
-
+    
     //Assemble original vector of free and dependent variables and corresponding vector of bound-constraint multipliers
     for (int i = 0; i < n_stages; i++){
         xi_full_k[2*i] = xi_free_k[i];
@@ -1930,7 +2245,15 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
         J_T_sigma = transpose_multiply(Data.J_dep_k[n_stages - 1], sigma);
     }
 
-    nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+    // nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
+    nu_k[n_stages - 1] = Data.q_k[n_stages - 1];
+    nu_k[n_stages - 1] -= lambda_k[n_stages - 1]; 
+    nu_k[n_stages - 1] -= J_T_sigma;
+    mult_to(Data.Q_k[n_stages - 1], xi_dep_k[n_stages - 1], nu_k[n_stages - 1]);
+    if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0){
+        mult_to(Data.S_k[n_stages - 1], xi_free_k[n_stages], nu_k[n_stages - 1]);
+    }
+    
     for (int i = n_stages - 2; i>= 0; i--){
         if (num_true_cons == 0){
             J_T_sigma.Dimension(Data.cond_sizes[i]);
@@ -1940,7 +2263,14 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
             J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
         }
 
-        nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
+        // nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
+    
+        nu_k[i] = Data.q_k[i];
+        nu_k[i] -= lambda_k[i];
+        nu_k[i] -= J_T_sigma;
+        Tmult_to(Data.A_k[i], nu_k[i+1], nu_k[i]);
+        mult_to(Data.Q_k[i], xi_dep_k[i], nu_k[i]);
+        mult_to(Data.S_k[i], xi_free_k[i+1], nu_k[i]);
     }
 
     nu = vertcat(nu_k);

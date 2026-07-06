@@ -111,7 +111,8 @@ class Matrix{
       return array[i];
     }
     
-    Matrix &operator=(const Matrix &A);                   ///< assignment operator
+    Matrix &operator=(const Matrix &A);
+    Matrix &operator=(Matrix &&A);
     Matrix &operator=(const SymMatrix &A);
     
     //virtual void operator=( Matrix &&A );
@@ -121,7 +122,7 @@ class Matrix{
     Matrix operator*(const double alpha) const;
     void operator+=(const Matrix &M2);
     void operator-=(const Matrix &M2);
-    void operator*=(const double alpha);
+    void operator*=(const double alpha) const;
 
     inline Matrix &Dimension(int M, int N = 1, int LDIM = -1){
       if (M != m || N != n || (LDIM != ldim && LDIM != -1)){
@@ -172,19 +173,42 @@ Matrix vertcat(std::vector<Matrix> Ms);
 
 
 inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
+    #ifdef MATRIX_DEBUG
+    if (M1.n != M2.m) throw std::invalid_argument("mult_to: Chaining dimension mismatch");
+    #endif
+  
     if (M3.m != M1.m || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.m, M2.n);
     if (M1.m == 0 || M2.n == 0) [[unlikely]] return; 
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), 1.0, M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), 0., M3.array, blasint(M3.ldim));
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
 }
 
-inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3){
+inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3){
     #ifdef MATRIX_DEBUG
-      if (M3.m != M1.m || M3.n != M2.n) throw std::invalid_argument("mult_into: Dimension mismatch");
+    if (M1.m != M2.m) throw std::invalid_argument("mult_to: Chaining dimension mismatch");
+    #endif
+  
+    if (M3.m != M1.n || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.n, M2.n);
+    if (M1.n == 0 || M2.n == 0) [[unlikely]] return; 
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+}
+
+inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta = 1.0){
+    #ifdef MATRIX_DEBUG
+      if (M1.n != M2.m) throw std::invalid_argument("mult_to: Chaining dimension mismatch");
+      if (M3.m != M1.m || M3.n != M2.n) throw std::invalid_argument("mult_to: Output matrix dimension mismatch");
     #endif
     if (M1.m == 0 || M2.n == 0) [[unlikely]] return;
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), 1.0, M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), 1.0, M3.array, blasint(M3.ldim));
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
 }
 
+inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta = 1.0){
+    #ifdef MATRIX_DEBUG
+      if (M1.m != M2.m) throw std::invalid_argument("Tmult_to: Chaining dimension mismatch");
+      if (M3.m != M1.n || M3.n != M2.n) throw std::invalid_argument("Tmult_to: Output matrix dimension mismatch");
+    #endif
+    if (M1.n == 0 || M2.n == 0) [[unlikely]] return;
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+}
 
 
 /**
@@ -214,7 +238,7 @@ class SymMatrix{
 
         inline double &operator()(int i, int j) const {
           #ifdef MATRIX_DEBUG
-            if (i < 0 || i >= m || j < 0 || j >= m) throw std::invalid_argument("SymMatrix::operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
+            if (i < 0 || i >= m || j < 0 || j >= m) throw std::invalid_argument("SymMatrix::operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(m) + ")");
           #endif
           if (i < j) return array[j + i*ldim - (i*(i + 1))/2];
           return array[i + j*ldim - (j*(j + 1))/2];
@@ -308,11 +332,11 @@ class Sparse_Matrix{
 Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2);
 Matrix sparse_vector_multiply(const Sparse_Matrix &M1, const Matrix &V1);
 Matrix transpose_multiply(const Sparse_Matrix &M1, const Matrix &M2);
-Sparse_Matrix horzcat(Sparse_Matrix*, int);
-Sparse_Matrix horzcat(std::vector<Sparse_Matrix>&);
+Sparse_Matrix horzcat(Sparse_Matrix* mats, int n_mats);
+Sparse_Matrix horzcat(std::vector<Sparse_Matrix>& mats);
 Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start);
 Sparse_Matrix lr_zero_pad(int N, const Matrix &M1, int start);
-Sparse_Matrix vertcat(std::vector<Sparse_Matrix>&);
+Sparse_Matrix vertcat(std::vector<Sparse_Matrix>& mats);
 
 
 class CSR_Matrix{
@@ -351,7 +375,7 @@ class LT_Block_Matrix{
 		LT_Block_Matrix(int, int*, int*);
 		LT_Block_Matrix(int, int, int*, int*);
 		LT_Block_Matrix();
-		~LT_Block_Matrix(void);
+		~LT_Block_Matrix();
 
 		void set(int i, int j, const Matrix &M);
 		const Matrix &operator() (int i, int j) const;
