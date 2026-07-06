@@ -28,6 +28,7 @@
 #endif
 
 #include <chrono>
+using namespace std::chrono;
 #include <thread>
 #include <fstream>
 
@@ -493,8 +494,8 @@ void Condenser::calc_ranges(){
 */
 
 
-Condenser *Condenser::layout_copy(const Condenser *cond){
-    return new Condenser(cond->vblocks, cond->num_vblocks, cond->cblocks, cond->num_cblocks, cond->hess_block_sizes, cond->num_hessblocks, cond->targets, cond->num_targets, cond->add_dep_bounds);
+Condenser *Condenser::layout_copy() const {
+    return new Condenser(vblocks, num_vblocks, cblocks, num_cblocks, hess_block_sizes, num_hessblocks, targets, num_targets, add_dep_bounds);
 }
 
 void Condenser::print_info(){
@@ -688,27 +689,25 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
             }
         }
     }
-
-    for (int i = 0; i < num_targets; i++){
-        single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
-        O_Slices[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+    
+    // for (int i = 0; i < num_targets; i++){
+    //     single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
+    //     O_Slices[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+    // }
+    // O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+    
+    
+    for (int tnum = 0; tnum < num_targets - 1; tnum++){
+        target_threads[tnum] = std::jthread(&Condenser::single_condense, this, tnum, T_grad_obj[tnum], T_Slices[tnum],
+                                            &(hess[h_starts[tnum]]), T_lb_var[tnum], T_ub_var[tnum], lb_con);
+        O_Slices[tnum].remove_rows(c_starts.get(), c_ends.get(), num_targets);
     }
+    int ntm1 = num_targets - 1;
+    single_condense(ntm1, T_grad_obj[ntm1], T_Slices[ntm1], &(hess[h_starts[ntm1]]), T_lb_var[ntm1], T_ub_var[ntm1], lb_con);
+    O_Slices[ntm1].remove_rows(c_starts.get(), c_ends.get(), num_targets);
     O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
     
-    
-    // for (int tnum = 0; tnum < num_targets - 1; tnum++){
-    //     target_threads[tnum] = std::jthread(&Condenser::single_condense, this, tnum, T_grad_obj[tnum], T_Slices[tnum],
-    //                                         &(hess[h_starts[tnum]]), T_lb_var[tnum], T_ub_var[tnum], lb_con);
-    //     std::cout << "jthread condense\n";
-    //     O_Slices[tnum].remove_rows(c_starts, c_ends, num_targets);
-    // }
-    // int ntm1 = num_targets - 1;
-    // single_condense(ntm1, T_grad_obj[ntm1], T_Slices[ntm1], &(hess[h_starts[ntm1]]), T_lb_var[ntm1], T_ub_var[ntm1], lb_con);
-    // O_Slices[ntm1].remove_rows(c_starts, c_ends, num_targets);
-    // O_Slices[num_targets].remove_rows(c_starts, c_ends, num_targets);
-    
-    // for (int tnum = 0; tnum < num_targets - 1; tnum++) target_threads[tnum].join();
-
+    for (int tnum = 0; tnum < num_targets - 1; tnum++) target_threads[tnum].join();
 
 
 //Assemble reduced constraint-jacobian (condensed jacobian without dependent-variable bounds)
@@ -836,7 +835,7 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     // #ifdef __cpp_lib_format
     //     if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
     // #else
-    //     if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
+        if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
     // #endif
     Data.matching_sign = std::round(Data.matching_sign);
     
@@ -854,7 +853,7 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
         // #ifdef __cpp_lib_format
         //     if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
         // #else
-        //     if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
+            if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
         // #endif
         if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1,...) = 0 or all F(x_k-1,...) - x_k+1 = 0");
         
@@ -1974,8 +1973,8 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
                                    cblock* CBLOCKS, int n_CBLOCKS, 
                                    int* HSIZES, int n_HBLOCKS, 
                                    condensing_target* TARGETS, int n_TARGETS, 
-                                   int n_split, int DEP_BOUNDS):
-        targets_orig(TARGETS), n_targets_orig(n_TARGETS){
+                                   int n_SPLIT, int DEP_BOUNDS):
+        targets_orig(TARGETS), n_targets_orig(n_TARGETS), n_split(n_SPLIT){
     add_dep_bounds = DEP_BOUNDS;
     vblocks = VBLOCKS;
     num_vblocks = n_VBLOCKS;
@@ -2035,6 +2034,10 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
 
 PartialCondenser::~PartialCondenser(){}
 
+
+Condenser *PartialCondenser::layout_copy(){
+    return new PartialCondenser(vblocks, num_vblocks, cblocks, num_cblocks, hess_block_sizes, num_hessblocks, targets_orig, n_targets_orig, n_split, add_dep_bounds);
+}
 
 //Moved to restoration.cpp
 /*

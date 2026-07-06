@@ -177,9 +177,11 @@ double BasicCQPsolver::get_reg(){
 
 
 QPresults BasicCQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
-    // steady_clock::time_point T0 = steady_clock::now();
+    steady_clock::time_point T0 = steady_clock::now();
     setup_inner_QPsol(deltaXi, lambdaQP);
-    // steady_clock::time_point T1 = steady_clock::now();
+    steady_clock::time_point T1 = steady_clock::now();
+    std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
+    
     QPresults QPret = inner_QPsol->solve(xi_cond, lambda_cond);
     // steady_clock::time_point T2 = steady_clock::now();
     // std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << ", solving the QP took " << duration_cast<microseconds>(T2 - T1) << "\n";
@@ -761,7 +763,7 @@ BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, 
     if (QPsol == nullptr) throw ParameterError("Selected QP solver not specified and linked, should have been caught by SQPoptions::optionsConsistency");
     
     //Wrap condensing step over external QP solver
-    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, Condenser::layout_copy(prob->condenser), true, true);
+    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
     return QPsol;
 }
 
@@ -801,12 +803,12 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
     load_mumps_libs(N_QP - 1);
     for (int i = 0; i < N_QP - 1; i++){
         QPsol = new qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
-        if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, Condenser::layout_copy(prob->condenser), true, true);
+        if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
         QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
     }
     
     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, Condenser::layout_copy(prob->condenser), true, true);
+    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
     
     return QPsols_par;
@@ -827,7 +829,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
     blockIdx = prob->condenser->condensed_blockIdx.get();
     
     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-    QPsol = new CQPsolver(QPsol, Condenser::layout_copy(prob->condenser), true, true);
+    QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
     QPsols_par[0] = std::unique_ptr<BasicQPsolver>(QPsol);
     for (int i = 1; i < N_QP - 1; i++){
         QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
@@ -835,7 +837,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
         QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
     }
     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-    QPsol = new CQPsolver(QPsol, Condenser::layout_copy(prob->condenser), true, true);
+    QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
     return QPsols_par;
     
@@ -879,6 +881,8 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     if (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity != -1)
         throw ParameterError("Values of qpOASES_options::matrixSparsity other that -1 are currently unsupported");
     sparseMatrices = !Qparam->condensed;
+    
+    sparseMatrices = true;
     qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
 
     int maxSchur = 15 + 35*int(LST != qpOASES::LST_LAPACK);
@@ -989,8 +993,11 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def){
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
     }
     else{
+        steady_clock::time_point T0 = steady_clock::now();
         convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
         H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
+        steady_clock::time_point T1 = steady_clock::now();
+        std::cout << "converting hess to dense took " << duration_cast<microseconds>(T1 - T0) << "\n"; 
     }
     matrices_changed = true;
     regF = 0.0;
@@ -1002,49 +1009,51 @@ void qpOASES_solver::set_constr(const Matrix &constr_jac){
     A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
     return;
 }
-void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
-    if (A_qp_nz == nullptr){
-        A_qp_nz = std::make_unique<double[]>(jac_colind[nVar]);
-        A_qp_row = std::make_unique<int[]>(jac_colind[nVar]);
-        A_qp_colind = std::make_unique<int[]>(nVar + 1);
-    }
-    std::copy(jac_nz, jac_nz + jac_colind[nVar], A_qp_nz.get());
-    std::copy(jac_row, jac_row + jac_colind[nVar], A_qp_row.get());
-    std::copy(jac_colind, jac_colind + nVar + 1, A_qp_colind.get());
-    
-    A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, A_qp_row.get(), A_qp_colind.get(), A_qp_nz.get());
-    
-    matrices_changed = true;
-    return;
-}
-
 // void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
-//     if (sparseMatrices){
-//         if (A_qp_nz == nullptr){
-//             A_qp_nz = std::make_unique<double[]>(jac_colind[nVar]);
-//             A_qp_row = std::make_unique<int[]>(jac_colind[nVar]);
-//             A_qp_colind = std::make_unique<int[]>(nVar + 1);
-//         }
-//         std::copy(jac_nz, jac_nz + jac_colind[nVar], A_qp_nz.get());
-//         std::copy(jac_row, jac_row + jac_colind[nVar], A_qp_row.get());
-//         std::copy(jac_colind, jac_colind + nVar + 1, A_qp_colind.get());
-        
-//         //A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, jac_row, jac_colind, jac_nz);
-//         A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, A_qp_row.get(), A_qp_colind.get(), A_qp_nz.get());
+//     if (A_qp_nz == nullptr){
+//         A_qp_nz = std::make_unique<double[]>(jac_colind[nVar]);
+//         A_qp_row = std::make_unique<int[]>(jac_colind[nVar]);
+//         A_qp_colind = std::make_unique<int[]>(nVar + 1);
 //     }
-//     else{
-//         jacT.Initialize(0.);
-//         for (int j = 0; j < nVar; j++){
-//             for (int i = jac_colind[j]; i < jac_colind[j+1]; i++){
-//                 jacT.array[j + jac_row[i]*jacT.m] = jac_nz[i];
-//             }
-//         }
-//         A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
-//     }
+//     std::copy(jac_nz, jac_nz + jac_colind[nVar], A_qp_nz.get());
+//     std::copy(jac_row, jac_row + jac_colind[nVar], A_qp_row.get());
+//     std::copy(jac_colind, jac_colind + nVar + 1, A_qp_colind.get());
+    
+//     A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, A_qp_row.get(), A_qp_colind.get(), A_qp_nz.get());
     
 //     matrices_changed = true;
 //     return;
 // }
+
+void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
+    if (sparseMatrices){
+        if (A_qp_nz == nullptr){
+            A_qp_nz = std::make_unique<double[]>(jac_colind[nVar]);
+            A_qp_row = std::make_unique<int[]>(jac_colind[nVar]);
+            A_qp_colind = std::make_unique<int[]>(nVar + 1);
+        }
+        std::copy(jac_nz, jac_nz + jac_colind[nVar], A_qp_nz.get());
+        std::copy(jac_row, jac_row + jac_colind[nVar], A_qp_row.get());
+        std::copy(jac_colind, jac_colind + nVar + 1, A_qp_colind.get());
+        
+        //A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, jac_row, jac_colind, jac_nz);
+        A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, A_qp_row.get(), A_qp_colind.get(), A_qp_nz.get());
+    }
+    else{steady_clock::time_point T0 = steady_clock::now();
+        jacT.Initialize(0.);
+        for (int j = 0; j < nVar; j++){
+            for (int i = jac_colind[j]; i < jac_colind[j+1]; i++){
+                jacT.array[j + jac_row[i]*jacT.m] = jac_nz[i];
+            }
+        }
+        A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
+        steady_clock::time_point T1 = steady_clock::now();
+        std::cout << "Converting Jacobian to dense took " << duration_cast<microseconds>(T1 - T0) << "\n";
+    }
+    
+    matrices_changed = true;
+    return;
+}
 
 void qpOASES_solver::set_bounds(const Matrix &lb_x, const Matrix &ub_x, const Matrix &lb_A, const Matrix &ub_A){
     //by default, qpOASES defines +-inifinity as +-1e20 (see qpOASES Constants.hpp), set bounds accordingly
@@ -1091,7 +1100,7 @@ void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
 
 QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     double QPtime;
-    
+    steady_clock::time_point T0 = steady_clock::now();
     if (convex_QP)  opts.enableInertiaCorrection = qpOASES::BT_TRUE;
     else            opts.enableInertiaCorrection = qpOASES::BT_FALSE;
     
@@ -1143,6 +1152,8 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
         QP_it += 1;
         *qpSave = *qp;
+        steady_clock::time_point T1 = steady_clock::now();
+        std::cout << "Solving the QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
         return QPresults::success;
     }
     

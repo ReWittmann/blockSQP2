@@ -421,7 +421,14 @@ class DenseMatrix : public virtual Matrix
 				BooleanType only_lower_triangular = BT_FALSE /**< if true, only the lower triangular portion is returned.  This can only be true for symmetric matrices and if irows==jcols. */
 				) const;
 
-
+		virtual returnValue getDenseSubmatrix(
+				int_t irowsLength,
+				const int_t* const irowsNumber,
+				int_t icolsLength,
+				const int_t* const icolsNumber,
+				real_t *avals
+		);
+		
 		/** Evaluate Y=alpha*A*X + beta*Y.
 		 *  \return SUCCESSFUL_RETURN. */
 		virtual returnValue times(	int_t xN,				/**< Number of vectors to multiply. */
@@ -849,7 +856,7 @@ class SparseMatrixRow : public virtual Matrix
 				real_t* avals,					/**< Numerical values of the entries. */
 				BooleanType only_lower_triangular = BT_FALSE /**< if true, only the lower triangular portion is returned.  This can only be true for symmetric matrices and if irows==jcols. */
 				) const;
-
+		
 		/** Evaluate Y=alpha*A*X + beta*Y. */
 		virtual returnValue times(	int_t xN,				/**< Number of vectors to multiply. */
 									real_t alpha,			/**< Scalar factor for matrix vector product. */

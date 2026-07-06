@@ -35,6 +35,27 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include "cblas.h"
+
+#ifndef OPENBLAS_CONFIG_H
+	#if defined(CBLAS_INT)
+		typedef CBLAS_INT blasint;
+	#elif defined(MKL_INT)
+		typedef MKL_INT blasint;
+	#else
+		#error "Included cblas header defines neither blasint nor CBLAS_INT nor MKL_INT"
+	#endif
+#endif
+
+#ifndef BSQP_CBLAS_SUFFIX
+    #define BSQP_CBLAS_SUFFIX
+#endif
+#define BSQP_CONCAT(a,b) a##b
+#define BSQP_EXPAND_CONCAT(a,b) BSQP_CONCAT(a,b)
+#define BSQP_BLASFUNC(a) BSQP_EXPAND_CONCAT(a, BSQP_CBLAS_SUFFIX) // #####!!! READ THIS !!!#####: If this is in an error message: Invalid cblas suffix. Check cblas.h, and use -DBSQP_CBLAS_SUFFIX= instead of -DBSQP_CBLAS_SUFFIX if there is no suffix.
+
+
+
 
 namespace blockSQP2{
 
@@ -50,78 +71,121 @@ extern int Ecount; ///< Count assign operator calls
 
 class SymMatrix;
 
-class Matrix
-{  private:
-      int malloc( void );                                           ///< memory allocation
-      int free( void );                                             ///< memory free
+class Matrix{  
+  private:
+    void allocate(void);
+    void deallocate(void);
 
-   public:
-      int m;                                                        ///< internal number of rows
-      int n;                                                        ///< internal number of columns
-      int ldim;                                                     ///< internal leading dimension not necesserily equal to m or n
-      double *array;                                                ///< array of how the matrix is stored in the memory
-      int tflag;                                                    ///< 1 if it is a Teilmatrix
+  public:
+    int m;                                                        ///< internal number of rows
+    int n;                                                        ///< internal number of columns
+    int ldim;                                                     ///< internal leading dimension not necesserily equal to m or n
+    double *array;                                                ///< array of how the matrix is stored in the memory
+    int tflag;                                                    ///< 1 if it is a Teilmatrix
 
-      Matrix();
-      Matrix( int, int = 1, int = -1 );                             ///< constructor with standard arguments
-      Matrix( int, int, double*, int = -1 );
-      Matrix( const Matrix& A );
-      Matrix(const SymMatrix &A);
-      //Matrix( Matrix&& M);
-      virtual ~Matrix( void );
+    Matrix();
+    Matrix(int, int = 1, int = -1);                             ///< constructor with standard arguments
+    Matrix( int, int, double*, int = -1 );
+    Matrix( const Matrix& A );
+    Matrix(const SymMatrix &A);
+    virtual ~Matrix();
+    
+    inline int M() const {return m;}
+    inline int N() const {return n;}
+    inline int LDIM() const {return ldim;}
+    inline double *ARRAY() const {return array;}
+    inline int TFLAG() const {return tflag;}
+
+    double *release();
+    
+    inline double &operator()(int i, int j) const {
+      #ifdef MATRIX_DEBUG 
+      if ( i < 0 || i >= m || j < 0 || j >= n) throw std::invalid_argument("Matrix operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")"); 
+      #endif
+      return array[i+j*ldim];
+    }
+    inline double &operator()(int i) const {
+      #ifdef MATRIX_DEBUG
+      if (i < 0 || i >= m) throw std::invalid_argument("Matrix operator(): Index " + std::to_string(i) + " out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
+      #endif
+      return array[i];
+    }
+    
+    Matrix &operator=(const Matrix &A);                   ///< assignment operator
+    Matrix &operator=(const SymMatrix &A);
+    
+    //virtual void operator=( Matrix &&A );
+    Matrix operator+(const Matrix &M2) const;
+    Matrix operator-(const Matrix &M2) const;
+    Matrix operator*(const Matrix &M2) const;
+    Matrix operator*(const double alpha) const;
+    void operator+=(const Matrix &M2);
+    void operator-=(const Matrix &M2);
+    void operator*=(const double alpha);
+
+    inline Matrix &Dimension(int M, int N = 1, int LDIM = -1){
+      if (M != m || N != n || (LDIM != ldim && LDIM != -1)){
+        if (tflag) throw std::logic_error("Cannot set new dimension for Submatrix");
+        else{
+            deallocate();
+            m = M;
+            n = N;
+            if (ldim < m) ldim = m;
+            allocate();
+        }
+      }
+      return *this;
+    }
+    
+    Matrix &Initialize(double (*)(int, int));
+    inline Matrix &Initialize(double val){
+      std::fill(array, array + ldim*n, val);
+      return *this;
+    }
+    
+    /// Returns just a pointer to the full matrix
+    Matrix& Submatrix( const Matrix&, int, int, int = 0, int = 0 );
+    /// Matrix that points on <tt>ARRAY</tt>
+    Matrix& Arraymatrix( int M, int N, double* ARRAY, int LDIM = -1 );
+
+    Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
+    Matrix get_slice(int m_start, int m_end) const;
+    void get_slice(int m_start, int m_end, int n_start, int n_end, Matrix &A) const;
+    void get_slice(int m_start, int m_end, Matrix &A) const;
+    
+    //Matrix without_rows(int *starts, int *ends, int num_slices);
+    Matrix without_rows(int *starts, int *ends, int num_slices) const;
+
+    /** Flag == 0: bracket output
+      * Flag == 1: Matlab output
+      * else: plain output */
       
-      int M( void ) const;                                          ///< number of rows
-      int N( void ) const;                                          ///< number of columns
-      int LDIM( void ) const;                                       ///< leading dimensions
-      double *ARRAY( void ) const;                                  ///< returns pointer to data array
-      double *release();                                            // Return pointer to data array, passing ownership
-      int TFLAG( void ) const;                                      ///< returns this->tflag (1 if it is a submatrix and does not own the memory and 0 otherwise)
-
-      double &operator()(int i, int j);                     ///< access element i,j of the matrix
-      double &operator()(int i, int j) const;
-      double &operator()(int i);                            ///< access element i of the matrix (columnwise)
-      double &operator()(int i) const;
-      Matrix &operator=(const Matrix &A);                   ///< assignment operator
-      Matrix &operator=(const SymMatrix &A);
-      
-      //virtual void operator=( Matrix &&A );
-      Matrix operator+(const Matrix &M2) const;
-      Matrix operator-(const Matrix &M2) const;
-      Matrix operator*(const Matrix &M2) const;
-      Matrix operator*(const double alpha) const;
-      void operator+=(const Matrix &M2);
-      void operator-=(const Matrix &M2);
-      void operator*=(const double alpha);
-
-      Matrix &Dimension( int, int = 1, int = -1 );          ///< set dimension (rows, columns, leading dimension)
-      Matrix &Initialize(double (*)(int, int));                     ///< set matrix elements i,j to f(i,j)
-      Matrix &Initialize(double);                                   ///< set all matrix elements to a constant
-
-      /// Returns just a pointer to the full matrix
-      Matrix& Submatrix( const Matrix&, int, int, int = 0, int = 0 );
-      /// Matrix that points on <tt>ARRAY</tt>
-      Matrix& Arraymatrix( int M, int N, double* ARRAY, int LDIM = -1 );
-
-      //Matrix get_slice(int m_start, int m_end, int n_start, int n_end);
-      Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
-      //Matrix get_slice(int m_start, int m_end);
-      Matrix get_slice(int m_start, int m_end) const;
-      //Matrix without_rows(int *starts, int *ends, int num_slices);
-      Matrix without_rows(int *starts, int *ends, int num_slices) const;
-
-      /** Flag == 0: bracket output
-        * Flag == 1: Matlab output
-        * else: plain output */
-       
-      const Matrix &Print( FILE* = stdout,   ///< file for output
-                             int = 13,       ///< number of digits
-                             int = 1         ///< Flag for format
-                           ) const;
+    const Matrix &Print( FILE* = stdout,   ///< file for output
+                            int = 13,       ///< number of digits
+                            int = 1         ///< Flag for format
+                          ) const;
       
 };
 
 std::ostream& operator<<(std::ostream& os, const Matrix &M);
 Matrix vertcat(std::vector<Matrix> Ms);
+
+
+inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
+    if (M3.m != M1.m || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.m, M2.n);
+    if (M1.m == 0 || M2.n == 0) [[unlikely]] return; 
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), 1.0, M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), 0., M3.array, blasint(M3.ldim));
+}
+
+inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3){
+    #ifdef MATRIX_DEBUG
+      if (M3.m != M1.m || M3.n != M2.n) throw std::invalid_argument("mult_into: Dimension mismatch");
+    #endif
+    if (M1.m == 0 || M2.n == 0) [[unlikely]] return;
+    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), 1.0, M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), 1.0, M3.array, blasint(M3.ldim));
+}
+
+
 
 /**
  * \brief Class for easy access of elements of a dense symmetric matrix.
@@ -136,30 +200,49 @@ class SymMatrix{
         int tflag;
 
     protected:
-        int malloc( void );
-        int free( void );
+        void allocate();
+        void deallocate();
 
     public:
         SymMatrix();
-        SymMatrix( int );
-        SymMatrix( int, double*, int = -1);
-        SymMatrix( int, int, int );
-        SymMatrix( const Matrix& A );
-        SymMatrix( const SymMatrix& A );
-        virtual ~SymMatrix( void );
+        SymMatrix(int);
+        SymMatrix(int, double*, int = -1);
+        SymMatrix(int, int, int);
+        SymMatrix(const Matrix& A);
+        SymMatrix(const SymMatrix& A);
+        virtual ~SymMatrix();
 
-        double &operator()( int i, int j );
-        double &operator()( int i, int j ) const;
-        double &operator()( int i );
-        double &operator()( int i ) const;
-
-        SymMatrix &Dimension(int = 1);
+        inline double &operator()(int i, int j) const {
+          #ifdef MATRIX_DEBUG
+            if (i < 0 || i >= m || j < 0 || j >= m) throw std::invalid_argument("SymMatrix::operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
+          #endif
+          if (i < j) return array[j + i*ldim - (i*(i + 1))/2];
+          return array[i + j*ldim - (j*(j + 1))/2];
+        };
+        
+        inline double &operator()(int i) const {
+          #ifdef MATRIX_DEBUG
+            if (i >= m*(m+1)/2.0) throw std::invalid_argument("SymMatrix operator(): Index " + std::to_string(i) + " out of bounds for SymMatrix of size " + std::to_string(m));
+          #endif
+          return array[i];
+        }
+        
+        SymMatrix &Dimension(int M = 1){
+          if (m != M){
+            deallocate();
+            m = M;
+            ldim = M;
+            allocate();
+          }
+          return *this;
+        }
+        
         SymMatrix &Initialize(double (*)(int, int));
         SymMatrix &Initialize(double);
 
         SymMatrix& Submatrix(const Matrix&, int, int = 0);
-        SymMatrix& Arraymatrix( int, double* );
-        SymMatrix& Arraymatrix( int, double*, int = -1 );
+        SymMatrix& Arraymatrix(int, double*);
+        SymMatrix& Arraymatrix(int, double*, int = -1);
 
         SymMatrix &operator=(const SymMatrix &M2);
         SymMatrix operator+(const SymMatrix &M2) const;
@@ -167,9 +250,10 @@ class SymMatrix{
 
 
         Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
+        void get_slice(int m_start, int m_end, int n_start, int n_end, Matrix &A) const;
 
         
-        const SymMatrix &Print( FILE* = stdout,   ///< file for output
+        const SymMatrix &Print(FILE* = stdout,   ///< file for output
                              int = 13,       ///< number of digits
                              int = 1         ///< Flag for format
                            ) const;
@@ -179,9 +263,9 @@ class SymMatrix{
 std::ostream& operator<<(std::ostream& os, const SymMatrix &M);
 
 
-Matrix Transpose( const Matrix& A); ///< Overwrites \f$ A \f$ with its transpose \f$ A^T \f$
-Matrix &Transpose( const Matrix &A, Matrix &T ); ///< Computes \f$ T = A^T \f$
-double delta( int, int );
+Matrix Transpose(const Matrix& A); ///< Overwrites \f$ A \f$ with its transpose \f$ A^T \f$
+Matrix &Transpose(const Matrix &A, Matrix &T); ///< Computes \f$ T = A^T \f$
+double delta(int, int);
 
 
 class CSR_Matrix;
@@ -209,8 +293,11 @@ class Sparse_Matrix{
 		void operator=(const Sparse_Matrix &M);
 		void operator=(Sparse_Matrix &&M);
 		Sparse_Matrix operator+(const Sparse_Matrix &M2) const;
-		//Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end);
 		Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
+    
+    void get_slice(int m_start, int m_end, int n_start, int n_end, Sparse_Matrix &A) const;
+    void get_slice(int m_start, int m_end, int n_start, int n_end, Matrix &A) const;
+    
 		Matrix get_dense_slice(int m_start, int m_end, int n_start, int n_end) const;
     double operator()(int i, int j = 0) const;
 		Matrix dense() const;
@@ -253,7 +340,7 @@ public:
 //Lower-Triangle block-matrix
 class LT_Block_Matrix{
 	private:
-		int malloc( void );
+		void allocate();
 	public:
 		int *m_block_sizes;
 		int *n_block_sizes;

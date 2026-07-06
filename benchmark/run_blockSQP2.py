@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Goddard_Rocket(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -53,7 +53,7 @@ opts = blockSQP2.SQPoptions(
     
     max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
-    par_QPs = True,                        #Enable parallel solution of QPs
+    par_QPs = False,                        #Enable parallel solution of QPs
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
@@ -77,7 +77,7 @@ opts = blockSQP2.SQPoptions(
     
     test_opt_1 = True,
     test_opt_2 = True,
-    test_opt_3 = False,
+    test_opt_3 = True,
     
     qpsol = 'qpOASES',
     # qpsol_options = QPopts
@@ -102,6 +102,7 @@ targets2 = [blockSQP2.condensing_target(*ctarget_data)]
 
 condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
 # condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+# condenser = None
 
 #Define blockSQP Problemspec
 #See class OCProblems.OCProblem and blockSQP2/Problem.py for field specifications
@@ -162,5 +163,5 @@ if not step_plots:
     xi = np.array(optimizer.get_xi()).reshape(-1)
     # OCprob.plot(xi, dpi=200, title=plot_title)
 
-time.sleep(0.01)
+time.sleep(0.2)
 print(t1 - t0, "s")

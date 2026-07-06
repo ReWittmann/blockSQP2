@@ -34,33 +34,14 @@
 #include <iostream>
 #include <string>
 #include <chrono>
-#include "cblas.h"
-//#define MATRIX_DEBUG      //Do bounds and dimension checking when performing matrix operations
-
-#ifndef OPENBLAS_CONFIG_H
-	#if defined(CBLAS_INT)
-		typedef CBLAS_INT blasint;
-	#elif defined(MKL_INT)
-		typedef MKL_INT blasint;
-	#else
-		#error "Included cblas header defines neither blasint nor CBLAS_INT nor MKL_INT"
-	#endif
-#endif
-
-#ifndef BSQP_CBLAS_SUFFIX
-    #define BSQP_CBLAS_SUFFIX
-#endif
-#define BSQP_CONCAT(a,b) a##b
-#define BSQP_EXPAND_CONCAT(a,b) BSQP_CONCAT(a,b)
-#define BSQP_BLASFUNC(a) BSQP_EXPAND_CONCAT(a, BSQP_CBLAS_SUFFIX) // #####!!! READ THIS !!!#####: If this is in an error message: Invalid cblas suffix. Check cblas.h, and use -DBSQP_CBLAS_SUFFIX= instead of -DBSQP_CBLAS_SUFFIX if there is no suffix.
 
 namespace blockSQP2{
 
-void Error( const char *F )
-{
-    printf("Error: %s\n", F );
-    //exit( 1 );
-}
+// void Error( const char *F )
+// {
+//     printf("Error: %s\n", F );
+//     //exit( 1 );
+// }
 
 /* ----------------------------------------------------------------------- */
 
@@ -70,95 +51,42 @@ int Ecount = 0;
 
 /* ----------------------------------------------------------------------- */
 
-int Matrix::malloc( void )
-{
-    int len;
-
-    if ( tflag )
-        Error("malloc cannot be called with Submatrix");
-
-    if ( ldim < m )
-        ldim = m;
-
-    len = ldim*n;
-
-    if ( len == 0 ){
-        array = NULL;
-        }
-    else{
-        if ( ( array = new double[len] ) == NULL ){
-            Error("'new' failed");
-            }
-        }
-    return 0;
+void Matrix::allocate(void){
+    if (tflag) throw std::invalid_argument("allocate cannot be called with Submatrix");
+    if (ldim < m) ldim = m;
+    
+    int len = ldim*n;
+    if (len == 0) array = nullptr;
+    else if ((array = new double[len]) == nullptr) 
+        throw std::runtime_error("Matrix::allocate: Array new failed");
 }
 
 
-int Matrix::free( void )
-{
-    if ( tflag )
-        Error("free cannot be called with Submatrix");
-
+void Matrix::deallocate(void){
+    if (tflag) throw std::logic_error("deallocate cannot be called with Submatrix");
     delete[] array;
     array = nullptr;
-
-    return 0;
 }
 
 
-double &Matrix::operator()( int i, int j )
-{   /*
-    #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m || j < 0 || j >= n )
-        Error("Invalid matrix entry");
-    #endif*/
+// double &Matrix::operator()(int i, int j) const{
+//     #ifdef MATRIX_DEBUG
+//     if ( i < 0 || i >= m || j < 0 || j >= n){
+//         throw std::invalid_argument("Matrix operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
+//     }
+//     #endif
+//     return array[i+j*ldim];
+// }
 
-    #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m || j < 0 || j >= n){
-        throw std::invalid_argument("Matrix operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
-    }
-    #endif
 
-    return array[i+j*ldim];
-}
-
-double &Matrix::operator()( int i, int j ) const
-{   /*
-    #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m || j < 0 || j >= n )
-        Error("Invalid matrix entry");
-    #endif*/
-
-    #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m || j < 0 || j >= n){
-        throw std::invalid_argument("Matrix operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
-    }
-    #endif
-
-    return array[i+j*ldim];
-}
-
-double &Matrix::operator()( int i )
-{
-    #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m ){
-        throw std::invalid_argument("Matrix operator(): Index " + std::to_string(i) + " out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
-    }
-    #endif
-
-    return array[i];
-}
-
-double &Matrix::operator()( int i ) const
-{
-    #ifdef MATRIX_DEBUG
-    if ( i < 0 || i >= m ){
-        throw std::invalid_argument("Matrix operator(): Index " + std::to_string(i) + " out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
-    }
-    #endif
-
-    return array[i];
-}
+// double &Matrix::operator()(int i) const{
+//     #ifdef MATRIX_DEBUG
+//     if ( i < 0 || i >= m ){
+//         throw std::invalid_argument("Matrix operator(): Index " + std::to_string(i) + " out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
+//     }
+//     #endif
+//     return array[i];
+// }
 
 
 Matrix::Matrix(){
@@ -169,8 +97,7 @@ Matrix::Matrix(){
     tflag = 0;
 }
 
-Matrix::Matrix( int M, int N, int LDIM )
-{
+Matrix::Matrix( int M, int N, int LDIM ){
     Ccount++;
 
     m = M;
@@ -178,12 +105,11 @@ Matrix::Matrix( int M, int N, int LDIM )
     ldim = LDIM;
     tflag = 0;
 
-    malloc();
+    allocate();
 }
 
 
-Matrix::Matrix( int M, int N, double *ARRAY, int LDIM )
-{
+Matrix::Matrix( int M, int N, double *ARRAY, int LDIM ){
     Ccount++;
 
     m = M;
@@ -208,7 +134,7 @@ Matrix::Matrix( const Matrix &A )
     ldim = A.ldim;
     tflag = 0;
 
-    malloc();
+    allocate();
 
     for ( i = 0; i < m; i++ )
         for ( j = 0; j < n ; j++ )
@@ -222,7 +148,7 @@ Matrix::Matrix(const SymMatrix &A){
     n = A.m;
     ldim = m;
     tflag = 0;
-    malloc();
+    allocate();
     for (int i = 0; i < m; i++){
         for (int j = 0; j < n; j++){
             (*this)(i,j) = A(i,j);
@@ -258,13 +184,13 @@ Matrix &Matrix::operator=( const Matrix &A )
         if ( !tflag )
         {
 
-            free();
+            deallocate();
 
             m = A.m;
             n = A.n;
             ldim = A.m;
 
-            malloc();
+            allocate();
 
             for ( i = 0; i < m; i++ )
                 for ( j = 0; j < n ; j++ )
@@ -289,13 +215,13 @@ Matrix &Matrix::operator=(const SymMatrix &A){
     Ecount++;
 
     if (!tflag){
-        free();
+        deallocate();
 
         m = A.m;
         n = A.m;
         ldim = m;
 
-        malloc();
+        allocate();
         for (int i = 0; i < m; i++){
             for (int j = 0; j < n ; j++){
                 (*this)(i,j) = A(i,j);
@@ -303,8 +229,9 @@ Matrix &Matrix::operator=(const SymMatrix &A){
         }
     }
     else{
-        if (m != A.m || n != A.m)
-            Error("= operation not allowed");
+        #ifdef MATRIX_DEBUG
+        if (m != A.m || n != A.m) throw std::invalid_argument("Matrix::operator=: Cannot assign to submatrix of different dimension");
+        #endif
 
         for (int i = 0; i < m; i++){
             for (int j = 0; j < n ; j++){
@@ -324,7 +251,7 @@ void Matrix::operator=(Matrix &&A){
     }
 
     if (m != A.m || n != A.n || ldim != A.ldim)
-        free();
+        deallocate();
         m = A.m;
         n = A.n;
         ldim = A.ldim;
@@ -346,29 +273,29 @@ Matrix::~Matrix( void )
 {
     Dcount++;
     if ( !tflag )
-        free();
+        deallocate();
 }
 
 /* ----------------------------------------------------------------------- */
 
-int Matrix::M( void ) const
-{   return m;
-}
+// int Matrix::M( void ) const
+// {   return m;
+// }
 
 
-int Matrix::N( void ) const
-{   return n;
-}
+// int Matrix::N( void ) const
+// {   return n;
+// }
 
 
-int Matrix::LDIM( void ) const
-{   return ldim;
-}
+// int Matrix::LDIM( void ) const
+// {   return ldim;
+// }
 
 
-double *Matrix::ARRAY( void ) const
-{   return array;
-}
+// double *Matrix::ARRAY( void ) const
+// {   return array;
+// }
 
 double *Matrix::release(){
     if (tflag) throw std::runtime_error("Submatrix cannot release it's memory.");
@@ -378,36 +305,29 @@ double *Matrix::release(){
     return ret;
 }
 
-int Matrix::TFLAG( void ) const
-{   return tflag;
-}
+// int Matrix::TFLAG( void ) const
+// {   return tflag;
+// }
 
 /* ----------------------------------------------------------------------- */
 
-Matrix &Matrix::Dimension( int M, int N, int LDIM )
-{
-    if ( M != m || N != n || ( LDIM != ldim && LDIM != -1 ) )
-    {
-        if ( tflag )
-            Error("Cannot set new dimension for Submatrix");
-        else
-        {
-            free();
-            m = M;
-            n = N;
-            ldim = std::max(LDIM, m);
-            malloc();
-        }
-    }
-
-    return *this;
-}
+// Matrix &Matrix::Dimension(int M, int N, int LDIM){
+//     if (M != m || N != n || (LDIM != ldim && LDIM != -1)){
+//         if (tflag) throw std::logic_error("Cannot set new dimension for Submatrix");
+//         else{
+//             deallocate();
+//             m = M;
+//             n = N;
+//             ldim = std::max(LDIM, m);
+//             allocate();
+//         }
+//     }
+//     return *this;
+// }
 
 
-Matrix &Matrix::Initialize( double (*f)( int, int ) )
-{
+Matrix &Matrix::Initialize(double (*f)(int, int)){
     int i, j;
-
     for ( i = 0; i < m; i++ )
         for ( j = 0; j < n; j++ )
             (*this)(i,j) = f(i,j);
@@ -416,31 +336,23 @@ Matrix &Matrix::Initialize( double (*f)( int, int ) )
 }
 
 
-Matrix &Matrix::Initialize( double val )
-{
-    int i, j;
-
-    for ( i = 0; i < m; i++ )
-        for ( j = 0; j < n; j++ )
-            (*this)(i,j) = val;
-
-    return *this;
-}
+// Matrix &Matrix::Initialize(double val){
+//     int i, j;
+//     std::fill(array, array + ldim*n, val);
+            
+//     return *this;
+// }
 
 
 
 /* ----------------------------------------------------------------------- */
 
-Matrix &Matrix::Submatrix( const Matrix &A, int M, int N, int i0, int j0 )
-{
-    if ( i0 + M > A.m || j0 + N > A.n )
-        Error("Cannot create Submatrix");
-
-    if ( !tflag )
-        free();
+Matrix &Matrix::Submatrix(const Matrix &A, int M, int N, int i0, int j0){
+    if (i0 + M > A.m || j0 + N > A.n)
+        throw std::invalid_argument("Matrix::Submatrix: Out of bounds");
+    if (!tflag) deallocate();
 
     tflag = 1;
-
     m = M;
     n = N;
     array = &A.array[i0+j0*A.ldim];
@@ -450,26 +362,19 @@ Matrix &Matrix::Submatrix( const Matrix &A, int M, int N, int i0, int j0 )
 }
 
 
-Matrix &Matrix::Arraymatrix( int M, int N, double *ARRAY, int LDIM )
-{
-    if ( !tflag )
-        free();
-
+Matrix &Matrix::Arraymatrix(int M, int N, double *ARRAY, int LDIM){
+    if (!tflag) deallocate();
     tflag = 1;
-
     m = M;
     n = N;
     array = ARRAY;
     ldim = LDIM;
-
-    if ( ldim < m )
-        ldim = m;
-
+    if (ldim < m) ldim = m;
     return *this;
 }
 
 
-Matrix Matrix::get_slice(int m_start, int m_end, int n_start, int n_end) const{
+Matrix Matrix::get_slice(int m_start, int m_end, int n_start, int n_end) const {
 	if (m_end < m_start || n_end < n_start || m_end > m || n_end > n){
 		throw std::invalid_argument("Matrix.get_slice: Slices (" + std::to_string(m_start) + ", " + std::to_string(m_end) + "), (" + std::to_string(n_start) + ", " + std::to_string(n_end) + ") invalid for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n));
 	}
@@ -501,6 +406,34 @@ Matrix Matrix::get_slice(int m_start, int m_end) const{
 		}
 	}
 	return Matrix(M_slc, n, array_slc);
+}
+
+void Matrix::get_slice(int m_start, int m_end, int n_start, int n_end, Matrix &A) const {
+    #ifdef MATRIX_DEBUG
+	if (m_end < m_start || m_end > m) throw std::invalid_argument("Matrix.get_slice: Slice (" + std::to_string(m_start) + ", " + std::to_string(m_end) + ") out of matrix bounds (" + std::to_string(0) + ", " + std::to_string(m) + ")");
+	#endif
+    int M_slc = m_end - m_start;
+	int N_slc = n_end - n_start;
+    A.Dimension(M_slc, N_slc);
+    for (int j = 0; j < n; j++){
+        for (int i = 0; i < M_slc; i++){
+            A(i,j) = (*this)(m_start + i, n_start + j);
+        }
+    }
+}
+void Matrix::get_slice(int m_start, int m_end, Matrix &A) const {
+    #ifdef MATRIX_DEBUG
+	if (m_end < m_start || m_end > m){
+		throw std::invalid_argument("Matrix.get_slice: Slice (" + std::to_string(m_start) + ", " + std::to_string(m_end) + ") out of matrix bounds (" + std::to_string(0) + ", " + std::to_string(m) + ")");
+	}
+	#endif
+	int M_slc = m_end - m_start;
+    A.Dimension(M_slc, n);
+	for (int j = 0; j < n; j++){
+		for (int i = 0; i < M_slc; i++){
+            A(i,j) = (*this)(m_start + i, j);
+		}
+	}
 }
 
 
@@ -669,10 +602,10 @@ Matrix Matrix::operator*(const Matrix &M2) const{
     // if (M2.n == 1)
     //     BSQP_BLASFUNC(cblas_dgemv(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1)));
     // else
-    if (M2.n > 1)
+    // if (M2.n > 1)
         BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
-    else
-        BSQP_BLASFUNC(cblas_dgemv)(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1));
+    // else
+    //     BSQP_BLASFUNC(cblas_dgemv)(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1));
     
     return Matrix(m, M2.n, array_3);
 }
@@ -767,70 +700,17 @@ Matrix vertcat(std::vector<Matrix> M_k){
 /* ----------------------------------------------------------------------- */
 
 
-
-int SymMatrix::malloc(void){
+void SymMatrix::allocate(void){
     int len;
     len = (m*(m+1))/2.0;
-    if ( len == 0 )
-       array = NULL;
-    else
-       if ((array = new double[len]) == NULL)
-          Error("'new' failed");
-
-    return 0;
+    if (len == 0) array = nullptr;
+    else if ((array = new double[len]) == nullptr)
+          throw std::runtime_error("Symmatrix::allocate: Allocation failed");
 }
 
-
-int SymMatrix::free(){
+void SymMatrix::deallocate(){
     delete[] array;
     array = nullptr;
-    return 0;
-}
-
-
-double &SymMatrix::operator()(int i, int j){
-    #ifdef MATRIX_DEBUG
-    if (i < 0 || i >= m || j < 0 || j >= m)
-    Error("Invalid matrix entry");
-    #endif
-
-    if( i < j )//reference to upper triangular part
-        return array[(j + i*ldim - (i*(i + 1))/2)];
-    return array[i + j*ldim - (j*(j + 1))/2];
-}
-
-
-double &SymMatrix::operator()(int i, int j) const{
-    #ifdef MATRIX_DEBUG
-    if (i < 0 || i >= m || j < 0 || j >= m)
-    Error("Invalid matrix entry");
-    #endif
-
-    if (i < j)//reference to upper triangular part
-        return array[j + i*ldim - (i*(i + 1))/2];
-    return array[i + j*ldim - (j*(j + 1))/2];
-}
-
-
-double &SymMatrix::operator()( int i )
-{
-    #ifdef MATRIX_DEBUG
-    if ( i >= m*(m+1)/2.0 )
-    Error("Invalid matrix entry");
-    #endif
-
-    return array[i];
-}
-
-
-double &SymMatrix::operator()( int i ) const
-{
-    #ifdef MATRIX_DEBUG
-    if ( i >= m*(m+1)/2.0 )
-    Error("Invalid matrix entry");
-    #endif
-
-    return array[i];
 }
 
 
@@ -844,7 +724,7 @@ SymMatrix::SymMatrix(){
 SymMatrix::SymMatrix(int M){
     m = M;
     ldim = M;
-    malloc();
+    allocate();
     tflag = 0;
 }
 
@@ -862,7 +742,7 @@ SymMatrix::SymMatrix(int M, int N, int LDIM){
     m = M;
     ldim = M;
     tflag = 0;
-    malloc();
+    allocate();
 }
 
 
@@ -870,7 +750,7 @@ SymMatrix::SymMatrix(const Matrix &A){
     m = A.m;
     ldim = A.m;
     tflag = 0;
-    malloc();
+    allocate();
     for (int j = 0; j < m; j++){
          for (int i = j; i < m; i++){
              (*this)(i,j) = A(i,j);
@@ -884,7 +764,7 @@ SymMatrix::SymMatrix(const SymMatrix &A){
     ldim = A.m;
     tflag = 0;
 
-    malloc();
+    allocate();
     for (int j = 0; j < m; j++){
         for (int i = j; i < m; i++){
             (*this)(i,j) = A(i,j);
@@ -897,19 +777,19 @@ SymMatrix::~SymMatrix( void ){
     Dcount++;
 
     if (!tflag)
-        free();
+        deallocate();
 }
 
 
-SymMatrix &SymMatrix::Dimension(int M){
-    free();
-    m = M;
-    ldim = M;
-    //tflag = 0;
+// SymMatrix &SymMatrix::Dimension(int M){
+//     deallocate();
+//     m = M;
+//     ldim = M;
+//     //tflag = 0;
 
-    malloc();
-    return *this;
-}
+//     allocate();
+//     return *this;
+// }
 
 
 SymMatrix &SymMatrix::Initialize(double (*f)(int, int)){
@@ -923,18 +803,13 @@ SymMatrix &SymMatrix::Initialize(double (*f)(int, int)){
 
 
 SymMatrix &SymMatrix::Initialize(double val){
-    for (int j = 0; j < m; j++){
-        for (int i = j; i < m; i++){
-            (*this)(i,j) = val;
-        }
-    }
+    std::fill(array, array + ldim*m - int(((m-1)*m)/2), val);
     return *this;
 }
 
 
 SymMatrix &SymMatrix::Submatrix(const Matrix &A, int M, int i0){
-    //Error("SymMatrix doesn't support Submatrix");
-    free();
+    deallocate();
     m = M;
     array = A.array + (i0 + i0*A.ldim - (i0 * (i0+1))/2);
     ldim = A.ldim - i0;
@@ -946,7 +821,7 @@ SymMatrix &SymMatrix::Submatrix(const Matrix &A, int M, int i0){
 
 SymMatrix &SymMatrix::Arraymatrix(int M, double *ARRAY){
     if (!tflag)
-        free();
+        deallocate();
 
     tflag = 1;
     m = M;
@@ -959,7 +834,7 @@ SymMatrix &SymMatrix::Arraymatrix(int M, double *ARRAY){
 
 SymMatrix &SymMatrix::Arraymatrix(int M, double *ARRAY, int LDIM){
     if(!tflag)
-        free();
+        deallocate();
 
     tflag = 1;
     m = M;
@@ -1000,7 +875,7 @@ SymMatrix SymMatrix::operator+(const SymMatrix &M2) const{
     return SymMatrix(m, arr);
 }
 
-SymMatrix SymMatrix::operator*(const double alpha) const{
+SymMatrix SymMatrix::operator*(const double alpha) const {
     double *arr = new double[(m*(m+1)/2)];
     for (int j = 0; j < m; j++){
         for (int i = j; i < m; i++){
@@ -1012,10 +887,12 @@ SymMatrix SymMatrix::operator*(const double alpha) const{
 }
 
 
-Matrix SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end) const{
+Matrix SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end) const {
+    #ifdef MATRIX_DEBUG
 	if (m_end < m_start || n_end < n_start || m_end > m || n_end > m){
 		throw std::invalid_argument("Matrix.get_slice: Slices (" + std::to_string(m_start) + ", " + std::to_string(m_end) + "), (" + std::to_string(n_start) + ", " + std::to_string(n_end) + ") invalid for matrix of shape (" + std::to_string(m) + ", " + std::to_string(m));
 	}
+    #endif
 
 	int M_slc = m_end - m_start;
 	int N_slc = n_end - n_start;
@@ -1026,6 +903,23 @@ Matrix SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end) cons
 		}
 	}
 	return Matrix(M_slc, N_slc, array_slc);
+}
+
+void SymMatrix::get_slice(int m_start, int m_end, int n_start, int n_end, Matrix &A) const {
+    #ifdef MATRIX_DEBUG
+	if (m_end < m_start || n_end < n_start || m_end > m || n_end > m){
+		throw std::invalid_argument("Matrix.get_slice: Slices (" + std::to_string(m_start) + ", " + std::to_string(m_end) + "), (" + std::to_string(n_start) + ", " + std::to_string(n_end) + ") invalid for matrix of shape (" + std::to_string(m) + ", " + std::to_string(m));
+	}
+    #endif
+
+	int M_slc = m_end - m_start;
+	int N_slc = n_end - n_start;
+    A.Dimension(M_slc, N_slc);
+	for (int j = 0; j < N_slc; j++){
+		for (int i = 0; i < M_slc; i++){
+			A(i,j) = (*this)(m_start + i, n_start + j);
+		}
+	}
 }
 
 
@@ -1083,35 +977,30 @@ const SymMatrix &SymMatrix::Print( FILE *f, int DIGITS, int flag ) const
 /* ----------------------------------------------------------------------- */
 
 
-double delta( int i, int j )
-{    return (i == j) ? 1.0 : 0.0;
+double delta(int i, int j){
+    return (i == j) ? 1.0 : 0.0;
 }
 
 
-Matrix Transpose( const Matrix &A )
-{
+Matrix Transpose(const Matrix &A){
     int i, j;
     double *array;
+    if ((array = new double[A.n*A.m]) == nullptr){
+        throw std::runtime_error("Transpose: Could not allocate transposed matrix");
+    }
+    for (i = 0; i < A.n; i++)
+        for (j = 0; j < A.m; j++)
+            array[i+j*A.n] = A(j,i);
 
-    if ( ( array = new double[A.N()*A.M()] ) == NULL )
-        Error("'new' failed");
-
-    for ( i = 0; i < A.N(); i++ )
-        for ( j = 0; j < A.M(); j++ )
-            array[i+j*A.N()] = A(j,i);
-
-    return Matrix( A.N(), A.M(), array, A.N() );
+    return Matrix(A.n, A.m, array, A.n);
 }
 
 
-Matrix &Transpose( const Matrix &A, Matrix &T )
-{
+Matrix &Transpose(const Matrix &A, Matrix &T){
     int i, j;
-
-    T.Dimension( A.N(), A.M() );
-
-    for ( i = 0; i < A.N(); i++ )
-        for ( j = 0; j < A.M(); j++ )
+    T.Dimension(A.n, A.m);
+    for ( i = 0; i < A.n; i++ )
+        for ( j = 0; j < A.m; j++ )
             T(i,j) = A(j,i);
 
     return T;
@@ -1179,14 +1068,15 @@ Sparse_Matrix::Sparse_Matrix(){
 
 
 Sparse_Matrix &Sparse_Matrix::Dimension(int M, int N, int NNZ){
-
-    m = M;
-    n = N;
-    
-    nz = std::make_unique<double[]>(NNZ);
-    row = std::make_unique<int[]>(NNZ);
-    colind = std::make_unique<int[]>(n+1);
-    colind[n] = NNZ;
+    if (m != M || n != N || colind[n] != NNZ){
+        m = M;
+        n = N;
+        
+        nz = std::make_unique<double[]>(NNZ);
+        row = std::make_unique<int[]>(NNZ);
+        colind = std::make_unique<int[]>(n+1);
+        colind[n] = NNZ;
+    }
     return *this;
 }
 
@@ -1337,6 +1227,58 @@ Sparse_Matrix Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int 
     std::copy(col_v.begin(), col_v.end(), COLIND.get());
 
 	return Sparse_Matrix(m_end - m_start, n_end - n_start, std::move(NZ), std::move(ROW), std::move(COLIND));
+}
+
+void Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int n_end, Sparse_Matrix &A) const{
+    #ifdef MATRIX_DEBUG
+	if (m_end > m || n_end > n){
+        std::string err_str = "Sparse_Matrix::get_slice - Slice out of matrix bounds: Matrix shape is (" + std::to_string(m) + "," + std::to_string(n) + "), m_start, n_start = " + std::to_string(m_start) + ", " + std::to_string(n_start) +  "; m_end, n_end = " + std::to_string(m_end) + ", " + std::to_string(n_end);
+		throw std::invalid_argument(err_str);
+	}
+	#endif
+    
+    int M_slc = m_end - m_start;
+	int N_slc = n_end - n_start;
+	int nnz = 0;
+	for (int j = n_start; j < n_end; j++){
+		for (int i = colind[j]; i < colind[j+1]; i++){
+            nnz += int(row[i] >= m_start && row[i] < m_end);
+        }
+	}
+    A.Dimension(M_slc, N_slc, nnz);
+    
+    nnz = 0;
+	for (int j = n_start; j < n_end; j++){
+		for (int i = colind[j]; i < colind[j+1]; i++){
+			if (row[i] >= m_start && row[i] < m_end){
+                A.row[nnz] = row[i] - m_start;
+                A.nz[nnz] = nz[i];
+				nnz++;
+			}
+        }
+		A.colind[j - n_start] = nnz;
+	}
+}
+
+void Sparse_Matrix::get_slice(int m_start, int m_end, int n_start, int n_end, Matrix &A) const{
+    #ifdef MATRIX_DEBUG
+	if (m_end > m || n_end > n){
+        std::string err_str = "Sparse_Matrix::get_slice - Slice out of matrix bounds: Matrix shape is (" + std::to_string(m) + "," + std::to_string(n) + "), m_start, n_start = " + std::to_string(m_start) + ", " + std::to_string(n_start) +  "; m_end, n_end = " + std::to_string(m_end) + ", " + std::to_string(n_end);
+		throw std::invalid_argument(err_str);
+	}
+	#endif
+    int M_slc = m_end - m_start;
+	int N_slc = n_end - n_start;
+    A.Dimension(M_slc, N_slc).Initialize(0.);
+    if (M_slc * N_slc == 0) return;
+    
+    for (int j = n_start; j < n_end; j++){
+        for (int i = colind[j]; i < colind[j+1]; i++){
+            if (row[i] >= m_start && row[i] < m_end){
+                A(row[i] - m_start, j - n_start) = nz[i];
+            }
+        }
+    }
 }
 
 
@@ -1947,16 +1889,12 @@ Matrix CSR_Matrix::dense() const{
 //###LT_Block_Matrix methods############
 //######################################
 
-int LT_Block_Matrix::malloc(void){
-	int len;
-	len = (m*(m+1))/2;
-    if ( len == 0 )
-        array = nullptr;
-    else
-        if ( ( array = new Matrix[len] ) == NULL )
-            Error("'new' failed");
-
-    return 0;
+void LT_Block_Matrix::allocate(){
+	int len = (m*(m+1))/2;
+    if (len == 0) array = nullptr;
+    else if ((array = new Matrix[len]) == nullptr){
+        throw std::runtime_error("LT_Block_Matrix::allocate failed");
+    }
 }
 
 LT_Block_Matrix::LT_Block_Matrix(int M, int *m_sizes, int *n_sizes){
@@ -1964,7 +1902,7 @@ LT_Block_Matrix::LT_Block_Matrix(int M, int *m_sizes, int *n_sizes){
 	n = M;
 	m_block_sizes = m_sizes;
 	n_block_sizes = n_sizes;
-	malloc();
+	allocate();
 }
 
 LT_Block_Matrix::LT_Block_Matrix(int M, int N, int *m_sizes, int *n_sizes){
@@ -1972,7 +1910,7 @@ LT_Block_Matrix::LT_Block_Matrix(int M, int N, int *m_sizes, int *n_sizes){
 	n = N;
 	m_block_sizes = m_sizes;
 	n_block_sizes = n_sizes;
-	malloc();
+	allocate();
 }
 
 
@@ -2034,7 +1972,7 @@ LT_Block_Matrix &LT_Block_Matrix::operator=(const LT_Block_Matrix &M){
 
 	m = M.m;
 	n = M.n;
-	malloc();
+	allocate();
 	m_block_sizes = new int[m];
 	n_block_sizes = new int[n];
 
@@ -2062,7 +2000,7 @@ LT_Block_Matrix &LT_Block_Matrix::Dimension(int M, int N, int* m_sizes, int* n_s
 	n = N;
 	m_block_sizes = m_sizes;
 	n_block_sizes = n_sizes;
-	malloc();
+	allocate();
 
 	return *this;
 }

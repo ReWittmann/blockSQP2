@@ -439,6 +439,15 @@ set_target_properties(example_dsytrf_2
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
 )
 
+add_executable(example_matmul blockSQP2/examples/example_matmul.cpp)
+target_link_libraries(example_matmul blockSQP2 LAPACK::LAPACK BLAS::BLAS)
+target_include_directories(example_matmul PRIVATE ${qpOASES_MODDED_DIR}/include)
+target_compile_options(example_matmul PRIVATE -O1)#$<$<CONFIG:Debug>:-O0 -g> $<$<CONFIG:Release>:-O3>)
+set_target_properties(example_matmul
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
+)
+
 
 option(PYTHON_INTERFACE "build python interface" ON)
 if(PYTHON_INTERFACE)

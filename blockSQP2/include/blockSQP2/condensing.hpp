@@ -251,7 +251,7 @@ class Condenser{
     void setup();
     
     //Construct a new Condenser sharing the layout data of an existing condenser.
-    static Condenser *layout_copy(const Condenser *CND);
+    virtual Condenser *layout_copy() const;
 
     void print_info();
 
@@ -339,9 +339,12 @@ class PartialCondenser : public Condenser{
     condensing_target *targets_orig;
     int n_targets_orig;
     std::unique_ptr<condensing_target[]> targets_hold;
+    int n_split;
     
-    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_split, int DEP_BOUNDS = 2);
+    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_SPLIT, int DEP_BOUNDS = 2);
     virtual ~PartialCondenser();
+    
+    virtual Condenser *layout_copy();
 };
 
 

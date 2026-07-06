@@ -42,8 +42,8 @@
 #include <qpOASES/LinearSolver.hpp>
 #include <qpOASES/LapackBlas.hpp>
 #include <iostream>
-// #include <chrono>
-// using namespace std::chrono;
+#include <chrono>
+using namespace std::chrono;
 #include <stdexcept>
 // #include <algorithm>
 
@@ -313,6 +313,7 @@ returnValue LapackDenseSolver::setMatrixData(
 
 returnValue LapackDenseSolver::factorize()
 {
+	steady_clock::time_point T0 = steady_clock::now();
     if (dim == 0)
     {
         neig = 0;
@@ -371,6 +372,8 @@ returnValue LapackDenseSolver::factorize()
         }
     }
     have_factorization = true;
+	steady_clock::time_point T1 = steady_clock::now();
+	std::cout << "Factorizing with LAPACK took " << duration_cast<microseconds>(T1 - T0) << " for dim = " << dim << "\n";
     return SUCCESSFUL_RETURN;
 }
  
@@ -1542,7 +1545,7 @@ returnValue MumpsSparseSolver::factorize( )
 		return SUCCESSFUL_RETURN;
 
 	}
-
+steady_clock::time_point T0 = steady_clock::now();
     /// IPOPT-MUMPS
     MUMPS_STRUC_C* mumps_data = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
 
@@ -1679,7 +1682,8 @@ returnValue MumpsSparseSolver::factorize( )
         return RET_MATRIX_FACTORISATION_FAILED;
     }
 
-
+steady_clock::time_point T1 = steady_clock::now();
+std::cout << "Factorizing with MUMPS took " << duration_cast<microseconds>(T1 - T0) << " for dim = " << dim << "\n";
 	have_factorization = true;
 	return SUCCESSFUL_RETURN;
 }

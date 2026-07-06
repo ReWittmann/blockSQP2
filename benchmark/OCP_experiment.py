@@ -42,7 +42,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
     HOLD = [vBlocks, cBlocks, hBlocks, targets]
     
-    cond = blockSQP2.Condenser(vBlocks, cBlocks, hBlocks, targets, 2 - 2*OCprob.state_bounds_implicit)
+    cond = blockSQP2.PartialCondenser(vBlocks, cBlocks, hBlocks, targets, 4, 2 - 2*OCprob.state_bounds_implicit)
     
     
     prob = blockSQP2.Problemspec()
