@@ -3052,7 +3052,7 @@ returnValue SQProblemSchur::determineStepDirection2(	const real_t* const delta_g
 	return SUCCESSFUL_RETURN;
 }
 
-returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrection )
+returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrection, int_t idxRec )
 {
 	int_t j;
 	int_t nFR = getNFR( );
@@ -3155,10 +3155,10 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 	numFactorizations++;
 
 	// If matrix is singular, add bounds/remove constraints according to zero pivots
-	if (retval == RET_KKT_MATRIX_SINGULAR)
+	if (retval == RET_KKT_MATRIX_SINGULAR && idxRec < 10)
 	{
 		if( repairSingularWorkingSet( ) == SUCCESSFUL_RETURN )
-			return resetSchurComplement( allowInertiaCorrection );
+			return resetSchurComplement( allowInertiaCorrection, idxRec + 1);
 		else
 			return RET_KKT_MATRIX_SINGULAR;
 	}

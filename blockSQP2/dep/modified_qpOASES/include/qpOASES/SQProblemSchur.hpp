@@ -110,7 +110,7 @@ class SQProblemSchur : public SQProblem
 
 		/** Resets Schur complement.  This sets up the KKT matrix for the
 			current activities, copies the activities, etc. TODO: Return values */
-		returnValue resetSchurComplement( BooleanType allowInertiaCorrection );
+		returnValue resetSchurComplement( BooleanType allowInertiaCorrection, int_t idxRec = 0);
 
 		/** Return the total number of sparse matrix factorizations performed so far. */
 		inline int_t getNumFactorizations( ) const;

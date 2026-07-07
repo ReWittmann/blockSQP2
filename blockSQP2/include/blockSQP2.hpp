@@ -10,6 +10,7 @@
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/general_purpose.hpp>
 #include <blockSQP2/iterate.hpp>
+#include <blockSQP2/lapackblas.hpp>
 #include <blockSQP2/matrix.hpp>
 #include <blockSQP2/method.hpp>
 #include <blockSQP2/options.hpp>

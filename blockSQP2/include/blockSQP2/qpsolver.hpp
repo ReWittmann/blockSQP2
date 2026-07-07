@@ -303,6 +303,8 @@ class SharedCQPsolver : public BasicCQPsolver{
 
 //Helper factory to create QPsolver with given SQPoptions. This assumes opts->OptionsConsistency has already been called to check for inconsistent options.
 //Preprocessor conditions for linked QP solvers are handled here.
+BasicQPsolver *create_QPsolver(int nVarQP, int nConQP, int nHessQP, int *blockIdx, const QPsolver_options *Qparam, int par_ind = -1);
+
 BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const QPsolver_options *Qparam);
 inline BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param){
     return create_QPsolver(prob, vars, param->qpsol_options);
@@ -344,7 +346,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
         
         int QP_it;
         
-        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts);
+        qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const QPsolver_options *QPopts);
         
         //Passthrough to QPsolver constructor
         qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, const QPsolver_options *QPopts);
@@ -377,7 +379,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
     #ifdef SOLVER_MUMPS
         class qpOASES_MUMPS_solver : public qpOASES_solver{
             public:
-            qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const qpOASES_options *QPopts, void *fptr_dmumps_c);
+            qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const QPsolver_options *QPopts, void *fptr_dmumps_c);
         };
     #endif
 #endif
@@ -398,7 +400,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
         GRBQuadExpr obj_quad;
 
 
-        gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, gurobi_options *QPopts);
+        gurobi_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts);
         ~gurobi_solver();
         
         void set_reg(double arg);
@@ -429,7 +431,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
         std::vector<qpalm::triplet_t> triplets;
         qpalm::Info info;
 
-        qpalm_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, qpalm_options *QPopts);
+        qpalm_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, QPsolver_options *QPopts);
         ~qpalm_solver();
         
         void set_reg(double arg);

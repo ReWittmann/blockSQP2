@@ -415,6 +415,12 @@ target_link_libraries(example1_sparse blockSQP2)
 set_target_properties(example1_sparse
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin")
+	
+add_executable(example1_redundant blockSQP2/examples/example1_redundant.cpp)
+target_link_libraries(example1_redundant blockSQP2)
+set_target_properties(example1_redundant
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin")
 
 add_executable(example_condensing blockSQP2/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP2)

@@ -206,6 +206,7 @@ LapackDenseSolver::LapackDenseSolver():
 		ipiv(nullptr),
 		neig(-1),
 		rank(-1),
+		zpiv(-1),
 		have_factorization(false){}
 
 LapackDenseSolver::LapackDenseSolver(const LapackDenseSolver& rhs): 
@@ -342,7 +343,10 @@ returnValue LapackDenseSolver::factorize()
 	SYTRF("L", &n, A, &lda, ipiv, work, &lwork, &info STRLENS1(1));
 	
     if (info > 0){
-        rank = info - 1;
+        // rank = info - 1;
+		rank = dim - 1;
+		zpiv = info - 1;
+		printf("LapackDenseSolver: KKT_MATRIX_SINGULAR, rank = %i, zpiv = %i\n", rank, zpiv);
         return RET_KKT_MATRIX_SINGULAR;
     }
     if (info < 0) return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);
@@ -408,6 +412,10 @@ int LapackDenseSolver::getRank(){
     return rank;
 }
 
+returnValue LapackDenseSolver::getZeroPivots(int_t *&zeroPivots){
+	zeroPivots[0] = zpiv;
+	return SUCCESSFUL_RETURN;
+}
 
 
 #ifdef SOLVER_MA27
@@ -2237,7 +2245,6 @@ int_t MumpsSparseSolver_2::getNegativeEigenvalues( )
  *	g e t R a n k
  */
 int_t MumpsSparseSolver_2::getRank(){
-	throw std::logic_error(std::string("getRank was called, rank deficiency = ") + std::to_string(static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1]) + std::string("\n"));
 	return dim - static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1];
 }
 

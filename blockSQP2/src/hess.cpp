@@ -391,7 +391,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory_seq(Hessians updateType, Sizings 
 void SQPmethod::calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess){
     int nBlocks = vars->nBlocks - int(skip_last_block(hess));
     if (nBlocks < LIM_MEM_N_THREADS){
-        calcHessianUpdateLimitedMemory(updateType, sizingType, hess);
+        calcHessianUpdateLimitedMemory_seq(updateType, sizingType, hess);
         return;
     }
       

@@ -641,6 +641,11 @@ void Matrix::operator-=(const Matrix &M2){
 
 void Matrix::operator*=(const double alpha) const {
     if (alpha == 1.) return;
+    else if (alpha == 0.){ //The matrix get initialized by calls to this with alpha = 0., so this is VERY important!
+        Initialize(0.); 
+        return;
+    }
+    
     for (int j = 0; j < n; j++){
         for (int i = 0; i < m; i++){
             (*this)(i,j) *= alpha;

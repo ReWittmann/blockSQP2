@@ -163,6 +163,8 @@ class LapackDenseSolver : public LinearSolver{
 	/** Return the rank after a factorization */
 	virtual int_t getRank();
 	
+	virtual returnValue getZeroPivots( int_t *&zeroPivots );
+	
 	protected:
 		/** Frees all allocated memory.
 		 *  \return SUCCESSFUL_RETURN */
@@ -180,6 +182,7 @@ class LapackDenseSolver : public LinearSolver{
 		lapack_int* ipiv;
 		int_t neig;
 		int_t rank;
+		int_t zpiv;
 		bool have_factorization;
 };
 

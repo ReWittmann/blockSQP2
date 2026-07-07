@@ -32,29 +32,10 @@
 #define BLOCKSQP2_MATRIX_HPP
 
 #include <blockSQP2/defs.hpp>
+#include <blockSQP2/lapackblas.hpp>
 #include <iostream>
 #include <vector>
 #include <memory>
-#include "cblas.h"
-
-#ifndef OPENBLAS_CONFIG_H
-	#if defined(CBLAS_INT)
-		typedef CBLAS_INT blasint;
-	#elif defined(MKL_INT)
-		typedef MKL_INT blasint;
-	#else
-		#error "Included cblas header defines neither blasint nor CBLAS_INT nor MKL_INT"
-	#endif
-#endif
-
-#ifndef BSQP_CBLAS_SUFFIX
-    #define BSQP_CBLAS_SUFFIX
-#endif
-#define BSQP_CONCAT(a,b) a##b
-#define BSQP_EXPAND_CONCAT(a,b) BSQP_CONCAT(a,b)
-#define BSQP_BLASFUNC(a) BSQP_EXPAND_CONCAT(a, BSQP_CBLAS_SUFFIX) // #####!!! READ THIS !!!#####: If this is in an error message: Invalid cblas suffix. Check cblas.h, and use -DBSQP_CBLAS_SUFFIX= instead of -DBSQP_CBLAS_SUFFIX if there is no suffix.
-
-
 
 
 namespace blockSQP2{
@@ -98,18 +79,8 @@ class Matrix{
 
     double *release();
     
-    inline double &operator()(int i, int j) const {
-      #ifdef MATRIX_DEBUG 
-      if ( i < 0 || i >= m || j < 0 || j >= n) throw std::invalid_argument("Matrix operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")"); 
-      #endif
-      return array[i+j*ldim];
-    }
-    inline double &operator()(int i) const {
-      #ifdef MATRIX_DEBUG
-      if (i < 0 || i >= m) throw std::invalid_argument("Matrix operator(): Index " + std::to_string(i) + " out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(n) + ")");
-      #endif
-      return array[i];
-    }
+    inline double &operator()(int i, int j) const;
+    inline double &operator()(int i) const;
     
     Matrix &operator=(const Matrix &A);
     Matrix &operator=(Matrix &&A);
@@ -124,25 +95,10 @@ class Matrix{
     void operator-=(const Matrix &M2);
     void operator*=(const double alpha) const;
 
-    inline Matrix &Dimension(int M, int N = 1, int LDIM = -1){
-      if (M != m || N != n || (LDIM != ldim && LDIM != -1)){
-        if (tflag) throw std::logic_error("Cannot set new dimension for Submatrix");
-        else{
-            deallocate();
-            m = M;
-            n = N;
-            if (ldim < m) ldim = m;
-            allocate();
-        }
-      }
-      return *this;
-    }
+    inline Matrix &Dimension(int M, int N = 1, int LDIM = -1);
     
     Matrix &Initialize(double (*)(int, int));
-    inline Matrix &Initialize(double val){
-      std::fill(array, array + ldim*n, val);
-      return *this;
-    }
+    inline const Matrix &Initialize(double val) const;
     
     /// Returns just a pointer to the full matrix
     Matrix& Submatrix( const Matrix&, int, int, int = 0, int = 0 );
@@ -171,44 +127,10 @@ class Matrix{
 std::ostream& operator<<(std::ostream& os, const Matrix &M);
 Matrix vertcat(std::vector<Matrix> Ms);
 
-
-inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
-    #ifdef MATRIX_DEBUG
-    if (M1.n != M2.m) throw std::invalid_argument("mult_to: Chaining dimension mismatch");
-    #endif
-  
-    if (M3.m != M1.m || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.m, M2.n);
-    if (M1.m == 0 || M2.n == 0) [[unlikely]] return; 
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
-}
-
-inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3){
-    #ifdef MATRIX_DEBUG
-    if (M1.m != M2.m) throw std::invalid_argument("mult_to: Chaining dimension mismatch");
-    #endif
-  
-    if (M3.m != M1.n || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.n, M2.n);
-    if (M1.n == 0 || M2.n == 0) [[unlikely]] return; 
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
-}
-
-inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta = 1.0){
-    #ifdef MATRIX_DEBUG
-      if (M1.n != M2.m) throw std::invalid_argument("mult_to: Chaining dimension mismatch");
-      if (M3.m != M1.m || M3.n != M2.n) throw std::invalid_argument("mult_to: Output matrix dimension mismatch");
-    #endif
-    if (M1.m == 0 || M2.n == 0) [[unlikely]] return;
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
-}
-
-inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta = 1.0){
-    #ifdef MATRIX_DEBUG
-      if (M1.m != M2.m) throw std::invalid_argument("Tmult_to: Chaining dimension mismatch");
-      if (M3.m != M1.n || M3.n != M2.n) throw std::invalid_argument("Tmult_to: Output matrix dimension mismatch");
-    #endif
-    if (M1.n == 0 || M2.n == 0) [[unlikely]] return;
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
-}
+inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3);
+inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3);
+inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta = 1.0);
+inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta = 1.0);
 
 
 /**
@@ -235,31 +157,11 @@ class SymMatrix{
         SymMatrix(const Matrix& A);
         SymMatrix(const SymMatrix& A);
         virtual ~SymMatrix();
-
-        inline double &operator()(int i, int j) const {
-          #ifdef MATRIX_DEBUG
-            if (i < 0 || i >= m || j < 0 || j >= m) throw std::invalid_argument("SymMatrix::operator(): Indices (" + std::to_string(i) + ", " + std::to_string(j) + ") out of bounds for matrix of shape (" + std::to_string(m) + ", " + std::to_string(m) + ")");
-          #endif
-          if (i < j) return array[j + i*ldim - (i*(i + 1))/2];
-          return array[i + j*ldim - (j*(j + 1))/2];
-        };
         
-        inline double &operator()(int i) const {
-          #ifdef MATRIX_DEBUG
-            if (i >= m*(m+1)/2.0) throw std::invalid_argument("SymMatrix operator(): Index " + std::to_string(i) + " out of bounds for SymMatrix of size " + std::to_string(m));
-          #endif
-          return array[i];
-        }
+        inline double &operator()(int i, int j) const;
+        inline double &operator()(int i) const;
         
-        SymMatrix &Dimension(int M = 1){
-          if (m != M){
-            deallocate();
-            m = M;
-            ldim = M;
-            allocate();
-          }
-          return *this;
-        }
+        inline SymMatrix &Dimension(int M = 1);
         
         SymMatrix &Initialize(double (*)(int, int));
         SymMatrix &Initialize(double);
@@ -398,6 +300,9 @@ CSR_Matrix make_fullrow(const CSR_Matrix &M);
 
 
 
+
+
+#include <blockSQP2/inline/matrix.ipp>
 
 } // namespace blockSQP2
 #endif

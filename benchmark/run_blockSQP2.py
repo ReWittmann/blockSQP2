@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Egerstedt_Standard(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -100,8 +100,8 @@ targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
 ctarget_data = [99, 1, 200, 1, 100]
 targets2 = [blockSQP2.condensing_target(*ctarget_data)]
 
-condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
-# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+# condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
+condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
 # condenser = None
 
 #Define blockSQP Problemspec
