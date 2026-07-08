@@ -2687,6 +2687,7 @@ class Three_Tank_Multimode(OCProblem):
         self.set_OCP_data(3,0,3,1,[0.,0.,0.], [np.inf,np.inf,np.inf], [],[], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0, self.model_params['T'])
         self.fix_initial_value([2.,2.,2.])
+        self.state_bounds_implicit = True
         
         c1, c2, c3, k1, k2, k3, k4 = (self.model_params[key] for key in ['c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4'])
         

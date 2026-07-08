@@ -127,7 +127,7 @@ class SQPoptions{
     bool enable_QP_cancellation = true;
     
     //Scaling
-    int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance 2: FUTURE
+    int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance
     double scaling_Theta_min = 0.1;
     double scaling_Theta_max = 10.0;
     
@@ -169,11 +169,12 @@ class SQPoptions{
     //double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
     
     //For experimental purposes
-    bool test_opt_1 = false;
-    bool test_opt_2 = false;
-    bool test_opt_3 = false;
-    double test_val_1 = 2.0;
-    double test_val_2 = 0.5;
+    bool test_opt_enable_conv_downscaling = true;
+    
+    // bool test_opt_2 = false;
+    // bool test_opt_3 = false;
+    // double test_val_1 = 2.0;
+    // double test_val_2 = 0.5;
     
     private:
     //Holder if no qpsol_options were provided

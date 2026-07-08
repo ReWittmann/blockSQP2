@@ -28,7 +28,8 @@ inline Matrix &Matrix::Dimension(int M, int N, int LDIM){
 }
 
 inline const Matrix &Matrix::Initialize(double val) const{
-    std::fill(array, array + ldim*n, val);
+    for (int j = 0; j < n; j++) std::fill(array + j*ldim, array + m + j*ldim, val);
+    // std::fill(array, array + ldim*n, val);
     return *this;
 }
 
@@ -81,7 +82,7 @@ inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, doubl
     BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
 }
 
-#else
+#else //defined(BSQP_SMALLMULT) 
 
 
 template<int M, int N> inline double (*rcst(double *ptr))[M*N]{return reinterpret_cast<double (*)[M*N]>(ptr);}
@@ -164,43 +165,44 @@ inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
             case 1:
                 switch (M2.n){
                     case 1:
-                    switch (M1.n){
-                        case 1:
-                            smallMult<1,1,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallMult<1,1,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallMult<1,1,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.n){
+                            case 1:
+                                smallMult<1,1,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallMult<1,1,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallMult<1,1,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 2:
-                    switch (M1.n){
-                        case 1:
-                            smallMult<1,2,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallMult<1,2,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallMult<1,2,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.n){
+                            case 1:
+                                smallMult<1,2,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallMult<1,2,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallMult<1,2,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 3:
-                    switch (M1.n){
-                        case 1:
-                            smallMult<1,3,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallMult<1,3,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallMult<1,3,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
+                        switch (M1.n){
+                            case 1:
+                                smallMult<1,3,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallMult<1,3,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallMult<1,3,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                    break;
                 }
                 break;
             case 2:
@@ -252,13 +254,13 @@ inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
                         switch (M1.n){
                             case 1:
                                 smallMult<3,1,1>(M1.array, M2.array, M3.array);
-                            break;
+                                break;
                             case 2:
                                 smallMult<3,1,2>(M1.array, M2.array, M3.array);
-                            break;
+                                break;
                             case 3:
                                 smallMult<3,1,3>(M1.array, M2.array, M3.array);
-                            break;
+                                break;
                         }
                         break;
                     case 2:
@@ -284,7 +286,7 @@ inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
                             case 3:
                                 smallMult<3,3,3>(M1.array, M2.array, M3.array);
                         }
-                    break;
+                        break;
                 }
                 break;
         }
@@ -307,43 +309,44 @@ inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3){
             case 1:
                 switch (M2.n){
                     case 1:
-                    switch (M1.m){
-                        case 1:
-                            smallTmult<1,1,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallTmult<1,1,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallTmult<1,1,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.m){
+                            case 1:
+                                smallTmult<1,1,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallTmult<1,1,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallTmult<1,1,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 2:
-                    switch (M1.m){
-                        case 1:
-                            smallTmult<1,2,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallTmult<1,2,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallTmult<1,2,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.m){
+                            case 1:
+                                smallTmult<1,2,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallTmult<1,2,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallTmult<1,2,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 3:
-                    switch (M1.m){
-                        case 1:
-                            smallTmult<1,3,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallTmult<1,3,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallTmult<1,3,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
+                        switch (M1.m){
+                            case 1:
+                                smallTmult<1,3,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallTmult<1,3,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallTmult<1,3,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                    break;
                 }
                 break;
             case 2:
@@ -452,43 +455,44 @@ inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double
             case 1:
                 switch (M2.n){
                     case 1:
-                    switch (M1.n){
-                        case 1:
-                            smallMultTo<1,1,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallMultTo<1,1,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallMultTo<1,1,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.n){
+                            case 1:
+                                smallMultTo<1,1,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallMultTo<1,1,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallMultTo<1,1,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 2:
-                    switch (M1.n){
-                        case 1:
-                            smallMultTo<1,2,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallMultTo<1,2,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallMultTo<1,2,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.n){
+                            case 1:
+                                smallMultTo<1,2,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallMultTo<1,2,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallMultTo<1,2,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 3:
-                    switch (M1.n){
-                        case 1:
-                            smallMultTo<1,3,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallMultTo<1,3,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallMultTo<1,3,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
+                        switch (M1.n){
+                            case 1:
+                                smallMultTo<1,3,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallMultTo<1,3,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallMultTo<1,3,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                 }
                 break;
             case 2:
@@ -598,44 +602,44 @@ inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, doubl
             case 1:
                 switch (M2.n){
                     case 1:
-                    switch (M1.m){
-                        case 1:
-                            smallTmultTo<1,1,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallTmultTo<1,1,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallTmultTo<1,1,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.m){
+                            case 1:
+                                smallTmultTo<1,1,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallTmultTo<1,1,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallTmultTo<1,1,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 2:
-                    switch (M1.m){
-                        case 1:
-                            smallTmultTo<1,2,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallTmultTo<1,2,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallTmultTo<1,2,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.m){
+                            case 1:
+                                smallTmultTo<1,2,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallTmultTo<1,2,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallTmultTo<1,2,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                     case 3:
-                    switch (M1.m){
-                        case 1:
-                            smallTmultTo<1,3,1>(M1.array, M2.array, M3.array);
-                            break;
-                        case 2:
-                            smallTmultTo<1,3,2>(M1.array, M2.array, M3.array);
-                            break;
-                        case 3:
-                            smallTmultTo<1,3,3>(M1.array, M2.array, M3.array);
-                            break;
-                    }
-                    break;
+                        switch (M1.m){
+                            case 1:
+                                smallTmultTo<1,3,1>(M1.array, M2.array, M3.array);
+                                break;
+                            case 2:
+                                smallTmultTo<1,3,2>(M1.array, M2.array, M3.array);
+                                break;
+                            case 3:
+                                smallTmultTo<1,3,3>(M1.array, M2.array, M3.array);
+                                break;
+                        }
+                        break;
                 }
                 break;
             case 2:
@@ -728,7 +732,7 @@ inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, doubl
     }
 }
 
-#endif
+#endif //elif defined(BSQP_SMALLMULT)
 
 
 

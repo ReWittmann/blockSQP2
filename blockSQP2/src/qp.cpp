@@ -358,7 +358,7 @@ QPresults SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
                            );
     if (QP_loop_active){
         if (param->par_QPs){
-            if (param->test_opt_3 && prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_par_cond_reduced(deltaXi, lambdaQP);
+            if (prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_par_cond_reduced(deltaXi, lambdaQP);
             return solveQP_par(deltaXi, lambdaQP);
         }
         if (prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_seq_cond_reduced(deltaXi, lambdaQP);
@@ -438,7 +438,7 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
             vars->QP_num_accepted = l;
             if (param->conv_strategy > 0 && l < maxQP - 1){
                 // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-                if (l == 1 && param->test_opt_1){
+                if (l == 1 && param->test_opt_enable_conv_downscaling){
                     int j = 0;
                     for (; j < 5; j++){
                         computeLowerRegularizedHessian(j, maxQP);
@@ -653,7 +653,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     bool sol_set = false;
     
     // int convKappaShift = 0;
-    // if (vars->hess_num_accepted == 1 && param->test_opt_1){
+    // if (vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
     //     deltaXi = vars->par_QP_sols_prim[1];
     //     lambdaQP = vars->par_QP_sols_dual[1];
         
@@ -756,7 +756,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     //     vars->convKappa *= std::pow(2, convKappaShift);
     //     // sub_QPs_par[maxQP - 1]->set_hotstart_point(sub_QP.get());
     // }
-    // if (vars->hess_num_accepted == 1 && param->test_opt_1){
+    // if (vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
     //     int j = 0;
     //     double solTime = sub_QPs_par[1]->get_solutionTime();
     //     for (; j < 10; j++){
@@ -779,7 +779,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     //     vars->QP_num_accepted = vars->hess_num_accepted;
     // }
     // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_1){
+    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
         int j = 0;
         // double s_prev = 0.;
         for (; j < 5; j++){
@@ -861,7 +861,7 @@ QPresults SQPmethod::solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
             vars->QP_num_accepted = l;
             if (param->conv_strategy > 0 && l < maxQP - 1){
                 // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-                if (l == 1 && param->test_opt_1){
+                if (l == 1 && param->test_opt_enable_conv_downscaling){
                     int j = 0;
                     for (; j < 5; j++){
                         // computeLowerRegularizationFactor(j, maxQP);
@@ -1047,7 +1047,7 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     bool sol_set = false;
     
     // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_1){
+    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
         int j = 0;
         for (; j < 5; j++){
             // computeLowerRegularizedHessian(j, maxQP);

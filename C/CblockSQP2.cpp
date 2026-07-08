@@ -390,25 +390,25 @@ CDLEXP void SQPoptions_set_indef_delay(void *ptr, int val){
     castOPT(ptr)->indef_delay = val;
 }
 
-CDLEXP void SQPoptions_set_test_opt_1(void *ptr, char val){
-    castOPT(ptr)->test_opt_1 = bool(val);
+CDLEXP void SQPoptions_set_test_opt_enable_conv_downscaling(void *ptr, char val){
+    castOPT(ptr)->test_opt_enable_conv_downscaling = bool(val);
 }
 
-CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
-    castOPT(ptr)->test_opt_2 = bool(val);
-}
+// CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
+//     castOPT(ptr)->test_opt_2 = bool(val);
+// }
 
-CDLEXP void SQPoptions_set_test_opt_3(void *ptr, char val){
-    castOPT(ptr)->test_opt_3 = bool(val);
-}
+// CDLEXP void SQPoptions_set_test_opt_3(void *ptr, char val){
+//     castOPT(ptr)->test_opt_3 = bool(val);
+// }
 
-CDLEXP void SQPoptions_set_test_val_1(void *ptr, double val){
-    castOPT(ptr)->test_val_1 = double(val);
-}
+// CDLEXP void SQPoptions_set_test_val_1(void *ptr, double val){
+//     castOPT(ptr)->test_val_1 = double(val);
+// }
 
-CDLEXP void SQPoptions_set_test_val_2(void *ptr, double val){
-    castOPT(ptr)->test_val_2 = double(val);
-}
+// CDLEXP void SQPoptions_set_test_val_2(void *ptr, double val){
+//     castOPT(ptr)->test_val_2 = double(val);
+// }
 
 // SQPstats
 CDLEXP void *create_SQPstats(char *pathstr){

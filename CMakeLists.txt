@@ -14,6 +14,12 @@ project(CMakeblockSQP2
 set(CMAKE_CXX_STANDARD 20)
 enable_language(Fortran)	#For MUMPS linear solver
 
+# include(CheckIPOSupported)
+# check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+
+# if(ipo_supported)
+#     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+# endif()
 
 #Static linking to avoid having to copy dll(-path)s.
 if(WIN32)

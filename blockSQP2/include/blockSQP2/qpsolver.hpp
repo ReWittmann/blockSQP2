@@ -93,7 +93,8 @@ class BasicQPsolver{
     //Set QP/active set of which to hotstart from. QP solver dependent, no effect by default, very important for qpOASES
     virtual void set_hotstart_point(BasicQPsolver *hot_QP);
     virtual void set_reg(double arg) = 0;              // Set regularization factor for the current Hessian
-    // virtual void set_reg_indices(int *arg) = 0;
+    virtual void set_reg_indices(int *arg_regInd, int arg_l, bool regInd_own = false) = 0;
+    inline void set_reg_indices(std::unique_ptr<int[]> arg_regInd, int arg_regInd_l){set_reg_indices(arg_regInd.release(), arg_regInd_l, true);}
     virtual double get_reg() = 0;
     
     //Statistics
@@ -136,6 +137,9 @@ class QPsolver : public BasicQPsolver{
     double regF;        //Regularization factor
     double convex_regF; //Regularization factor for convex QPs
     
+    std::unique_ptr<int[]> regInd; //Indices of Hessian diagonal to which regularization should be applied, applied to all if nullptr
+    int regInd_l;
+    
     //One time QP solving options (reset if a QP solve is successful)
     //bool record_time;
     bool skip_timeRecord;
@@ -151,6 +155,7 @@ class QPsolver : public BasicQPsolver{
     
     virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0);
     virtual void set_use_hotstart(bool use_hom);
+    virtual void set_reg_indices(int *arg_regInd, int arg_regInd_l, bool regInd_own = false);
     virtual double get_reg();
     
     //Statistics
@@ -187,6 +192,8 @@ class BasicCQPsolver : public BasicQPsolver{
     virtual void set_hotstart_point(BasicQPsolver *hot_QP);
     virtual void set_hotstart_point(BasicCQPsolver *hot_QP);
     virtual void set_reg(double arg);
+    // Filter out all variables indices eliminated by condensing, then set remaining indices of inner_QPsol
+    virtual void set_reg_indices(int *arg_regInd, int arg_l, bool regInd_own = false);
     virtual double get_reg();
     
     virtual void set_cond_update_flags(bool up_h, bool up_hess, bool up_A, bool up_bounds);

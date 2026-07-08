@@ -475,7 +475,7 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     //Create restoration Jacobian from B and C, adding slacks only for B:
     //[B I]
     //[C 0]
-    //Matrix rows may not be sorted according to B anc C, 
+    //Matrix rows may not be sorted according to B and C, 
     //so iterate over constraint blocks corresponding to B
     for (int i = 0; i < parent_cond->num_cblocks; i++){
         if (!parent_cond->cblocks[i].removed){

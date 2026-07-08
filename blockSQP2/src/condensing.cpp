@@ -592,6 +592,12 @@ void Condenser::print_info(){
     }
     std::cout << "\n";
 
+    std::cout<< "vblock presence status = \n";
+    for (int i = 0; i< num_vblocks; i++){
+        std::cout << vblocks[i].removed << ", ";
+    }
+    std::cout<< "\n";
+    
     std::cout<< "cblock presence status = \n";
     for (int i = 0; i< num_cblocks; i++){
         std::cout << cblocks[i].removed << ", ";

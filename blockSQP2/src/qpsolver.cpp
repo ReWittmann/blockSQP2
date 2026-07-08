@@ -79,6 +79,7 @@ QPsolver::QPsolver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, const QPsolv
     convex_QP = false;
     convex_regF = QPopts->reg_factor;
     regF = 0.;
+    regInd_l = -1;
     
     //Flags
     use_hotstart = false;
@@ -103,6 +104,18 @@ void QPsolver::set_use_hotstart(bool use_hom){
     use_hotstart = use_hom;
 }
 
+void QPsolver::set_reg_indices(int *arg_regInd, int arg_regInd_l, bool regInd_own){
+    if (regInd_own){
+        regInd_l = arg_regInd_l;
+        regInd = std::unique_ptr<int[]>(arg_regInd);
+        return;
+    }
+    if (regInd_l < arg_regInd_l){
+        regInd_l = arg_regInd_l;
+        regInd = std::make_unique<int[]>(arg_regInd_l);
+    }
+    std::copy(arg_regInd, arg_regInd + regInd_l, regInd.get());
+}
 
 double QPsolver::get_reg(){
     return regF;
@@ -132,11 +145,29 @@ void QPsolver::reset_timeRecord(){
 
 
 BasicCQPsolver::BasicCQPsolver(BasicQPsolver *arg_inner_QPsol, Condenser *arg_cond, bool arg_QPsol_own, bool arg_cond_own):
-    inner_QPsol(arg_inner_QPsol), condenser(arg_cond), QPsol_own(arg_QPsol_own), condenser_own(arg_cond_own),
-    xi_cond(condenser->condensed_num_vars), lambda_cond(condenser->condensed_num_vars + condenser->condensed_num_cons),
-    regF(0.), reg_updated(false),
-    h_cond_updated(true), hess_cond_updated(true), A_cond_updated(true), bounds_cond_updated(true)
-{}
+        inner_QPsol(arg_inner_QPsol), condenser(arg_cond), QPsol_own(arg_QPsol_own), condenser_own(arg_cond_own),
+        xi_cond(condenser->condensed_num_vars), lambda_cond(condenser->condensed_num_vars + condenser->condensed_num_cons),
+        regF(0.), reg_updated(false),
+        h_cond_updated(true), hess_cond_updated(true), A_cond_updated(true), bounds_cond_updated(true){
+    int inner_regInd_l = 0;
+    for (int i = 0; i < condenser->num_vblocks; i++){
+        inner_regInd_l += condenser->vblocks[i].size*int(!condenser->vblocks[i].dependent && !condenser->vblocks[i].removed);
+    }
+    std::unique_ptr<int[]> inner_regInd = std::make_unique<int[]>(inner_regInd_l);
+    int offset = 0, ind = 0;
+    for (int i = 0; i < condenser->num_vblocks; i++){
+        const vblock &VB = condenser->vblocks[i];
+        if (VB.removed) continue;
+        if (!VB.dependent){
+            for (int j = 0; j < VB.size; j++){
+                inner_regInd[ind + j] = offset + j;
+            }
+            ind += VB.size;
+        }
+        offset += VB.size;
+    }
+    inner_QPsol->set_reg_indices(std::move(inner_regInd), inner_regInd_l);
+}
 
 BasicCQPsolver::~BasicCQPsolver(){}
 
@@ -169,6 +200,31 @@ void BasicCQPsolver::set_reg(double arg){
     if (regF < 0.0) throw std::invalid_argument("BasicCQPsolver::set_reg - regularization factor < 0 invalid");
     regF = arg;
     reg_updated = true;
+}
+
+void BasicCQPsolver::set_reg_indices(int *arg_regInd, int arg_l, bool regInd_own){
+    int inner_regInd_l = 0, j = 0, ind = 0;
+    for (int i = 0; i < condenser->num_vblocks; i++){
+        for (; arg_regInd[j++] < ind + condenser->vblocks[i].size;){
+            inner_regInd_l += int(!condenser->vblocks[i].removed);
+            if (j == arg_l) goto sri_outer_loop_1_break;
+        }
+        ind += condenser->vblocks[i].size;
+    } sri_outer_loop_1_break:
+    std::unique_ptr<int[]> inner_regInd = std::make_unique<int[]>(inner_regInd_l);
+    
+    int offset = 0; j = 0; ind = 0;
+    for (int i = 0; i < condenser->num_vblocks; i++){
+        for (; arg_regInd[j++] < ind + condenser->vblocks[i].size;){
+            inner_regInd[j-1] = arg_regInd[j-1] - offset;
+            if (j == arg_l) goto sri_outer_loop_2_break;
+        }
+        ind += condenser->vblocks[i].size;
+        offset += condenser->vblocks[i].size * int(condenser->vblocks[i].removed);
+    } sri_outer_loop_2_break:
+    inner_QPsol->set_reg_indices(std::move(inner_regInd), inner_regInd_l);
+    if (regInd_own) delete[] arg_regInd;
+    return;
 }
 
 double BasicCQPsolver::get_reg(){
@@ -787,7 +843,7 @@ BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, 
 
 
 std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
-    if (param->test_opt_3 && prob->condenser != nullptr && param->conv_strategy == 2 && param->qpsol == QPsolvers::qpOASES) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
+    if (prob->condenser != nullptr && param->conv_strategy == 2) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
     std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
     
@@ -820,7 +876,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
 
 
 // std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
-//     if (param->test_opt_3 && prob->condenser != nullptr && param->conv_strategy == 2 && param->qpsol == QPsolvers::qpOASES) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
+//     if (prob->condenser != nullptr && param->conv_strategy == 2 && param->qpsol == QPsolvers::qpOASES) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
 //     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
 //     std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
     
@@ -961,7 +1017,7 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
     
     if (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity != -1)
         throw ParameterError("Values of qpOASES_options::matrixSparsity other that -1 are currently unsupported");
-    sparseMatrices = !Qparam->condensed;
+    // sparseMatrices = !Qparam->condensed;
     
     sparseMatrices = true;
     qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
@@ -1037,10 +1093,15 @@ qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
         qpOASES_MUMPS_solver::qpOASES_MUMPS_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, 
                                                                         int *blockIdx, const QPsolver_options *QPopts, void *fptr_dmumps_c):
                                                 qpOASES_solver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
-            qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
-            qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
-            qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, 50, qpOASES::LST_MUMPS, fptr_dmumps_c));
-            sparseMatrices = !Qparam->condensed;
+            // sparseMatrices = !Qparam->condensed;
+            sparseMatrices = true;
+            qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_MUMPS : qpOASES::LST_LAPACK;
+            int maxSchur = 15;
+            
+            qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST, fptr_dmumps_c));
+            qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST, fptr_dmumps_c));
+            qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST, fptr_dmumps_c));
+            // sparseMatrices = !Qparam->condensed;
             init_QP_common(blockIdx);    
         }
     #else
@@ -1056,7 +1117,8 @@ void qpOASES_solver::set_reg(double arg){
     double delta_regF = arg - regF;
     regF += delta_regF;
     if (H_qp == nullptr) throw std::logic_error("qpOASES_solver::set_reg - error, a Hessian must be set before a regularization");
-    qpOASES::returnValue ret = H_qp->addToDiag(delta_regF);
+    qpOASES::returnValue ret = (regInd == nullptr) ? H_qp->addToDiag(delta_regF) :  H_qp->addToDiagIndices(delta_regF, regInd.get(), regInd_l);
+    // if (regInd == nullptr) H_qp->addToDiag(delta_regF); else H_qp->addToDiagIndices(delta_regF, regInd.get(), regInd_l);
     if (ret != qpOASES::SUCCESSFUL_RETURN) throw std::logic_error("addToDiag failed\n");
     matrices_changed = true;
 }
@@ -1073,27 +1135,38 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def){
     
     // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel > 0){
     if (sparseMatrices){
-        convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
+        // convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, regFactor, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
+        convertHessian_noalloc(Qparam->eps, hess, nHess, nVar, hess_nz.get(), hess_row.get(), hess_colind.get(), hess_loind.get());
         H_qp = std::make_unique<qpOASES::SymSparseMat>(nVar, nVar, hess_row.get(), hess_colind.get(), hess_nz.get());
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
     }
     else{
         steady_clock::time_point T0 = steady_clock::now();
-        convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
+        // convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
+        convertHessian_noalloc(hess, nHess, nVar, hess_nz.get());
         H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
         steady_clock::time_point T1 = steady_clock::now();
         std::cout << "converting hess to dense took " << duration_cast<microseconds>(T1 - T0) << "\n"; 
     }
+    // if (regInd == nullptr) H_qp->addToDiag(regFactor); else H_qp->addToDiagIndices(regFactor, regInd.get(), regInd_l);
+    qpOASES::returnValue ret = (regInd == nullptr) ? H_qp->addToDiag(regFactor) :  H_qp->addToDiagIndices(regFactor, regInd.get(), regInd_l);
+    if (ret != qpOASES::SUCCESSFUL_RETURN) throw std::logic_error("addToDiag failed\n");
     matrices_changed = true;
     regF = 0.0;
     return;
 }
 
+// void qpOASES_solver::set_constr(const Matrix &constr_jac){
+//     Transpose(constr_jac, jacT);
+//     A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
+//     return;
+// }
 void qpOASES_solver::set_constr(const Matrix &constr_jac){
     Transpose(constr_jac, jacT);
     A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
     return;
 }
+
 // void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
 //     if (A_qp_nz == nullptr){
 //         A_qp_nz = std::make_unique<double[]>(jac_colind[nVar]);

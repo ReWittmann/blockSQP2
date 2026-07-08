@@ -245,8 +245,12 @@ class SQPmethod{
         void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
         
         // Rescaling of the problem (only variables)
+        
+        //  Scaling heuristic as described in paper
         void calc_free_variables_scaling(double *SF);
-        void calc_free_variables_scaling_2(double *SF);
+        
+        // Scaling heuristic as described in paper, but applied to each control separately
+        void calc_free_variables_scaling_separate(double *SF);
         void apply_rescaling(const double *resfactors);
         void scaling_heuristic();
         
