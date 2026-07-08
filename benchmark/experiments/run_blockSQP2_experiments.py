@@ -78,7 +78,6 @@ opt_CS2_new = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True
     )
 
 opt_CS2_noScaling = blockSQP2.SQPoptions(
@@ -86,7 +85,6 @@ opt_CS2_noScaling = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = False,
-    test_opt_1 = True
     )
 
 opt_CS2_newScaling = blockSQP2.SQPoptions(
@@ -94,8 +92,6 @@ opt_CS2_newScaling = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True
     )
 
 
@@ -104,16 +100,12 @@ opt_CS2_S1 = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True,
     )
 opt_CS2_S2 = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True,
     scaling_Theta_min = 0.1,
     scaling_Theta_max = 5.0
     )
@@ -122,8 +114,6 @@ opt_CS2_S3 = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True,
     scaling_Theta_min = 0.1,
     scaling_Theta_max = 2.0
     )
@@ -132,8 +122,6 @@ opt_CS2_S4 = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True,
     scaling_Theta_min = 0.05,
     scaling_Theta_max = 10.0
     )
@@ -143,8 +131,6 @@ opt_CS2_S5 = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True,
     scaling_Theta_min = 0.2,
     scaling_Theta_max = 10.0
     )
@@ -154,8 +140,6 @@ opt_CS2_S6 = blockSQP2.SQPoptions(
     conv_strategy = 2,
     max_filter_overrides = 0,
     automatic_scaling = True,
-    test_opt_1 = True,
-    test_opt_2 = True,
     scaling_Theta_min = 0.2,
     scaling_Theta_max = 5.0
     )
@@ -174,8 +158,6 @@ opt_CS2_par = blockSQP2.SQPoptions(
     par_QPs = True,
     max_filter_overrides = 0, 
     automatic_scaling = True, 
-    test_opt_1 = False,
-    test_opt_2 = True,
     scaling_Theta_min = 0.1,
     scaling_Theta_max = 5.0
     )
@@ -184,15 +166,13 @@ opt_CS2_par_new = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
     conv_strategy = 2,
     par_QPs = True,
-    max_filter_overrides = 0, 
+    max_filter_overrides = 2, 
     automatic_scaling = True, 
-    test_opt_1 = True,
-    test_opt_2 = True,
     scaling_Theta_min = 0.1,
-    scaling_Theta_max = 5.0
+    scaling_Theta_max = 10.0
     )
 
-
+condensing = True
 
 #Select option sets to test for
 Experiments = [
@@ -213,7 +193,7 @@ Experiments = [
                # (opt_CS2_S6, "scaling_0p2_5"),
                
                # (opt_CS2_par, "par"),
-               (opt_CS2_par_new, "par_new")
+               (opt_CS2_par_new, "par_new_cond")
                ]
 
 
@@ -250,7 +230,7 @@ for OCclass in Examples:
     EXP_type_sol = []
     n_EXP = 0
     for EXP_opts, EXP_name in Experiments:
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
+        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, COND = condensing)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)

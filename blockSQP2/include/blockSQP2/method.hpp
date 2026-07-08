@@ -73,7 +73,7 @@ class SQPmethod{
         Matrix rest_lambdaQP;
         
     protected:
-        bool                     initCalled = false;  ///< indicates if init() has been called (necessary for run())
+        bool initCalled = false;  ///< indicates if init() has been called (necessary for run())
         
     public:
         /// Construct a method for a given problem and set of algorithmic options
@@ -121,24 +121,24 @@ class SQPmethod{
         //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
         //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
         
+        // Dispatch to best solveQP variant based on parameters, options, iteration state etc.
         virtual QPresults solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
-        QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        
+            QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
+            QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
+            QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+            // QPresults solveQP_seq_default(Matrix &deltaXi, Matrix &lambdaQP);
+            QPresults solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
+            
+            // QPresults solveQP_par_default(Matrix &deltaXi, Matrix &lambdaQP);
+            QPresults solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
         
         /// Sequentially try to solve increasingly convexified QPs. 
-        //virtual int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        /////////////////////////////////
-        
-        //virtual int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        //virtual int solve_convex_QP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        
-        /// Solve a QP with convex hessian and corrected constraint bounds. vars->AdeltaXi, vars->trialConstr need to be updated before calling this method
-        //virtual int solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
-        
         virtual QPresults solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
+        //For idx = 1,..., maxQP - 2, compute series of increasing Hessian regularization factors.
+        double computeRegularizationFactor(int idx, int maxQP);
+        //For idx = 0,..., compute series of decreasing Hessian regularization factors.
+        double computeLowerRegularizationFactor(int idx, int maxQP);
         
         /// Compute the next Hessian in the inner loop of increasingly convexified QPs and store it in vars->hess2
         void computeNextHessian( int idx, int maxQP );
@@ -148,7 +148,6 @@ class SQPmethod{
         void computeLowerRegularizedHessian(int idx, int maxQP);
         /// Set hess to point to a blockwise (scaled) identity hessian, (vars->hess_spec)
         void setIdentityHessian();
-        
         
         // Filter line search, restoration phase and associated heuristics
         /// No enable_linesearch strategy
@@ -217,10 +216,9 @@ class SQPmethod{
         // void calcHessianUpdate(int updateType, int sizing, SymMatrix *hess);
         void calcHessianUpdate(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         /// Compute limited memory Hessian approximations based on update formulas
-        // void calcHessianUpdateLimitedMemory(int updateType, int sizing, SymMatrix *hess);
+        
         void calcHessianUpdateLimitedMemory(Hessians updateType, Sizings sizingType, SymMatrix *hess);
-        // void calcHessianUpdateLimitedMemory_par(int updateType, int sizing, SymMatrix *hess);
-        // void par_inner_update_loop(int updateType, int sizing, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
+        void calcHessianUpdateLimitedMemory_seq(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         void calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess);
         void par_inner_update_loop(Hessians updateType, Sizings sizingType, SymMatrix *hess, int blockIdx_start, int blockIdx_end);
         
@@ -247,8 +245,12 @@ class SQPmethod{
         void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
         
         // Rescaling of the problem (only variables)
+        
+        //  Scaling heuristic as described in paper
         void calc_free_variables_scaling(double *SF);
-        void calc_free_variables_scaling_2(double *SF);
+        
+        // Scaling heuristic as described in paper, but applied to each control separately
+        void calc_free_variables_scaling_separate(double *SF);
         void apply_rescaling(const double *resfactors);
         void scaling_heuristic();
         

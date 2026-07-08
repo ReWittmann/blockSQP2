@@ -289,6 +289,16 @@ enum SchurUpdateType
 	SUT_UNDEFINED			/**< Type of Schur update is undefined. */
 };
 
+enum LinearSolverType{
+	LST_ANY,
+	LST_NONE,
+	LST_LAPACK,
+	LST_MA27,
+	LST_MA57,
+	LST_MUMPS,
+	LST_SPRAL
+};
+
 /**
  *	\brief Stores internal information for tabular (debugging) output.
  *

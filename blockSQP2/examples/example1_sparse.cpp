@@ -308,10 +308,11 @@ int main(int argc, const char* argv[]){
 
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES
-    QPopts.sparsityLevel = 2;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS
+    QPopts.matrixSparsity = 1;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS
                                                // Default -1 (automatically infer and SET from SQPoptions). Internal default options may also be overwritten by SQPoptions
     QPopts.printLevel = 0;                  // QP solver options keep their name. See qpOASES manual for options. Currently only printLevel and terminationTolerance can be passed.
-
+    QPopts.max_QP_it = 20;
+    opts->qpsol_options = &QPopts;
 
     /*-------------------------------------------------*/
     /* Create blockSQP method object and run algorithm */

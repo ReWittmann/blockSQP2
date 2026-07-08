@@ -3,15 +3,15 @@ from typing import Optional
 from .cxxwrappers import CXXobjCreator, CXXobjHolder
 
 class qpOASESoptions(CXXobjCreator):
-    def __init__(self, sparsityLevel: int = 2, printLevel: int = 0, terminationTolerance: float = 5.0e6 * 2.221e-16):
-        self.sparsityLevel = sparsityLevel
+    def __init__(self, matrixSparsity: int = -1, printLevel: int = 0, terminationTolerance: float = 5.0e6 * 2.221e-16):
+        self.matrixSparsity = matrixSparsity
         self.printLevel = printLevel
         self.terminationTolerance = terminationTolerance
     def create_cxx_obj(self):
         BSQP = self.BSQP
         
         cxx_obj = BSQP.create_qpOASES_options()
-        BSQP.qpOASES_options_set_sparsityLevel(cxx_obj, c_int(self.sparsityLevel))
+        BSQP.qpOASES_options_set_matrixSparsity(cxx_obj, c_int(self.matrixSparsity))
         BSQP.qpOASES_options_set_printLevel(cxx_obj, c_int(self.printLevel))
         BSQP.qpOASES_options_set_terminationTolerance(cxx_obj, c_double(self.terminationTolerance))
         
@@ -67,10 +67,11 @@ class Options(CXXobjCreator):
                  scaling_Theta_max: float = 10.0,
                  enable_premature_termination: bool = False,
                  indef_delay: int = 3,
-                 test_opt_1: bool = False,
-                 test_opt_2: bool = False,
-                 test_val_1: float = 0.,
-                 test_val_2: float = 0.
+                 test_opt_enable_conv_downscaling: bool = True,
+                #  test_opt_2: bool = False,
+                #  test_opt_3: bool = False,
+                #  test_val_1: float = 0.,
+                #  test_val_2: float = 0.
                  ):
         self.eps = eps
         self.inf = inf
@@ -119,10 +120,11 @@ class Options(CXXobjCreator):
         self.scaling_Theta_max = scaling_Theta_max
         self.enable_premature_termination = enable_premature_termination
         self.indef_delay = indef_delay
-        self.test_opt_1 = test_opt_1
-        self.test_opt_2 = test_opt_2
-        self.test_val_1 = test_val_1
-        self.test_val_2 = test_val_2
+        self.test_opt_enable_conv_downscaling = test_opt_enable_conv_downscaling
+        # self.test_opt_2 = test_opt_2
+        # self.test_opt_3 = test_opt_3
+        # self.test_val_1 = test_val_1
+        # self.test_val_2 = test_val_2
     
     def create_cxx_obj(self):
         BSQP = self.BSQP        
@@ -221,10 +223,11 @@ class Options(CXXobjCreator):
             QPsolver_options_hld = QPopts.create_cxx_obj()
             BSQP.SQPoptions_set_qpsol_options(cxx_obj, QPsolver_options_hld.cxx_obj)
         
-        BSQP.SQPoptions_set_test_opt_1(cxx_obj, c_char(self.test_opt_1))
-        BSQP.SQPoptions_set_test_opt_2(cxx_obj, c_char(self.test_opt_2))
-        BSQP.SQPoptions_set_test_val_1(cxx_obj, c_double(self.test_val_1))
-        BSQP.SQPoptions_set_test_val_2(cxx_obj, c_double(self.test_val_2))
+        BSQP.SQPoptions_set_test_opt_enable_conv_downscaling(cxx_obj, c_char(self.test_opt_enable_conv_downscaling))
+        # BSQP.SQPoptions_set_test_opt_2(cxx_obj, c_char(self.test_opt_2))
+        # BSQP.SQPoptions_set_test_opt_3(cxx_obj, c_char(self.test_opt_3))
+        # BSQP.SQPoptions_set_test_val_1(cxx_obj, c_double(self.test_val_1))
+        # BSQP.SQPoptions_set_test_val_2(cxx_obj, c_double(self.test_val_2))
         
         deleter = lambda ptr: self.BSQP.delete_SQPoptions(ptr)
         return CXXobjHolder(cxx_obj, deleter, QPsolver_options_hld)

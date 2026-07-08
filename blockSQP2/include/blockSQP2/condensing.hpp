@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <cassert>
 #include <memory>
+#include <thread>
 
 
 namespace blockSQP2{
@@ -38,6 +39,7 @@ struct vblock{
 	int size;
 	bool dependent;
 	bool removed;
+    
 };
 
 //Future: Have more general dependency graphs for variables for advanced condensing in more than one pass
@@ -80,11 +82,11 @@ struct condensing_target{
 	//Number of intermediate shooting stages
 	int n_stages;
 	//First free variable block that following dependent blocks depend on
-	int first_free;
+	int vblock_start;
 	//End of variable blocks of target/first vblock not corresponding to target and associated hessian blocks
 	int vblock_end;
 	//First and last continuity conditions
-	int first_cond;
+	int cblock_start;
 	int cblock_end;
 };
 
@@ -123,6 +125,9 @@ struct condensing_data{
 	LT_Block_Matrix G;       //n_stages x (n_stages + 1)
 	std::vector<Matrix> h_k; //h_0, ..., h_{n_stages}
 	LT_Block_Matrix H;       //(n_stages + 1) x (n_stages + 1)
+    
+    // std::unique_ptr<double[]> w_ik;
+    // std::unique_ptr<double[]> W_ik;
     
 	//Horizontal slices of (horizontal jacobian slice corresponding to target variables), separated in free- and dependent-variable-slices,
 	//without continuity conditions
@@ -177,7 +182,7 @@ struct condensing_data{
 class Condenser{
 
     public:
-    //Constructor arguments
+    ///Constructor arguments///
 	int num_cblocks;
 	int num_vblocks;
 	int num_hessblocks;
@@ -188,7 +193,12 @@ class Condenser{
 	int* hess_block_sizes;
 	condensing_target* targets;
     
-    //Layout data calculated from constructor arguments
+	//Additional option: How should dependent variable bounds be added to the condensed QP:
+    //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
+    int add_dep_bounds;
+    
+    
+    ///Layout data calculated from constructor arguments by calling the "setup" method///
 	int num_vars;
 	int num_cons;
     int condensed_num_vars;
@@ -197,40 +207,51 @@ class Condenser{
 
     int condensed_num_hessblocks;
 
-	int* cranges;
-	int* vranges;
+	std::unique_ptr<int[]> cranges;
+	std::unique_ptr<int[]> vranges;
 
-	int* c_starts;
-	int* c_ends;
-	int* v_starts;
-	int* v_ends;
-	int* h_starts;
-	int* h_ends;
-    int* condensed_v_starts;
-    int* condensed_v_ends;
+	std::unique_ptr<int[]> c_starts;
+	std::unique_ptr<int[]> c_ends;
+	std::unique_ptr<int[]> v_starts;
+	std::unique_ptr<int[]> v_ends;
+	std::unique_ptr<int[]> h_starts;
+	std::unique_ptr<int[]> h_ends;
+    std::unique_ptr<int[]> condensed_v_starts;
+    std::unique_ptr<int[]> condensed_v_ends;
 
-	int* hess_block_ranges;
+	std::unique_ptr<int[]> hess_block_ranges;
 
-    int* condensed_hess_block_sizes;
-    int* condensed_blockIdx;
+    std::unique_ptr<int[]> condensed_hess_block_sizes;
+    std::unique_ptr<int[]> condensed_blockIdx;
 
-	//Additional option: How should dependent variable bounds be added to the condensed QP:
-    //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
-	int add_dep_bounds;
 	//Number of constraints and conditions of original QP, if dependent variable bounds are kept, else number of "true" constraints
 	int condensed_num_cons;
 
     ///QP specific data
 	//QP-specific data for each condensable variable-condition-structure
-	condensing_data *targets_data;
+	std::unique_ptr<condensing_data[]> targets_data;
 
+    // //Slices of the gradient of the objective
+    // std::vector<Matrix> T_grad_obj;
+    // std::vector<Matrix> O_grad_obj;
+
+	// //Horizontal slices of linear constraints matrix (Jacobian) for T-target variables and O-other variables
+	// std::vector<Sparse_Matrix> T_Slices;
+    // std::vector<Sparse_Matrix> O_Slices;
+    
     //Slices of the gradient of the objective
-    std::vector<Matrix> T_grad_obj;
-    std::vector<Matrix> O_grad_obj;
-
-	//Horizontal slices of linear constraints matrix (Jacobian) for T-target variables and O-other variables
-	std::vector<Sparse_Matrix> T_Slices;
-    std::vector<Sparse_Matrix> O_Slices;
+    std::unique_ptr<Matrix[]> T_grad_obj;
+    std::unique_ptr<Matrix[]> O_grad_obj;
+    
+    std::unique_ptr<Sparse_Matrix[]> T_Slices;
+    std::unique_ptr<Sparse_Matrix[]> O_Slices;
+    std::unique_ptr<Matrix[]> T_lb_var;
+    std::unique_ptr<Matrix[]> T_ub_var;
+    std::unique_ptr<Matrix[]> O_lb_var;
+    std::unique_ptr<Matrix[]> O_ub_var;
+    
+    
+    std::unique_ptr<std::jthread[]> target_threads;
 
     ///Condensed QP data
 
@@ -238,12 +259,14 @@ class Condenser{
     Matrix lb_dep_var;
     Matrix ub_dep_var;
 
+    Condenser();
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
 	Condenser(Condenser &&C);
 	virtual ~Condenser();
+    void setup();
     
     //Construct a new Condenser sharing the layout data of an existing condenser.
-    static Condenser *layout_copy(const Condenser *CND);
+    virtual Condenser *layout_copy() const;
 
     void print_info();
 
@@ -261,16 +284,16 @@ class Condenser{
 
 	//Condensing for a single block of variables and conditions with condensable structure
     void single_condense(int tnum, const Matrix &grad_obj, const Sparse_Matrix &B_Jac, const SymMatrix *const sub_hess,
-                            const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con);
+                            const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con) const;
 
     //Recovery of dependent variables and condition-lagrange-multipliers from qp-solution X_cond
 	void recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_cond,
-                            Matrix &xi_full, Matrix &lambda_full);
+                            Matrix &xi_full, Matrix &lambda_full) const;
 
     //Recover dependent variables and continuity condition multipliers for a single condensable structure
     //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
     void single_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda);
+                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
 
 
 
@@ -278,15 +301,15 @@ class Condenser{
     //They are modded versions of the four primary methods above, so currently there is still a lot of code duplication
 
     //Update condensed QP with a different hessian. This also affects the linear term in the condensed QP.
-    void fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2);
-    void single_hess_condense(int tnum, const SymMatrix *const sub_hess);
+    // void fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2);
+    // void single_hess_condense(int tnum, const SymMatrix *const sub_hess);
 
-    //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
-    void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full);
+    // //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
+    // void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const;
 
-    //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
-    void single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
-                            Matrix &xi_full, Matrix &nu, Matrix &mu_lambda);
+    // //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
+    // void single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
+    //                         Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
 
     
     //Update condensed QP with a new hessian
@@ -311,20 +334,33 @@ class Condenser{
 //Condenser holding its own layout information
 class holding_Condenser : public Condenser{
     public:
+    holding_Condenser();
     holding_Condenser(
                         std::unique_ptr<vblock[]> VBLOCKS, int n_VBLOCKS, 
                         std::unique_ptr<cblock[]> CBLOCKS, int n_CBLOCKS, 
                         std::unique_ptr<int[]> HSIZES, int n_HBLOCKS, 
                         std::unique_ptr<condensing_target[]> TARGETS, int n_TARGETS, 
                         int DEP_BOUNDS = 2);
-	std::unique_ptr<vblock[]> auto_vblocks;
-    std::unique_ptr<cblock[]> auto_cblocks;
-	std::unique_ptr<int[]> auto_hess_block_sizes;
-	std::unique_ptr<condensing_target[]> auto_targets;
+	std::unique_ptr<vblock[]> vblocks_hold;
+    std::unique_ptr<cblock[]> cblocks_hold;
+	std::unique_ptr<int[]> hess_block_sizes_hold;
+	std::unique_ptr<condensing_target[]> targets_hold;
 };
 
 //holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS = 2);
 
+class PartialCondenser : public Condenser{
+    public:
+    condensing_target *targets_orig;
+    int n_targets_orig;
+    std::unique_ptr<condensing_target[]> targets_hold;
+    int n_split;
+    
+    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_SPLIT, int DEP_BOUNDS = 2);
+    virtual ~PartialCondenser();
+    
+    virtual Condenser *layout_copy();
+};
 
 
 } // namespace blockSQP2

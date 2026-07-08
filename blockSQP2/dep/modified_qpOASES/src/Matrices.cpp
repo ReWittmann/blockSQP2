@@ -34,7 +34,9 @@
 
 #include <qpOASES/Matrices.hpp>
 #include <qpOASES/LapackBlas.hpp>
-
+#include <iostream>
+#include <chrono>
+using namespace std::chrono;
 
 BEGIN_NAMESPACE_QPOASES
 
@@ -228,6 +230,7 @@ returnValue DenseMatrix::getSparseSubmatrix (int_t irowsLength, const int_t* con
 											 int_t* jcn, real_t* avals,
 											 BooleanType only_lower_triangular /*= BT_FALSE */) const
 {
+	// steady_clock::time_point T0 = steady_clock::now();
 	int_t i, j, irA;
 	real_t v;
 	numNonzeros = 0;
@@ -297,9 +300,26 @@ returnValue DenseMatrix::getSparseSubmatrix (int_t irowsLength, const int_t* con
 			}
 		}
 	}
-
+// steady_clock::time_point T1 = steady_clock::now();
+// std::cout << "getSparseSubmatrix took " << duration_cast<nanoseconds>(T1 - T0) << "\n"; 
 	return SUCCESSFUL_RETURN;
 }
+
+returnValue DenseMatrix::getDenseSubmatrix(int_t irowsLength, const int_t* const irowsNumber,
+										   int_t icolsLength, const int_t* const icolsNumber,
+										   real_t *avals){
+	real_t *dwork = new real_t[nCols*irowsLength];
+	for (int_t i = 0; i < irowsLength; i++){
+		memcpy(dwork, val + irowsNumber[i]*nCols, sizeof(real_t)*nCols);
+	}
+	
+	for (int_t j = 0; j < icolsLength; j++){
+		CBLAS__COPY(irowsLength, avals, irowsLength, dwork + icolsNumber[j], nCols);
+	}
+	
+	return SUCCESSFUL_RETURN;
+}
+
 
 returnValue DenseMatrix::times(	int_t xN, real_t alpha, const real_t* x, int_t xLD, real_t beta, real_t* y, int_t yLD ) const
 {
@@ -351,6 +371,7 @@ returnValue DenseMatrix::times(	const Indexlist* const irows, const Indexlist* c
 								int_t xN, real_t alpha, const real_t* x, int_t xLD, real_t beta, real_t* y, int_t yLD,
 								BooleanType yCompr ) const
 {
+	// steady_clock::time_point T0 = steady_clock::now();
 	int_t i, j, k, row, col, iy, irA;
 
 	if (yCompr == BT_TRUE)
@@ -527,13 +548,15 @@ returnValue DenseMatrix::times(	const Indexlist* const irows, const Indexlist* c
 						}
 					}
 	}
-
+	// steady_clock::time_point T1 = steady_clock::now();
+	// std::cout << "DenseMatrix::times took " << duration_cast<nanoseconds>(T1 - T0) << "\n";
 	return SUCCESSFUL_RETURN;
 }
 
 returnValue DenseMatrix::transTimes(	const Indexlist* const irows, const Indexlist* const icols,
 										int_t xN, real_t alpha, const real_t* x, int_t xLD, real_t beta, real_t* y, int_t yLD ) const
 {
+	// steady_clock::time_point T0 = steady_clock::now();
 	int_t i, j, k, row, col;
 
 	if ( isZero(beta) == BT_TRUE )
@@ -582,7 +605,8 @@ returnValue DenseMatrix::transTimes(	const Indexlist* const irows, const Indexli
 					y[col+k*yLD] += alpha * val[irows->number[row]*leaDim+icols->number[col]] * x[row+k*xLD];
 				}
 			}
-
+	// steady_clock::time_point T1 = steady_clock::now();
+	// std::cout << "DenseMatrix::transTimes took " << duration_cast<nanoseconds>(T1 - T0) << "\n";
 	return SUCCESSFUL_RETURN;
 }
 
@@ -595,7 +619,25 @@ returnValue DenseMatrix::addToDiag( real_t alpha )
 
 	return SUCCESSFUL_RETURN;
 }
+returnValue DenseMatrix::addToDiagI(real_t alpha, int_t ind){
+	if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+	val[ind*(leaDim + 1)] += alpha;
+	return SUCCESSFUL_RETURN;
+}
+returnValue DenseMatrix::addToDiagIndices(real_t alpha, int *indices, int_t il){
+	for (int_t i = 0; i < il; i++){
+		int_t ind = indices[i];
+		if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+		val[ind*(leaDim + 1)] += alpha;
+	}
+	return SUCCESSFUL_RETURN;
+}
 
+real_t DenseMatrix::sum(){
+	real_t acc = 0;
+	for (int_t i = 0; i < nRows*nCols; i++) acc += val[i];
+	return acc;
+}
 
 returnValue DenseMatrix::writeToFile( FILE* output_file, const char* prefix ) const
 {
@@ -648,6 +690,7 @@ SymmetricMatrix *SymDenseMat::duplicateSym( ) const
 returnValue SymDenseMat::bilinear(	const Indexlist* const icols,
 									int_t xN, const real_t* x, int_t xLD, real_t* y, int_t yLD ) const
 {
+	// std::cout << "SymDenseMat::bilinear\n";
 	int_t ii, jj, kk, col;
 	int_t i,j,k,irA;
 
@@ -1146,7 +1189,7 @@ returnValue SparseMatrix::times( const Indexlist* const irows, const Indexlist* 
 {
 	long i, j, k, l, col;
 	real_t xcol;
-
+	// steady_clock::time_point T0 = steady_clock::now();
 	if ( isEqual(alpha,0.0) == BT_TRUE )
 	{
 		if (yCompr == BT_TRUE)
@@ -1302,6 +1345,9 @@ returnValue SparseMatrix::times( const Indexlist* const irows, const Indexlist* 
 	}
 
 	delete [] ytmp;
+	
+	// steady_clock::time_point T1 = steady_clock::now();
+	// std::cout << "SparseMatrix::times took " << duration_cast<nanoseconds>(T1 - T0) << "\n";
 	return SUCCESSFUL_RETURN;
 }
 
@@ -1376,6 +1422,37 @@ returnValue SparseMatrix::addToDiag( real_t alpha )
 	return SUCCESSFUL_RETURN;
 }
 
+returnValue SparseMatrix::addToDiagI(real_t alpha, int_t ind){
+	if (jd == nullptr) return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+	if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+	if (isZero(alpha) == BT_FALSE){	
+		if (ir[jd[ind]] == ind) val[jd[ind]] += alpha;
+		else return 			RET_NO_DIAGONAL_AVAILABLE;
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SparseMatrix::addToDiagIndices(real_t alpha, int *indices, int_t il){
+	if (jd == nullptr) return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+
+	if (isZero(alpha) == BT_FALSE){
+		for (int_t i = 0; i < il; i++){
+			int_t ind = indices[i];
+			if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+			if (ir[jd[ind]] == ind) val[jd[ind]] += alpha;
+			else 					return RET_NO_DIAGONAL_AVAILABLE;
+		}
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
+real_t SparseMatrix::sum(){
+	real_t acc = 0;
+	for (int_t i = 0; i < jc[nCols]; i++) acc += val[i];
+	return acc;
+}
 
 sparse_int_t* SparseMatrix::createDiagInfo( )
 {
@@ -2076,6 +2153,41 @@ returnValue SparseMatrixRow::addToDiag( real_t alpha )
 	return SUCCESSFUL_RETURN;
 }
 
+returnValue SparseMatrixRow::addToDiagI(real_t alpha, int_t ind){
+	long i;
+	if (jd == nullptr)
+		return THROWERROR( RET_DIAGONAL_NOT_INITIALISED );
+	if ( isZero( alpha ) == BT_FALSE )
+	{	if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+		if (ic[jd[ind]] == ind){
+			val[jd[ind]] += alpha;
+		}
+		else return RET_NO_DIAGONAL_AVAILABLE;
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
+returnValue SparseMatrixRow::addToDiagIndices(real_t alpha, int *indices, int_t il){
+	if (jd == nullptr) return THROWERROR(RET_DIAGONAL_NOT_INITIALISED);
+
+	if (isZero(alpha) == BT_FALSE){
+		for (int_t i = 0; i < il; i++){
+			int_t ind = indices[i];
+			if (ind < 0 || ind >= nRows || ind >= nCols) return THROWERROR(RET_INDEX_OUT_OF_BOUNDS);
+			if (ic[jd[ind]] == ind) val[jd[ind]] += alpha;
+			else 					return RET_NO_DIAGONAL_AVAILABLE;
+		}
+	}
+
+	return SUCCESSFUL_RETURN;
+}
+
+real_t SparseMatrixRow::sum(){
+	real_t acc = 0;
+	for (int_t i = 0; i < jr[nCols]; i++) acc += val[i];
+	return acc;
+}
 
 sparse_int_t* SparseMatrixRow::createDiagInfo( )
 {

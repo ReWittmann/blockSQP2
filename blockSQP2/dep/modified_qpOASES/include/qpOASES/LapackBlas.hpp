@@ -26,16 +26,24 @@
 
 #ifdef __USE_SINGLE_PRECISION__
 	#define CBLAS__GEMM QPOS_BLASFUNC(cblas_sgemm)
+	#define CBLAS__COPY QPOS_BLASFUNC(cblas_scopy)
 
 	#define POTRF spotrf_
 	#define TRTRS strtrs_
 	#define TRCON strcon_
+	#define SYTRF ssytrf_
+	#define SYTRS ssytrs_
 #else
 	#define CBLAS__GEMM QPOS_BLASFUNC(cblas_dgemm)
+	#define CBLAS__COPY QPOS_BLASFUNC(cblas_dcopy)
 
 	#define POTRF dpotrf_
 	#define TRTRS dtrtrs_
 	#define TRCON dtrcon_
+	// #define SYTRF dsytrf_
+	// #define SYTRS dsytrs_
+	#define SYTRF dsytrf_rook_
+	#define SYTRS dsytrs_rook_
 #endif // __USE_SINGLE_PRECISION__
 
 #ifdef LAPACK_FORTRAN_STRLEN_END

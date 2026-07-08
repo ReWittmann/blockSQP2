@@ -553,13 +553,12 @@ returnValue QProblem::hotstart(	const real_t* const g_new,
 			}
 			else
 				pcputime_rem = 0;
-
+			
 			/* Automatically call standard solveQP if regularisation is not active. */
 			returnvalue = solveRegularisedQP(	g_new,lb_new_far,ub_new_far,lbA_new_far,ubA_new_far,
 												nWSR,pcputime_rem,nWSR_performed,
 												isFirstCall
 												);
-
 			nWSR_performed  = nWSR;
 			cputime_needed += cputime_remaining;
 			isFirstCall     = BT_FALSE;
@@ -1588,6 +1587,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 											delta_g,delta_lbA,delta_ubA,delta_lb,delta_ub,
 											Delta_bC_isZero, Delta_bB_isZero
 											);
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1607,6 +1607,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 												Delta_bC_isZero, Delta_bB_isZero,
 												delta_xFX,delta_xFR,delta_yAC,delta_yFX
 												);
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1627,6 +1628,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 									delta_xFX,delta_xFR,delta_yAC,delta_yFX,
 									BC_idx,BC_status,BC_isBound
 									);
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
@@ -1646,6 +1648,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 		nC = getNC( );
 
 		homotopyLength = getRelativeHomotopyLength( g_new,lb_new,ub_new,lbA_new,ubA_new );
+		
 		if ( homotopyLength <= options.terminationTolerance )
 		{
 			status = QPS_SOLVED;
@@ -1667,6 +1670,7 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 
 		/* 6) Change active set. */
 		returnvalue = changeActiveSet( BC_idx,BC_status,BC_isBound );
+		
 		if ( returnvalue != SUCCESSFUL_RETURN )
 		{
 			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;

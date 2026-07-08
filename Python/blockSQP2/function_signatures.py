@@ -32,7 +32,7 @@ BSQP_function_signatures = {
     "delete_QPsolver_options": (None, (c_void_p,)),
     
     "create_qpOASES_options": (c_void_p, ()),
-    "qpOASES_options_set_sparsityLevel": (None, (c_void_p, c_int)),
+    "qpOASES_options_set_matrixSparsity": (None, (c_void_p, c_int)),
     "qpOASES_options_set_printLevel": (None, (c_void_p, c_int)),
     "qpOASES_options_set_terminationTolerance": (None, (c_void_p, c_double)),
     
@@ -88,10 +88,11 @@ BSQP_function_signatures = {
     "SQPoptions_set_enable_premature_termination": (None, (c_void_p, c_char)),
     "SQPoptions_set_qpsol": (None, (c_void_p, c_int)),
     "SQPoptions_set_indef_delay": (None, (c_void_p, c_int)),
-    "SQPoptions_set_test_opt_1": (None, (c_void_p, c_char)),
-    "SQPoptions_set_test_opt_2": (None, (c_void_p, c_char)),
-    "SQPoptions_set_test_val_1": (None, (c_void_p, c_double)),
-    "SQPoptions_set_test_val_2": (None, (c_void_p, c_double)),
+    "SQPoptions_set_test_opt_enable_conv_downscaling": (None, (c_void_p, c_char)),
+    # "SQPoptions_set_test_opt_2": (None, (c_void_p, c_char)),
+    # "SQPoptions_set_test_opt_3": (None, (c_void_p, c_char)),
+    # "SQPoptions_set_test_val_1": (None, (c_void_p, c_double)),
+    # "SQPoptions_set_test_val_2": (None, (c_void_p, c_double)),
     
     "create_SQPstats": (c_void_p, (c_char_p,)),
     "delete_SQPstats": (None, (c_void_p,)),
@@ -111,7 +112,7 @@ BSQP_function_signatures = {
     "Problemspec_set_blockIdx": (None, (c_void_p, c_void_p, c_int)),
     "Problemspec_set_vblocks": (None, (c_void_p, c_void_p, c_int)),
     "Problemspec_pass_vblocks": (None, (c_void_p, c_void_p, c_int)),
-    "Problemspec_set_cond": (None, (c_void_p, c_void_p)),
+    "Problemspec_set_condenser": (None, (c_void_p, c_void_p)),
     "Problemspec_set_closure": (None, (c_void_p, c_void_p)),
     
     "Problemspec_set_dense_init": (None, (c_void_p, BSQP_callback_signatures['initialize_dense'])),
@@ -161,6 +162,7 @@ BSQP_function_signatures = {
     "Condenser_condensed_nCon": (c_int, (c_void_p,)),
     "Condenser_condensed_nBlocks": (c_int, (c_void_p,)),
     "Condenser_condensed_hsizes": (POINTER(c_int), (c_void_p,)),
+    "create_PartialCondenser": (c_void_p, (c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_void_p, c_int, c_int, c_int)),
     
     "create_Matrix": (c_void_p, (c_int, c_int)),
     "create_Matrix_default": (c_void_p, ()),

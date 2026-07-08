@@ -47,7 +47,7 @@
 
 
 #include <qpOASES/SQProblem.hpp>
-#include <qpOASES/SparseSolver.hpp>
+#include <qpOASES/LinearSolver.hpp>
 
 
 BEGIN_NAMESPACE_QPOASES
@@ -88,6 +88,7 @@ class SQProblemSchur : public SQProblem
 						int_t _nC,		  						/**< Number of constraints. */
 						HessianType _hessianType = HST_UNKNOWN,	/**< Type of Hessian matrix. */
 						int_t maxSchurUpdates = 75,				/**< Maximal number of Schur updates */
+						LinearSolverType _linSolType = LST_ANY,
 						void *arg_fptr_dmumps_c = nullptr
 						);
 
@@ -109,7 +110,7 @@ class SQProblemSchur : public SQProblem
 
 		/** Resets Schur complement.  This sets up the KKT matrix for the
 			current activities, copies the activities, etc. TODO: Return values */
-		returnValue resetSchurComplement( BooleanType allowInertiaCorrection );
+		returnValue resetSchurComplement( BooleanType allowInertiaCorrection, int_t idxRec = 0);
 
 		/** Return the total number of sparse matrix factorizations performed so far. */
 		inline int_t getNumFactorizations( ) const;
@@ -399,8 +400,8 @@ class SQProblemSchur : public SQProblem
 	 *	PROTECTED MEMBER VARIABLES
 	 */
 	protected:
-		SparseSolver* sparseSolver;			/**< Interface to the sparse linear solver. */
-
+		LinearSolver* linSol;			/**< Interface to the sparse linear solver. */
+		
 		real_t* S;							/**< Schur complement matrix. (This is actually the negative of the Schur complement!) */
 		int_t nS;							/**< Current size of Schur complement matrix. -1 means that the Schur complement has not yet been initialized. */
 		int_t nSmax;						/**< Maximum size of Schur complement matrix. */
@@ -410,15 +411,15 @@ class SQProblemSchur : public SQProblem
 		real_t detS;						/**< Determinant of Schur complement */
 		real_t rcondS;						/**< Reciprocal of condition number of S (estimate) */
 		int_t numFactorizations;			/**< Total number of factorizations performed */
-
+		
 		int_t* schurUpdateIndex;			/**< Indices of variables or constraints for each update in Schur complement. */
 		SchurUpdateType* schurUpdate;		/**< Type of update for each update in Schur complement. */
-
+		
 		int_t M_physicallength;				/**< Allocated size of the M_vals and M_ir arrays. */
 		real_t* M_vals;						/**< Values of the sparse M matrix containing the vectors with the additional rows defining the Schur complement (length). */
 		sparse_int_t* M_ir;					/**< Row indices (length). */
 		sparse_int_t* M_jc;					/**< Indices in M to first entry of columns (nS+1). */
-
+		
 		Indexlist boundsFreeStart;			/**< Index list for free bounds when major iteration started. */
 		Indexlist constraintsActiveStart;	/**< Index list for active constraints when major iteration started. */
 };
