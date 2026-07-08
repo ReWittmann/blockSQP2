@@ -128,7 +128,7 @@ void SQPmethod::calc_free_variables_scaling(double *ret_SF){
 
 
 
-void SQPmethod::calc_free_variables_scaling_2(double *ret_SF){
+void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
     int nIt, pos, ind_1, scdep;
     std::unique_ptr<int[]> scfree, count_delta, count_gamma;
     
@@ -262,8 +262,7 @@ void SQPmethod::scaling_heuristic(){
         vars->rescaleFactors[i] = 1.0;
     }
     
-    if (!param->test_opt_2) calc_free_variables_scaling(vars->rescaleFactors.get());
-    else                    calc_free_variables_scaling_2(vars->rescaleFactors.get());
+    calc_free_variables_scaling_separate(vars->rescaleFactors.get());
     apply_rescaling(vars->rescaleFactors.get());
 }
 

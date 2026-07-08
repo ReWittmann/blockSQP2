@@ -139,14 +139,6 @@ void MyProblem::convertJacobian( const Matrix &constrJac, double *jacNz, int *ja
             for( i=0; i<nCon; i++ )
                 if( fabs( constrJac( i, j ) < myInf ) )
                     nnz++;
-		/*
-        if( jacNz != NULL ) delete[] jacNz;
-        if( jacIndRow != NULL ) delete[] jacIndRow;
-
-        jacNz = new double[nnz];
-        jacIndRow = new int[nnz + (nVar+1)];
-        jacIndCol = jacIndRow + nnz;
-        */
     }
     else
     {
@@ -174,8 +166,7 @@ void MyProblem::convertJacobian( const Matrix &constrJac, double *jacNz, int *ja
 
 
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
-{
-    std::cout << "Initialize called\n";
+{   
     // set initial values for xi and lambda
     lambda.Initialize( 0.0 );
     for( int i=0; i<nVar; i++ )
@@ -184,9 +175,9 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, Matrix &constrJac )
 
 
 void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol )
-{    std::cout << "Initialize called\n";
+{   
     Matrix constrDummy, gradObjDummy, constrJac;
-    SymMatrix *hessDummy;
+    SymMatrix *hessDummy = nullptr;
     double objvalDummy;
     int info;
 
@@ -202,7 +193,7 @@ void MyProblem::initialize( Matrix &xi, Matrix &lambda, double *jacNz, int *jacI
     evaluate( xi, lambda, &objvalDummy, constrDummy, gradObjDummy, constrJac, hessDummy, 1, &info );
 
     // allocate sparse Jacobian structures
-    convertJacobian( constrJac, jacNz, jacIndRow, jacIndCol, 1 );
+    convertJacobian( constrJac, jacNz, jacIndRow, jacIndCol, 0 );
 }
 
 /*
@@ -233,19 +224,22 @@ void MyProblem::evaluate(const Matrix &xi, const Matrix &lambda, double *objval,
      */
     if (dmode >= 0){
         *objval = xi(0)*xi(0) - 0.5*xi(1)*xi(1);
-        constr(0) = xi(0) - xi(1);
+        for (int i = 0; i < nCon; i++){
+            constr(i) = xi(0) - xi(1);
+        }
     }
 
     if (dmode > 0){
         gradObj(0) = 2.0 * xi(0);
         gradObj(1) = -xi(1);
-
-        constrJac(0, 0) = 1.0;
-        constrJac(0, 1) = -1.0;
+        for (int i = 0; i < nCon; i++){
+            constrJac(i, 0) = 1.0;
+            constrJac(i, 1) = -1.0;
+        }
     }
 }
 
-} // namespace blockSQP2
+} // namespace blockSQP
 
 int main(int argc, const char* argv[]){
     using namespace blockSQP2;
@@ -261,7 +255,7 @@ int main(int argc, const char* argv[]){
     /* Setup problem data */
     /*--------------------*/
     int nVar = 2;
-    int nCon = 1;
+    int nCon = 3;
 
     int nBlocks = nVar;
     int blockIdx[2+1]; //[nBlocks+1]
@@ -277,42 +271,50 @@ int main(int argc, const char* argv[]){
     ub_var.Dimension(nVar).Initialize(myInf);
 
     // Constraint bounds
-    lb_con.Dimension(nCon);
-    ub_con.Dimension(nCon);
-    lb_con(0) = 0.0;
-    ub_con(0) = 0.0;
-
+    lb_con.Dimension(nCon).Initialize(0.);
+    ub_con.Dimension(nCon).Initialize(0.);
+    
     // Variable partition for block Hessian
     for( int i=0; i<nBlocks+1; i++ )
         blockIdx[i] = i;
-
+    
     // Create problem evaluation object
     prob = new MyProblem( nVar, nCon, nBlocks, blockIdx, lb_var, ub_var, lb_con, ub_con, x0 );
-	prob->nnz = 2;
-
+	prob->nnz = 2*nCon;
+    
     /*------------------------*/
     /* Options for SQP solver */
     /*------------------------*/
     opts = new SQPoptions();
     opts->opt_tol = 1.0e-12;         // For this example, set tolerances very low. The default is 1e-6
     opts->feas_tol = 1.0e-12;        
-
+    
+    opts->sparse = true;
+    
     opts->enable_linesearch = false;        // Disable filter line search for this example
-    opts->hess_approx = Hessians::BFGS;           
+    opts->hess_approx = Hessians::SR1;           
     opts->fallback_approx = Hessians::BFGS;       // ' ', not needed if hess_approximation is positive definite
-
+    opts->lim_mem = true;
+    
     opts->sizing = Sizings::None;              // Turn of sizing strategy for this example (1: OL sizing, 2: shanno-phua, 3: geom. mean of 1 and 2, 4: COL sizing)
     opts->fallback_sizing = Sizings::None;     // ' '
-    opts->sparse = false;                  // Dense matrices for this example
+    opts->sparse = true;                  // Dense matrices for this example
     opts->print_level = 2;                  // Maximum print output
     opts->debug_level = 0;                  // No printing to files
     
+    opts->par_QPs = false;
+    opts->max_conv_QPs = 1;
+    
+    opts->indef_delay = 1;
+    
+
     opts->qpsol = QPsolvers::qpOASES;       // Set QP solver
     qpOASES_options QPopts;                 // Options to be passed to qpOASES
-    QPopts.matrixSparsity = 0;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS
+    QPopts.matrixSparsity = -1;               // Select the method qpOASES uses. 0: dense, 1: sparse, 2: schur, requires sparse linear solver such as MUMPS
                                                // Default -1 (automatically infer and SET from SQPoptions). Internal default options may also be overwritten by SQPoptions
     QPopts.printLevel = 0;                  // QP solver options keep their name. See qpOASES manual for options. Currently only printLevel and terminationTolerance can be passed.
-
+    QPopts.max_QP_it = 20;
+    opts->qpsol_options = &QPopts;
 
     /*-------------------------------------------------*/
     /* Create blockSQP method object and run algorithm */
@@ -336,10 +338,7 @@ int main(int argc, const char* argv[]){
     printf("\nHessian approximation at the solution:\n");
     for( int i=0; i<meth->vars->nBlocks; i++ )
         meth->vars->hess[i].Print();
-    //printf("\nFallback Hessian at the solution:\n");
-    //for( int i=0; i<meth->vars->nBlocks; i++ )
-        //meth->vars->hess2[i].Print();
-
+    
     // Clean up
     delete prob;
     delete stats;

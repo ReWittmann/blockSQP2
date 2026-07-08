@@ -382,7 +382,7 @@ double lInfConstraintNorm(const Matrix &xi, const Matrix &constr, const Matrix &
 
 
 
-void convertHessian(SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian(SymMatrix const* hess, int nBlocks, int nVar,// double regularizationFactor,
                                             double *&hessNz){
     if (hessNz == NULL)
         hessNz = new double[nVar * nVar];
@@ -403,7 +403,7 @@ void convertHessian(SymMatrix *const hess, int nBlocks, int nVar, double regular
             for (int i = 0; i < hess[h].m; i++){
                 hessNz[ind] = hess[h](i, j);
                 //NEW
-                if (i == j) hessNz[ind] += regularizationFactor;
+                //if (i == j) hessNz[ind] += regularizationFactor;
 
                 ++ind;
             }
@@ -419,7 +419,7 @@ void convertHessian(SymMatrix *const hess, int nBlocks, int nVar, double regular
 }
 
 
-void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian(double eps, SymMatrix const* hess_, int nBlocks, int nVar,// double regularizationFactor,
                              double *&hessNz_, int *&hessIndRow_, int *&hessIndCol_, int *&hessIndLo_ ){
     int iBlock, count, colCountTotal, rowOffset, i, j;
     int nnz, nCols, nRows;
@@ -429,13 +429,11 @@ void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, d
     for (iBlock=0; iBlock<nBlocks; iBlock++){
         for (i=0; i<hess_[iBlock].m; i++){
             //Always count diagonal elements (regularization)
-            if (fabs(hess_[iBlock](i,i)) > eps || fabs(hess_[iBlock](i,i)) + regularizationFactor > eps)
-                nnz++;
+            //if (fabs(hess_[iBlock](i,i)) > eps || fabs(hess_[iBlock](i,i)) + regularizationFactor > eps)
+            nnz++;
 
-            for (j = i + 1; j < hess_[iBlock].m; j++){
-                if (fabs(hess_[iBlock]( i,j )) > eps)
-                    nnz += 2;
-            }
+            //for (j = i + 1; j < hess_[iBlock].m; j++){
+            for (j = 0; j < i; j++) nnz += 2*int(fabs(hess_[iBlock]( i,j )) > eps);
         }
     }
 
@@ -462,10 +460,10 @@ void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, d
             hessIndCol_[colCountTotal] = count;
 
             for (j = 0; j < nRows; j++){
-                //if (hess_[iBlock]( i,j ) > eps || -hess_[iBlock]( i,j ) > eps ){
-                if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                // if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                if (i == j || fabs(hess_[iBlock](i,j)) > eps){// || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){  
                     hessNz_[count] = hess_[iBlock](i, j);
-                    if (i == j) hessNz_[count] += regularizationFactor;
+                    //if (i == j) hessNz_[count] += regularizationFactor;
 
                     hessIndRow_[count] = j + rowOffset;
                     count++;
@@ -484,15 +482,15 @@ void convertHessian(double eps, SymMatrix *const hess_, int nBlocks, int nVar, d
         hessIndLo_[j] = i;
     }
 
-    if( count != nnz ){
-         std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
-    }
+    if (count != nnz) throw std::runtime_error("Error in convertHessian: " + std::to_string(count) + " elements processed, should be " + std::to_string(nnz) + " elements!\n");
+    //      std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
+    // }
 }
 
 
 
 
-void convertHessian_noalloc(SymMatrix *const hess, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian_noalloc(SymMatrix const* hess, int nBlocks, int nVar,// double regularizationFactor,
                                             double *hessNz){
     int bsize, bstart = 0, ind = 0;
     //Iterate over hessian blocks
@@ -510,7 +508,7 @@ void convertHessian_noalloc(SymMatrix *const hess, int nBlocks, int nVar, double
             for (int i = 0; i < hess[h].m; i++){
                 hessNz[ind] = hess[h](i, j);
                 //NEW
-                if (i == j) hessNz[ind] += regularizationFactor;
+                //if (i == j) hessNz[ind] += regularizationFactor;
 
                 ++ind;
             }
@@ -526,7 +524,7 @@ void convertHessian_noalloc(SymMatrix *const hess, int nBlocks, int nVar, double
 }
 
 
-void convertHessian_noalloc(double eps, SymMatrix *const hess_, int nBlocks, int nVar, double regularizationFactor,
+void convertHessian_noalloc(double eps, SymMatrix const* hess_, int nBlocks, int nVar,// double regularizationFactor,
                              double *hessNz_, int *hessIndRow_, int *hessIndCol_, int *hessIndLo_ ){
     int iBlock, count, colCountTotal, rowOffset, i, j;
     int nCols, nRows;
@@ -544,10 +542,10 @@ void convertHessian_noalloc(double eps, SymMatrix *const hess_, int nBlocks, int
             hessIndCol_[colCountTotal] = count;
 
             for (j = 0; j < nRows; j++){
-                //if (hess_[iBlock]( i,j ) > eps || -hess_[iBlock]( i,j ) > eps ){
-                if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                // if (fabs(hess_[iBlock](i,j)) > eps || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
+                if (i == j || fabs(hess_[iBlock](i,j)) > eps){// || (i == j && fabs(hess_[iBlock](i,j)) + regularizationFactor > eps)){
                     hessNz_[count] = hess_[iBlock](i, j);
-                    if (i == j) hessNz_[count] += regularizationFactor;
+                    //if (i == j) hessNz_[count] += regularizationFactor;
 
                     hessIndRow_[count] = j + rowOffset;
                     count++;

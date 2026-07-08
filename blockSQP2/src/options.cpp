@@ -58,7 +58,7 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
     if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
     
-    if (problem->cond != nullptr && !block_hess)
+    if (problem->condenser != nullptr && !block_hess)
         throw ParameterError("Condenser passed, but block updates not enabled");
     
     if (block_hess == 2)
@@ -67,6 +67,7 @@ void SQPoptions::optionsConsistency(Problemspec *problem){
         throw ParameterError("Using exact Hessian for now requires passing blockIdx to Problemspec and enabling block updates through SQPoptions");
     
     optionsConsistency();
+    complete_QP_options(problem);
 }
 
 void SQPoptions::optionsConsistency(){
@@ -90,18 +91,6 @@ void SQPoptions::optionsConsistency(){
     
     if (last_block_approx != Hessians::last_block_default && last_block_approx != Hessians::exact && last_block_approx != Hessians::pos_def_exact)
         throw ParameterError("last_block_approx can only be last_block_default, exact or pos_def_exact");
-    
-    //Currently, indefinite Hessian approximations are only supported by qpOASES with Schur-complement approach
-    if (is_indefinite(hess_approx) || is_indefinite(last_block_approx)){
-        if (qpsol == QPsolvers::qpOASES){
-            if (qpsol_options == nullptr || static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
-                if (!sparse) throw ParameterError("Indefinite Hessians not supported for dense qpOASES (derived from SQPoptions::sparse = 0, as no or default qpOASES_options::sparsityLevel was given)");
-            }
-            else if (static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel != 2)
-                throw ParameterError("Indefinite Hessians only supported for qpOASES with Schur-complement approach (qpOASES_options::sparsityLevel = 2)");
-        }
-        else throw ParameterError("Only qpOASES with option sparsityLevel = 2 currently supports indefinite Hessians");
-    }
     
     if (par_QPs){
         #ifdef BSQP_PAR_QPS_DISABLED
@@ -137,11 +126,9 @@ void SQPoptions::optionsConsistency(){
     if (lim_mem && mem_size > 200){
         std::cout << "WARNING: Large value of mem_size (> 200). Performance may be impeded\n";
     }   
-    
-    complete_QP_options();
 }
 
-void SQPoptions::complete_QP_options(){
+void SQPoptions::complete_QP_options(Problemspec *problem){
     //Create default options if no options have been passed
     if (qpsol_options == nullptr){
         if (qpsol == QPsolvers::qpOASES) held_qpsol_options = std::make_unique<qpOASES_options>();
@@ -156,13 +143,9 @@ void SQPoptions::complete_QP_options(){
     if (qpsol_options->inf == std::numeric_limits<double>::infinity()) qpsol_options->inf = inf;  
     if (qpsol_options->max_QP_secs == 10.) qpsol_options->max_QP_secs = max_QP_secs;
     if (qpsol_options->max_QP_it == std::numeric_limits<int>::max()) qpsol_options->max_QP_it = max_QP_it;
-
-    //Infer solver specific options from SQPoptions
-    //  Infer qpOASES sparsityLevel
-    if (qpsol == QPsolvers::qpOASES && static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel == -1){
-        if (!sparse) static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 0;
-        else         static_cast<qpOASES_options*>(qpsol_options)->sparsityLevel = 2;
-    }
+    if (qpsol_options->reg_factor == 0.0) qpsol_options->reg_factor = reg_factor; 
+    
+    qpsol_options->condensed = (problem->condenser != nullptr);
 }
 
 
@@ -171,11 +154,13 @@ QPsolver_options::QPsolver_options(QPsolvers SOL): sol(SOL){
     inf = std::numeric_limits<double>::infinity();
     max_QP_secs = 10.;
     max_QP_it = std::numeric_limits<int>::max();
+    condensed = false;
+    reg_factor = 0.0;
 }
 QPsolver_options::~QPsolver_options(){}
 
 qpOASES_options::qpOASES_options(): QPsolver_options(QPsolvers::qpOASES){
-    sparsityLevel = -1;
+    matrixSparsity = -1;
     printLevel = 0;
     terminationTolerance = 5.0e6*2.221e-16;
 }

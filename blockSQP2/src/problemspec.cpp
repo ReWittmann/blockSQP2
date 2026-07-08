@@ -75,7 +75,7 @@ scaled_Problemspec::scaled_Problemspec(Problemspec *UNSCprob): unscaled_prob(UNS
     blockIdx = unscaled_prob->blockIdx;
     vblocks = unscaled_prob->vblocks;
     n_vblocks = unscaled_prob->n_vblocks;
-    cond = unscaled_prob->cond;
+    condenser = unscaled_prob->condenser;
     
     for (int i = 0; i < nVar; i++){
         scaling_factors[i] = 1.0;

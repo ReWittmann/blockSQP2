@@ -151,8 +151,8 @@ CDLEXP void *create_qpOASES_options(){
     return static_cast<void *>(new qpOASES_options());
 }
 
-CDLEXP void qpOASES_options_set_sparsityLevel(void *opts, int val){
-    static_cast<qpOASES_options *>(opts)->sparsityLevel = val;
+CDLEXP void qpOASES_options_set_matrixSparsity(void *opts, int val){
+    static_cast<qpOASES_options *>(opts)->matrixSparsity = val;
 }
 
 CDLEXP void qpOASES_options_set_printLevel(void *opts, int val){
@@ -390,21 +390,25 @@ CDLEXP void SQPoptions_set_indef_delay(void *ptr, int val){
     castOPT(ptr)->indef_delay = val;
 }
 
-CDLEXP void SQPoptions_set_test_opt_1(void *ptr, char val){
-    castOPT(ptr)->test_opt_1 = bool(val);
+CDLEXP void SQPoptions_set_test_opt_enable_conv_downscaling(void *ptr, char val){
+    castOPT(ptr)->test_opt_enable_conv_downscaling = bool(val);
 }
 
-CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
-    castOPT(ptr)->test_opt_2 = bool(val);
-}
+// CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
+//     castOPT(ptr)->test_opt_2 = bool(val);
+// }
 
-CDLEXP void SQPoptions_set_test_val_1(void *ptr, double val){
-    castOPT(ptr)->test_val_1 = double(val);
-}
+// CDLEXP void SQPoptions_set_test_opt_3(void *ptr, char val){
+//     castOPT(ptr)->test_opt_3 = bool(val);
+// }
 
-CDLEXP void SQPoptions_set_test_val_2(void *ptr, double val){
-    castOPT(ptr)->test_val_2 = double(val);
-}
+// CDLEXP void SQPoptions_set_test_val_1(void *ptr, double val){
+//     castOPT(ptr)->test_val_1 = double(val);
+// }
+
+// CDLEXP void SQPoptions_set_test_val_2(void *ptr, double val){
+//     castOPT(ptr)->test_val_2 = double(val);
+// }
 
 // SQPstats
 CDLEXP void *create_SQPstats(char *pathstr){
@@ -500,8 +504,8 @@ CDLEXP void Problemspec_pass_vblocks(void *ptr, void *arg_vblocks, int arg_n_vbl
     castCP(ptr)->vblocks = static_cast<vblock *>(arg_vblocks);
 }
 
-CDLEXP void Problemspec_set_cond(void *ptr, void *Condenser_cond){
-    castCP(ptr)->cond = static_cast<Condenser*>(Condenser_cond);
+CDLEXP void Problemspec_set_condenser(void *ptr, void *Condenser_obj){
+    castCP(ptr)->condenser = static_cast<Condenser*>(Condenser_obj);
 }
 
 CDLEXP void Problemspec_set_closure(void *ptr, void *arg_closure){
@@ -638,11 +642,11 @@ CDLEXP void delete_target_array(void *ptr){
     delete[] static_cast<condensing_target *>(ptr);
 }
 
-CDLEXP void target_array_set(void *ptr, int index, int n_stages, int first_free, int vblock_end, int first_cond, int cblock_end){
+CDLEXP void target_array_set(void *ptr, int index, int n_stages, int vblock_start, int vblock_end, int cblock_start, int cblock_end){
     static_cast<condensing_target *>(ptr)[index].n_stages = n_stages;
-    static_cast<condensing_target *>(ptr)[index].first_free = first_free;
+    static_cast<condensing_target *>(ptr)[index].vblock_start = vblock_start;
     static_cast<condensing_target *>(ptr)[index].vblock_end = vblock_end;
-    static_cast<condensing_target *>(ptr)[index].first_cond = first_cond;
+    static_cast<condensing_target *>(ptr)[index].cblock_start = cblock_start;
     static_cast<condensing_target *>(ptr)[index].cblock_end = cblock_end;
 }
 
@@ -724,8 +728,21 @@ CDLEXP int Condenser_condensed_nBlocks(void *ptr){
 }
 
 CDLEXP int *Condenser_condensed_hsizes(void *ptr){
-    return castCND(ptr)->condensed_hess_block_sizes;
+    return castCND(ptr)->condensed_hess_block_sizes.get();
 }
+
+
+CDLEXP void *create_PartialCondenser(void *arg_vblocks, int N_vblocks, void *arg_cblocks, int N_cblocks, void *arg_hsizes, int N_hsizes, void *arg_targets, int N_targets, int n_split, int arg_dep_bounds){
+    try{
+        return static_cast<void*>(new PartialCondenser(static_cast<vblock *>(arg_vblocks), N_vblocks, static_cast<cblock *>(arg_cblocks), N_cblocks, static_cast<int *>(arg_hsizes), N_hsizes, static_cast<condensing_target *>(arg_targets), N_targets, n_split, arg_dep_bounds));
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return nullptr;
+}
+
 
 // Matrix
 CDLEXP void *create_Matrix(int m, int n){

@@ -42,8 +42,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
     HOLD = [vBlocks, cBlocks, hBlocks, targets]
     
-    cond = blockSQP2.Condenser(vBlocks, cBlocks, hBlocks, targets)
-    
+    cond = blockSQP2.PartialCondenser(vBlocks, cBlocks, hBlocks, targets, 4, 2 - 2*OCprob.state_bounds_implicit)
     
     prob = blockSQP2.Problemspec()
     prob.x_start = OCprob.start_point
@@ -77,7 +76,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions,
         prob, cond, HOLD = create_prob_cond(OCprob)
         prob.x_start = start_it
         if COND:
-            prob.cond = cond
+            prob.condenser = cond
         
         stats = blockSQP2.SQPstats("./solver_outputs")        
         t0 = time.monotonic()

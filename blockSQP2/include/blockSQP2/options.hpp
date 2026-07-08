@@ -127,7 +127,7 @@ class SQPoptions{
     bool enable_QP_cancellation = true;
     
     //Scaling
-    int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance 2: FUTURE
+    int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance
     double scaling_Theta_min = 0.1;
     double scaling_Theta_max = 10.0;
     
@@ -169,10 +169,12 @@ class SQPoptions{
     //double dep_bound_tolerance = 1e-7;      ///< Maximum dependent variable bound violation before adding to QP
     
     //For experimental purposes
-    bool test_opt_1 = false;
-    bool test_opt_2 = false;
-    double test_val_1 = 2.0;
-    double test_val_2 = 0.5;
+    bool test_opt_enable_conv_downscaling = true;
+    
+    // bool test_opt_2 = false;
+    // bool test_opt_3 = false;
+    // double test_val_1 = 2.0;
+    // double test_val_2 = 0.5;
     
     private:
     //Holder if no qpsol_options were provided
@@ -188,7 +190,7 @@ class SQPoptions{
     //Checks for inconsistent options. Throw ParameterError if inconsistent options are detected. Calls complete_QP_options.
     void optionsConsistency();
     //Set default QP solver options and copy over some options from the SQP options. Assumes options are consistent. Automatically called by optionsConsistency
-    void complete_QP_options();
+    void complete_QP_options(Problemspec *problem);
 };
 
 
@@ -200,7 +202,10 @@ class QPsolver_options{
     double inf;
     double max_QP_secs;
     int max_QP_it;
-
+    
+    double reg_factor;
+    bool condensed;
+    
     protected:
     QPsolver_options(QPsolvers SOL);
     public:
@@ -209,8 +214,9 @@ class QPsolver_options{
 
 class qpOASES_options : public QPsolver_options{
     public:
-    int sparsityLevel;                   ///< Method used by qpOASES: -1 (default): Infer from SQPoptions, 0 - qpOASES::SQProblem (dense), 1 - qpOASES::SQProblem (sparse), 2 - schur.
-
+    // int sparsityLevel;                   ///< Method used by qpOASES: -1 (default): Infer from SQPoptions, 0 - qpOASES::SQProblem (dense), 1 - qpOASES::SQProblem (sparse), 2 - schur.
+    int matrixSparsity;            // -1 (default): Choose automatically, 0: Dense matrices and factorizations, 1: Sparse matrices and factorizations
+    
     //See qpOASES documentation
     int printLevel;                 ///< print level of qpOASES sub-qp solver, 0 = PL_NONE, 1 = PL_LOW, 2 = PL_MEDIUM, 3 = PL_HIGH
     double terminationTolerance;    ///< Termination tolerance of qp-subproblem solver qpOASES

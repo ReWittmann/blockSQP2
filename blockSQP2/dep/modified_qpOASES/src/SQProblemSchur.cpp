@@ -77,15 +77,15 @@ BEGIN_NAMESPACE_QPOASES
 SQProblemSchur::SQProblemSchur( ) : SQProblem( )
 {
 #ifdef SOLVER_MA57
-	sparseSolver = new Ma57SparseSolver();
+	linSol = new Ma57SparseSolver();
 #elif defined SOLVER_MA27
-	sparseSolver = new Ma27SparseSolver();
+	linSol = new Ma27SparseSolver();
 #elif defined SOLVER_MUMPS
-	sparseSolver = new MumpsSparseSolver();
+	linSol = new MumpsSparseSolver();
 #elif defined SOLVER_SPRAL
-	sparseSolver = new SpralSparseSolver();
+	linSol = new SpralSparseSolver();
 #elif defined SOLVER_NONE
-    sparseSolver = new DummySparseSolver();
+    linSol = new DummySparseSolver();
 #endif
 
 	nSmax = 0;
@@ -109,25 +109,60 @@ SQProblemSchur::SQProblemSchur( ) : SQProblem( )
 /*
  *	Q P r o b l e m
  */
-SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, int_t maxSchurUpdates, void *arg_fptr_dmumps_c) 
-	: SQProblem( _nV,_nC,_hessianType, BT_FALSE )
+SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, int_t maxSchurUpdates, LinearSolverType _linSolType, void *arg_fptr_dmumps_c) 
+	: SQProblem( _nV,_nC,_hessianType, BT_FALSE ), linSol(nullptr)
 {
 	/* The interface to the sparse linear solver.  In the long run,
 	   different linear solvers might be optionally chosen. */
-#ifdef SOLVER_MA57
-	sparseSolver = new Ma57SparseSolver();
-#elif defined SOLVER_MA27
-	sparseSolver = new Ma27SparseSolver();
-#elif defined SOLVER_MUMPS
-	if (arg_fptr_dmumps_c == nullptr)
-		sparseSolver = new MumpsSparseSolver();
-	else
-		sparseSolver = new MumpsSparseSolver_2(arg_fptr_dmumps_c);
-#elif defined SOLVER_SPRAL
-	sparseSolver = new SpralSparseSolver();
-#elif defined SOLVER_NONE
-	sparseSolver = new DummySparseSolver();
-#endif
+	switch (_linSolType){
+		case LST_LAPACK: linSol = new LapackDenseSolver(); break;
+	#ifdef SOLVER_MA57
+		case LST_MA57: linSol = new Ma57SparseSolver(); break;
+	#elif defined SOLVER_MA27
+		case LST_MA27: linSol = new Ma27SparseSolver(); break;
+	#elif defined SOLVER_MUMPS
+		case LST_MUMPS: linSol = arg_fptr_dmumps_c == nullptr ? static_cast<LinearSolver*>(new MumpsSparseSolver()) : static_cast<LinearSolver*>(new MumpsSparseSolver_2(arg_fptr_dmumps_c)); break;
+	#elif defined SOLVER_SPRAL
+		case LST_SPRAL: linSol = new SpralSparseSolver(); break;
+	#endif
+		case LST_NONE: linSol = new DummySparseSolver(); break;
+		case LST_ANY:
+			#ifdef SOLVER_MA57
+				linSol = new Ma57SparseSolver(); break;
+			#elif defined SOLVER_MA27
+				linSol = new Ma27SparseSolver(); break;
+			#elif defined SOLVER_MUMPS
+				linSol = arg_fptr_dmumps_c == nullptr ? static_cast<LinearSolver*>(new MumpsSparseSolver()) : static_cast<LinearSolver*>(new MumpsSparseSolver_2(arg_fptr_dmumps_c)); break;
+			#elif defined SOLVER_SPRAL
+				linSol = new SpralSparseSolver(); break;
+			#endif
+			linSol = new LapackDenseSolver(); break;
+		default:
+			printf("WARNING: The selected linear solver for SQProblemSchur was not available. Setting DummySparseSolver. The QP solution will likely fail.\n");
+			linSol = new DummySparseSolver();
+	}
+// if (_linSolType == LST_LAPACK) linSol = new LapackDenseSolver();
+// #ifdef SOLVER_MA57
+// 	if (_linSolType == LST_MA57) linSol = new Ma57SparseSolver();
+// #elif defined SOLVER_MA27
+// 	if (_linSolType == LST_MA27) linSol = new Ma27SparseSolver();
+// #elif defined SOLVER_MUMPS
+// 	if (_linSolType == LST_MUMPS){
+// 		if (arg_fptr_dmumps_c == nullptr)
+// 			linSol = new MumpsSparseSolver();
+// 		else
+// 			linSol = new MumpsSparseSolver_2(arg_fptr_dmumps_c);
+// 	}
+// #elif defined SOLVER_SPRAL
+// 	if (_linSolType == LST_SPRAL) linSol = new SpralSparseSolver();
+// #elif defined SOLVER_NONE
+// 	linSol = new DummySparseSolver();
+// #endif
+
+// 	if (linSol == nullptr){
+// 		linSol = new DummySparseSolver();
+// 		printf("WARNING: The selected linear solver is not available. Setting DummySparseSolver. Expect the program to error soon.\n");
+// 	}
 
 	nSmax = maxSchurUpdates;
 	nS = -1;
@@ -169,13 +204,13 @@ SQProblemSchur::SQProblemSchur( int_t _nV, int_t _nC, HessianType _hessianType, 
 SQProblemSchur::SQProblemSchur( const SQProblemSchur& rhs ) : SQProblem( rhs )
 {
 #ifdef SOLVER_MA57
-	sparseSolver = new Ma57SparseSolver();
+	linSol = new Ma57SparseSolver();
 #elif defined SOLVER_MA27
-	sparseSolver = new Ma27SparseSolver();
+	linSol = new Ma27SparseSolver();
 #elif defined SOLVER_MUMPS
-	sparseSolver = new MumpsSparseSolver();
+	linSol = new MumpsSparseSolver();
 #elif defined SOLVER_NONE
-	sparseSolver = new DummySparseSolver();
+	linSol = new DummySparseSolver();
 #endif
 	copy( rhs );
 }
@@ -186,7 +221,7 @@ SQProblemSchur::SQProblemSchur( const SQProblemSchur& rhs ) : SQProblem( rhs )
  */
 SQProblemSchur::~SQProblemSchur( )
 {
-	delete sparseSolver;
+	delete linSol;
 
 	clear( );
 }
@@ -216,7 +251,7 @@ returnValue SQProblemSchur::reset( )
 	if ( SQProblem::reset( ) != SUCCESSFUL_RETURN )
 		return THROWERROR( RET_RESET_FAILED );
 
-	sparseSolver->reset();
+	linSol->reset();
 	nS = -1;
 
 	return SUCCESSFUL_RETURN;
@@ -259,7 +294,7 @@ returnValue SQProblemSchur::copy(	const SQProblemSchur& rhs
 {
 	int_t i, j, length;
 
-	*sparseSolver = *(rhs.sparseSolver);
+	*linSol = *(rhs.linSol);
 
 	nS = rhs.nS;
 	nSmax = rhs.nSmax;
@@ -423,7 +458,7 @@ returnValue SQProblemSchur::setupAuxiliaryQP(	SymmetricMatrix *H_new,
 
 	/* 1) Check if current active set is linearly independent and has the correct inertia */
 	returnvalue = resetSchurComplement( BT_FALSE );
-	int_t neig = sparseSolver->getNegativeEigenvalues( );
+	int_t neig = linSol->getNegativeEigenvalues( );
 
 	if ( returnvalue == SUCCESSFUL_RETURN && neig == getNAC( ) )
 	{
@@ -616,7 +651,7 @@ returnValue SQProblemSchur::setupAuxiliaryWorkingSet(	const Bounds* const auxili
 		return THROWERROR( RET_SETUP_WORKINGSET_FAILED );
 
 	/* III.2.) Check if inertia is correct. If so, we now have a linearly independent working set with a pos def reduced Hessian */
-	int_t neig = sparseSolver->getNegativeEigenvalues( );
+	int_t neig = linSol->getNegativeEigenvalues( );
 	if ( neig == getNAC( ) )
 	{
 		/* We now have a linearly independent working set with a pos def reduced Hessian.
@@ -1743,7 +1778,7 @@ returnValue SQProblemSchur::removeConstraint(	int_t number,
 		{/* Case 3: S was reset. */
 
 			/* Check inertia of new factorization given by the sparse solver: must be ( nFR, nAC, 0 ) */
-			int_t neig = sparseSolver->getNegativeEigenvalues( );
+			int_t neig = linSol->getNegativeEigenvalues( );
 			if( neig > getNAC( ) ) // Wrong inertia!
 			{
 				/* Flip bounds and update Schur complement */
@@ -2111,7 +2146,7 @@ returnValue SQProblemSchur::removeBound(	int_t number,
 		{/* Case 3: S was reset. */
 
 			/* Check inertia of new factorization given by the sparse solver: must be ( nFR, nAC, 0 ) */
-			int_t neig = sparseSolver->getNegativeEigenvalues( );
+			int_t neig = linSol->getNegativeEigenvalues( );
 			if( neig > getNAC( ) ) // Wrong inertia, flip bounds!
 			{
 				/* Flip bounds and update Schur complement */
@@ -2661,14 +2696,14 @@ returnValue SQProblemSchur::stepCalcBacksolveSchur( int_t nFR, int_t nFX, int_t 
 
 	computeMTimes(-1.0, p, 1.0, rhs);
 
-	retval = sparseSolver->solve(dim, rhs, sol);
+	retval = linSol->solve(dim, rhs, sol);
 
     // for (int i = 0; i < dim; i++)
     //     printf("sol[%i] = %f\n", i, sol[i]);
 
 	if (retval != SUCCESSFUL_RETURN)
 	{
-		MyPrintf( "sparseSolver->solve (second time) failed.\n");
+		MyPrintf( "linSol->solve (second time) failed.\n");
 		return THROWERROR(RET_MATRIX_FACTORISATION_FAILED); // TODO: Different return code
 	}
 
@@ -2966,11 +3001,11 @@ returnValue SQProblemSchur::determineStepDirection2(	const real_t* const delta_g
 			if (retval != SUCCESSFUL_RETURN)
 				return retval;
 
-			retval = sparseSolver->solve(dim, rhs, sol);
+			retval = linSol->solve(dim, rhs, sol);
 
 			if (retval != SUCCESSFUL_RETURN)
 			{
-				MyPrintf( "sparseSolver->solve (first time) failed.\n");
+				MyPrintf( "linSol->solve (first time) failed.\n");
 				return THROWERROR(RET_MATRIX_FACTORISATION_FAILED); // TODO: Different return code
 			}
 
@@ -3002,7 +3037,6 @@ returnValue SQProblemSchur::determineStepDirection2(	const real_t* const delta_g
 			}
 
 		}
-
 		delete [] sol;
 		delete [] rhs;
 	}
@@ -3018,7 +3052,7 @@ returnValue SQProblemSchur::determineStepDirection2(	const real_t* const delta_g
 	return SUCCESSFUL_RETURN;
 }
 
-returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrection )
+returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrection, int_t idxRec )
 {
 	int_t j;
 	int_t nFR = getNFR( );
@@ -3107,8 +3141,8 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 	numNonzeros += numNonzerosA;
 
 	// Call the linear solver
-	sparseSolver->reset();
-	returnValue retval = sparseSolver->setMatrixData(dim, numNonzeros, irn, jcn, avals);
+	linSol->reset();
+	returnValue retval = linSol->setMatrixData(dim, numNonzeros, irn, jcn, avals);
 	delete [] jcn;
 	delete [] irn;
 	delete [] avals;
@@ -3117,14 +3151,14 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 		return THROWERROR(RET_NO_SPARSE_SOLVER);
 
 	// Factorize the matrix for later backsolves
-	retval = sparseSolver->factorize();
+	retval = linSol->factorize();
 	numFactorizations++;
 
 	// If matrix is singular, add bounds/remove constraints according to zero pivots
-	if (retval == RET_KKT_MATRIX_SINGULAR)
+	if (retval == RET_KKT_MATRIX_SINGULAR && idxRec < 10)
 	{
 		if( repairSingularWorkingSet( ) == SUCCESSFUL_RETURN )
-			return resetSchurComplement( allowInertiaCorrection );
+			return resetSchurComplement( allowInertiaCorrection, idxRec + 1);
 		else
 			return RET_KKT_MATRIX_SINGULAR;
 	}
@@ -3132,7 +3166,7 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 	// If matrix has wrong inertia, add bounds until inertia is correct
 	if (retval == SUCCESSFUL_RETURN && allowInertiaCorrection)
 	{
-		int_t neig = sparseSolver->getNegativeEigenvalues( );
+		int_t neig = linSol->getNegativeEigenvalues( );
 		if( neig > getNAC( ) )
 		{
 			if ( options.printLevel == PL_HIGH )
@@ -3215,10 +3249,10 @@ returnValue SQProblemSchur::addToSchurComplement( int_t number, SchurUpdateType 
 	for ( i=0; i<numNonzerosM; i++ )
 		rhs[Mpos[i]] = Mvals[i];
 
-	returnValue retval = sparseSolver->solve(dim, rhs, sol);
+	returnValue retval = linSol->solve(dim, rhs, sol);
 	if (retval != SUCCESSFUL_RETURN)
 	{
-		MyPrintf( "sparseSolver->solve in SQProblemSchur::addToSchurComplement failed.\n");
+		MyPrintf( "linSol->solve in SQProblemSchur::addToSchurComplement failed.\n");
 		return THROWERROR(RET_MATRIX_FACTORISATION_FAILED); // TODO: Different return code
 	}
 
@@ -3475,7 +3509,7 @@ returnValue SQProblemSchur::correctInertia( )
 	 * has been added, i.e. when a bound has flipped after refactorization */
 	if( nS != 0 && nS != 1 )
 		return THROWERROR( RET_INERTIA_CORRECTION_FAILED );
-	neig = sparseSolver->getNegativeEigenvalues( );
+	neig = linSol->getNegativeEigenvalues( );
 
 	/* if a bound flipped, check if it did in fact remove a negative eigenvalue */
 	if( nS == 1 && detS < 0 )
@@ -3530,7 +3564,7 @@ returnValue SQProblemSchur::correctInertia( )
 
 		/* Case 1: Schur complement has been reset, check inertia of new factorization */
 		if( nS == 0 )
-			neig = sparseSolver->getNegativeEigenvalues( );
+			neig = linSol->getNegativeEigenvalues( );
 		/* Case 2: Schur complement has grown, check if determinant changed sign */
 		else if( oldDetS * detS < 0 )
 			neig--;
@@ -3563,7 +3597,7 @@ returnValue SQProblemSchur::repairSingularWorkingSet( )
 {
 	int_t k, number;
 	SubjectToStatus B_status;
-	int_t rank = sparseSolver->getRank( );
+	int_t rank = linSol->getRank( );
 	int_t nFR = getNFR( );
 	int_t defect = nFR + getNAC( ) - rank;
 
@@ -3577,7 +3611,7 @@ returnValue SQProblemSchur::repairSingularWorkingSet( )
 
 	/* Determine zero pivots */
 	int_t *zeroPivots = new int_t[defect];
-	sparseSolver->getZeroPivots( zeroPivots );
+	linSol->getZeroPivots( zeroPivots );
 
 	/* Determination of zero pivots not supported by linear solver */
 	if ( zeroPivots == 0 )

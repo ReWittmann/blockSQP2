@@ -1076,9 +1076,9 @@ py::class_<cblock_array>(m, "cblock_array")
 py::class_<blockSQP2::condensing_target>(m, "condensing_target")
     .def(py::init<int, int, int, int, int>())
     .def_readwrite("n_stages", &blockSQP2::condensing_target::n_stages)
-    .def_readwrite("first_free", &blockSQP2::condensing_target::first_free)
+    .def_readwrite("vblock_start", &blockSQP2::condensing_target::vblock_start)
     .def_readwrite("vblock_end", &blockSQP2::condensing_target::vblock_end)
-    .def_readwrite("first_cond", &blockSQP2::condensing_target::first_cond)
+    .def_readwrite("cblock_start", &blockSQP2::condensing_target::cblock_start)
     .def_readwrite("cblock_end", &blockSQP2::condensing_target::cblock_end);
 
 py::class_<condensing_targets>(m, "condensing_targets")

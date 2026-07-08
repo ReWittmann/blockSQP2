@@ -562,7 +562,7 @@ returnValue SolutionAnalysis::checkCurvatureOnStronglyActiveConstraints( SQProbl
 
   // Do a new factorization and check the inertia
   ret = qp->resetSchurComplement( BT_FALSE );
-  neig = qp->sparseSolver->getNegativeEigenvalues( );
+  neig = qp->linSol->getNegativeEigenvalues( );
   if( ret == SUCCESSFUL_RETURN && neig != nAC )
     ret = RET_INERTIA_CORRECTION_FAILED;
 

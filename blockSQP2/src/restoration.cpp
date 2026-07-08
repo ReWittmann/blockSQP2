@@ -382,7 +382,7 @@ void RestorationProblem::recover_lambda(const Matrix &lambda_rest, Matrix &lambd
 
 TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, const Matrix &xi_Reference,
                                                  double param_rho, double param_zeta):
-        parent_cond(parent_Problem->cond), xi_ref(xi_Reference), rho(param_rho), zeta(param_zeta){
+        parent_cond(parent_Problem->condenser), xi_ref(xi_Reference), rho(param_rho), zeta(param_zeta){
     parent = parent_Problem;
     
     // Block structure: One additional block for every slack variable
@@ -427,13 +427,13 @@ TC_restoration_Problem::TC_restoration_Problem(Problemspec *parent_Problem, cons
     
     nnz = parent->nnz + parent_cond->num_true_cons;
     
-    cond = create_restoration_Condenser(parent_cond, parent_cond->add_dep_bounds);
-    vblocks = cond->vblocks;
+    condenser = create_restoration_Condenser(parent_cond, parent_cond->add_dep_bounds);
+    vblocks = condenser->vblocks;
 }
 
 TC_restoration_Problem::~TC_restoration_Problem(){
     delete[] blockIdx;
-    delete cond;
+    delete condenser;
 }
 
 
@@ -475,7 +475,7 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     //Create restoration Jacobian from B and C, adding slacks only for B:
     //[B I]
     //[C 0]
-    //Matrix rows may not be sorted according to B anc C, 
+    //Matrix rows may not be sorted according to B and C, 
     //so iterate over constraint blocks corresponding to B
     for (int i = 0; i < parent_cond->num_cblocks; i++){
         if (!parent_cond->cblocks[i].removed){
@@ -682,7 +682,7 @@ holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUND
 
 
 
-TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): parent(parent_Problem), parent_cond(parent_Problem->cond){
+TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): parent(parent_Problem), parent_cond(parent_Problem->condenser){
 
     // one slack variable for each true (not used for condensing) constraint
     nnz = parent->nnz + parent_cond->num_true_cons;
@@ -724,8 +724,8 @@ TC_feasibility_Problem::TC_feasibility_Problem(Problemspec *parent_Problem): par
         ub_con(i) = parent->ub_con(i);
     }
     
-    cond = create_restoration_Condenser(parent_cond, parent_cond->add_dep_bounds);
-    vblocks = cond->vblocks;
+    condenser = create_restoration_Condenser(parent_cond, parent_cond->add_dep_bounds);
+    vblocks = condenser->vblocks;
 }
 
 
@@ -734,7 +734,7 @@ TC_feasibility_Problem::~TC_feasibility_Problem(){
     delete[] jac_orig_row;
     delete[] jac_orig_colind;
     delete[] blockIdx;
-    delete cond;
+    delete condenser;
 }
 
 

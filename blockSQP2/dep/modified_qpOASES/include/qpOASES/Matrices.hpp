@@ -242,7 +242,12 @@ class Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										) = 0;
-
+		
+		virtual returnValue addToDiagI( real_t alpha, int_t ind) = 0;
+		
+		virtual returnValue addToDiagIndices(real_t alpha, int *indices, int_t il) = 0;
+		
+		virtual real_t sum() = 0;
 		/** Allocates and creates dense matrix array in row major format.
 		 *
 		 *  Note: Calling function has to free allocated memory!
@@ -416,7 +421,14 @@ class DenseMatrix : public virtual Matrix
 				BooleanType only_lower_triangular = BT_FALSE /**< if true, only the lower triangular portion is returned.  This can only be true for symmetric matrices and if irows==jcols. */
 				) const;
 
-
+		virtual returnValue getDenseSubmatrix(
+				int_t irowsLength,
+				const int_t* const irowsNumber,
+				int_t icolsLength,
+				const int_t* const icolsNumber,
+				real_t *avals
+		);
+		
 		/** Evaluate Y=alpha*A*X + beta*Y.
 		 *  \return SUCCESSFUL_RETURN. */
 		virtual returnValue times(	int_t xN,				/**< Number of vectors to multiply. */
@@ -471,8 +483,9 @@ class DenseMatrix : public virtual Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										);
-
-
+		virtual returnValue addToDiagI( real_t alpha, int_t ind);
+		virtual returnValue addToDiagIndices(real_t alpha, int *indices, int_t il);
+		virtual real_t sum();
 		/** Allocates and creates dense matrix array in row major format.
 		 *
 		 *  Note: Calling function has to free allocated memory!
@@ -706,7 +719,9 @@ class SparseMatrix : public virtual Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										);
-
+		virtual returnValue addToDiagI( real_t alpha, int_t ind);
+		virtual returnValue addToDiagIndices(real_t alpha, int *indices, int_t il);
+		virtual real_t sum();
 		/** Create jd field from ir and jc.
 		 *  \return Pointer to jd. */
 		sparse_int_t* createDiagInfo();
@@ -841,7 +856,7 @@ class SparseMatrixRow : public virtual Matrix
 				real_t* avals,					/**< Numerical values of the entries. */
 				BooleanType only_lower_triangular = BT_FALSE /**< if true, only the lower triangular portion is returned.  This can only be true for symmetric matrices and if irows==jcols. */
 				) const;
-
+		
 		/** Evaluate Y=alpha*A*X + beta*Y. */
 		virtual returnValue times(	int_t xN,				/**< Number of vectors to multiply. */
 									real_t alpha,			/**< Scalar factor for matrix vector product. */
@@ -892,7 +907,10 @@ class SparseMatrixRow : public virtual Matrix
 		 			RET_NO_DIAGONAL_AVAILABLE */
 		virtual returnValue addToDiag(	real_t alpha		/**< Diagonal offset. */
 										);
-
+		virtual returnValue addToDiagI(	real_t alpha, int_t ind
+								);
+		virtual returnValue addToDiagIndices(real_t alpha, int *indices, int_t il);
+		virtual real_t sum();
 		/** Create jd field from ir and jc.
 		 *  \return Pointer to jd. */
 		sparse_int_t* createDiagInfo();

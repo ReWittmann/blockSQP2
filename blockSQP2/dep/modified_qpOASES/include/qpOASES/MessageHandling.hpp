@@ -52,7 +52,6 @@
 
 #include <qpOASES/Constants.hpp>
 
-
 BEGIN_NAMESPACE_QPOASES
 
 

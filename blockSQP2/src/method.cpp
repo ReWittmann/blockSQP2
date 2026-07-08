@@ -115,8 +115,8 @@ SQPmethod::~SQPmethod(){}
 
 bound_correction_method::bound_correction_method(Problemspec *problem, SQPoptions *parameters, SQPstats *statistics):
     SQPmethod(problem, parameters, statistics){
-        if (prob->cond == nullptr) throw std::invalid_argument("bound_correction_method invoked for problem with no condenser!");
-        if (prob->cond->add_dep_bounds > 0) throw std::invalid_argument("bound_correction_method: Condenser adds dependent variable bounds!");
+        if (prob->condenser == nullptr) throw std::invalid_argument("bound_correction_method invoked for problem with no condenser!");
+        if (prob->condenser->add_dep_bounds > 0) throw std::invalid_argument("bound_correction_method: Condenser adds dependent variable bounds!");
         //Note: The dimensions of rest_xi, rest_lambda and rest_lambdaQP are set larger than necessary by base class.
         //      Should not cause problems, so leave them for now
     }

@@ -154,6 +154,8 @@ class OCProblem:
     lbx : list #lower state bound
     ubx : list #upper state bound
     
+    state_bounds_implicit : bool
+    
     #Integrator data
     integration_method : str
     parallel : bool
@@ -219,6 +221,7 @@ class OCProblem:
         
         self.ntS = nt
         self.ntR = refine
+        self.state_bounds_implicit = False
         
         self.build_problem()
         
@@ -776,6 +779,7 @@ class Lotka_Volterra_Fishing(OCProblem):
         self.set_OCP_data(2,0,1,1,[0,0],[np.inf, np.inf],[],[],[0],[1])
         self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init'])
+        self.state_bounds_implicit = True
         
         x = cs.MX.sym('x', 2)
         w = cs.MX.sym('w', 1)
@@ -836,6 +840,7 @@ class Lotka_Volterra_Fishing_MAYER(OCProblem):
         self.set_OCP_data(3,0,1,0,[0,0,-np.inf],[np.inf, np.inf, np.inf],[],[],[0],[1])
         self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init']+[0])
+        self.state_bounds_implicit = True
         
         x = cs.MX.sym('x', 3)
         w = cs.MX.sym('w', 1)
@@ -897,6 +902,7 @@ class Lotka_Volterra_multimode(OCProblem):
         t0, tf, c01, c02, c03, c11, c12, c13 = (self.model_params[key] for key in ['t0', 'tf', 'c01', 'c02', 'c03', 'c11', 'c12', 'c13'])
         self.fix_initial_value([0.5,0.7])
         self.fix_time_horizon(t0,tf)
+        self.state_bounds_implicit = True
         
         x = cs.MX.sym('x',2)
         x0,x1 = cs.vertsplit(x)
@@ -1242,6 +1248,7 @@ class Batch_Reactor(OCProblem):
     default_params = {}
     def build_problem(self):
         self.set_OCP_data(2, 0, 1, 0, [-np.inf,-np.inf], [np.inf,np.inf], [], [], [298],[398])
+        self.state_bounds_implicit = True
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
@@ -1530,6 +1537,7 @@ class Catalyst_Mixing(OCProblem):
         self.set_OCP_data(2,0,1,0,[-np.inf,-np.inf],[np.inf,np.inf],[],[],[0.],[1.])
         self.fix_time_horizon(0,1)
         self.fix_initial_value([1.,0.])
+        self.state_bounds_implicit = True
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
@@ -1585,6 +1593,7 @@ class Cushioned_Oscillation(OCProblem):
     def build_problem(self):
         m,c,x0,v0,umm = (self.model_params[key] for key in ['m', 'c', 'x0', 'v0', 'umm'])
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf], [np.inf,np.inf], [8/self.ntS],[20/self.ntS], [-umm], [umm])
+        self.state_bounds_implicit = True
         
         X = cs.MX.sym('X',2)
         x,v = cs.vertsplit(X)
@@ -1646,6 +1655,7 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
     def build_problem(self):
         m,c,x0,v0,umm,TSCALE = (self.model_params[key] for key in ['m', 'c', 'x0', 'v0', 'umm', 'TSCALE'])
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf], [np.inf,np.inf], [8/self.ntS * TSCALE],[20/self.ntS * TSCALE], [-umm], [umm])
+        self.state_bounds_implicit = True
         
         X = cs.MX.sym('X',2)
         x,v = cs.vertsplit(X)
@@ -2677,6 +2687,7 @@ class Three_Tank_Multimode(OCProblem):
         self.set_OCP_data(3,0,3,1,[0.,0.,0.], [np.inf,np.inf,np.inf], [],[], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0, self.model_params['T'])
         self.fix_initial_value([2.,2.,2.])
+        self.state_bounds_implicit = True
         
         c1, c2, c3, k1, k2, k3, k4 = (self.model_params[key] for key in ['c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4'])
         
@@ -3179,6 +3190,7 @@ class Lotka_OED(OCProblem):
         tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
+        self.state_bounds_implicit = True
         
         S = cs.MX.sym('S', 9)
         x1, x2, G11, G12, G21, G22, F11, F12, F22 = cs.vertsplit(S)
@@ -3493,17 +3505,17 @@ class Batch_Distillation(OCProblem):
                       }
     # tscale = 1e1 #1e2
     # uscale = 1.0 #1.0
-    # M0scale = 1e-2
-    # MDscale = 1e-2
-    # xDscale = 1e2
+    M0scale = 1e-2
+    MDscale = 1e-2
+    xDscale = 1e2
     # xCscale = 2.0
     # x0scale = 2.0
     
     tscale = 1.0
     uscale = 1.0
-    M0scale = 1.0
-    MDscale = 1.0
-    xDscale = 1.0
+    # M0scale = 1.0
+    # MDscale = 1.0
+    # xDscale = 1.0
     xCscale = 1.0
     x0scale = 1.0
     

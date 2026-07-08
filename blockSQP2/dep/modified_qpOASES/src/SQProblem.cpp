@@ -118,12 +118,10 @@ returnValue SQProblem::hotstart(	SymmetricMatrix *H_new, const real_t* const g_n
 		starttime = getCPUtime( );
 	}
 
-
 	/* I) UPDATE QP MATRICES AND VECTORS */
 	if ( setupNewAuxiliaryQP( H_new,A_new,lb_new,ub_new,lbA_new,ubA_new ) != SUCCESSFUL_RETURN ) {
 		return THROWERROR( RET_SETUP_AUXILIARYQP_FAILED );
 	}
-
 
 	/* II) PERFORM USUAL HOMOTOPY */
 

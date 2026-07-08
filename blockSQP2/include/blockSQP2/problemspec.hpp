@@ -63,7 +63,7 @@ class Problemspec{
         int         n_vblocks = -1;                                     // number of distinct variable blocks of variables
         vblock      *vblocks = nullptr;                                 // variable blocks, containing structure information (free/dependent, ...)
         
-        Condenser   *cond = nullptr;                                      //Condenser for the QPs for this problem
+        Condenser   *condenser = nullptr;                                      //Condenser for the QPs for this problem
         
     public:
         Problemspec();

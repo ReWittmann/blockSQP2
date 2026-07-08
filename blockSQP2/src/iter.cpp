@@ -114,6 +114,8 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
         Bsize = blockIdx[iBlock+1] - blockIdx[iBlock];
         hess_conv[iBlock].Dimension(Bsize).Initialize(0.0);
     }
+    hess_conv_regF = 0.0;
+    
     //Initialize current Hessian pointer to first Hessian
     hess = hess1.get();
     
@@ -194,7 +196,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     n_scaleIt = 0;
     
     //Derived from parameters
-    modified_hess_regularizationFactor = param->reg_factor;
+    // modified_hess_regularizationFactor = param->reg_factor;
     
     cNormOpt_save = param->inf;
     cNormSOpt_save = param->inf;

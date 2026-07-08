@@ -14,6 +14,12 @@ project(CMakeblockSQP2
 set(CMAKE_CXX_STANDARD 20)
 enable_language(Fortran)	#For MUMPS linear solver
 
+# include(CheckIPOSupported)
+# check_ipo_supported(RESULT ipo_supported OUTPUT ipo_error)
+
+# if(ipo_supported)
+#     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+# endif()
 
 #Static linking to avoid having to copy dll(-path)s.
 if(WIN32)
@@ -74,7 +80,7 @@ FetchContent_MakeAvailable(SCIV_MUMPS_SUPERBUILD)
 set(qpOASES_MODDED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/blockSQP2/dep/modified_qpOASES)
 add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/Matrices.cpp          
-	${qpOASES_MODDED_DIR}/src/SparseSolver.cpp
+	${qpOASES_MODDED_DIR}/src/LinearSolver.cpp
 	${qpOASES_MODDED_DIR}/src/Bounds.cpp             
 	${qpOASES_MODDED_DIR}/src/MessageHandling.cpp   
 	${qpOASES_MODDED_DIR}/src/SQProblem.cpp
@@ -92,7 +98,7 @@ add_library(qpOASES STATIC
 	)
 
 #MUMPS LINEAR SOLVER
-target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE __NO_COPYRIGHT__)
+target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE __NO_COPYRIGHT__ __SUPPRESSANYOUTPUT__)
 target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS LAPACK::LAPACK BLAS::BLAS) #
 IF(UNIX)
 	target_compile_definitions(qpOASES PRIVATE LINUX)
@@ -413,6 +419,12 @@ set_target_properties(example1
 add_executable(example1_sparse blockSQP2/examples/example1_sparse.cpp)
 target_link_libraries(example1_sparse blockSQP2)
 set_target_properties(example1_sparse
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin")
+	
+add_executable(example1_redundant blockSQP2/examples/example1_redundant.cpp)
+target_link_libraries(example1_redundant blockSQP2)
+set_target_properties(example1_redundant
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin")
 
