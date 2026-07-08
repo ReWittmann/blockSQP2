@@ -978,8 +978,8 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 		Data.G.set(i,i, Data.B_k[i]);
 		for (int k = i+1; k < n_stages; k++){
             // Data.G(k,i) *= 0.;
-            // mult_to(Data.A_k[k-1], Data.G(k-1,i), Data.G(k,i), 0.);
-			Data.G.set(k, i, Data.A_k[k-1]*Data.G(k-1,i));
+            mult_to(Data.A_k[k-1], Data.G(k-1,i), Data.G(k,i), 0.);
+			// Data.G.set(k, i, Data.A_k[k-1]*Data.G(k-1,i));
 		}
 	}
 
@@ -1882,7 +1882,7 @@ void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
     Data.h = vertcat(Data.h_k);
     
     Sparse_Matrix J_d(horzcat(Data.J_dep_k));
-    Data.Jtimes_g = sparse_dense_multiply(J_d, Data.g).dense();
+    Data.Jtimes_g = sparse_vector_multiply(J_d, Data.g);
     
     return;
 }
@@ -2057,7 +2057,7 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
     Data.h = vertcat(Data.h_k);
     
     Sparse_Matrix J_d(horzcat(Data.J_dep_k));
-    Data.Jtimes_g = sparse_dense_multiply(J_d, Data.g).dense();
+    Data.Jtimes_g = sparse_vector_multiply(J_d, Data.g);
 
     return;
 }

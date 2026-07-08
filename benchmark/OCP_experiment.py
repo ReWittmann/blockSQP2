@@ -43,7 +43,6 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     HOLD = [vBlocks, cBlocks, hBlocks, targets]
     
     cond = blockSQP2.PartialCondenser(vBlocks, cBlocks, hBlocks, targets, 4, 2 - 2*OCprob.state_bounds_implicit)
-    # cond = blockSQP2.Condenser(vBlocks, cBlocks, hBlocks, targets, 2 - 2*OCprob.state_bounds_implicit)
     
     prob = blockSQP2.Problemspec()
     prob.x_start = OCprob.start_point
