@@ -2338,7 +2338,6 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
         
         new_vstart = j;
         new_cstart = targets_orig[tnum].cblock_start;
-        std::cout << "j = " << j << "\n";
         for (int i = 1; i < n_split + 1; i++){
             for (; stage_ind < split_ind[i]; stage_ind++){
                 for (; vblocks[j].dependent; j++){}
@@ -2356,7 +2355,7 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
             
             new_cend = new_cstart + new_nstages;
             
-            std::cout << "new_nstages = " << new_nstages << ", new_vstart = " << new_vstart << ", new_vend = " << new_vend << ", new_cstart = " << new_cstart << ", new_cend = " << new_cend << "\n";
+            // std::cout << "new_nstages = " << new_nstages << ", new_vstart = " << new_vstart << ", new_vend = " << new_vend << ", new_cstart = " << new_cstart << ", new_cend = " << new_cend << "\n";
             targets_hold[targets_ind++] = condensing_target(new_nstages, new_vstart, new_vend, new_cstart, new_cend);
             
             new_vstart = new_vend;

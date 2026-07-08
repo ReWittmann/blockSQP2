@@ -233,10 +233,10 @@ double BasicCQPsolver::get_reg(){
 
 
 QPresults BasicCQPsolver::solve(Matrix &deltaXi, Matrix &lambdaQP){
-    steady_clock::time_point T0 = steady_clock::now();
+    // steady_clock::time_point T0 = steady_clock::now();
     setup_inner_QPsol(deltaXi, lambdaQP);
-    steady_clock::time_point T1 = steady_clock::now();
-    std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
+    // steady_clock::time_point T1 = steady_clock::now();
+    // std::cout << "Setting up the QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
     
     QPresults QPret = inner_QPsol->solve(xi_cond, lambda_cond);
     // steady_clock::time_point T2 = steady_clock::now();
@@ -1141,12 +1141,9 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def){
         dynamic_cast<qpOASES::SymSparseMat*>(H_qp.get())->createDiagInfo();
     }
     else{
-        steady_clock::time_point T0 = steady_clock::now();
         // convertHessian_noalloc(hess, nHess, nVar, regFactor, hess_nz.get());
         convertHessian_noalloc(hess, nHess, nVar, hess_nz.get());
         H_qp = std::make_unique<qpOASES::SymDenseMat>(nVar, nVar, nVar, hess_nz.get());
-        steady_clock::time_point T1 = steady_clock::now();
-        std::cout << "converting hess to dense took " << duration_cast<microseconds>(T1 - T0) << "\n"; 
     }
     // if (regInd == nullptr) H_qp->addToDiag(regFactor); else H_qp->addToDiagIndices(regFactor, regInd.get(), regInd_l);
     qpOASES::returnValue ret = (regInd == nullptr) ? H_qp->addToDiag(regFactor) :  H_qp->addToDiagIndices(regFactor, regInd.get(), regInd_l);
@@ -1197,7 +1194,8 @@ void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *c
         //A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, jac_row, jac_colind, jac_nz);
         A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, A_qp_row.get(), A_qp_colind.get(), A_qp_nz.get());
     }
-    else{steady_clock::time_point T0 = steady_clock::now();
+    else{
+        // steady_clock::time_point T0 = steady_clock::now();
         jacT.Initialize(0.);
         for (int j = 0; j < nVar; j++){
             for (int i = jac_colind[j]; i < jac_colind[j+1]; i++){
@@ -1205,8 +1203,8 @@ void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *c
             }
         }
         A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
-        steady_clock::time_point T1 = steady_clock::now();
-        std::cout << "Converting Jacobian to dense took " << duration_cast<microseconds>(T1 - T0) << "\n";
+        // steady_clock::time_point T1 = steady_clock::now();
+        // std::cout << "Converting Jacobian to dense took " << duration_cast<microseconds>(T1 - T0) << "\n";
     }
     
     matrices_changed = true;
@@ -1258,7 +1256,7 @@ void qpOASES_solver::set_hotstart_point(qpOASES_solver *hot_QP){
 
 QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
     double QPtime;
-    steady_clock::time_point T0 = steady_clock::now();
+    // steady_clock::time_point T0 = steady_clock::now();
     if (convex_QP)  opts.enableInertiaCorrection = qpOASES::BT_TRUE;
     else            opts.enableInertiaCorrection = qpOASES::BT_FALSE;
     
@@ -1310,8 +1308,8 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
         QP_it += 1;
         *qpSave = *qp;
-        steady_clock::time_point T1 = steady_clock::now();
-        std::cout << "Solving the QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
+        // steady_clock::time_point T1 = steady_clock::now();
+        // std::cout << "Solving the QP took " << duration_cast<microseconds>(T1 - T0) << "\n";
         return QPresults::success;
     }
     
