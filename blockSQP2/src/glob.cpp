@@ -459,7 +459,6 @@ int SQPmethod::feasibilityRestorationPhase(){
         else{
             rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         }
-        rest_prob->update_xi_ref(vars->xi);
         
         rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());
         rest_method->init();

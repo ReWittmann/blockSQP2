@@ -191,6 +191,49 @@ public:
 
 
 
+
+
+// class condensable_Restoration_Problem: public Problemspec{
+// public:
+//     Problemspec *parent;
+//     Condenser *parent_cond;
+
+//     Matrix xi_ref;
+//     Matrix diagScale;
+
+//     double zeta;
+//     double rho;
+
+//     Matrix constr_orig;
+//     double *jac_orig_nz = nullptr;
+//     int *jac_orig_row = nullptr;
+//     int *jac_orig_colind = nullptr;
+
+
+
+// public:
+//     condensable_Restoration_Problem(Problemspec *parent_Problem, Condenser *parent_cond, const Matrix &xi_Reference);
+//     ~condensable_Restoration_Problem();
+
+//     /// Set initial values for xi and lambda, may also set matrix for linear constraints (sparse version)
+//     virtual void initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol);
+
+//     /// Evaluate all problem functions and their derivatives (sparse version)
+//     virtual void evaluate(const Matrix &xi, const Matrix &lambda,
+//                            double *objval, Matrix &constr,
+//                            Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
+//                            SymMatrix *&hess, int dmode, int *info);
+
+
+//     void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
+//     void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
+//     void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig, double &lambda_step_norm);
+
+// };
+
+
+
+
 } // namespace blockSQP2
 
 #endif
