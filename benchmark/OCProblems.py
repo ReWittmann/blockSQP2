@@ -126,7 +126,8 @@ class OCProblem:
     hessBlock_index : list[int]
     vBlock_sizes : list[int]            #partition of variables into blocks
     vBlock_dependencies : list[bool]    #Which blocks are free/dependent
-            
+    #vBlock_bounds_implicit             #Which dependent blocks have implicit bounds
+    
     cBlock_sizes : list[int]            #Partition of constraints, used to distinguish individual continuity conditions
     ctarget_data : list[int]            #Specifies target for condensing, see blockSQP2/include/blockSQP2/condensing.hpp
     
@@ -155,6 +156,7 @@ class OCProblem:
     ubx : list #upper state bound
     
     state_bounds_implicit : bool
+    #state_bounds_ind_implicit : typing.Iterable[bool]
     
     #Integrator data
     integration_method : str
@@ -2237,9 +2239,9 @@ class F8_Aircraft(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        x0,x1,x2 = self.get_state_arrays(xi)
+        x0,x1,x2 = self.get_state_arrays_expanded(xi)
         w = self.get_control_plot_arrays(xi)
-        p = self.get_param_arrays(xi)
+        p = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0.], p]))
         
         plt.figure(dpi = dpi)

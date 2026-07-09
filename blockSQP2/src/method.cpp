@@ -31,10 +31,10 @@
  #include <blockSQP2/general_purpose.hpp>
  #include <blockSQP2/restoration.hpp>
  #include <blockSQP2/qpsolver.hpp>
- #include <fstream>
  #include <cmath>
  #include <chrono>
  #include <memory>
+ #include <iostream>
 
 
 namespace blockSQP2{
@@ -44,29 +44,28 @@ namespace blockSQP2{
 
 SQPoptions* create_restoration_options(SQPoptions *parent_options){
     SQPoptions *rest_param = new SQPoptions();
-
+    
     //General restoration options
     rest_param->enable_rest = 0;
-    rest_param->lim_mem = 1;
+    rest_param->lim_mem = true;
     rest_param->hess_approx = Hessians::BFGS;
     rest_param->sizing = Sizings::OL;
     rest_param->BFGS_damping_factor = 0.2;
     rest_param->sparse = parent_options->sparse;
     rest_param->max_filter_overrides = 0;
-    //rest_param->sizing = 4;
-    //rest_param->BFGS_damping_factor = 1./3.;
-
+    rest_param->skip_first_linesearch = true;
+    
     rest_param->result_print_color = false;
     rest_param->par_QPs = false;
     //Do not print to any file
     rest_param->debug_level = 0;
-
+    
     //Derived from parent method options
     rest_param->opt_tol = parent_options->opt_tol;
     rest_param->feas_tol = parent_options->feas_tol;
     rest_param->qpsol = parent_options->qpsol;
     rest_param->qpsol_options = parent_options->qpsol_options;
-
+    
     return rest_param;
 }
 
@@ -83,7 +82,7 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
         prob = scaled_prob.get();
     }    
     vars = std::make_unique<SQPiterate>(prob, param);
-
+    
     // Create a solver object for quadratic subproblems.
     sub_QP = std::unique_ptr<BasicQPsolver>(create_QPsolver(prob, vars.get(), param->qpsol_options));
     

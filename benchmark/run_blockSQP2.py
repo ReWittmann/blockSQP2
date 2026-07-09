@@ -40,14 +40,15 @@ itMax = 100                                  #max number of steps
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
+sol_plot = True
 
 
 # start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
-################################
-# QPopts = blockSQP2.qpOASES_options(
-#     sparsityLevel = 2
-#     )
+###############################
+QPopts = blockSQP2.qpOASES_options(
+    matrixSparsity = -1
+    )
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
@@ -72,13 +73,13 @@ opts = blockSQP2.SQPoptions(
     
     automatic_scaling = True,
     
-    max_extra_steps = 0,                    #Extra steps for improved accuracy
+    max_extra_steps = 10,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
     max_filter_overrides = 0,
     
     test_opt_enable_conv_downscaling = True,
     qpsol = 'qpOASES',
-    # qpsol_options = QPopts
+    qpsol_options = QPopts
 )
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()
@@ -94,9 +95,6 @@ cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
 
 targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
-
-ctarget_data = [99, 1, 200, 1, 100]
-targets2 = [blockSQP2.condensing_target(*ctarget_data)]
 
 condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
 # condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
@@ -159,7 +157,8 @@ else:
 t1 = time.monotonic()
 if not step_plots:
     xi = np.array(optimizer.get_xi()).reshape(-1)
-    # OCprob.plot(xi, dpi=200, title=plot_title)
+    if sol_plot:
+        OCprob.plot(xi, dpi=200, title=plot_title)
 
 time.sleep(0.2)
 print(t1 - t0, "s")

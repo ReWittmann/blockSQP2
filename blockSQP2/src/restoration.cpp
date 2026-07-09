@@ -26,8 +26,8 @@
  *  \author Reinhold Wittmann
  *  \date 2023-2025
  */
- 
- 
+
+
 #include <blockSQP2/restoration.hpp>
 #include <blockSQP2/matrix.hpp>
 #include <cmath>
@@ -36,7 +36,7 @@
 namespace blockSQP2{
 
 
-void RestorationProblemBase::update_xi_ref(const Matrix &xiReference){return;}
+void BasicRestorationProblem::update_xi_ref(const Matrix &xiReference){return;}
 
 
 RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta): rho(param_rho), zeta(param_zeta){
@@ -493,7 +493,7 @@ void TC_restoration_Problem::initialize(Matrix &xi, Matrix &lambda, double *jacN
     
     
     // The reference point is the starting value for the restoration phase
-    for(int i=0; i<parent->nVar; i++){
+    for (int i = 0; i < parent->nVar; i++){
         xi_parent(i) = xi_ref(i);
     }
     

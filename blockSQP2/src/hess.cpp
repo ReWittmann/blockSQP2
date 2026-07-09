@@ -34,7 +34,6 @@
 #include <blockSQP2/method.hpp>
 #include <blockSQP2/general_purpose.hpp>
 #include <iostream>
-#include <fstream>
 #include <thread>
 
 namespace blockSQP2{

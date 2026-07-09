@@ -44,7 +44,7 @@ namespace blockSQP2{
 
 // Base for restoration problem, requires methods to restore original iterates from restoration iterates. 
 // Allows variable layouts for original and slack variables
-class RestorationProblemBase : public Problemspec{
+class BasicRestorationProblem : public Problemspec{
     public:
     Problemspec *parent;
     //Update the reference point if it enters into the restoration problem
@@ -58,7 +58,7 @@ class RestorationProblemBase : public Problemspec{
 };
 
 
-class RestorationProblem : public RestorationProblemBase{
+class RestorationProblem : public BasicRestorationProblem{
     public:
         Matrix xi_ref;
         Matrix diagScale;
@@ -120,7 +120,7 @@ class RestorationProblem : public RestorationProblemBase{
 
 //    Only "true" constraints lb_g <= g(x,u) <= ub_g are relaxed via the slack variables s.
 
-class TC_restoration_Problem: public RestorationProblemBase{
+class TC_restoration_Problem: public BasicRestorationProblem{
     public:
     Condenser *parent_cond;
     Matrix xi_ref;

@@ -30,14 +30,14 @@
 #include <chrono>
 using namespace std::chrono;
 #include <thread>
-#include <fstream>
+#include <iostream>
 
 namespace blockSQP2{
 
-vblock::vblock(int SIZE, bool DEP): size(SIZE), dependent(DEP), removed(false)
+vblock::vblock(int SIZE, bool DEP): size(SIZE), dependent(DEP), removed(false)//, bounds_implicit(false)
 {}
 
-vblock::vblock(): size(0), dependent(false), removed(false)
+vblock::vblock(): size(0), dependent(false), removed(false)//, bounds_implicit(false)
 {}
 
 cblock::cblock(int SIZE): size(SIZE), removed(false)
@@ -877,11 +877,11 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     // Set match_sense to the sign before x_k in the matching, slices of B_Jac require the opposite sign.
     // double match_sense = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
     Data.matching_sign = B_Jac(Data.cond_ranges[0], Data.alt_vranges[1]);
-    // #ifdef __cpp_lib_format
-    //     if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
-    // #else
+    #ifdef __cpp_lib_format
+        if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[1], Data.alt_vranges[2], Data.cond_ranges[0], Data.alt_vranges[1], Data.matching_sign));
+    #else
         if (std::abs(std::abs(Data.matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
-    // #endif
+    #endif
     Data.matching_sign = std::round(Data.matching_sign);
     
 	//Extract relevant subvectors and -matrices
@@ -901,11 +901,11 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     
 	for (int i = 1; i<n_stages; i++){
         double matching_sign = B_Jac(Data.cond_ranges[i], Data.alt_vranges[2*i+1]);
-        // #ifdef __cpp_lib_format
-        //     if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
-        // #else
+        #ifdef __cpp_lib_format
+            if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error(std::format("Error during condensing: Expected constr_jac({}:{},{}:{}) == +-I, but constr_jac({},{}) = {}", Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i+1], Data.alt_vranges[2*i+2], Data.cond_ranges[i], Data.alt_vranges[2*i+1], matching_sign));
+        #else
             if (std::abs(std::abs(matching_sign) - 1.) > 1e-12) throw std::logic_error("Error during condensing: Constraint Jacobian not matching provided layout data");
-        // #endif
+        #endif
         if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k-1,...) = 0 or all F(x_k-1,...) - x_k+1 = 0");
         
 		// Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
@@ -1578,12 +1578,9 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
 
 
 void Condenser::new_hessian_condense(const SymMatrix *const hess, Matrix &condensed_h, SymMatrix *condensed_hess){
-
     for (int tnum = 0; tnum < num_targets; tnum++){
         single_new_hess_condense(tnum, hess + h_starts[tnum]);
     }
-
-    //if (condensed_hess == nullptr) condensed_hess = new SymMatrix[condensed_num_hessblocks];
 
     //Assemble second condensed block hessian
     int ind_1 = 0;
@@ -2353,9 +2350,7 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
                 new_nstages = split_ind[n_split] - split_ind[n_split - 1];
             }
             
-            new_cend = new_cstart + new_nstages;
-            
-            // std::cout << "new_nstages = " << new_nstages << ", new_vstart = " << new_vstart << ", new_vend = " << new_vend << ", new_cstart = " << new_cstart << ", new_cend = " << new_cend << "\n";
+            new_cend = new_cstart + new_nstages;            
             targets_hold[targets_ind++] = condensing_target(new_nstages, new_vstart, new_vend, new_cstart, new_cend);
             
             new_vstart = new_vend;

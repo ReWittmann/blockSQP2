@@ -8,6 +8,7 @@
 
 #include <blockSQP2.hpp>
 #include <limits>
+#include <iostream>
 
 namespace blockSQP2{
 

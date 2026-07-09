@@ -21,7 +21,6 @@
 #include <blockSQP2/method.hpp>
 #include <blockSQP2/general_purpose.hpp>
 
-#include <fstream>
 #include <cmath>
 #include <chrono>
 

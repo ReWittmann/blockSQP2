@@ -35,7 +35,6 @@
 #include <blockSQP2/restoration.hpp>
 #include <blockSQP2/general_purpose.hpp>
 #include <iostream>
-#include <fstream>
 
 namespace blockSQP2{
 
@@ -455,8 +454,12 @@ int SQPmethod::feasibilityRestorationPhase(){
         vars->nRestIt = 0;
         rest_stats = std::make_unique<SQPstats>(stats->outpath);
         //NEW
-        rest_prob = std::make_unique<RestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
-        //rest_prob->update_xi_ref(vars->xi);
+        if (prob->condenser == nullptr)
+            rest_prob = std::make_unique<RestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+        else{
+            rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+        }
+        rest_prob->update_xi_ref(vars->xi);
         
         rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());
         rest_method->init();
@@ -466,7 +469,7 @@ int SQPmethod::feasibilityRestorationPhase(){
 }
 
 
-int SQPmethod::innerRestorationPhase(RestorationProblemBase *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
+int SQPmethod::innerRestorationPhase(BasicRestorationProblem *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
     int info;
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresults ret;

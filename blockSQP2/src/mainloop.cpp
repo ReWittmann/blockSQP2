@@ -30,7 +30,7 @@
 #include <blockSQP2/general_purpose.hpp>
 #include <blockSQP2/restoration.hpp>
 #include <blockSQP2/qpsolver.hpp>
-#include <fstream>
+#include <iostream>
 #include <cmath>
 #include <chrono>
 using namespace std::chrono;

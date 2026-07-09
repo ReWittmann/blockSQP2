@@ -35,7 +35,6 @@
 #include <blockSQP2/defs.hpp>
 #include <iostream>
 #include <chrono>
-#include <fstream>
 #include <cmath>
 #include <thread>
 #include <functional>

@@ -24,6 +24,7 @@
 #include <blockSQP2/iterate.hpp>
 #include <cmath>
 #include <chrono>
+#include <iostream>
 using namespace std::chrono;
 
 
@@ -998,34 +999,23 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
 
 qpOASES_solver::qpOASES_solver(int n_QP_var, int n_QP_con, int n_QP_hessblocks, int *blockIdx, const QPsolver_options *QPopts):
                     QPsolver(n_QP_var, n_QP_con, n_QP_hessblocks, QPopts){
-        
-    // if (static_cast<const qpOASES_options*>(Qparam)->sparsityLevel < 2){
-    //     qp = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
-    //     qpSave = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
-    //     qpCheck = std::unique_ptr<qpOASES::SQProblem>(new qpOASES::SQProblem(nVar, nCon));
-    // }
-    // else{
-        // qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
-    
-    // switch (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity){
-    //     case 0: sparseMatrices = false; break;
-    //     case 1: sparseMatrices = true; break;
-    //     case -1: sparseMatrices = n_QP_hessblocks > 10; break;
-    //     default: throw ParameterError(std::string("qpOASES_options::matrixSparsity has an invalid value of ") + std::to_string(sparseMatrices) + std::string(", should be -1 for auto, 0 for dense, 1 for sparse"));
-    // }
     if (Qparam->sol != QPsolvers::qpOASES) throw ParameterError("Wrong options type given for QPsolver qpOASES");
+    switch (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity){
+        case 0: sparseMatrices = false; break;
+        case 1: sparseMatrices = true; break;
+        case -1: sparseMatrices = true; break;
+        default: throw ParameterError("qpOASES_options::matrixSparsity has an invalid value of " + std::to_string(static_cast<const qpOASES_options*>(Qparam)->matrixSparsity) + ", should be -1 for auto, 0 for dense, 1 for sparse");
+    }
     
-    if (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity != -1)
-        throw ParameterError("Values of qpOASES_options::matrixSparsity other that -1 are currently unsupported");
+    // if (static_cast<const qpOASES_options*>(Qparam)->matrixSparsity != -1)
+    //     throw ParameterError("Values of qpOASES_options::matrixSparsity other that -1 are currently unsupported");
     // sparseMatrices = !Qparam->condensed;
     
-    sparseMatrices = true;
+    // sparseMatrices = true;
     qpOASES::LinearSolverType LST = sparseMatrices ? qpOASES::LST_ANY : qpOASES::LST_LAPACK; //n_QP_hessblocks < 11 ? qpOASES::LST_LAPACK : qpOASES::LST_ANY;
 
     // int maxSchur = 15;//15 + 35*int(LST != qpOASES::LST_LAPACK);
     int maxSchur = 15;
-    
-    // qpOASES::LinearSolverType LST = Qparam->condensed ? qpOASES::LST_ANY : qpOASES::LST_LAPACK;
     qp = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST));
     qpSave = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST));
     qpCheck = std::unique_ptr<qpOASES::SQProblemSchur>(new qpOASES::SQProblemSchur(nVar, nCon, qpOASES::HST_UNKNOWN, maxSchur, LST));

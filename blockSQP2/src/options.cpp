@@ -32,6 +32,7 @@
 #include <blockSQP2/defs.hpp>
 #include <iostream>
 #include <limits>
+#include <string>
 
 namespace blockSQP2{
 

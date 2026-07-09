@@ -39,7 +39,7 @@ struct vblock{
 	int size;
 	bool dependent;
 	bool removed;
-    
+    //bool bounds_implicit;
 };
 
 //Future: Have more general dependency graphs for variables for advanced condensing in more than one pass

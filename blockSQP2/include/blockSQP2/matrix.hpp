@@ -33,7 +33,7 @@
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/lapackblas.hpp>
-#include <iostream>
+#include <iosfwd>
 #include <vector>
 #include <memory>
 
@@ -44,14 +44,13 @@ extern int Ccount; ///< Count constructor calls
 extern int Dcount; ///< Count destructor calls
 extern int Ecount; ///< Count assign operator calls
 
+class SymMatrix;
+
 /**
  * \brief Class for easy access of elements of a dense matrix.
  * \author Dennis Janka
  * \date 2012-2015
  */
-
-class SymMatrix;
-
 class Matrix{  
   private:
     void allocate(void);
@@ -189,8 +188,8 @@ class SymMatrix{
 std::ostream& operator<<(std::ostream& os, const SymMatrix &M);
 
 
-Matrix Transpose(const Matrix& A); ///< Overwrites \f$ A \f$ with its transpose \f$ A^T \f$
-Matrix &Transpose(const Matrix &A, Matrix &T); ///< Computes \f$ T = A^T \f$
+Matrix Transpose(const Matrix& A);
+Matrix &Transpose(const Matrix &A, Matrix &T);
 double delta(int, int);
 
 
@@ -200,11 +199,9 @@ class Sparse_Matrix{
 	public:
 		int m;
 		int n;
-		//int nnz;
 		std::unique_ptr<double[]> nz;
 		std::unique_ptr<int[]> row;
 		std::unique_ptr<int[]> colind;
-    //bool memoryOwned;
 
     Sparse_Matrix(int M, int N, int NNZ);
     Sparse_Matrix(int M, int N, std::unique_ptr<double[]> NZ, std::unique_ptr<int[]> ROW, std::unique_ptr<int[]> COLIND);
@@ -212,7 +209,6 @@ class Sparse_Matrix{
 		Sparse_Matrix(Sparse_Matrix &&M);
 		Sparse_Matrix(const CSR_Matrix &M);
 		Sparse_Matrix();
-		//~Sparse_Matrix();
     
     Sparse_Matrix &Dimension(int M, int N, int NNZ);
     

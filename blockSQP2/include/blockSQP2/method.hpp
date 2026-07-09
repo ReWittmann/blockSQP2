@@ -38,8 +38,6 @@
 #include <blockSQP2/stats.hpp>
 #include <blockSQP2/qpsolver.hpp>
 #include <blockSQP2/restoration.hpp>
-// #include <blockSQP2/load_mumps.hpp>
-#include <iostream>
 #include <memory>
 #include <thread>
 
@@ -63,7 +61,7 @@ class SQPmethod{
         
         // Objects for feasibility restoration
         //Feasibility restoration problem
-        std::unique_ptr<RestorationProblemBase> rest_prob;
+        std::unique_ptr<BasicRestorationProblem> rest_prob;
         std::unique_ptr<SQPoptions>  rest_param;
         std::unique_ptr<SQPstats>    rest_stats;
         std::unique_ptr<SQPmethod>   rest_method;
@@ -184,7 +182,7 @@ class SQPmethod{
         /// Start feasibility restoration phase (solve NLP)
         virtual int feasibilityRestorationPhase();
         /// Main loop of restoration phase - check acceptability of the filter after each step
-        int innerRestorationPhase(RestorationProblemBase *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
+        int innerRestorationPhase(BasicRestorationProblem *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
         
