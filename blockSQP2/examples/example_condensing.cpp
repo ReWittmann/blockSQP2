@@ -99,16 +99,16 @@ int main(){
     
     //Layout information
     blockSQP2::vblock *vblocks = new blockSQP2::vblock[7];
-    vblocks[0] = blockSQP2::vblock(1,false);
+    vblocks[0] = blockSQP2::vblock(1, false, false);
     
-    vblocks[1] = blockSQP2::vblock(2,true);
-    vblocks[2] = blockSQP2::vblock(1,false);
+    vblocks[1] = blockSQP2::vblock(2, true, false);
+    vblocks[2] = blockSQP2::vblock(1, false, false);
     
-    vblocks[3] = blockSQP2::vblock(2,true);
-    vblocks[4] = blockSQP2::vblock(1,false);
+    vblocks[3] = blockSQP2::vblock(2, true, false);
+    vblocks[4] = blockSQP2::vblock(1, false, false);
     
-    vblocks[5] = blockSQP2::vblock(2,true);
-    vblocks[6] = blockSQP2::vblock(1,false);
+    vblocks[5] = blockSQP2::vblock(2, true, false);
+    vblocks[6] = blockSQP2::vblock(1, false, false);
     
     
     blockSQP2::cblock *cblocks = new blockSQP2::cblock[4];

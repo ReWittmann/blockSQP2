@@ -90,7 +90,7 @@ class OCProblem:
     nCon : int #number of constraints
     
     #NLP dict as required for casadi NLP solvers
-    NLP : {str : cs.MX}
+    NLP : typing.Dict[str, cs.MX]
     
     #Objective
     f : typing.Callable[[np.ndarray[1, np.float64]], float]
@@ -126,7 +126,7 @@ class OCProblem:
     hessBlock_index : list[int]
     vBlock_sizes : list[int]            #partition of variables into blocks
     vBlock_dependencies : list[bool]    #Which blocks are free/dependent
-    #vBlock_bounds_implicit             #Which dependent blocks have implicit bounds
+    vBlock_bounds_implicit : list[bool] #Which (dependent) blocks have implicit bounds
     
     cBlock_sizes : list[int]            #Partition of constraints, used to distinguish individual continuity conditions
     ctarget_data : list[int]            #Specifies target for condensing, see blockSQP2/include/blockSQP2/condensing.hpp
@@ -155,8 +155,7 @@ class OCProblem:
     lbx : list #lower state bound
     ubx : list #upper state bound
     
-    state_bounds_implicit : bool
-    #state_bounds_ind_implicit : typing.Iterable[bool]
+    state_bounds_implicit : typing.Iterable[bool]
     
     #Integrator data
     integration_method : str
@@ -223,7 +222,6 @@ class OCProblem:
         
         self.ntS = nt
         self.ntR = refine
-        self.state_bounds_implicit = False
         
         self.build_problem()
         
@@ -263,6 +261,8 @@ class OCProblem:
         self.constr_arr = []
         self.lbc_arr = []
         self.ubc_arr = []
+        
+        self.state_bounds_implicit = [False]*nx
     
     def to_blocks_LT(self, sparse_hess : cs.DM):
         blocks = []
@@ -291,6 +291,28 @@ class OCProblem:
         self.time_grid = np.linspace(t0,tf,self.ntS+1,endpoint=True)
         self.time_grid_ref = np.linspace(t0,tf,self.ntS*self.ntR + 1, endpoint = True)
         self.fix_time = True
+    
+    def mark_state_bounds_implicit(self, *args):
+        if len(args) == 0:
+            self.state_bounds_implicit = [True]*self.nx
+        elif len(args) == 1:
+            if isinstance(args[0], bool):
+                self.state_bounds_implicit = [args[0]]*self.nx
+            elif isinstance(args[0], int):
+                self.state_bounds_implicit = [i == args[0] for i in range(self.nx)]
+            elif len(args[0]) == self.nx and all([isinstance(arg0, bool) for arg0 in args[0]]): 
+                self.state_bounds_implicit = [*args[0]]
+            else:
+                raise Exception("Invalid argument")
+        elif len(args) == self.nx:
+            if all([isinstance(arg, int) for arg in args]):
+                self.state_bounds_implicit = [(i in args) for i in range(self.nx)]
+            elif all([isinstance(arg, bool) for arg in args]):
+                self.state_bounds_implicit = [*args]
+            else:
+                raise Exception("Invalid argument")
+        else:
+            raise Exception("Invalid argument")
     
     def build_integrator(self):
         if self.integration_method.lower() == 'cvodes':
@@ -781,7 +803,7 @@ class Lotka_Volterra_Fishing(OCProblem):
         self.set_OCP_data(2,0,1,1,[0,0],[np.inf, np.inf],[],[],[0],[1])
         self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init'])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         w = cs.MX.sym('w', 1)
@@ -842,7 +864,7 @@ class Lotka_Volterra_Fishing_MAYER(OCProblem):
         self.set_OCP_data(3,0,1,0,[0,0,-np.inf],[np.inf, np.inf, np.inf],[],[],[0],[1])
         self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init']+[0])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 3)
         w = cs.MX.sym('w', 1)
@@ -904,7 +926,7 @@ class Lotka_Volterra_multimode(OCProblem):
         t0, tf, c01, c02, c03, c11, c12, c13 = (self.model_params[key] for key in ['t0', 'tf', 'c01', 'c02', 'c03', 'c11', 'c12', 'c13'])
         self.fix_initial_value([0.5,0.7])
         self.fix_time_horizon(t0,tf)
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x',2)
         x0,x1 = cs.vertsplit(x)
@@ -1250,7 +1272,7 @@ class Batch_Reactor(OCProblem):
     default_params = {}
     def build_problem(self):
         self.set_OCP_data(2, 0, 1, 0, [-np.inf,-np.inf], [np.inf,np.inf], [], [], [298],[398])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
@@ -1539,7 +1561,7 @@ class Catalyst_Mixing(OCProblem):
         self.set_OCP_data(2,0,1,0,[-np.inf,-np.inf],[np.inf,np.inf],[],[],[0.],[1.])
         self.fix_time_horizon(0,1)
         self.fix_initial_value([1.,0.])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
@@ -1595,7 +1617,7 @@ class Cushioned_Oscillation(OCProblem):
     def build_problem(self):
         m,c,x0,v0,umm = (self.model_params[key] for key in ['m', 'c', 'x0', 'v0', 'umm'])
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf], [np.inf,np.inf], [8/self.ntS],[20/self.ntS], [-umm], [umm])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         X = cs.MX.sym('X',2)
         x,v = cs.vertsplit(X)
@@ -1657,7 +1679,7 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
     def build_problem(self):
         m,c,x0,v0,umm,TSCALE = (self.model_params[key] for key in ['m', 'c', 'x0', 'v0', 'umm', 'TSCALE'])
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf], [np.inf,np.inf], [8/self.ntS * TSCALE],[20/self.ntS * TSCALE], [-umm], [umm])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         X = cs.MX.sym('X',2)
         x,v = cs.vertsplit(X)
@@ -2689,7 +2711,7 @@ class Three_Tank_Multimode(OCProblem):
         self.set_OCP_data(3,0,3,1,[0.,0.,0.], [np.inf,np.inf,np.inf], [],[], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0, self.model_params['T'])
         self.fix_initial_value([2.,2.,2.])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         c1, c2, c3, k1, k2, k3, k4 = (self.model_params[key] for key in ['c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4'])
         
@@ -3192,7 +3214,7 @@ class Lotka_OED(OCProblem):
         tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
-        self.state_bounds_implicit = True
+        self.mark_state_bounds_implicit()
         
         S = cs.MX.sym('S', 9)
         x1, x2, G11, G12, G21, G22, F11, F12, F22 = cs.vertsplit(S)

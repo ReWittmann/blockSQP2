@@ -282,7 +282,7 @@ class Problem(CXXobjCreator):
         if self.vblocks is not None and len(self.vblocks) > 0:
             vblock_array = BSQP.create_vblock_array(c_int(len(self.vblocks)))
             for i, vb in enumerate(self.vblocks):
-                BSQP.vblock_array_set(vblock_array, c_int(i), c_int(vb.size), c_char(vb.dependent))
+                BSQP.vblock_array_set(vblock_array, c_int(i), c_int(vb.size), c_char(vb.dependent), c_char(False))
             BSQP.Problemspec_pass_vblocks(cxx_obj, vblock_array, c_int(len(self.vblocks)))
         
         if self.condenser is not None:

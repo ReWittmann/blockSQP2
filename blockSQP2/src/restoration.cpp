@@ -46,7 +46,7 @@ RestorationProblem::RestorationProblem(Problemspec *parentProblem, const Matrix 
         n_vblocks = parent->n_vblocks + 1;
         vblocks = new vblock[parent->n_vblocks + 1];
         std::copy(parent->vblocks, parent->vblocks + parent->n_vblocks, vblocks);
-        vblocks[parent->n_vblocks] = vblock(parent->nCon, false);
+        vblocks[parent->n_vblocks] = vblock(parent->nCon, false, false);
     }
     
     xi_ref = xiReference;
@@ -645,7 +645,8 @@ void TC_restoration_Problem::recover_lambda(const Matrix &lambda_rest, Matrix &l
 
 
 holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
-    int N_vblocks = parent->num_vblocks + parent->num_true_cons;
+    // int N_vblocks = parent->num_vblocks + parent->num_true_cons;
+    int N_vblocks = parent->num_vblocks + 1;
     int N_cblocks = parent->num_cblocks;
     int N_hessblocks = parent->num_hessblocks + parent->num_true_cons;
     int N_targets = parent->num_targets;
@@ -658,9 +659,10 @@ holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUND
     for (int i = 0; i < parent->num_vblocks; i++){
         rest_vblocks[i] = parent->vblocks[i];
     }
-    for (int i = parent->num_vblocks; i < N_vblocks; i++){
-        rest_vblocks[i] = vblock(1, false);
-    }
+    // for (int i = parent->num_vblocks; i < N_vblocks; i++){
+    //     rest_vblocks[i] = vblock(1, false);
+    // }
+    rest_vblocks[parent->num_vblocks] = vblock(parent->num_true_cons, false, false);
     
     for (int i = 0; i < parent->num_cblocks; i++){
         rest_cblocks[i] = parent->cblocks[i];

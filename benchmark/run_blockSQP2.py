@@ -73,7 +73,7 @@ opts = blockSQP2.SQPoptions(
     
     automatic_scaling = True,
     
-    max_extra_steps = 10,                    #Extra steps for improved accuracy
+    max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
     max_filter_overrides = 0,
     
@@ -90,7 +90,7 @@ opts = blockSQP2.SQPoptions(
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vblocks = [blockSQP2.vblock(size, dep) for size, dep in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies)]
+vblocks = [blockSQP2.vblock(size, dep, False) for size, dep in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies)]
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
 

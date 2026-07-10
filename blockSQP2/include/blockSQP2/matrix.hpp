@@ -111,7 +111,8 @@ class Matrix{
     
     //Matrix without_rows(int *starts, int *ends, int num_slices);
     Matrix without_rows(int *starts, int *ends, int num_slices) const;
-
+    Matrix without_rows(int const *row_indices, int row_indices_l) const;
+    
     /** Flag == 0: bracket output
       * Flag == 1: Matlab output
       * else: plain output */
@@ -124,7 +125,8 @@ class Matrix{
 };
 
 std::ostream& operator<<(std::ostream& os, const Matrix &M);
-Matrix vertcat(std::vector<Matrix> Ms);
+Matrix vertcat(std::vector<Matrix> mats);
+Matrix vertcat(Matrix const *mats, int mats_l);
 
 inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3);
 inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3);
@@ -224,7 +226,8 @@ class Sparse_Matrix{
     double operator()(int i, int j = 0) const;
 		Matrix dense() const;
 		void remove_rows(int *starts, int *ends, int nblocks);
-		Sparse_Matrix without_nz_rows(int *starts, int *ends, int nblocks) const;
+		// Sparse_Matrix without_nz_rows(int *starts, int *ends, int nblocks) const;
+    Sparse_Matrix without_rows(int const *row_indices, int row_indices_l) const;
 };
 
 Sparse_Matrix sparse_dense_multiply(const Sparse_Matrix &M1, const Matrix &M2);
@@ -235,7 +238,7 @@ Sparse_Matrix horzcat(std::vector<Sparse_Matrix>& mats);
 Sparse_Matrix lr_zero_pad(int N, const Sparse_Matrix &M1, int start);
 Sparse_Matrix lr_zero_pad(int N, const Matrix &M1, int start);
 Sparse_Matrix vertcat(std::vector<Sparse_Matrix>& mats);
-
+Sparse_Matrix vertcat(Sparse_Matrix const *mats, int mats_l);
 
 class CSR_Matrix{
 public:

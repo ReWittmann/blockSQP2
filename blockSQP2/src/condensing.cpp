@@ -34,10 +34,10 @@ using namespace std::chrono;
 
 namespace blockSQP2{
 
-vblock::vblock(int SIZE, bool DEP): size(SIZE), dependent(DEP), removed(false)//, bounds_implicit(false)
+vblock::vblock(int SIZE, bool DEP, bool B_IMPL): size(SIZE), dependent(DEP), bounds_implicit(B_IMPL), removed(false), bounds_removed(false)
 {}
 
-vblock::vblock(): size(0), dependent(false), removed(false)//, bounds_implicit(false)
+vblock::vblock(): size(0), dependent(false), bounds_implicit(false), removed(false), bounds_removed(false)
 {}
 
 cblock::cblock(int SIZE): size(SIZE), removed(false)
@@ -171,19 +171,40 @@ void Condenser::setup(){
     // }
     // condensed_num_vars = num_vars - offset;
 
-    num_true_cons = num_cons;
-    condensed_num_hessblocks = num_hessblocks;
-    for (int i = 0; i < num_targets; i++){
-        num_true_cons -= c_ends[i] - c_starts[i];
-        condensed_num_hessblocks -= h_ends[i] - h_starts[i] - 1;
-    }
-
-    if (add_dep_bounds){
-        condensed_num_cons = num_cons;
-    }
-    else{
-        condensed_num_cons = num_true_cons;
-    }
+    // num_true_cons = num_cons;
+    // condensed_num_hessblocks = num_hessblocks;
+    // for (int i = 0; i < num_targets; i++){
+    //     num_true_cons -= c_ends[i] - c_starts[i];
+    //     condensed_num_hessblocks -= h_ends[i] - h_starts[i] - 1;
+    // }
+    
+    // switch (add_dep_bounds){
+    //     case 0:
+    //         condensed_num_cons = num_true_cons;
+    //         break;
+    //     case 1:
+    //         condensed_num_cons = num_true_cons;
+    //         for (int i = 0; i < num_vblocks; i++){
+    //             if (vblocks[i].removed){
+    //                 if (vblocks[i].bounds_implicit) vblocks[i].bounds_removed = true;
+    //                 else                            condensed_num_cons += vblocks[i].size;
+    //             }
+    //         }
+    //         break;
+    //     case 2:
+    //         condensed_num_cons = num_cons;
+    //         break;
+    //     default:
+    //         throw std::invalid_argument("Invalid value of add_dep_bounds, should be 0,1 or 2");
+    // }
+    
+    
+    // if (add_dep_bounds){
+    //     condensed_num_cons = num_cons;
+    // }
+    // else{
+    //     condensed_num_cons = num_true_cons;
+    // }
 
     //Initialize data for individual condensing target structures
 
@@ -324,17 +345,65 @@ void Condenser::setup(){
         targets_data[tnum].J_d_CSR_k.resize(n_stages);
         targets_data[tnum].J_reduced_k.resize(n_stages + 1);
 
-        //Allocate additional matrices and vectors in case an additional QP with fallback hessian needs to be condensed
-        int *h_sizes_2 = new int[n_stages + 1];
-        for (int i = 0; i <= n_stages; i++){
-            h_sizes_2[i] = targets_data[tnum].free_sizes[i];
+        
+        targets_data[tnum].impl_bounds_indices = std::make_unique<int[]>(targets_data[tnum].n_dep); //Over-allocate
+        targets_data[tnum].impl_bounds_indices_l = 0;
+        int impl_ind = 0;
+        for (int i = targets[tnum].vblock_start; i < targets[tnum].vblock_end; i++){
+            if (!vblocks[i].removed) continue;
+            if (vblocks[i].bounds_implicit){
+                for (int j = 0; j < vblocks[i].size; j++){
+                    targets_data[tnum].impl_bounds_indices[targets_data[tnum].impl_bounds_indices_l + j] = impl_ind + j;
+                }
+                targets_data[tnum].impl_bounds_indices_l += vblocks[i].size;
+            }
+            impl_ind += vblocks[i].size;
         }
+        
+        std::cout << "impl_bounds_indices:\n";
+        for (int i = 0; i < targets_data[tnum].impl_bounds_indices_l; i++){
+            std::cout << targets_data[tnum].impl_bounds_indices[i] << ", ";
+        }
+        std::cout << "\n";
+        
+        //Allocate additional matrices and vectors in case an additional QP with fallback hessian needs to be condensed
+        // int *h_sizes_2 = new int[n_stages + 1];
+        // for (int i = 0; i <= n_stages; i++){
+        //     h_sizes_2[i] = targets_data[tnum].free_sizes[i];
+        // }
 
-        targets_data[tnum].R_k_2.resize(n_stages + 1);
-        targets_data[tnum].Q_k_2.resize(n_stages);
-        targets_data[tnum].S_k_2.resize(n_stages);
-        targets_data[tnum].h_k_2.resize(n_stages + 1);
-        targets_data[tnum].H_2.Dimension(n_stages + 1, n_stages + 1, h_sizes_2, h_sizes_2);
+        // targets_data[tnum].R_k_2.resize(n_stages + 1);
+        // targets_data[tnum].Q_k_2.resize(n_stages);
+        // targets_data[tnum].S_k_2.resize(n_stages);
+        // targets_data[tnum].h_k_2.resize(n_stages + 1);
+        // targets_data[tnum].H_2.Dimension(n_stages + 1, n_stages + 1, h_sizes_2, h_sizes_2);
+    }
+    
+    num_true_cons = num_cons;
+    condensed_num_hessblocks = num_hessblocks;
+    for (int i = 0; i < num_targets; i++){
+        num_true_cons -= c_ends[i] - c_starts[i];
+        condensed_num_hessblocks -= h_ends[i] - h_starts[i] - 1;
+    }
+    
+    switch (add_dep_bounds){
+        case 0:
+            condensed_num_cons = num_true_cons;
+            break;
+        case 1:
+            condensed_num_cons = num_true_cons;
+            for (int i = 0; i < num_vblocks; i++){
+                if (vblocks[i].removed){
+                    if (vblocks[i].bounds_implicit) vblocks[i].bounds_removed = true;
+                    else                            condensed_num_cons += vblocks[i].size;
+                }
+            }
+            break;
+        case 2:
+            condensed_num_cons = num_cons;
+            break;
+        default:
+            throw std::invalid_argument("Invalid value of add_dep_bounds, should be 0,1 or 2");
     }
 
     condensed_hess_block_sizes = std::make_unique<int[]>(condensed_num_hessblocks);
@@ -592,11 +661,17 @@ void Condenser::print_info(){
     }
     std::cout << "\n";
 
-    std::cout<< "vblock presence status = \n";
-    for (int i = 0; i< num_vblocks; i++){
+    std::cout << "vblock presence status = \n";
+    for (int i = 0; i < num_vblocks; i++){
         std::cout << vblocks[i].removed << ", ";
     }
-    std::cout<< "\n";
+    std::cout << "\n";
+    
+    std::cout << "vblock bounds status = \n";
+    for (int i = 0; i < num_vblocks; i++){
+        std::cout << vblocks[i].bounds_removed << ", ";
+    }
+    std::cout << "\n";
     
     std::cout<< "cblock presence status = \n";
     for (int i = 0; i< num_cblocks; i++){
@@ -656,49 +731,7 @@ int Condenser::get_hessblock_index(int v_ind){
 
 
 void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_jac, const SymMatrix *const hess, const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con,
-    Matrix &condensed_h, Sparse_Matrix &condensed_Jacobian, SymMatrix *condensed_hess, Matrix &condensed_lb_var, Matrix &condensed_ub_var, Matrix &condensed_lb_con, Matrix &condensed_ub_con
-){
-	// T_Slices.resize(0);
-	// O_Slices.resize(0);
-	// T_grad_obj.resize(0);
-	// O_grad_obj.resize(0);
-
-    // std::vector<Matrix> T_lb_var;
-    // std::vector<Matrix> T_ub_var;
-    // std::vector<Matrix> O_lb_var;
-    // std::vector<Matrix> O_ub_var;
-    // T_lb_var.reserve(num_targets);
-    // T_ub_var.reserve(num_targets);
-    // O_lb_var.reserve(num_targets + 1);
-    // O_ub_var.reserve(num_targets + 1);
-
-	// O_Slices.push_back(con_jac.get_slice(0, con_jac.m, 0, v_starts[0]));
-    // O_lb_var.push_back(lb_var.get_slice(0, v_starts[0], 0, 1));
-    // O_ub_var.push_back(ub_var.get_slice(0, v_starts[0], 0, 1));
-    // O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
-
-	// T_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_starts[0], v_ends[0]));
-    // T_lb_var.push_back(lb_var.get_slice(v_starts[0], v_ends[0], 0, 1));
-    // T_ub_var.push_back(ub_var.get_slice(v_starts[0], v_ends[0], 0, 1));
-    // T_grad_obj.push_back(grad_obj.get_slice(v_starts[0], v_ends[0], 0, 1));
-
-	// for (int i = 1; i < num_targets; i++){
-    //     O_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_ends[i-1], v_starts[i]));
-    //     O_lb_var.push_back(lb_var.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-    //     O_ub_var.push_back(ub_var.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-    //     O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-
-    //     T_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_starts[i], v_ends[i]));
-    //     T_lb_var.push_back(lb_var.get_slice(v_starts[i], v_ends[i], 0, 1));
-    //     T_ub_var.push_back(ub_var.get_slice(v_starts[i], v_ends[i], 0, 1));
-    //     T_grad_obj.push_back(grad_obj.get_slice(v_starts[i], v_ends[i], 0, 1));
-	// }
-	// O_Slices.push_back(con_jac.get_slice(0, con_jac.m, v_ends[num_targets - 1], num_vars));
-    // O_lb_var.push_back(lb_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-    // O_ub_var.push_back(ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-    // O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
-    
-    
+            Matrix &condensed_h, Sparse_Matrix &condensed_Jacobian, SymMatrix *condensed_hess, Matrix &condensed_lb_var, Matrix &condensed_ub_var, Matrix &condensed_lb_con, Matrix &condensed_ub_con){    
     con_jac.get_slice(0, con_jac.m, 0, v_starts[0], O_Slices[0]);
     lb_var.get_slice(0, v_starts[0], 0, 1, O_lb_var[0]);
     ub_var.get_slice(0, v_starts[0], 0, 1, O_ub_var[0]);
@@ -824,31 +857,50 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
         condensed_ub_con = vertcat(condensed_ub_con_k);
     }
     else if (add_dep_bounds == 1){
-        std::vector<Sparse_Matrix> condensed_Jacobian_Slices(num_targets + 1);
-        std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
+        // std::vector<Sparse_Matrix> condensed_Jacobian_Slices(num_targets + 1);
+        // std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
+        // std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
+        // condensed_Jacobian_Slices[0] = reduced_Jacobian;
+        // condensed_lb_con_k[0] = reduced_lb_con;
+        // condensed_ub_con_k[0] = reduced_ub_con;
+        // for (int tnum = 0; tnum < num_targets; tnum++){
+        //     condensed_Jacobian_Slices[tnum + 1] = lr_zero_pad(condensed_num_vars, targets_data[tnum].G_sparse, condensed_v_starts[tnum]);
+        //     condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
+        //     condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
+        // }
+
+        // condensed_Jacobian = vertcat(condensed_Jacobian_Slices);
+        // condensed_lb_con = vertcat(condensed_lb_con_k);
+        // condensed_ub_con = vertcat(condensed_ub_con_k);
+
+        // //Save bounds on dependent variables so a user can manually add them to the qp
+        // std::vector<Matrix> lb_dep_var_k(num_targets);
+        // std::vector<Matrix> ub_dep_var_k(num_targets);
+        // for (int tnum = 0; tnum < num_targets; tnum++){
+        //     lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
+        //     ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
+        // }
+        // lb_dep_var = vertcat(lb_dep_var_k);
+        // ub_dep_var = vertcat(ub_dep_var_k);
+        std::unique_ptr<Sparse_Matrix[]> condensed_Jacobian_Slices = std::make_unique<Sparse_Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        
         condensed_Jacobian_Slices[0] = reduced_Jacobian;
         condensed_lb_con_k[0] = reduced_lb_con;
         condensed_ub_con_k[0] = reduced_ub_con;
         for (int tnum = 0; tnum < num_targets; tnum++){
-            condensed_Jacobian_Slices[tnum + 1] = lr_zero_pad(condensed_num_vars, targets_data[tnum].G_sparse, condensed_v_starts[tnum]);
-            condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
-            condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
+            condensed_Jacobian_Slices[tnum + 1] = lr_zero_pad(condensed_num_vars, 
+                targets_data[tnum].G_sparse.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l), 
+                condensed_v_starts[tnum]);
+            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_lb_con_k[tnum + 1] -= targets_data[tnum].g.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_ub_con_k[tnum + 1] -= targets_data[tnum].g.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
         }
-
-        condensed_Jacobian = vertcat(condensed_Jacobian_Slices);
-        condensed_lb_con = vertcat(condensed_lb_con_k);
-        condensed_ub_con = vertcat(condensed_ub_con_k);
-
-        //Save bounds on dependent variables so a user can manually add them to the qp
-        std::vector<Matrix> lb_dep_var_k(num_targets);
-        std::vector<Matrix> ub_dep_var_k(num_targets);
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
-            ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        }
-        lb_dep_var = vertcat(lb_dep_var_k);
-        ub_dep_var = vertcat(ub_dep_var_k);
+        condensed_Jacobian = vertcat(condensed_Jacobian_Slices.get(), num_targets + 1);
+        condensed_lb_con = vertcat(condensed_lb_con_k.get(), num_targets + 1);
+        condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
     }
     else{
         condensed_Jacobian = reduced_Jacobian;

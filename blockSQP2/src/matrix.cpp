@@ -132,7 +132,7 @@ Matrix::Matrix( const Matrix &A )
 
     m = A.m;
     n = A.n;
-    ldim = A.ldim;
+    ldim = A.m;
     tflag = 0;
 
     allocate();
@@ -424,6 +424,7 @@ void Matrix::get_slice(int m_start, int m_end, Matrix &A) const {
 
 
 Matrix Matrix::without_rows(int *starts, int *ends, int n_slices) const{
+    if (n_slices == 0) return Matrix(*this);
     int M = m;
 
     #ifdef MATRIX_DEBUG
@@ -461,6 +462,28 @@ Matrix Matrix::without_rows(int *starts, int *ends, int n_slices) const{
     }
 
     return Matrix(M, n, r_array);
+}
+
+Matrix Matrix::without_rows(int const *row_indices, int row_indices_l) const {
+    if (row_indices_l == 0) return Matrix(*this);
+    #ifdef MATRIX_DEBUG
+    for (int i = 0; i < row_indices_l; i++){
+        if (row_indices[i] < 0 || row_indices[i] >= m) throw std::invalid_argument("Matrix::without_rows: Row index out of bounds");
+    }
+    if (!std::is_sorted(row_indices, row_indices + row_indices_l)) throw std::invalid_argument("Matrix::without_rows: Row indices not sorted");
+	#endif
+    
+    Matrix ret(m - row_indices_l, n);
+    int ind = 0, ind_new = 0;
+    for (int i = 0; i < row_indices_l; i++, ind++){
+        for (; ind < row_indices[i]; ind++, ind_new++){
+            BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+        }
+    }
+    for (; ind < m; ind++, ind_new++){
+        BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+    }
+    return ret;
 }
 
 
@@ -655,36 +678,56 @@ void Matrix::operator*=(const double alpha) const {
 }
 
 
-Matrix vertcat(std::vector<Matrix> M_k){
-    int n = M_k[0].n;
+Matrix vertcat(std::vector<Matrix> mats){
+    int n = mats[0].n;
     int m = 0;
     double *array;
 
-    //for (int i = 0; i < M_k.size(); i++){
-    for (std::vector<Matrix>::size_type i = 0; i < M_k.size(); i++){
+    //for (int i = 0; i < mats.size(); i++){
+    for (std::vector<Matrix>::size_type i = 0; i < mats.size(); i++){
         #ifdef MATRIX_DEBUG
-        if (M_k[i].n != n){
-            throw std::invalid_argument("Matrix vertcat: Mismatched matrix sizes of " + std::to_string(n) + " and " + std::to_string(M_k[i].n));
+        if (mats[i].n != n){
+            throw std::invalid_argument("Matrix vertcat: Mismatched matrix sizes of " + std::to_string(n) + " and " + std::to_string(mats[i].n));
         }
         #endif
 
-        m += M_k[i].m;
+        m += mats[i].m;
     }
 
     array = new double[m*n];
     int ind;
     for (int j = 0; j<n; j++){
         ind = 0;
-        for (std::vector<Matrix>::size_type k = 0; k < M_k.size(); k++){
-            for (int i = 0; i<M_k[k].m; i++){
-                array[ind + i + j*m] = M_k[k](i,j);
+        for (std::vector<Matrix>::size_type k = 0; k < mats.size(); k++){
+            for (int i = 0; i<mats[k].m; i++){
+                array[ind + i + j*m] = mats[k](i,j);
             }
-           ind += M_k[k].m;
+           ind += mats[k].m;
         }
     }
     return Matrix(m, n, array);
 }
 
+Matrix vertcat(Matrix const *mats, int mats_l){
+    int n_new = mats[0].n;
+    int m_new = 0;
+    for (int i = 0; i < mats_l; i++){
+        #ifdef MATRIX_DEBUG
+        if (mats[i].n != n_new){
+            throw std::invalid_argument("Matrix vertcat: Mismatched second dimensions of " + std::to_string(n_new) + " and " + std::to_string(mats[i].n));
+        }
+        #endif
+        m_new += mats[i].m;
+    }
+    Matrix ret(m_new, n_new);
+    int ind = 0;
+    for (int i = 0; i < mats_l; ind += mats[i].m, i++){
+        for (int j = 0; j < n_new; j++){
+            std::copy(mats[i].array + j*mats[i].ldim, mats[i].array + mats[i].m + j*mats[i].ldim, ret.array + ind + j*ret.ldim);
+        }
+    }
+    return ret;
+}
 
 
 /* ----------------------------------------------------------------------- */
@@ -1006,8 +1049,12 @@ Matrix &Transpose(const Matrix &A, Matrix &T){
 //###########################
 //###Sparse_Matrix methods###
 //###########################
-Sparse_Matrix::Sparse_Matrix(int M, int N, int NNZ): m(M), n(N), 
-                                nz(std::make_unique<double[]>(NNZ)), row(std::make_unique<int[]>(NNZ)), colind(std::make_unique<int[]>(n+1)){
+Sparse_Matrix::Sparse_Matrix(int M, int N, int NNZ): 
+        m(M), 
+        n(N), 
+        nz(std::make_unique<double[]>(NNZ)), 
+        row(std::make_unique<int[]>(NNZ)), 
+        colind(std::make_unique<int[]>(n+1)){
     colind[n] = NNZ;                                 
 }
 
@@ -1514,53 +1561,102 @@ void Sparse_Matrix::remove_rows(int *starts, int *ends, int nblocks){
 	}
 }
 
-Sparse_Matrix Sparse_Matrix::without_nz_rows(int *starts, int *ends, int nblocks) const{
+// Sparse_Matrix Sparse_Matrix::without_nz_rows(int *starts, int *ends, int nblocks) const{
+//     #ifdef MATRIX_DEBUG
+// 	for (int l = 0; l<nblocks-1; l++){
+// 		if (starts[l] > ends[l] || ends[l]>starts[l+1]){
+// 			throw std::invalid_argument( "slice end must be greater than start and slices must be non-overlapping and sorted by starting index" );
+// 		}
+// 	}
+// 	if (starts[nblocks - 1] > ends[nblocks - 1]){
+// 		throw std::invalid_argument( "slice end must be greater than start and slices must be non-overlapping and sorted by starting index" );
+// 	}
+// 	#endif
+    
+// 	std::vector<double> NZ_v = {};
+// 	std::vector<int> ROW_v = {};
+// 	std::vector<int> COLIND_v = {0};
+// 	COLIND_v.reserve(n+1);
+// 	int c_ind = 0;
+// 	bool in_slice;
+    
+// 	for (int k = 0; k<n; k++){
+// 		for (int j = colind[k]; j<colind[k+1]; j++){
+// 			in_slice = false;
+// 			for (int l = 0; l<nblocks; l++){
+// 				if	(row[j] >= starts[l] && row[j] < ends[l]){
+// 					in_slice = true;
+// 					break;
+// 				}
+// 			}
+// 			if (!in_slice){
+// 				NZ_v.push_back(nz[j]);
+// 				ROW_v.push_back(row[j]);
+// 				c_ind++;
+// 			}
+// 		}
+// 		COLIND_v.push_back(c_ind);
+// 	}
+    
+// 	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(c_ind);
+// 	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(c_ind);
+// 	std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(n+1);
+    
+//     std::copy(NZ_v.begin(), NZ_v.end(), M_nz.get());
+//     std::copy(ROW_v.begin(), ROW_v.end(), M_row.get());
+//     std::copy(COLIND_v.begin(), COLIND_v.end(), M_colind.get());
+    
+// 	return Sparse_Matrix(m, n, std::move(M_nz), std::move(M_row), std::move(M_colind));
+// }
+
+
+Sparse_Matrix Sparse_Matrix::without_rows(int const *row_indices, int row_indices_l) const {
+    if (row_indices_l == 0) return Sparse_Matrix(*this);
+    
     #ifdef MATRIX_DEBUG
-	for (int l = 0; l<nblocks-1; l++){
-		if (starts[l] > ends[l] || ends[l]>starts[l+1]){
-			throw std::invalid_argument( "slice end must be greater than start and slices must be non-overlapping and sorted by starting index" );
-		}
-	}
-	if (starts[nblocks - 1] > ends[nblocks - 1]){
-		throw std::invalid_argument( "slice end must be greater than start and slices must be non-overlapping and sorted by starting index" );
-	}
+    for (int i = 0; i < row_indices_l; i++){
+        if (row_indices[i] < 0 || row_indices[i] >= m) throw std::invalid_argument("Sparse_Matrix::without_rows: Row index out of bounds");
+    }
+    if (!std::is_sorted(row_indices, row_indices + row_indices_l)) throw std::invalid_argument("Sparse_Matrix::without_rows: Row indices not sorted");
 	#endif
     
-	std::vector<double> NZ_v = {};
-	std::vector<int> ROW_v = {};
-	std::vector<int> COLIND_v = {0};
-	COLIND_v.reserve(n+1);
-	int c_ind = 0;
-	bool in_slice;
+    int m_new = m - row_indices_l;
     
-	for (int k = 0; k<n; k++){
-		for (int j = colind[k]; j<colind[k+1]; j++){
-			in_slice = false;
-			for (int l = 0; l<nblocks; l++){
-				if	(row[j] >= starts[l] && row[j] < ends[l]){
-					in_slice = true;
-					break;
-				}
-			}
-			if (!in_slice){
-				NZ_v.push_back(nz[j]);
-				ROW_v.push_back(row[j]);
-				c_ind++;
-			}
-		}
-		COLIND_v.push_back(c_ind);
-	}
+    int ind = colind[0], ind_new = 0;
+    for (int j = 0; j < n; j++){
+        for (int i = 0; i < row_indices_l; i++){
+            for (; row[ind] < row_indices[i]; ind++, ind_new++){}
+            ind += int(row[ind] == row_indices[i]);
+        }
+        for (; ind < colind[j+1]; ind++, ind_new++){}
+    }
     
-	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(c_ind);
-	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(c_ind);
-	std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(n+1);
+    std::unique_ptr<double[]> nz_new = std::make_unique<double[]>(ind_new);
+    std::unique_ptr<int[]> row_new = std::make_unique<int[]>(ind_new);
+    std::unique_ptr<int[]> colind_new = std::make_unique<int[]>(n+1);
+    colind_new[0] = 0;
     
-    std::copy(NZ_v.begin(), NZ_v.end(), M_nz.get());
-    std::copy(ROW_v.begin(), ROW_v.end(), M_row.get());
-    std::copy(COLIND_v.begin(), COLIND_v.end(), M_colind.get());
-    
-	return Sparse_Matrix(m, n, std::move(M_nz), std::move(M_row), std::move(M_colind));
+    ind = colind[0]; 
+    ind_new = colind_new[0];
+    for (int j = 0; j < n; j++){
+        int i = 0;
+        for (; i < row_indices_l; i++){
+            for (; row[ind] < row_indices[i]; ind++, ind_new++){
+                nz_new[ind_new] = nz[ind];
+                row_new[ind_new] = row[ind] - i;   
+            }
+            ind += int(row[ind] == row_indices[i]);
+        }
+        for (; ind < colind[j+1]; ind++, ind_new++){
+            nz_new[ind_new] = nz[ind];
+            row_new[ind_new] = row[ind] - i;
+        }
+        colind_new[j+1] = ind_new;
+    }
+    return Sparse_Matrix(m_new, n, std::move(nz_new), std::move(row_new), std::move(colind_new));
 }
+
+
 
 
 Sparse_Matrix horzcat(Sparse_Matrix *mats, int n_mat){
@@ -1676,6 +1772,41 @@ Sparse_Matrix vertcat(std::vector<Sparse_Matrix> &mats){
         colind[j+1] = ind;
     }
     return Sparse_Matrix(m, n, std::move(nz), std::move(row), std::move(colind));
+}
+
+Sparse_Matrix vertcat(Sparse_Matrix const *mats, int mats_l){
+    int nnz_new = 0;
+    int m_new = 0;
+    int n_new = mats[0].n;
+
+    for (int k = 0; k < mats_l; k++){
+        #ifdef MATRIX_DEBUG
+        if (mats[k].n != n_new){
+            throw std::invalid_argument("Sparse_Matrix vertcat: Mismatched seconds dimensions");
+        }
+        #endif
+
+        nnz_new += mats[k].colind[mats[k].n];
+        m_new += mats[k].m;
+    }
+    Sparse_Matrix ret(m_new, n_new, nnz_new); 
+    
+    int row_offset;
+    int ind = 0;
+    ret.colind[0] = ind;
+    for (int j = 0; j < n_new; j++){
+        row_offset = 0;
+        for (int k = 0; k < mats_l; k++){
+            for (int i = mats[k].colind[j]; i < mats[k].colind[j+1]; i++){
+                ret.nz[ind] = mats[k].nz[i];
+                ret.row[ind] = mats[k].row[i] + row_offset;
+                ind++;
+            }
+            row_offset += mats[k].m;
+        }
+        ret.colind[j+1] = ind;
+    }
+    return ret;
 }
 
 

@@ -31,7 +31,6 @@
  #include <blockSQP2/general_purpose.hpp>
  #include <blockSQP2/restoration.hpp>
  #include <blockSQP2/qpsolver.hpp>
-//  #include <fstream>
  #include <cmath>
  #include <chrono>
 

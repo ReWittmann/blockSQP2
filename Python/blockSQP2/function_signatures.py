@@ -27,7 +27,7 @@ BSQP_function_signatures = {
     "get_error_message": (c_char_p, ()),
     "create_vblock_array": (c_void_p, (c_int,)),
     "delete_vblock_array": (None, (c_void_p,)),
-    "vblock_array_set": (None, (c_void_p, c_int, c_int, c_char)),
+    "vblock_array_set": (None, (c_void_p, c_int, c_int, c_char, c_char)),
     
     "delete_QPsolver_options": (None, (c_void_p,)),
     
