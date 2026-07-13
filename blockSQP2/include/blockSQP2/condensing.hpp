@@ -204,7 +204,7 @@ class Condenser{
     
     //Additional option: How should implicit/explicit dependent variable bounds be added to the condensed QP:
     //  0: omit all, 1: omit dep, 2: omit none
-    int add_dep_bounds;
+    const int add_dep_bounds;
     
     ///Layout data calculated from constructor arguments by calling the "setup" method///
 	int num_vars;
@@ -267,7 +267,7 @@ class Condenser{
     Matrix lb_dep_var;
     Matrix ub_dep_var;
 
-    Condenser();
+    Condenser(int arg_add_dep_bounds = 1);
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
 	Condenser(Condenser &&C);
 	virtual ~Condenser();
@@ -279,7 +279,7 @@ class Condenser{
     void print_info();
 
     //Setter of changing how dependent variable bounds are added
-    void set_dep_bound_handling(int opt);
+    // void set_dep_bound_handling(int opt);
 
     //For starting index start, get index of hessian block that starts at start
 	int get_hessblock_index(int start);
@@ -364,7 +364,7 @@ class PartialCondenser : public Condenser{
     std::unique_ptr<condensing_target[]> targets_hold;
     int n_split;
     
-    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_SPLIT, int DEP_BOUNDS = 2);
+    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_SPLIT, int DEP_BOUNDS = 1);
     virtual ~PartialCondenser();
     
     virtual Condenser *layout_copy();

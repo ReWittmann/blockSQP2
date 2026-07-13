@@ -247,6 +247,7 @@ class OCProblem:
         self.np = np
         self.nq = nq
         self.nfree = self.nx
+        self.state_bounds_implicit = [False]*nx
         self.x_init = [None]*self.nx
         self.fix_time = False
         
@@ -261,8 +262,6 @@ class OCProblem:
         self.constr_arr = []
         self.lbc_arr = []
         self.ubc_arr = []
-        
-        self.state_bounds_implicit = [False]*nx
     
     def to_blocks_LT(self, sparse_hess : cs.DM):
         blocks = []
@@ -302,15 +301,14 @@ class OCProblem:
                 self.state_bounds_implicit = [i == args[0] for i in range(self.nx)]
             elif len(args[0]) == self.nx and all([isinstance(arg0, bool) for arg0 in args[0]]): 
                 self.state_bounds_implicit = [*args[0]]
+            elif all([isinstance(elem, int) for elem in args[0]]):
+                self.state_bounds_implicit = [(i in args[0]) for i in range(self.nx)]
             else:
                 raise Exception("Invalid argument")
-        elif len(args) == self.nx:
-            if all([isinstance(arg, int) for arg in args]):
-                self.state_bounds_implicit = [(i in args) for i in range(self.nx)]
-            elif all([isinstance(arg, bool) for arg in args]):
-                self.state_bounds_implicit = [*args]
-            else:
-                raise Exception("Invalid argument")
+        elif len(args) == self.nx and all([isinstance(arg, bool) for arg in args]):
+            self.state_bounds_implicit = [*args]
+        elif all([isinstance(arg, int) for arg in args]):
+            self.state_bounds_implicit = [(i in args) for i in range(self.nx)]
         else:
             raise Exception("Invalid argument")
     
@@ -488,6 +486,24 @@ class OCProblem:
         self.hessBlock_sizes = [0]
         self.vBlock_sizes = [0]
         self.vBlock_dependencies = [False]
+        self.vBlock_bounds_implicit = [False]
+        
+        
+        vBlock_state_lt = []
+        vBlock_state_impl = []
+        vBlock_impl_current = self.state_bounds_implicit[0]
+        count = 0
+        for SBI in self.state_bounds_implicit:
+            if SBI != vBlock_impl_current:
+                vBlock_state_lt.append(count)
+                vBlock_state_impl.append(vBlock_impl_current)
+                vBlock_impl_current = SBI
+                count = 0
+            count += 1
+        vBlock_state_lt.append(count)
+        vBlock_state_impl.append(vBlock_impl_current)
+        
+        
         # if not self.fix_init:
         #     xopt_arr.append(x_arr[0])
         #     self.hessBlock_sizes[0] += self.nx
@@ -510,7 +526,7 @@ class OCProblem:
         
         self.hessBlock_sizes[0] += self.np + self.ntR * self.nu
         self.vBlock_sizes[0] += self.np + self.ntR * self.nu
-        self.vBlock_dependencies = [False]
+        # self.vBlock_dependencies = [False]
         
         for i in range(1, self.ntS):
             xopt_arr.append(x_arr[i])
@@ -518,16 +534,26 @@ class OCProblem:
             for j in range(self.ntR):
                 xopt_arr.append(u_arr[i*self.ntR + j])
             self.hessBlock_sizes += [self.nx + self.np + self.ntR*self.nu]
-            self.vBlock_sizes += [self.nx, self.np + self.ntR*self.nu]
-            self.vBlock_dependencies += [True, False]
+            
+            # self.vBlock_sizes += [self.nx, self.np + self.ntR*self.nu]
+            # self.vBlock_dependencies += [True, False]
+            self.vBlock_sizes += vBlock_state_lt + [self.np + self.ntR*self.nu]
+            self.vBlock_dependencies += [True]*len(vBlock_state_lt) + [False]
+            self.vBlock_bounds_implicit += vBlock_state_impl + [False]
+            
             lbv_arr.append(cs.DM(self.lbx + self.lbp + self.lbu*self.ntR))
             ubv_arr.append(cs.DM(self.ubx + self.ubp + self.ubu*self.ntR))        
         
         #Terminal state is a shooting variable
         xopt_arr.append(x_arr[self.ntS])
         self.hessBlock_sizes += [self.nx]
-        self.vBlock_sizes += [self.nx]
-        self.vBlock_dependencies += [True]
+        
+        # self.vBlock_sizes += [self.nx]
+        # self.vBlock_dependencies += [True]
+        self.vBlock_sizes += vBlock_state_lt
+        self.vBlock_dependencies += [True]*len(vBlock_state_lt)
+        self.vBlock_bounds_implicit += vBlock_state_impl
+        
         lbv_arr.append(cs.DM(self.lbx))
         ubv_arr.append(cs.DM(self.ubx))
         
@@ -539,7 +565,8 @@ class OCProblem:
         self.start_point = np.zeros(self.nVar)
         self.lb_var = np.array(cs.vertcat(*lbv_arr), dtype = np.float64).reshape(-1)
         self.ub_var = np.array(cs.vertcat(*ubv_arr), dtype = np.float64).reshape(-1)
-        self.ctarget_data = [self.ntS, 0, 2*self.ntS, 0, self.ntS]
+        # self.ctarget_data = [self.ntS, 0, 2*self.ntS, 0, self.ntS]
+        self.ctarget_data = [self.ntS, 0, (1 + len(vBlock_state_lt))*self.ntS, 0, self.ntS]
     
     #Finalize NLP and populate NLP function fields
     def build_NLP(self):
@@ -2162,6 +2189,7 @@ class Electric_Car(OCProblem):
         self.set_OCP_data(3,0,1,1,[-150,-np.inf,-np.inf], [150,np.inf,np.inf], [], [], [-1.], [1.])
         self.fix_time_horizon(0.,10.)
         self.fix_initial_value([0.,0.,0.])
+        self.mark_state_bounds_implicit([1,2])
         
         x = cs.MX.sym('x', 3)
         x0,x1,x2 = cs.vertsplit(x)
@@ -4181,6 +4209,8 @@ class Ducted_Fan(OCProblem):
         self.set_OCP_data(6,1,2,1,[-np.inf]*2 + [-30] + [-np.inf]*3,[np.inf]*2 + [30] + [np.inf]*3,[1.0/self.ntS],[8.0/self.ntS],[-5., 0.],[5., 17.])
         m, J, r, mg, mu = (self.model_params[key] for key in self.default_params.keys())
         self.fix_initial_value([0.]*6)
+        self.mark_state_bounds_implicit([i for i in range(self.nx) if i not in [2]])
+        
         x = cs.MX.sym('x', 6)
         u = cs.MX.sym('u', 2)
         x1, x2, alpha, dx1, dx2, dalpha = cs.vertsplit(x)

@@ -435,6 +435,13 @@ set_target_properties(example_condensing
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
 )
 
+add_executable(example_condensing_2 blockSQP2/examples/example_condensing_2.cpp)
+target_link_libraries(example_condensing_2 blockSQP2)
+set_target_properties(example_condensing_2
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
+)
+
 
 option(PYTHON_INTERFACE "build python interface" ON)
 if(PYTHON_INTERFACE)

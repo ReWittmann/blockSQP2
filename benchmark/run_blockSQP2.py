@@ -40,7 +40,7 @@ itMax = 100                                  #max number of steps
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
-sol_plot = True
+sol_plot = False
 
 
 # start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
@@ -77,7 +77,6 @@ opts = blockSQP2.SQPoptions(
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
     max_filter_overrides = 0,
     
-    test_opt_enable_conv_downscaling = True,
     qpsol = 'qpOASES',
     qpsol_options = QPopts
 )
@@ -90,14 +89,14 @@ opts = blockSQP2.SQPoptions(
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vblocks = [blockSQP2.vblock(size, dep, False) for size, dep in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies)]
+vblocks = [blockSQP2.vblock(size, dep, impl) for size, dep, impl in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies, OCprob.vBlock_bounds_implicit)]
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
 
 targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
 
-condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
-# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 1)
+# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 1)
 # condenser = None
 
 #Define blockSQP Problemspec

@@ -466,6 +466,8 @@ Matrix Matrix::without_rows(int *starts, int *ends, int n_slices) const{
 
 Matrix Matrix::without_rows(int const *row_indices, int row_indices_l) const {
     if (row_indices_l == 0) return Matrix(*this);
+    if (row_indices_l == m) return Matrix(0,n);
+    
     #ifdef MATRIX_DEBUG
     for (int i = 0; i < row_indices_l; i++){
         if (row_indices[i] < 0 || row_indices[i] >= m) throw std::invalid_argument("Matrix::without_rows: Row index out of bounds");
@@ -1610,8 +1612,13 @@ void Sparse_Matrix::remove_rows(int *starts, int *ends, int nblocks){
 // }
 
 
-Sparse_Matrix Sparse_Matrix::without_rows(int const *row_indices, int row_indices_l) const {
+Sparse_Matrix Sparse_Matrix::without_rows(int const *row_indices, int row_indices_l) const {    
     if (row_indices_l == 0) return Sparse_Matrix(*this);
+    if (row_indices_l == m){
+        Sparse_Matrix ret(0, n, 0);
+        std::fill(ret.colind.get(), ret.colind.get() + n, 0);
+        return ret;
+    }
     
     #ifdef MATRIX_DEBUG
     for (int i = 0; i < row_indices_l; i++){
@@ -1622,38 +1629,38 @@ Sparse_Matrix Sparse_Matrix::without_rows(int const *row_indices, int row_indice
     
     int m_new = m - row_indices_l;
     
-    int ind = colind[0], ind_new = 0;
+    int ind = colind[0], nnz_new = 0;
     for (int j = 0; j < n; j++){
         for (int i = 0; i < row_indices_l; i++){
-            for (; row[ind] < row_indices[i]; ind++, ind_new++){}
+            for (; ind < colind[j+1] && row[ind] < row_indices[i]; ind++, nnz_new++){}
+            if (ind == colind[j+1]) break;
             ind += int(row[ind] == row_indices[i]);
         }
-        for (; ind < colind[j+1]; ind++, ind_new++){}
+        for (; ind < colind[j+1]; ind++, nnz_new++){}
     }
     
-    std::unique_ptr<double[]> nz_new = std::make_unique<double[]>(ind_new);
-    std::unique_ptr<int[]> row_new = std::make_unique<int[]>(ind_new);
-    std::unique_ptr<int[]> colind_new = std::make_unique<int[]>(n+1);
-    colind_new[0] = 0;
+    Sparse_Matrix ret(m_new, n, nnz_new);
     
+    ret.colind[0] = 0;
     ind = colind[0]; 
-    ind_new = colind_new[0];
+    nnz_new = ret.colind[0];
     for (int j = 0; j < n; j++){
         int i = 0;
         for (; i < row_indices_l; i++){
-            for (; row[ind] < row_indices[i]; ind++, ind_new++){
-                nz_new[ind_new] = nz[ind];
-                row_new[ind_new] = row[ind] - i;   
+            for (; ind < colind[j+1] && row[ind] < row_indices[i]; ind++, nnz_new++){
+                ret.nz[nnz_new] = nz[ind];
+                ret.row[nnz_new] = row[ind] - i;
             }
+            if (ind == colind[j+1]) break;
             ind += int(row[ind] == row_indices[i]);
         }
-        for (; ind < colind[j+1]; ind++, ind_new++){
-            nz_new[ind_new] = nz[ind];
-            row_new[ind_new] = row[ind] - i;
+        for (; ind < colind[j+1]; ind++, nnz_new++){
+            ret.nz[nnz_new] = nz[ind];
+            ret.row[nnz_new] = row[ind] - i;
         }
-        colind_new[j+1] = ind_new;
+        ret.colind[j+1] = nnz_new;
     }
-    return Sparse_Matrix(m_new, n, std::move(nz_new), std::move(row_new), std::move(colind_new));
+    return ret;
 }
 
 
@@ -2195,6 +2202,64 @@ void LT_Block_Matrix::to_sym(SymMatrix &M) const{
 }
 
 
+// void LT_Block_Matrix::to_sparse(Sparse_Matrix &M) const{
+// 	int M_m = 0;
+// 	int M_n = 0;
+//     int M_nnz = 0;
+
+// 	for (int i = 0; i<m; i++){
+// 		M_m += m_block_sizes[i];
+// 	}
+
+// 	for (int i = 0; i<n; i++){
+// 		M_n += n_block_sizes[i];
+// 	}
+
+//     int qsize = std::min(m, n);
+//     int Lsize = M_m;
+// 	for (int i = 0; i < qsize; i++){
+//         M_nnz += n_block_sizes[i] * Lsize;
+//         Lsize -= m_block_sizes[i];
+// 	}
+
+// 	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(M_nnz);
+// 	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(M_nnz);
+//     std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(M_n + 1);
+//     M_colind[0] = 0;
+
+//     int L_start = 0, I_start, J_start = 0;
+//     int ind = 0, ind_2 = M_m;
+
+//     for (int J = 0; J < qsize; J++){
+//         for (int j = 0; j < n_block_sizes[J]; j++){
+//             I_start = L_start;
+//             for (int I = J; I < m; I++){
+//                 for (int i = 0; i < m_block_sizes[I]; i++){
+//                     M_nz[ind] = (*this)(I,J)(i,j);
+//                     M_row[ind] = I_start + i;
+//                     ind++;
+//                 }
+//                 I_start += m_block_sizes[I];
+//             }
+//             M_colind[J_start + j + 1] = M_colind[J_start + j] + ind_2;
+//         }
+//         J_start += n_block_sizes[J];
+//         L_start += m_block_sizes[J];
+//         ind_2 -= m_block_sizes[J];
+//     }
+
+//     for (int J = qsize; J < n; J++){
+//         for (int j = 0; j < n_block_sizes[J]; j++){
+//             M_colind[J_start + j + 1] = M_nnz;
+//         }
+//         J_start += n_block_sizes[J];
+//     }
+
+//     M = Sparse_Matrix(M_m, M_n, std::move(M_nz), std::move(M_row), std::move(M_colind));
+//     return;
+// }
+
+
 void LT_Block_Matrix::to_sparse(Sparse_Matrix &M) const{
 	int M_m = 0;
 	int M_n = 0;
@@ -2208,47 +2273,43 @@ void LT_Block_Matrix::to_sparse(Sparse_Matrix &M) const{
 		M_n += n_block_sizes[i];
 	}
 
-    int qsize = std::min(m, n);
-    int Lsize = M_m;
-	for (int i = 0; i < qsize; i++){
+    int LT_size2 = std::min(m, n);          //Second dimension of lower-triangular part 
+    int Lsize = M_m;                        //First dimension of current lower-triangular column
+	for (int i = 0; i < LT_size2; i++){
         M_nnz += n_block_sizes[i] * Lsize;
         Lsize -= m_block_sizes[i];
 	}
-
-	std::unique_ptr<double[]> M_nz = std::make_unique<double[]>(M_nnz);
-	std::unique_ptr<int[]> M_row = std::make_unique<int[]>(M_nnz);
-    std::unique_ptr<int[]> M_colind = std::make_unique<int[]>(M_n + 1);
-    M_colind[0] = 0;
+    
+    M.Dimension(M_m, M_n, M_nnz);
+    M.colind[0] = 0;
 
     int L_start = 0, I_start, J_start = 0;
     int ind = 0, ind_2 = M_m;
 
-    for (int J = 0; J < qsize; J++){
+    for (int J = 0; J < LT_size2; J++){
         for (int j = 0; j < n_block_sizes[J]; j++){
             I_start = L_start;
             for (int I = J; I < m; I++){
                 for (int i = 0; i < m_block_sizes[I]; i++){
-                    M_nz[ind] = (*this)(I,J)(i,j);
-                    M_row[ind] = I_start + i;
+                    M.nz[ind] = (*this)(I,J)(i,j);
+                    M.row[ind] = I_start + i;
                     ind++;
                 }
                 I_start += m_block_sizes[I];
             }
-            M_colind[J_start + j + 1] = M_colind[J_start + j] + ind_2;
+            M.colind[J_start + j + 1] = M.colind[J_start + j] + ind_2;
         }
         J_start += n_block_sizes[J];
         L_start += m_block_sizes[J];
         ind_2 -= m_block_sizes[J];
     }
 
-    for (int J = qsize; J < n; J++){
+    for (int J = LT_size2; J < n; J++){
         for (int j = 0; j < n_block_sizes[J]; j++){
-            M_colind[J_start + j + 1] = M_nnz;
+            M.colind[J_start + j + 1] = M_nnz;
         }
         J_start += n_block_sizes[J];
     }
-
-    M = Sparse_Matrix(M_m, M_n, std::move(M_nz), std::move(M_row), std::move(M_colind));
     return;
 }
 
@@ -2370,8 +2431,7 @@ CSR_Matrix add_fullrow(const CSR_Matrix &M1, const CSR_Matrix &M2){
 CSR_Matrix fullrow_multiply(const CSR_Matrix &M1, const Matrix &M2){
     #ifdef MATRIX_DEBUG
     if (M1.n != M2.m || M1.n == 0){
-        std::cout << "M1.n = " << M1.n << ", M2.m = " << M2.m << "\n";
-        throw std::invalid_argument("fullrow_multiply: Mismatched chaining dimensions");
+        throw std::invalid_argument("fullrow_multiply: Mismatched chaining dimensions of " + std::to_string(M1.n) + " and " + std::to_string(M2.m));
     }
     #endif
 

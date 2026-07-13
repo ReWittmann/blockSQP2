@@ -60,7 +60,7 @@ condensing_target::condensing_target():
     n_stages(0), vblock_start(0), vblock_end(0), cblock_start(0), cblock_end(0){
     }
 
-Condenser::Condenser(){}
+Condenser::Condenser(int arg_add_dep_bounds): add_dep_bounds(arg_add_dep_bounds){}
 
 Condenser::Condenser(
 	vblock* VBLOCKS,            int n_VBLOCKS,
@@ -403,7 +403,7 @@ void Condenser::setup(){
             condensed_num_cons = num_cons;
             break;
         default:
-            throw std::invalid_argument("Invalid value of add_dep_bounds, should be 0,1 or 2");
+            throw std::invalid_argument("Invalid value of add_dep_bounds, should be 0: No added dep bounds, 1: Explicit dep bounds added, or 2: All dep bounds added");
     }
 
     condensed_hess_block_sizes = std::make_unique<int[]>(condensed_num_hessblocks);
@@ -475,7 +475,7 @@ Condenser(const Condenser &C){
     condensed_num_vars = C.condensed_num_vars;
 }*/
 
-Condenser::Condenser(Condenser &&C){
+Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
     num_cblocks = C.num_cblocks;
     num_vblocks = C.num_vblocks;
     num_hessblocks = C.num_hessblocks;
@@ -518,7 +518,7 @@ Condenser::Condenser(Condenser &&C){
     // C.condensed_v_ends = nullptr;
     // C.hess_block_ranges = nullptr;
 
-    add_dep_bounds = C.add_dep_bounds;
+    // add_dep_bounds = C.add_dep_bounds;
     condensed_num_cons = C.condensed_num_cons;
 
     targets_data = std::move(C.targets_data);
@@ -709,14 +709,24 @@ void Condenser::print_info(){
     return;
 }
 
-void Condenser::set_dep_bound_handling(int DEP_BOUNDS){
-    add_dep_bounds = DEP_BOUNDS;
-    if (add_dep_bounds)
-        condensed_num_cons = num_cons;
-    else
-        condensed_num_cons = num_true_cons;
-    return;
-}
+// void Condenser::set_dep_bound_handling(int DEP_BOUNDS){
+//     add_dep_bounds = DEP_BOUNDS;
+//     // if (add_dep_bounds)
+//     //     condensed_num_cons = num_cons;
+//     // else
+//     //     condensed_num_cons = num_true_cons;
+//     switch (add_dep_bounds){
+//         case 0:
+//             condensed_num_cons = num_true_cons;
+//             break;
+//         case 1:
+//         errorasdf
+//         case 2:
+//         condensed_num_cons = num_cons;
+//     }
+    
+//     return;
+// }
 
 
 int Condenser::get_hessblock_index(int v_ind){
@@ -839,53 +849,15 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
     condensed_ub_var = vertcat(condensed_ub_var_k);
 
 //Add dependent variable bounds to constraints
-    if (add_dep_bounds == 2){
-        std::vector<Sparse_Matrix> condensed_Jacobian_Slices(num_targets + 1);
-        std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-        condensed_Jacobian_Slices[0] = reduced_Jacobian;
-        condensed_lb_con_k[0] = reduced_lb_con;
-        condensed_ub_con_k[0] = reduced_ub_con;
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            condensed_Jacobian_Slices[tnum + 1] = lr_zero_pad(condensed_num_vars, targets_data[tnum].G_sparse, condensed_v_starts[tnum]);
-            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
-            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        }
-
-        condensed_Jacobian = vertcat(condensed_Jacobian_Slices);
-        condensed_lb_con = vertcat(condensed_lb_con_k);
-        condensed_ub_con = vertcat(condensed_ub_con_k);
+    if (add_dep_bounds == 0){
+        condensed_Jacobian = reduced_Jacobian;
+        condensed_lb_con = reduced_lb_con;
+        condensed_ub_con = reduced_ub_con;
     }
     else if (add_dep_bounds == 1){
-        // std::vector<Sparse_Matrix> condensed_Jacobian_Slices(num_targets + 1);
-        // std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        // std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-        // condensed_Jacobian_Slices[0] = reduced_Jacobian;
-        // condensed_lb_con_k[0] = reduced_lb_con;
-        // condensed_ub_con_k[0] = reduced_ub_con;
-        // for (int tnum = 0; tnum < num_targets; tnum++){
-        //     condensed_Jacobian_Slices[tnum + 1] = lr_zero_pad(condensed_num_vars, targets_data[tnum].G_sparse, condensed_v_starts[tnum]);
-        //     condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
-        //     condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
-        // }
-
-        // condensed_Jacobian = vertcat(condensed_Jacobian_Slices);
-        // condensed_lb_con = vertcat(condensed_lb_con_k);
-        // condensed_ub_con = vertcat(condensed_ub_con_k);
-
-        // //Save bounds on dependent variables so a user can manually add them to the qp
-        // std::vector<Matrix> lb_dep_var_k(num_targets);
-        // std::vector<Matrix> ub_dep_var_k(num_targets);
-        // for (int tnum = 0; tnum < num_targets; tnum++){
-        //     lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
-        //     ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        // }
-        // lb_dep_var = vertcat(lb_dep_var_k);
-        // ub_dep_var = vertcat(ub_dep_var_k);
         std::unique_ptr<Sparse_Matrix[]> condensed_Jacobian_Slices = std::make_unique<Sparse_Matrix[]>(num_targets + 1);
         std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
         std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
-        
         condensed_Jacobian_Slices[0] = reduced_Jacobian;
         condensed_lb_con_k[0] = reduced_lb_con;
         condensed_ub_con_k[0] = reduced_ub_con;
@@ -903,9 +875,22 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
         condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
     }
     else{
-        condensed_Jacobian = reduced_Jacobian;
-        condensed_lb_con = reduced_lb_con;
-        condensed_ub_con = reduced_ub_con;
+        std::unique_ptr<Sparse_Matrix[]> condensed_Jacobian_Slices = std::make_unique<Sparse_Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        condensed_Jacobian_Slices[0] = reduced_Jacobian;
+        condensed_lb_con_k[0] = reduced_lb_con;
+        condensed_ub_con_k[0] = reduced_ub_con;
+        for (int tnum = 0; tnum < num_targets; tnum++){
+            condensed_Jacobian_Slices[tnum + 1] = lr_zero_pad(condensed_num_vars, targets_data[tnum].G_sparse, condensed_v_starts[tnum]);
+            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb;
+            condensed_lb_con_k[tnum + 1] -= targets_data[tnum].g;
+            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub;
+            condensed_ub_con_k[tnum + 1] -= targets_data[tnum].g;
+        }
+        condensed_Jacobian = vertcat(condensed_Jacobian_Slices.get(), num_targets + 1);
+        condensed_lb_con = vertcat(condensed_lb_con_k.get(), num_targets + 1);
+        condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
     }
 
 //Assemble condensed_h, vector of linear term in objective
@@ -1174,14 +1159,14 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     std::vector<Matrix> T_lambda(num_targets);
     std::vector<Matrix> O_sigma(num_targets + 1);
     Matrix sigma = lambda_cond.get_slice(condensed_num_vars, condensed_num_vars + num_true_cons);
-
+    
     std::vector<Matrix> T_xi_full(num_targets);
     std::vector<Matrix> T_nu(num_targets);
     std::vector<Matrix> T_mu_lambda(num_targets);
-
+    
     std::vector<Matrix> xi_full_k(2*num_targets + 1);
     std::vector<Matrix> lambda_full_k(2*(2*num_targets + 1));
-
+    
     //Get slices corresponding to targets free variables and other free variables
     int ind = 0;
     for (int i = 0; i < num_targets; i++){
@@ -1193,10 +1178,10 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
         
         xi_cond.get_slice(ind, condensed_v_starts[i], O_xi_cond[i]);
         xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_xi_cond[i]);
-
+        
         lambda_cond.get_slice(ind, condensed_v_starts[i], O_mu[i]);
         lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_mu[i]);
-
+        
         ind = condensed_v_ends[i];
     }
     // O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
@@ -1204,7 +1189,7 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     
     xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_xi_cond[num_targets]);
     lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_mu[num_targets]);
-
+    
     //Slice constraint multipliers to later insert continuity condition multipliers
     ind = 0;
     int ind_2 = condensed_num_vars;
@@ -1216,29 +1201,60 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     }
     // O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
     lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind, O_sigma[num_targets]);
-
+    
     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
     ind = condensed_num_vars + num_true_cons;
-    if (add_dep_bounds){
-        for (int i = 0; i < num_targets; i++){
-            // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
-            lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
-            ind += targets_data[i].n_dep;
-        }
+    
+    // if (add_dep_bounds){
+    //     for (int i = 0; i < num_targets; i++){
+    //         // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+    //         lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
+    //         ind += targets_data[i].n_dep;
+    //     }
+    // }
+    // else{
+    //     for (int i = 0; i < num_targets; i++){
+    //         T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+    //     }
+    // }
+    
+    switch (add_dep_bounds){
+        case 0:
+            for (int i = 0; i < num_targets; i++){
+                T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+            }
+            break;
+        case 1:
+            for (int i = 0; i < num_targets; i++){
+                T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+                int k = 0, j = 0;
+                for (; k < targets_data[i].impl_bounds_indices_l; k++, j++){
+                    for (; j < targets_data[i].impl_bounds_indices[k]; j++){
+                        T_lambda[i](j) = lambda_cond(ind + j - k);
+                    }
+                }
+                for (; j < targets_data[i].n_dep; j++){
+                    T_lambda[i](j) = lambda_cond(ind + j - k);
+                }
+                ind += targets_data[i].n_dep - k;
+            }
+            break;
+        case 2:
+            for (int i = 0; i < num_targets; i++){
+                lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
+                ind += targets_data[i].n_dep;
+            }
+            break;
+        default: throw;
     }
-    else{
-        for (int i = 0; i < num_targets; i++){
-            T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
-        }
-    }
-
-
+    
+    
     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
     //assemble multipliers for free and dependent variable bounds
     for (int i = 0; i < num_targets; i++){
         single_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, T_xi_full[i], T_nu[i], T_mu_lambda[i]);
     }
-
+    
     //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
     for (int i = 0; i < num_targets; i++){
         xi_full_k[2*i] = O_xi_cond[i];
@@ -1248,7 +1264,7 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     }
     xi_full_k[2*num_targets] = O_xi_cond[num_targets];
     lambda_full_k[2*num_targets] = O_mu[num_targets];
-
+    
     //Append constraint and condition multipliers to bound-constraint multipliers
     ind = 2*num_targets + 1;
     for (int i = 0; i < num_targets; i++){
@@ -1256,10 +1272,10 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
         lambda_full_k[ind + 2*i + 1] = T_nu[i];
     }
     lambda_full_k[ind + 2*num_targets] = O_sigma[num_targets];
-
+    
     xi_full = vertcat(xi_full_k);
     lambda_full = vertcat(lambda_full_k);
-
+    
     return;
 }
 
@@ -1796,54 +1812,87 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
         single_SOC_condense(i, lb_con);
     }
     
-//Assemble reduced constraint-bounds (without dependent-variable bounds)
+    //Assemble reduced constraint-bounds (without dependent-variable bounds)
     Matrix reduced_lb_con = lb_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
     Matrix reduced_ub_con = ub_con.without_rows(c_starts.get(), c_ends.get(), num_targets);
     for (int i = 0; i < num_targets; i++){
         reduced_lb_con -= targets_data[i].Jtimes_g;
         reduced_ub_con -= targets_data[i].Jtimes_g;
     }
-//Add dependent variable bounds to constraints
-    if (add_dep_bounds == 2){
-        std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-        condensed_lb_con_k[0] = reduced_lb_con;
-        condensed_ub_con_k[0] = reduced_ub_con;
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
-            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        }
-        condensed_lb_con = vertcat(condensed_lb_con_k);
-        condensed_ub_con = vertcat(condensed_ub_con_k);
-    }
-    else if (add_dep_bounds == 1){
-        std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-        condensed_lb_con_k[0] = reduced_lb_con;
-        condensed_ub_con_k[0] = reduced_ub_con;
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
-            condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
-        }
-        condensed_lb_con = vertcat(condensed_lb_con_k);
-        condensed_ub_con = vertcat(condensed_ub_con_k);
+// //Add dependent variable bounds to constraints
+//     if (add_dep_bounds == 2){
+//         std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
+//         std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
+//         condensed_lb_con_k[0] = reduced_lb_con;
+//         condensed_ub_con_k[0] = reduced_ub_con;
+//         for (int tnum = 0; tnum < num_targets; tnum++){
+//             condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
+//             condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
+//         }
+//         condensed_lb_con = vertcat(condensed_lb_con_k);
+//         condensed_ub_con = vertcat(condensed_ub_con_k);
+//     }
+//     else if (add_dep_bounds == 1){
+//         std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
+//         std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
+//         condensed_lb_con_k[0] = reduced_lb_con;
+//         condensed_ub_con_k[0] = reduced_ub_con;
+//         for (int tnum = 0; tnum < num_targets; tnum++){
+//             condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
+//             condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
+//         }
+//         condensed_lb_con = vertcat(condensed_lb_con_k);
+//         condensed_ub_con = vertcat(condensed_ub_con_k);
 
-        //Save bounds on dependent variables so a user can manually add them to the qp
-        std::vector<Matrix> lb_dep_var_k(num_targets);
-        std::vector<Matrix> ub_dep_var_k(num_targets);
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
-            ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        }
-        lb_dep_var = vertcat(lb_dep_var_k);
-        ub_dep_var = vertcat(ub_dep_var_k);
-    }
-    else{
+//         //Save bounds on dependent variables so a user can manually add them to the qp
+//         std::vector<Matrix> lb_dep_var_k(num_targets);
+//         std::vector<Matrix> ub_dep_var_k(num_targets);
+//         for (int tnum = 0; tnum < num_targets; tnum++){
+//             lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
+//             ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
+//         }
+//         lb_dep_var = vertcat(lb_dep_var_k);
+//         ub_dep_var = vertcat(ub_dep_var_k);
+//     }
+//     else{
+//         condensed_lb_con = reduced_lb_con;
+//         condensed_ub_con = reduced_ub_con;
+//     }
+
+    if (add_dep_bounds == 0){
         condensed_lb_con = reduced_lb_con;
         condensed_ub_con = reduced_ub_con;
     }
+    else if (add_dep_bounds == 1){
+        std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        condensed_lb_con_k[0] = reduced_lb_con;
+        condensed_ub_con_k[0] = reduced_ub_con;
+        for (int tnum = 0; tnum < num_targets; tnum++){
+            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_lb_con_k[tnum + 1] -= targets_data[tnum].g.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_ub_con_k[tnum + 1] -= targets_data[tnum].g.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+        }
+        condensed_lb_con = vertcat(condensed_lb_con_k.get(), num_targets + 1);
+        condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
+    }
+    else{
+        std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        condensed_lb_con_k[0] = reduced_lb_con;
+        condensed_ub_con_k[0] = reduced_ub_con;
+        for (int tnum = 0; tnum < num_targets; tnum++){
+            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb;
+            condensed_lb_con_k[tnum + 1] -= targets_data[tnum].g;
+            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub;
+            condensed_ub_con_k[tnum + 1] -= targets_data[tnum].g;
+        }
+        condensed_lb_con = vertcat(condensed_lb_con_k.get(), num_targets + 1);
+        condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
+    }
 
-//Assemble condensed_h, vector of linear term in objective
+    //Assemble condensed_h, vector of linear term in objective
     std::vector<Matrix> condensed_h_k(2*num_targets+1);
     for (int i = 0; i < num_targets; i++){
         condensed_h_k[2*i] = O_grad_obj[i];
@@ -1975,43 +2024,76 @@ void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con
         reduced_ub_con -= targets_data[i].Jtimes_g;
     }
 //Add dependent variable bounds to constraints
-    if (add_dep_bounds == 2){
-        std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-        condensed_lb_con_k[0] = reduced_lb_con;
-        condensed_ub_con_k[0] = reduced_ub_con;
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
-            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        }
-        condensed_lb_con = vertcat(condensed_lb_con_k);
-        condensed_ub_con = vertcat(condensed_ub_con_k);
-    }
-    else if (add_dep_bounds == 1){
-        std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-        std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-        condensed_lb_con_k[0] = reduced_lb_con;
-        condensed_ub_con_k[0] = reduced_ub_con;
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
-            condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
-        }
-        condensed_lb_con = vertcat(condensed_lb_con_k);
-        condensed_ub_con = vertcat(condensed_ub_con_k);
+    // if (add_dep_bounds == 2){
+    //     std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
+    //     std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
+    //     condensed_lb_con_k[0] = reduced_lb_con;
+    //     condensed_ub_con_k[0] = reduced_ub_con;
+    //     for (int tnum = 0; tnum < num_targets; tnum++){
+    //         condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
+    //         condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
+    //     }
+    //     condensed_lb_con = vertcat(condensed_lb_con_k);
+    //     condensed_ub_con = vertcat(condensed_ub_con_k);
+    // }
+    // else if (add_dep_bounds == 1){
+    //     std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
+    //     std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
+    //     condensed_lb_con_k[0] = reduced_lb_con;
+    //     condensed_ub_con_k[0] = reduced_ub_con;
+    //     for (int tnum = 0; tnum < num_targets; tnum++){
+    //         condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
+    //         condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
+    //     }
+    //     condensed_lb_con = vertcat(condensed_lb_con_k);
+    //     condensed_ub_con = vertcat(condensed_ub_con_k);
 
-        //Save bounds on dependent variables so a user can manually add them to the qp
-        std::vector<Matrix> lb_dep_var_k(num_targets);
-        std::vector<Matrix> ub_dep_var_k(num_targets);
-        for (int tnum = 0; tnum < num_targets; tnum++){
-            lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
-            ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
-        }
-        lb_dep_var = vertcat(lb_dep_var_k);
-        ub_dep_var = vertcat(ub_dep_var_k);
-    }
-    else{
+    //     //Save bounds on dependent variables so a user can manually add them to the qp
+    //     std::vector<Matrix> lb_dep_var_k(num_targets);
+    //     std::vector<Matrix> ub_dep_var_k(num_targets);
+    //     for (int tnum = 0; tnum < num_targets; tnum++){
+    //         lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
+    //         ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
+    //     }
+    //     lb_dep_var = vertcat(lb_dep_var_k);
+    //     ub_dep_var = vertcat(ub_dep_var_k);
+    // }
+    // else{
+    //     condensed_lb_con = reduced_lb_con;
+    //     condensed_ub_con = reduced_ub_con;
+    // }
+    
+    if (add_dep_bounds == 0){
         condensed_lb_con = reduced_lb_con;
         condensed_ub_con = reduced_ub_con;
+    }
+    else if (add_dep_bounds == 1){
+        std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        condensed_lb_con_k[0] = reduced_lb_con;
+        condensed_ub_con_k[0] = reduced_ub_con;
+        for (int tnum = 0; tnum < num_targets; tnum++){
+            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_lb_con_k[tnum + 1] -= targets_data[tnum].g.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+            condensed_ub_con_k[tnum + 1] -= targets_data[tnum].g.without_rows(targets_data[tnum].impl_bounds_indices.get(), targets_data[tnum].impl_bounds_indices_l);
+        }
+        condensed_lb_con = vertcat(condensed_lb_con_k.get(), num_targets + 1);
+        condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
+    }
+    else{
+        std::unique_ptr<Matrix[]> condensed_lb_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        std::unique_ptr<Matrix[]> condensed_ub_con_k = std::make_unique<Matrix[]>(num_targets + 1);
+        condensed_lb_con_k[0] = reduced_lb_con;
+        condensed_ub_con_k[0] = reduced_ub_con;
+        for (int tnum = 0; tnum < num_targets; tnum++){
+            condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb;
+            condensed_lb_con_k[tnum + 1] -= targets_data[tnum].g;
+            condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub;
+            condensed_ub_con_k[tnum + 1] -= targets_data[tnum].g;
+        }
+        condensed_lb_con = vertcat(condensed_lb_con_k.get(), num_targets + 1);
+        condensed_ub_con = vertcat(condensed_ub_con_k.get(), num_targets + 1);
     }
 
 //Assemble condensed_h, vector of linear term in objective
@@ -2172,17 +2254,48 @@ void Condenser::recover_correction_var_mult(const Matrix &xi_cond, const Matrix 
 
     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
     ind = condensed_num_vars + num_true_cons;
-    if (add_dep_bounds){
-        for (int i = 0; i < num_targets; i++){
-            // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
-            lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
-            ind += targets_data[i].n_dep;
-        }
-    }
-    else{
-        for (int i = 0; i < num_targets; i++){
-            T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
-        }
+    
+    // if (add_dep_bounds){
+    //     for (int i = 0; i < num_targets; i++){
+    //         // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
+    //         lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
+    //         ind += targets_data[i].n_dep;
+    //     }
+    // }
+    // else{
+    //     for (int i = 0; i < num_targets; i++){
+    //         T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+    //     }
+    // }
+    
+    switch (add_dep_bounds){
+        case 0:
+            for (int i = 0; i < num_targets; i++){
+                T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+            }
+            break;
+        case 1:
+            for (int i = 0; i < num_targets; i++){
+                T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
+                int k = 0, j = 0;
+                for (; k < targets_data[i].impl_bounds_indices_l; k++, j++){
+                    for (; j < targets_data[i].impl_bounds_indices[k]; j++){
+                        T_lambda[i](j) = lambda_cond(ind + j - k);
+                    }
+                }
+                for (; j < targets_data[i].n_dep; j++){
+                    T_lambda[i](j) = lambda_cond(ind + j - k);
+                }
+                ind += targets_data[i].n_dep - targets_data[i].impl_bounds_indices_l;
+            }
+            break;
+        case 2:
+            for (int i = 0; i < num_targets; i++){
+                lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
+                ind += targets_data[i].n_dep;
+            }
+            break;
+        default: throw;
     }
     
     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
@@ -2359,8 +2472,8 @@ PartialCondenser::PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS,
                                    int* HSIZES, int n_HBLOCKS, 
                                    condensing_target* TARGETS, int n_TARGETS, 
                                    int n_SPLIT, int DEP_BOUNDS):
+        Condenser(DEP_BOUNDS),
         targets_orig(TARGETS), n_targets_orig(n_TARGETS), n_split(n_SPLIT){
-    add_dep_bounds = DEP_BOUNDS;
     vblocks = VBLOCKS;
     num_vblocks = n_VBLOCKS;
     cblocks = CBLOCKS;

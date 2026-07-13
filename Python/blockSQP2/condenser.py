@@ -108,7 +108,7 @@ class Condenser(CXXobjWrapper):
         BSQP = self.BSQP
         self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
         for i, vb in enumerate(vblocks):
-            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(False))
+            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
         
         self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
         for i, cb in enumerate(cblocks):
@@ -306,11 +306,11 @@ class Condenser(CXXobjWrapper):
     
     
 class PartialCondenser(Condenser): #TODO: Reduce code duplication
-    def __init__(self, vblocks : typing.List['vblock'], cblocks : typing.List['cblock'], hsizes : typing.List['int'], targets : typing.List['condensing_target'], n_split : int, dep_bounds : int = 2):
+    def __init__(self, vblocks : typing.List['vblock'], cblocks : typing.List['cblock'], hsizes : typing.List['int'], targets : typing.List['condensing_target'], n_split : int, dep_bounds : int = 1):
         BSQP = self.BSQP
         self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
         for i, vb in enumerate(vblocks):
-            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(False))
+            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
         
         self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
         for i, cb in enumerate(cblocks):
