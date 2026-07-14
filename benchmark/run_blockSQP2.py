@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Satellite_Deorbiting_1(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -34,8 +34,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
-
-itMax = 100                                  #max number of steps
+itMax = 200                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
@@ -43,8 +42,8 @@ plot_title = True                           #Put name of problem in plot?
 sol_plot = False
 
 
-# start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
-start = OCprob.start_point
+start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
+# start = OCprob.start_point
 ###############################
 QPopts = blockSQP2.qpOASES_options(
     matrixSparsity = -1
@@ -129,13 +128,14 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 # scaledProb = blockSQP2.ScaledProblem(prob)
 # scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 # for i in range(OCprob.ntS + 1):
-#     OCprob.set_stage_control(scalingFactors, i, 10.0)
+#     OCprob.set_stage_state(scalingFactors, i, [1.0]*6 + [1.0]*3)
 # scaledProb.set_scale(scalingFactors)
 
 stats = blockSQP2.SQPstats("./solver_outputs")
 
 t0 = time.monotonic()
 optimizer = blockSQP2.SQPmethod(prob, opts, stats)
+# optimizer = blockSQP2.SQPmethod(scaledProb, opts, stats)
 optimizer.init()
 
 if (step_plots):

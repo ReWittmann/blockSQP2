@@ -1224,6 +1224,8 @@ class Calcium_Oscillation(OCProblem):
     def build_problem(self):
         self.set_OCP_data(4,1,1,1,[0,0,0,0],[np.inf,np.inf,np.inf,np.inf],[1.1], [1.3], [1], [np.inf])
         self.fix_initial_value([0.03966, 1.09799, 0.00142, 1.65431])
+        self.mark_state_bounds_implicit()
+        
         x = cs.MX.sym('x', 4)
         x0,x1,x2,x3 = cs.vertsplit(x)
         w = cs.MX.sym('w')
@@ -1373,6 +1375,7 @@ class Bioreactor(OCProblem):
         self.set_OCP_data(3, 0, 1, 1,[0.,0.,0.],[np.inf,np.inf,np.inf],[],[],[28.7],[40.])
         self.fix_initial_value([6.5,12,22])
         self.fix_time_horizon(0,48)
+        self.mark_state_bounds_implicit(True, False, True)
         
         D, Ki, Km, Pm, Yxs, alpha, beta, mum = (self.model_params[key] for key in ['D', 'Ki', 'Km', 'Pm', 'Yxs', 'alpha', 'beta', 'mum'])
         
@@ -1511,7 +1514,8 @@ class Hanging_Chain(OCProblem):
 class Hanging_Chain_MAYER(Hanging_Chain):
     default_params = {'a':1, 'b':3, 'Lp': 4}
     def build_problem(self):
-        self.set_OCP_data(3,0,1,0,[0.], [10.], [], [], [-10., -np.inf, -np.inf], [20., np.inf, np.inf])
+        self.set_OCP_data(3,0,1,0,[0., -np.inf, -np.inf], [10., np.inf, np.inf], [], [], [-10.], [20.])
+        self.mark.state_bounds_implicit([False, True, True])
         
         a,b,Lp = (self.model_params[key] for key in ['a', 'b', 'Lp'])
         self.fix_initial_value([a, 0, 0])
@@ -1816,8 +1820,7 @@ class D_Onofrio_Chemotherapy(OCProblem):
     
     def build_problem(self):
         zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
-        self.set_OCP_data(2,0,2,3,[0.1,0.1], [np.inf,np.inf], [], [], [0.,0.],[u0max,u1max])
-        #Note: Lower bounds 0.1,0.1 for differential states required as integrations fails at 0, 0 due to numerical errors causing negative states
+        self.set_OCP_data(2,0,2,3,[1e-1,1e-1], [np.inf,np.inf], [], [], [0.,0.],[u0max,u1max])
         self.fix_initial_value([x00,x10])
         self.fix_time_horizon(0., self.model_params['duration'])
         
@@ -1870,105 +1873,105 @@ class D_Onofrio_Chemotherapy(OCProblem):
         plt.show()   
         plt.close()
     
-class D_Onofrio_Chemotherapy_VT(OCProblem):
-    default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0.}
-    param_set_1 = {
-        'x00': 12000,
-        'x10': 15000,
-        'u1max': 1,
-        'x3max': 2
-    }
+# class D_Onofrio_Chemotherapy_VT(OCProblem):
+#     default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0.}
+#     param_set_1 = {
+#         'x00': 12000,
+#         'x10': 15000,
+#         'u1max': 1,
+#         'x3max': 2
+#     }
     
-    param_set_2 = {
-        'x00': 12000,
-        'x10': 15000,
-        'u1max': 2,
-        'x3max': 10
-    }
+#     param_set_2 = {
+#         'x00': 12000,
+#         'x10': 15000,
+#         'u1max': 2,
+#         'x3max': 10
+#     }
     
-    param_set_3 = {
-        'x00': 14000,
-        'x10': 5000,
-        'u1max': 1,
-        'x3max': 2
-    }
+#     param_set_3 = {
+#         'x00': 14000,
+#         'x10': 5000,
+#         'u1max': 1,
+#         'x3max': 2
+#     }
     
-    param_set_4 = {
-        'x00': 14000,
-        'x10': 5000,
-        'u1max': 2,
-        'x3max': 10
-    }
+#     param_set_4 = {
+#         'x00': 14000,
+#         'x10': 5000,
+#         'u1max': 2,
+#         'x3max': 10
+#     }
     
-    def __init__(self, nt = 20, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
-        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel, N_threads = N_threads, **kwargs)
+#     def __init__(self, nt = 20, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
+#         OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel, N_threads = N_threads, **kwargs)
 
     
-    def build_problem(self):
-        zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
-        self.set_OCP_data(4,1,2,1,[0.1,0.1,0.,0.], [np.inf,np.inf,x2max,x3max], [4/self.ntS], [20/self.ntS], [0.,0.],[u0max,u1max])
-        #Note: Lower bounds 0.1,0.1 for differential states required as integrations fails at 0, 0 due to numerical errors causing negative states
-        self.fix_initial_value([x00,x10,x20,x30])
-        # self.fix_time_horizon(0, 6.0)
+#     def build_problem(self):
+#         zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
+#         self.set_OCP_data(4,1,2,1,[0.1,0.1,0.,0.], [np.inf,np.inf,x2max,x3max], [4/self.ntS], [20/self.ntS], [0.,0.],[u0max,u1max])
+#         #Note: Lower bounds 0.1,0.1 for differential states required as integrations fails at 0, 0 due to numerical errors causing negative states
+#         self.fix_initial_value([x00,x10,x20,x30])
+#         # self.fix_time_horizon(0, 6.0)
         
-        x = cs.MX.sym('x', 4)
-        x0,x1,x2,x3 = cs.vertsplit(x)
-        u = cs.MX.sym('u', 2)
-        u0,u1 = cs.vertsplit(u)
-        p = cs.MX.sym('p', 1)
-        dt = p
-        # dt = cs.MX.sym('dt')
+#         x = cs.MX.sym('x', 4)
+#         x0,x1,x2,x3 = cs.vertsplit(x)
+#         u = cs.MX.sym('u', 2)
+#         u0,u1 = cs.vertsplit(u)
+#         p = cs.MX.sym('p', 1)
+#         dt = p
+#         # dt = cs.MX.sym('dt')
         
-        ode_rhs = cs.vertcat(-zeta*x0*cs.log(x0/x1) - F*x0*u1,
-                             b*x0 - mu*x1 - d*x0**(2./3.)*x1 - G*u0*x1 - eta*x1*u1,
-                             u0,
-                             u1
-                             )
-        quad = u0**2
-        self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad':dt*quad}
-        self.multiple_shooting()
-        self.set_objective(20*self.p_tf*self.ntS+self.x_eval[0,-1] + alpha*self.q_tf)
-        self.build_NLP()
-        self.set_stage_param(self.start_point, 0, 4/self.ntS)
-        for i in range(1,self.ntS):
-            self.set_stage_param(self.start_point, i, 6/self.ntS)
-        self.integrate_full(self.start_point)
+#         ode_rhs = cs.vertcat(-zeta*x0*cs.log(x0/x1) - F*x0*u1,
+#                              b*x0 - mu*x1 - d*x0**(2./3.)*x1 - G*u0*x1 - eta*x1*u1,
+#                              u0,
+#                              u1
+#                              )
+#         quad = u0**2
+#         self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad':dt*quad}
+#         self.multiple_shooting()
+#         self.set_objective(20*self.p_tf*self.ntS+self.x_eval[0,-1] + alpha*self.q_tf)
+#         self.build_NLP()
+#         self.set_stage_param(self.start_point, 0, 4/self.ntS)
+#         for i in range(1,self.ntS):
+#             self.set_stage_param(self.start_point, i, 6/self.ntS)
+#         self.integrate_full(self.start_point)
     
-    def perturbed_start_point(self, ind):
-        s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, [0.1,0.1])
-        return s
+#     def perturbed_start_point(self, ind):
+#         s = copy.copy(self.start_point)
+#         self.set_stage_control(s, ind, [0.1,0.1])
+#         return s
     
-    def plot(self, xi, dpi = None, title = None, it = None):
-        p = self.get_param_arrays(xi)
-        time_grid = np.cumsum(np.concatenate([[0], p]))
-        # time_grid = self.time_grid
-        x0,x1,x2,x3 = self.get_state_arrays(xi)
-        u0,u1 = self.get_control_plot_arrays(xi)
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         p = self.get_param_arrays(xi)
+#         time_grid = np.cumsum(np.concatenate([[0], p]))
+#         # time_grid = self.time_grid
+#         x0,x1,x2,x3 = self.get_state_arrays(xi)
+#         u0,u1 = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, x0/100., 'r-', label = 'x0/100')
-        plt.plot(time_grid, x1/100., 'g-', label = 'x1/100')
-        plt.plot(time_grid, x2, 'b-', label = 'x2')
-        plt.plot(time_grid, x3, 'c-', label = 'x3')
-        plt.step(time_grid, u0, 'r-', label = 'u0')
-        plt.step(time_grid, u1*75, 'g-', label = 'u1*75')
-        plt.legend(fontsize='large')
+#         plt.figure(dpi = dpi)
+#         plt.plot(time_grid, x0/100., 'r-', label = 'x0/100')
+#         plt.plot(time_grid, x1/100., 'g-', label = 'x1/100')
+#         plt.plot(time_grid, x2, 'b-', label = 'x2')
+#         plt.plot(time_grid, x3, 'c-', label = 'x3')
+#         plt.step(time_grid, u0, 'r-', label = 'u0')
+#         plt.step(time_grid, u1*75, 'g-', label = 'u1*75')
+#         plt.legend(fontsize='large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'D\'Onofrio chemotherapy problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+#         ttl = None
+#         if isinstance(title,str):
+#             ttl = title
+#         elif title == True:
+#             ttl = 'D\'Onofrio chemotherapy problem'
+#         if ttl is not None:
+#             if isinstance(it, int):
+#                 ttl = ttl + f', iteration {it}'
+#             plt.title(ttl)
+#         else:
+#             plt.title('')
             
-        plt.show()  
-        plt.close()
+#         plt.show()  
+#         plt.close()
              
         
 
@@ -1979,9 +1982,9 @@ class Egerstedt_Standard(OCProblem):
     def build_problem(self):
         self.set_OCP_data(2,0,3,1, [-np.inf, 0.4], [np.inf,np.inf], [], [], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0.,1.)
-        
         x_init = self.model_params['x_init']
         self.fix_initial_value(x_init)
+        self.mark_state_bounds_implicit(True, False)
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
@@ -2050,6 +2053,7 @@ class Egerstedt_Standard_MAYER(Egerstedt_Standard):
         self.set_OCP_data(3,0,3,0, [-np.inf, 0.4, -np.inf], [np.inf,np.inf,np.inf], [], [], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0.,1.)
         self.fix_initial_value([0.5,0.5,0.])
+        self.mark_state_bounds_implicit(True, False, True)
         
         x = cs.MX.sym('x', 3)
         x1,x2, q = cs.vertsplit(x)
@@ -2116,6 +2120,7 @@ class Fullers(OCProblem):
         self.set_OCP_data(2, 0, 1, 1, [-np.inf,-np.inf], [np.inf,np.inf], [], [], [0.], [1.])
         self.fix_initial_value([0.01, 0.])
         self.fix_time_horizon(0.,1.)
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         x0,x1 = cs.vertsplit(x)
@@ -2261,6 +2266,7 @@ class F8_Aircraft(OCProblem):
     def build_problem(self):
         self.set_OCP_data(3,1,1,0,[-np.inf,-np.inf,-np.inf], [np.inf,np.inf,np.inf], [1/self.ntS], [100/self.ntS], [-0.05236], [0.05236])
         self.fix_initial_value([0.4655,0.,0.])
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 3)
         x0,x1,x2 = cs.vertsplit(x)
@@ -2365,7 +2371,7 @@ class Gravity_Turn(OCProblem):
         self.multiple_shooting()
         
         self.set_objective(m0 - self.x_eval[0,-1])
-        self.add_constraint(cs.cumsum(self.q_eval), 0., np.inf)
+        self.add_constraint(cs.cumsum(self.q_eval, 1), 0., np.inf)
         self.add_constraint(self.x_eval[1:4,-1] - cs.DM([vT, betaT, hT]), 0., 0.)
         
         self.build_NLP()
@@ -2429,6 +2435,7 @@ class Oil_Shale_Pyrolysis(OCProblem):
     def build_problem(self):
         self.set_OCP_data(4,1,1,0, [0.,0.,0.,0.], [np.inf,np.inf,np.inf,np.inf], [0.1/self.ntS], [20./self.ntS], [698.15], [748.15])
         self.fix_initial_value([1.,0.,0.,0.])
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 4)
         x1,x2,x3,x4 = cs.vertsplit(x)
@@ -2498,15 +2505,16 @@ class Particle_Steering(OCProblem):
     def build_problem(self):
         self.set_OCP_data(4, 1, 1, 0, [-np.inf]*4, [np.inf]*4, [0.01/self.ntS], [100/self.ntS], [-np.pi/2], [np.pi/2])
         self.fix_initial_value([0.,0.,0.,0.])
+        self.mark_state_bounds_implicit()
         
         a = self.model_params['a']
         x = cs.MX.sym('x',4)
-        x1,x2,y1,y2 = cs.vertsplit(x)
+        x1,x2,dx1,dx2 = cs.vertsplit(x)
         u = cs.MX.sym('u')
         dt = cs.MX.sym('dt')
         
-        ode_rhs = cs.vertcat(y1,
-                             y2,
+        ode_rhs = cs.vertcat(dx1,
+                             dx2,
                              a*cs.cos(u),
                              a*cs.sin(u),
                              )
@@ -2527,7 +2535,7 @@ class Particle_Steering(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        x1,x2,y1,y2 = self.get_state_arrays(xi)
+        x1,x2,dx1,dx2 = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
         p = self.get_param_arrays(xi)
         p_exp = self.get_param_arrays_expanded(xi)
@@ -2563,6 +2571,7 @@ class Quadrotor_Helicopter(OCProblem):
         self.set_OCP_data(6, 0, 4, 1, [-np.inf,-np.inf,0.,-np.inf,-np.inf,-np.inf], [np.inf]*6, [], [], [0.,0.,0.,0.], [1.,1.,1.,0.001])
         self.fix_time_horizon(0,7.5)
         self.fix_initial_value([0.,0.,1.,0.,0.,0.])
+        self.mark_state_bounds_implicit(0,1,  3,4,5)
         
         g,M,L,I = (self.model_params[key] for key in ['g', 'M', 'L', 'I'])
         
@@ -2808,6 +2817,7 @@ class Three_Tank_Multimode_MAYER(Three_Tank_Multimode):
         self.set_OCP_data(4,0,3,0,[0.,0.,0.,-np.inf], [np.inf,np.inf,np.inf,np.inf], [],[], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0, self.model_params['T'])
         self.fix_initial_value([2.,2.,2.,0.])
+        self.mark_state_bounds_implicit()
         
         c1, c2, c3, k1, k2, k3, k4 = (self.model_params[key] for key in ['c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4'])
         
@@ -3444,7 +3454,6 @@ class Lotka_OED_USCALE(OCProblem):
 
 
 
-
 class Fermenter(OCProblem):
     #Janka PhD and Le master's thesis params
     default_params = {'mux':2e5,
@@ -3470,12 +3479,12 @@ class Fermenter(OCProblem):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     def build_problem(self):
-        self.set_OCP_data(9, 0, 3, 0, [0.,0.,0.,0.,0.3,0.] + [0.,0.,0.], [0.1,0.04,0.03,0.1,0.45,0.1] + [0.05,0.2,0.025], [], [], [0.,0.,0.], [15.,1.,30.])
+        self.set_OCP_data(6, 0, 3, 3, [0.,0.,0.,0.,0.3,0.], [0.1,0.04,0.03,0.1,0.45,0.1], [], [], [0.,0.,0.], [15.,1.,30.])
         mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
         self.fix_time_horizon(0.,1.)
         self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1] + [0., 0.009, 0.009])
-        x = cs.MX.sym('x', 9)
-        P,S1,S2,E,V,G, _,_,_ = cs.vertsplit(x)
+        x = cs.MX.sym('x', 6)
+        P,S1,S2,E,V,G = cs.vertsplit(x)
         u = cs.MX.sym('u', 3)
         uS1,uS2,uP = cs.vertsplit(u)
         dt = cs.MX.sym('dt', 1)
@@ -3489,17 +3498,21 @@ class Fermenter(OCProblem):
                 mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
                 uS1 + uS2 - uP,
                 -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
-                uP*P + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),#P,
-                0.0168*uS1,
-                0.01332*uS2
         )
         
-        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode':dt*ode_rhs}
+        quad = cs.vertcat(uP*P + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),#P,
+                0.0168*uS1,
+                0.01332*uS2)
+        
+        self.ODE = {'x':x, 'p':cs.vertcat(dt, u), 'ode':dt*ode_rhs, 'quad': dt*quad}
         self.multiple_shooting()
         
-        _,_,_,_,_,_, P_acc, S1_acc, S2_acc = cs.vertsplit(self.x_eval[:,-1])
+        P_acc, S1_acc, S2_acc = cs.vertsplit(self.q_tf + cs.DM([0., 0.009, 0.009]))
+        
         # self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
         self.set_objective(2*(S1_acc*S2_acc)/P_acc)
+        print(self.q_eval.shape)
+        self.add_constraint(cs.cumsum(self.q_eval, 1), np.array([0.,0.,0.]) - np.array([0., 0.009, 0.009]), np.array([0.05,0.2,0.025]) - np.array([0., 0.009, 0.009]))
 
         self.build_NLP()
         for i in range(self.ntS):
@@ -3513,7 +3526,7 @@ class Fermenter(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        P,S1,S2,E,V,G,_,_,_ = self.get_state_arrays(xi)
+        P,S1,S2,E,V,G = self.get_state_arrays(xi)
         uS1,uS2,uP = self.get_control_plot_arrays(xi)
         
         plt.figure(dpi=dpi)
@@ -3694,6 +3707,7 @@ class Hang_Glider(OCProblem):
         x0, y0, ytf, dxbc, dybc, c0, c1, S, rho, cmax, m, g, uC, rC = (self.model_params[key] for key in ['x0', 'y0', 'ytf', 'dxbc', 'dybc', 'c0', 'c1', 'S', 'rho', 'cmax', 'm', 'g', 'uC', 'rC'])
         self.set_OCP_data(4,1,1,0, [0.,0.,-np.inf,-np.inf], [np.inf,np.inf,np.inf,np.inf], [75/self.ntS], [np.inf], [0], [cmax])
         self.fix_initial_value([x0, dxbc, y0, dybc])
+        self.mark_state_bounds_implicit(False,False,True,True)
         
         XY = cs.MX.sym('XY', 4)
         x,dx,y,dy = cs.vertsplit(XY)
@@ -3763,12 +3777,17 @@ class Tubular_Reactor(OCProblem):
         self.set_OCP_data(1,0,1,1, [-np.inf], [np.inf], [], [], [0.], [5.])
         self.fix_time_horizon(0.,1.)
         self.fix_initial_value([1.0])
+        self.mark_state_bounds_implicit()
         x = cs.MX.sym('x', 1)
         u = cs.MX.sym('u', 1)
         dt = cs.MX.sym('dt', 1)
         ode_rhs = -(u + 0.5 * u**2) * x
         quad_expr = u * x
-        self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.ODE = {'x':x, 
+                    'p':cs.vertcat(dt,u), 
+                    'ode': dt*ode_rhs, 
+                    'quad': dt*quad_expr
+                    }
         self.multiple_shooting()
         self.set_objective(-self.q_tf[0])
         
@@ -3808,11 +3827,11 @@ class Tubular_Reactor(OCProblem):
         
 
 class Tubular_Reactor_MAYER(Tubular_Reactor):
-    
     def build_problem(self):
         self.set_OCP_data(2,0,1,0, [-np.inf, -np.inf], [np.inf, np.inf], [], [], [0.], [5.])
         self.fix_time_horizon(0.,1.)
         self.fix_initial_value([None, 0.])
+        self.mark_state_bounds_implicit()
         X = cs.MX.sym('X', 2)
         x,y = cs.vertsplit(X)
         u = cs.MX.sym('u', 1)
@@ -3863,6 +3882,7 @@ class Mountain_Car(OCProblem):
     def build_problem(self):
         self.set_OCP_data(2,1,1,0,[-np.inf, -np.inf],[np.inf, np.inf],[1.0/self.ntS],[np.inf],[-1.0],[1.0])
         self.fix_initial_value([-0.5, 0.])
+        self.mark_state_bounds_implicit()
         
         X = cs.MX.sym('X', 2)
         x,v = cs.vertsplit(X)
@@ -3927,6 +3947,7 @@ class Rao_Mease(OCProblem):
         self.set_OCP_data(1,0,1,1,[-np.inf],[np.inf],[],[],[-np.inf],[np.inf])
         self.fix_time_horizon(0.,10.)
         self.fix_initial_value([1.0])
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 1)
         w = cs.MX.sym('w', 1)
@@ -3998,6 +4019,7 @@ class Cart_Pendulum(OCProblem):
         self.set_OCP_data(4,0,1,0, [-2.0, -np.inf, -np.inf, -np.inf], [2.0, np.inf, np.inf, np.inf], [], [], [-u_max], [u_max])
         self.fix_time_horizon(0., 4.0)
         self.fix_initial_value([0., 0., 0., 0.])
+        self.mark_state_bounds_implicit(1,2,3)
         
         w = cs.MX.sym('w', 4)
         x,xdot,theta,thetadot = cs.vertsplit(w)
@@ -4067,6 +4089,8 @@ class Dielectrophoretic_Particle(OCProblem):
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf],[np.inf, np.inf],[0.01],[np.inf],[-1],[1])
         x0,xf,alpha,c = (self.model_params[key] for key in self.default_params.keys())
         self.fix_initial_value([x0, 0.])
+        self.mark_state_bounds_implicit()
+        
         x = cs.MX.sym('x', 2)
         u = cs.MX.sym('u', 1)
         x0, x1 = cs.vertsplit(x)
@@ -4137,6 +4161,7 @@ class Double_Oscillator(OCProblem):
         m1, m2, k1, k2, c, T = (self.model_params[key] for key in self.default_params.keys())
         self.fix_initial_value([0., 0., None, None, 0.])
         self.fix_time_horizon(0,T)
+        self.mark_state_bounds_implicit()
         x = cs.MX.sym('x', 4+1)
         u = cs.MX.sym('u', 1)
         x0, x1, dx0, dx1,t = cs.vertsplit(x)
@@ -4209,7 +4234,7 @@ class Ducted_Fan(OCProblem):
         self.set_OCP_data(6,1,2,1,[-np.inf]*2 + [-30] + [-np.inf]*3,[np.inf]*2 + [30] + [np.inf]*3,[1.0/self.ntS],[8.0/self.ntS],[-5., 0.],[5., 17.])
         m, J, r, mg, mu = (self.model_params[key] for key in self.default_params.keys())
         self.fix_initial_value([0.]*6)
-        self.mark_state_bounds_implicit([i for i in range(self.nx) if i not in [2]])
+        self.mark_state_bounds_implicit([i != 2 for i in range(self.nx)])
         
         x = cs.MX.sym('x', 6)
         u = cs.MX.sym('u', 2)
@@ -4280,6 +4305,8 @@ class Robbins(OCProblem):
         alpha, beta, gamma, T = (self.model_params[key] for key in self.default_params.keys())
         self.fix_time_horizon(0,T)
         self.fix_initial_value([1.,-2.,0.])
+        self.mark_state_bounds_implicit(False, True, True)
+        
         X = cs.MX.sym('X', 3)
         u = cs.MX.sym('u', 1)
         x, dx, ddx = cs.vertsplit(X)
@@ -4332,11 +4359,12 @@ class Robbins(OCProblem):
 class Lotka_Volterra_Shared(OCProblem):
     default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[1.5,0.5,1.0]}
     def build_problem(self):
-        self.set_OCP_data(3,0,1,1,[0.,0.,0.],[2.0, 2.0, 2.0],[],[],[0.],[1.])
+        self.set_OCP_data(3,0,1,1,[0.,0.,0.],[np.inf, np.inf, np.inf],[],[],[0.],[1.])
         
         c1, c2 = (self.model_params[key] for key in ['c1', 'c2'])
         self.fix_time_horizon(self.model_params['t0'], self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init'])
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 3)
         u = cs.MX.sym('w', 1)
@@ -4394,11 +4422,12 @@ class Lotka_Volterra_Shared(OCProblem):
 class Lotka_Volterra_Competitive(OCProblem):
     default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[0.5, 1.5]}
     def build_problem(self):
-        self.set_OCP_data(2,0,1,1,[0.,0.],[2.0, 2.0],[],[],[0.],[1.])
+        self.set_OCP_data(2,0,1,1,[0.,0.],[np.inf, np.inf],[],[],[0.],[1.])
         
         c1, c2 = (self.model_params[key] for key in ['c1', 'c2'])
         self.fix_time_horizon(self.model_params['t0'], self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init'])
+        self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         u = cs.MX.sym('w', 1)
@@ -4406,6 +4435,7 @@ class Lotka_Volterra_Competitive(OCProblem):
         ode_rhs = cs.vertcat(
                 x0 * (1 - (x0 + 1.2 * x1)/1.8) - c1 * x0 * u,#x[0] population suffers greater loss from competition with x[1] than vice versa
                 x1 * (1 - (x0 + x1)/1.8) - c2 * x1 * u)
+        
         
         quad_expr = (x1 - 1)**2 + (x0 - 1)**2 + 1e-4*u**2 
         dt = cs.MX.sym('dt', 1)
@@ -4569,6 +4599,7 @@ class Clinic_Scheduling(OCProblem):
         self.set_OCP_data(4,0,3,0, [0.,0.,0.,U_min], [np.inf,N_max,W_max,1.0], [], [], [0., mu_min, 1.0], [lam_max, mu_max, N_max])
         self.fix_time_horizon(0., 8.0)
         self.fix_initial_value([Q0, S0, W0, U0])
+        self.mark_state_bounds_implicit(0)
         
         X = cs.MX.sym('X', 4)
         Q, S, W, U = cs.vertsplit(X)
@@ -4810,15 +4841,18 @@ class Satellite_Deorbiting_1(OCProblem):
             # 'thetascale': 1.0,
             # 'mscale': 1.0e1,
             # 'TSCALE': 1.0
-            'rscale': 1.0e-4,
-            'vscale': 1.0e-2,
-            'thetascale': 1.0e-2,
-            'mscale': 1.0e0,
+            # 'rscale': 1e-4,         #good
+            'rscale': 1.0,
+            'vrscale': 1.0,
+            'thetascale': 1.0,
+            # 'vthetascale': 1e-4,    #good
+            'vthetascale': 1.0,
+            'mscale': 1,
             'TSCALE': 1.0
             }
     
     def build_problem(self):
-        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, rscale, thetascale, mscale, vscale, TSCALE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'rscale', 'thetascale', 'mscale', 'vscale', 'TSCALE'])
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, rscale, thetascale, mscale, vrscale, vthetascale, TSCALE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'rscale', 'thetascale', 'mscale', 'vrscale', 'vthetascale', 'TSCALE'])
         
         h0 = 450000
         r0 = RE + h0
@@ -4831,8 +4865,8 @@ class Satellite_Deorbiting_1(OCProblem):
         hreentry = 120000
         rfinal = RE + hreentry
         
-        self.set_OCP_data(5,1,2,0, [(RE+5000. - RE)*rscale, -2*np.pi*thetascale, -10000.*vscale, 0.*vscale, (mdry - 0.1)*mscale], [(r0 + 100000. - RE)*rscale, 2*np.pi*thetascale, 10000.*vscale, 20000*vscale, (m0 + 0.1)*mscale], [300/self.ntS * TSCALE], [21600/self.ntS * TSCALE], [-umax, -umax], [umax, umax])
-        self.fix_initial_value([(r0 - RE)*rscale, theta0*thetascale, vr0*vscale, vorb*vscale, m0*mscale])
+        self.set_OCP_data(5,1,2,0, [(RE+5000. - RE)*rscale, -2*np.pi*thetascale, -10000.*vrscale, 0.*vthetascale, (mdry - 0.1)*mscale], [(r0 + 100000. - RE)*rscale, 2*np.pi*thetascale, 10000.*vrscale, 20000*vthetascale, (m0 + 0.1)*mscale], [300/self.ntS * TSCALE], [21600/self.ntS * TSCALE], [-umax, -umax], [umax, umax])
+        self.fix_initial_value([(r0 - RE)*rscale, theta0*thetascale, vr0*vrscale, vorb*vthetascale, m0*mscale])
         
         def safe_sqrt(x):
             return cs.sqrt(cs.fmax(x, 1e-12))
@@ -4855,8 +4889,8 @@ class Satellite_Deorbiting_1(OCProblem):
         r_, theta_, vr_, vtheta_, m_ = cs.vertsplit(X)
         r = r_/rscale + RE
         theta = theta_/thetascale
-        vr = vr_/vscale
-        vtheta = vtheta_/vscale
+        vr = vr_/vrscale
+        vtheta = vtheta_/vthetascale
         m = m_/mscale
         
         U = cs.MX.sym('U', 2)
@@ -4879,8 +4913,8 @@ class Satellite_Deorbiting_1(OCProblem):
         ode_rhs = cs.vertcat(
             vr * rscale,
             vtheta/rsafe * thetascale,
-            (centrifugal - gravity + rthrust - drag*vrelr) * vscale,
-            (-vr*vtheta/rsafe + thetathrust - drag*vreltheta) * vscale,
+            (centrifugal - gravity + rthrust - drag*vrelr) * vrscale,
+            (-vr*vtheta/rsafe + thetathrust - drag*vreltheta) * vthetascale,
             # vtheta**2 / r_safe - mu / r**2 + ur/m - drag*vrelr,
             # -vr*vtheta/r + utheta/m - drag*vreltheta,
             (-cs.sqrt(ur**2 + utheta**2)/(Isp*g0)) * mscale
@@ -4917,13 +4951,17 @@ class Satellite_Deorbiting_1(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        RE, rscale, thetascale, mscale, TSCALE = [self.model_params[key] for key in ['RE', 'rscale', 'thetascale', 'mscale', 'TSCALE']]
+        RE, rscale, thetascale, mscale, TSCALE, vrscale, vthetascale, mu = [self.model_params[key] for key in ['RE', 'rscale', 'thetascale', 'mscale', 'TSCALE', 'vrscale', 'vthetascale', 'mu']]
+        
+        h0 = 450000
+        r0 = RE + h0
+        vorb = np.sqrt(mu/r0)
         
         r_, theta_, vr_, vtheta_, m_ = self.get_state_arrays(xi)
         r = r_/rscale + RE
         theta = theta_/thetascale
-        # vr = vr_/rscale
-        # vtheta = vtheta_/rscale
+        vr = vr_/vrscale
+        vtheta = vtheta_/vthetascale
         m = m_/mscale
         
         ur, utheta = self.get_control_plot_arrays(xi)
@@ -4935,8 +4973,8 @@ class Satellite_Deorbiting_1(OCProblem):
         plt.figure(dpi=dpi)
         plt.plot(time_grid, (r - RE)/1000, 'r--', label = r'(r - Re)/1000')
         plt.plot(time_grid, theta*50, 'g:', label = r'$\theta\cdot 50$')
-        # plt.plot(time_grid, vr, 'b-.', label = r'$v_r$')
-        # plt.plot(time_grid, vtheta, 'y-', label = r$v_\theta$))
+        plt.plot(time_grid, vr, 'b--', label = r'$v_r$')
+        plt.plot(time_grid, vtheta - vorb, 'y-', label = r'$v_\theta - vorb$')
         plt.plot(time_grid, (m - 100.)*4, 'b-.', label = r'(m - 100)$\cdot 4$')
         
         # plt.axhline(y = 5)
@@ -4985,13 +5023,15 @@ class Satellite_Deorbiting_2(OCProblem):
             'omegaE':7.2921e-5,
             'MDTH': 1.0,
             'rscale': 1.0e-2, #1.0e-2
-            'vscale': 1.0e-1, #1.0e-1
+            # 'vscale': 1.0e-1, #1.0e-1
             'thetascale': 1.0,
+            'vrscale': 1.0,
+            'vthetascale': 1.0e-4,
             'mscale': 1.0e1   #1.0e1
             }
     
     def build_problem(self):
-        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, MDTH, rscale, vscale, thetascale, mscale = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'MDTH', 'rscale', 'vscale', 'thetascale', 'mscale'])
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, MDTH, rscale, thetascale, vrscale, vthetascale, mscale = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'MDTH', 'rscale', 'thetascale', 'vrscale', 'vthetascale', 'mscale'])
         
         h0 = 450000
         r0 = RE + h0
@@ -5011,9 +5051,9 @@ class Satellite_Deorbiting_2(OCProblem):
         orbital_period = 2 * np.pi * np.sqrt(r0**3 / mu)
         n_orbits = T_mission_fixed / orbital_period
         
-        self.set_OCP_data(5,0,2,0, [(RE + 5000 - RE)*rscale, -np.ceil(n_orbits)*2*np.pi*thetascale, -8000.*vscale, 1000.*vscale, (mdry - 0.1)*mscale], [(r0 + 50000. - RE)*rscale, np.ceil(n_orbits)*2*np.pi*thetascale, 8000.*vscale, 15000.*vscale, (m0 + 0.1)*mscale], [], [], [-umax, -umax], [umax, umax])
+        self.set_OCP_data(5,0,2,0, [(RE + 5000 - RE)*rscale, -np.ceil(n_orbits)*2*np.pi*thetascale, -8000.*vrscale, 1000.*vthetascale, (mdry - 0.1)*mscale], [(r0 + 50000. - RE)*rscale, np.ceil(n_orbits)*2*np.pi*thetascale, 8000.*vrscale, 15000.*vthetascale, (m0 + 0.1)*mscale], [], [], [-umax, -umax], [umax, umax])
         self.fix_time_horizon(0., T_mission_fixed)
-        self.fix_initial_value([(r0 - RE)*rscale, (theta0)*thetascale, vr0*vscale, vorb*vscale, m0*mscale])
+        self.fix_initial_value([(r0 - RE)*rscale, (theta0)*thetascale, vr0*vrscale, vorb*vthetascale, m0*mscale])
         
         def safe_sqrt(x):
             return cs.sqrt(cs.fmax(x, 1e-12))
@@ -5036,8 +5076,8 @@ class Satellite_Deorbiting_2(OCProblem):
         r_, theta_, vr_, vtheta_, m_ = cs.vertsplit(X)
         r = r_/rscale + RE
         theta = theta_/thetascale
-        vr = vr_/vscale
-        vtheta = vtheta_/vscale
+        vr = vr_/vrscale
+        vtheta = vtheta_/vthetascale
         m = m_/mscale
         
         U = cs.MX.sym('U', 2)
@@ -5059,8 +5099,8 @@ class Satellite_Deorbiting_2(OCProblem):
         ode_rhs = cs.vertcat(
             vr * rscale,
             vtheta/rsafe * thetascale,
-            (centrifugal - gravity + rthrust - drag*vrelr) * vscale,
-            (-vr*vtheta/rsafe + thetathrust - drag*vreltheta) * vscale,
+            (centrifugal - gravity + rthrust - drag*vrelr) * vrscale,
+            (-vr*vtheta/rsafe + thetathrust - drag*vreltheta) * vthetascale,
             (-safe_sqrt(ur**2 + utheta**2)/(Isp*g0)) * mscale
         )
         
@@ -5083,8 +5123,8 @@ class Satellite_Deorbiting_2(OCProblem):
         fuel_estimate = 20
         r_init = (np.linspace(r0, rfinal, self.ntS + 1) - RE)*rscale
         theta_init = np.linspace(0, 2*np.pi * n_orbits * 0.8, self.ntS + 1) * thetascale
-        vr_init = np.linspace(0., -500., self.ntS + 1) * vscale
-        vtheta_init = np.linspace(vorb, vorb*0.85, self.ntS + 1) * vscale
+        vr_init = np.linspace(0., -500., self.ntS + 1) * vrscale
+        vtheta_init = np.linspace(vorb, vorb*0.85, self.ntS + 1) * vthetascale
         m_init = np.linspace(m0, m0 - fuel_estimate, self.ntS + 1) * mscale
         for j in range(self.ntS + 1):
             self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j]])
@@ -5100,7 +5140,7 @@ class Satellite_Deorbiting_2(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        RE, rscale, thetascale, vscale, mscale = [self.model_params[key] for key in ['RE', 'rscale', 'thetascale', 'vscale', 'mscale']]
+        RE, rscale, thetascale, vrscale, vthetascale, mscale = [self.model_params[key] for key in ['RE', 'rscale', 'thetascale', 'vrscale', 'vthetascale', 'mscale']]
         
         r_, theta_, vr_, vtheta_, m_ = self.get_state_arrays(xi)
         r = r_/rscale + RE

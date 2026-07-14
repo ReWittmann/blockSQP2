@@ -1565,6 +1565,9 @@ returnValue QProblem::solveQP(	const real_t* const g_new,
 		
 		
 		if (stopToken.stop_requested()) [[unlikely]] {
+			delete[] delta_yAC; delete[] delta_yFX; delete[] delta_xFX; delete[] delta_xFR;
+			delete[] delta_ub; delete[] delta_lb; delete[] delta_ubA; delete[] delta_lbA; delete[] delta_g;
+			
 			nWSR = iter;
 			if (cputime != 0)
 				*cputime = getCPUtime() - starttime;

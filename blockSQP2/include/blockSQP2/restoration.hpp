@@ -193,7 +193,7 @@ public:
 
 
 
-// class condensable_Restoration_Problem: public Problemspec{
+// class CondensableRestorationProblem: public BasicRestorationProblem{
 // public:
 //     Problemspec *parent;
 //     Condenser *parent_cond;
@@ -228,6 +228,9 @@ public:
 //     void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
 //     void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
 //     void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig, double &lambda_step_norm);
+
+    // virtual void recover_xi(const Matrix &xi_rest, Matrix &xi_orig);
+    // virtual void recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig);
 
 // };
 

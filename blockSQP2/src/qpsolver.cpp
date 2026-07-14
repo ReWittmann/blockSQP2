@@ -170,7 +170,10 @@ BasicCQPsolver::BasicCQPsolver(BasicQPsolver *arg_inner_QPsol, Condenser *arg_co
     inner_QPsol->set_reg_indices(std::move(inner_regInd), inner_regInd_l);
 }
 
-BasicCQPsolver::~BasicCQPsolver(){}
+BasicCQPsolver::~BasicCQPsolver(){
+    if (QPsol_own) delete inner_QPsol;
+    if (condenser_own) delete condenser;
+}
 
 void BasicCQPsolver::set_cond_update_flags(bool up_h, bool up_hess, bool up_A, bool up_bounds){
     h_cond_updated = up_h;
@@ -301,8 +304,6 @@ CQPsolver::CQPsolver(BasicQPsolver *arg_inner_QPsol, Condenser *arg_cond, bool a
 }
 
 CQPsolver::~CQPsolver(){
-    if (QPsol_own) delete inner_QPsol;
-    if (condenser_own) delete condenser;
 }
 
 

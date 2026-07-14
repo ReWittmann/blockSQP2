@@ -360,11 +360,11 @@ void Condenser::setup(){
             impl_ind += vblocks[i].size;
         }
         
-        std::cout << "impl_bounds_indices:\n";
-        for (int i = 0; i < targets_data[tnum].impl_bounds_indices_l; i++){
-            std::cout << targets_data[tnum].impl_bounds_indices[i] << ", ";
-        }
-        std::cout << "\n";
+        // std::cout << "impl_bounds_indices:\n";
+        // for (int i = 0; i < targets_data[tnum].impl_bounds_indices_l; i++){
+        //     std::cout << targets_data[tnum].impl_bounds_indices[i] << ", ";
+        // }
+        // std::cout << "\n";
         
         //Allocate additional matrices and vectors in case an additional QP with fallback hessian needs to be condensed
         // int *h_sizes_2 = new int[n_stages + 1];

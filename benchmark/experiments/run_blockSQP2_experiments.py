@@ -27,23 +27,25 @@ import OCProblems
 
 
 Examples = [
-            OCProblems.Batch_Reactor,
-            OCProblems.Cart_Pendulum,
-            OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
-            OCProblems.Ducted_Fan,
-            OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
-            OCProblems.Hang_Glider,
-            OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Time_Optimal_Car,
-            OCProblems.Tubular_Reactor,
-            OCProblems.Lotka_OED,
+            # OCProblems.Batch_Reactor,
+            # OCProblems.Cart_Pendulum,
+            # OCProblems.Catalyst_Mixing,
+            # OCProblems.Cushioned_Oscillation,
+            # OCProblems.Ducted_Fan,
+            # OCProblems.Egerstedt_Standard,
+            # OCProblems.Electric_Car,
+            # OCProblems.Goddard_Rocket,
+            # OCProblems.Hang_Glider,
+            # OCProblems.Hanging_Chain,
+            # OCProblems.Lotka_Volterra_Fishing,
+            # OCProblems.Particle_Steering,
+            # OCProblems.Quadrotor_Helicopter,
+            # OCProblems.Three_Tank_Multimode,
+            # OCProblems.Time_Optimal_Car,
+            # OCProblems.Tubular_Reactor,
+            # OCProblems.Lotka_OED,
+            # OCProblems.Fermenter
+            OCProblems.Satellite_Deorbiting_1
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -172,6 +174,16 @@ opt_CS2_par_new = blockSQP2.SQPoptions(
     scaling_Theta_max = 10.0
     )
 
+opt_CS2_par_new_noScale = blockSQP2.SQPoptions(
+    max_conv_QPs = 4,
+    conv_strategy = 2,
+    par_QPs = True,
+    max_filter_overrides = 2, 
+    automatic_scaling = False, 
+    scaling_Theta_min = 0.1,
+    scaling_Theta_max = 10.0
+    )
+
 condensing = True
 
 #Select option sets to test for
@@ -193,7 +205,8 @@ Experiments = [
                # (opt_CS2_S6, "scaling_0p2_5"),
                
                # (opt_CS2_par, "par"),
-               (opt_CS2_par_new, "par_new_cond")
+               (opt_CS2_par_new, "par_new"),
+               (opt_CS2_par_new_noScale, "par_new_noScale")
                ]
 
 
