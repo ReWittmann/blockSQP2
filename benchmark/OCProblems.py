@@ -2262,7 +2262,6 @@ class Electric_Car(OCProblem):
         
 
 class F8_Aircraft(OCProblem):
-    
     def build_problem(self):
         self.set_OCP_data(3,1,1,0,[-np.inf,-np.inf,-np.inf], [np.inf,np.inf,np.inf], [1/self.ntS], [100/self.ntS], [-0.05236], [0.05236])
         self.fix_initial_value([0.4655,0.,0.])

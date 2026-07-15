@@ -457,7 +457,8 @@ int SQPmethod::feasibilityRestorationPhase(){
         if (prob->condenser == nullptr)
             rest_prob = std::make_unique<RestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         else{
-            rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+            // rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+            rest_prob = std::make_unique<CondensableRestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         }
         
         rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());

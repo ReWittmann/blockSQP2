@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Satellite_Deorbiting_1(
+OCprob = OCProblems.F8_Aircraft(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -34,7 +34,7 @@ OCprob = OCProblems.Satellite_Deorbiting_1(
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
-itMax = 200                                  #max number of steps
+itMax = 100                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0

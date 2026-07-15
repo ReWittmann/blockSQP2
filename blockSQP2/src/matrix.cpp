@@ -1789,7 +1789,7 @@ Sparse_Matrix vertcat(Sparse_Matrix const *mats, int mats_l){
     for (int k = 0; k < mats_l; k++){
         #ifdef MATRIX_DEBUG
         if (mats[k].n != n_new){
-            throw std::invalid_argument("Sparse_Matrix vertcat: Mismatched seconds dimensions");
+            throw std::invalid_argument("Sparse_Matrix vertcat: Mismatched second dimensions of " + std::to_string(n_new) + " and " + std::to_string(mats[k].n));
         }
         #endif
 

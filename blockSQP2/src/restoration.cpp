@@ -883,9 +883,11 @@ CondensableRestorationProblem::CondensableRestorationProblem(Problemspec *parent
             xi_ref(xi_Reference),
             constr_orig(parent->nCon),
             jac_orig(parent->nCon, parent->nVar, parent->nnz){
+    int num_bound_dep_vars = parent_cond->condensed_num_cons - parent_cond->num_true_cons;
+    
     nVar = parent->nVar + parent_cond->condensed_num_cons;
-    nCon = parent->nCon + (parent_cond->condensed_num_cons - parent_cond->num_true_cons);
-    nnz = parent->nnz + parent_cond->num_true_cons + 2*(parent_cond->condensed_num_cons - parent_cond->num_true_cons);
+    nCon = parent->nCon + num_bound_dep_vars;
+    nnz = parent->nnz + parent_cond->num_true_cons + 2*num_bound_dep_vars;
     
     // Block structure: One additional block for every slack variable
     nBlocks = parent->nBlocks + parent_cond->condensed_num_cons;
@@ -894,7 +896,7 @@ CondensableRestorationProblem::CondensableRestorationProblem(Problemspec *parent
         blockIdx[i] = parent->blockIdx[i];
     }
     for(int i = parent->nBlocks + 1; i<nBlocks+1; i++){
-        blockIdx[i] = blockIdx[i-1]+1;
+        blockIdx[i] = blockIdx[i-1] + 1;
     }
     
     //Set bounds, no bounds for dependent variables, add dependent variable bounds to constraints
@@ -902,13 +904,13 @@ CondensableRestorationProblem::CondensableRestorationProblem(Problemspec *parent
     objUp = 1.0e20;
     
     //Bounds for original variables, bounds for slack variables, bounds for original constraints and conditions, bounds for dependent variables as constraints
-    lb_var.Dimension(nVar).Initialize(-1.0e20);
-    ub_var.Dimension(nVar).Initialize(1.0e20);
+    lb_var.Dimension(nVar).Initialize(-std::numeric_limits<double>::infinity());
+    ub_var.Dimension(nVar).Initialize( std::numeric_limits<double>::infinity());
     
     //Variable bounds: Explicit state bounds are moved to constraints, so dont add them here.
     int ind_1 = 0;
     for (int i = 0; i < parent_cond->num_vblocks; i++){
-        if (!parent_cond->vblocks[i].removed || !parent_cond->vblocks[i].bounds_removed){
+        if (!parent_cond->vblocks[i].removed || parent_cond->vblocks[i].bounds_removed){
             for (int j = ind_1; j < ind_1 + parent_cond->vblocks[i].size; j++){
                 lb_var(j) = parent->lb_var(j);
                 ub_var(j) = parent->ub_var(j);
@@ -922,8 +924,8 @@ CondensableRestorationProblem::CondensableRestorationProblem(Problemspec *parent
     //Slack variables are unbounded
     
     //Bounds for constraints and conditions
-    lb_con.Dimension(nCon).Initialize(-1.0e20);
-    ub_con.Dimension(nCon).Initialize(1.0e20);
+    lb_con.Dimension(nCon);
+    ub_con.Dimension(nCon);
     
     for (int i = 0; i < parent->nCon; i++){
         lb_con(i) = parent->lb_con(i);
@@ -943,17 +945,58 @@ CondensableRestorationProblem::CondensableRestorationProblem(Problemspec *parent
         }
         ind_2 += parent_cond->vblocks[i].size;
     }
+    
+    
+    int num_vblocks_rest = parent_cond->num_vblocks + parent_cond->condensed_num_cons;
+    int num_cblocks_rest = parent_cond->num_cblocks + 1;
+    int num_hessblocks_rest = parent_cond->num_hessblocks + parent_cond->condensed_num_cons;
+    int num_targets_rest = parent_cond->num_targets;
+    
+	std::unique_ptr<vblock[]> vblocks_rest = std::make_unique<vblock[]>(num_vblocks_rest);
+    std::unique_ptr<cblock[]> cblocks_rest = std::make_unique<cblock[]>(num_cblocks_rest);
+	std::unique_ptr<int[]> hess_block_sizes_rest = std::make_unique<int[]>(num_hessblocks_rest);
+	std::unique_ptr<condensing_target[]> targets_rest = std::make_unique<condensing_target[]>(num_targets_rest);
+    
+    // std::copy(parent_cond->vblocks, parent_cond->vblocks + parent_cond->num_vblocks, vblocks_rest.get());
+    for (int i = 0; i < parent_cond->num_vblocks; i++){
+        vblocks_rest[i] = vblock(parent_cond->vblocks[i].size, parent_cond->vblocks[i].dependent, parent_cond->vblocks[i].bounds_implicit);
+    }
+    
+    for (int i = parent_cond->num_vblocks; i < num_vblocks_rest; i++){
+        vblocks_rest[i] = vblock(1, false, false);
+    }
+    
+    // std::copy(parent_cond->cblocks, parent_cond->cblocks + parent_cond->num_cblocks, cblocks_rest.get());
+    for (int i = 0; i < parent_cond->num_cblocks; i++){
+        cblocks_rest[i] = cblock(parent_cond->cblocks[i].size);
+    }
+    cblocks_rest[num_cblocks_rest - 1] = cblock(num_bound_dep_vars);
+    
+    std::copy(parent_cond->hess_block_sizes, parent_cond->hess_block_sizes + parent_cond->num_hessblocks, hess_block_sizes_rest.get());
+    for (int i = parent_cond->num_hessblocks; i < num_hessblocks_rest; i++){
+        hess_block_sizes_rest[i] = 1;
+    }
+    
+    std::copy(parent_cond->targets, parent_cond->targets + parent_cond->num_targets, targets_rest.get());
+    
+    condenser = new holding_Condenser(std::move(vblocks_rest), num_vblocks_rest, std::move(cblocks_rest), num_cblocks_rest, std::move(hess_block_sizes_rest), num_hessblocks_rest, std::move(targets_rest), num_targets_rest, 0);
+    vblocks = condenser->vblocks;
     return;
 }
 
 
-CondensableRestorationProblem::~CondensableRestorationProblem(){}
+CondensableRestorationProblem::~CondensableRestorationProblem(){
+    delete condenser;
+    delete[] blockIdx;
+}
 
+void CondensableRestorationProblem::update_xi_ref(const Matrix &xiReference){
+    xi_ref = xiReference;
+}
 
 void CondensableRestorationProblem::build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration){
     int num_bound_dep_vars = parent_cond->condensed_num_cons - parent_cond->num_true_cons;
-    int nCon_new = parent->nCon + num_bound_dep_vars;
-    Sparse_Matrix constr_slack(parent->nCon, nCon_new, parent_cond->num_true_cons);
+    Sparse_Matrix constr_slack(parent->nCon, parent_cond->condensed_num_cons, parent_cond->num_true_cons);
     
     //Upper right part: Slacks for true constraints, padded below and to the right
     int ind_1 = 0;
@@ -970,12 +1013,13 @@ void CondensableRestorationProblem::build_restoration_jacobian(const Sparse_Matr
         }
         ind_2 += parent_cond->cblocks[i].size;
     }
-    for (int i = parent_cond->num_true_cons; i < parent_cond->num_true_cons +  num_bound_dep_vars; i++){
-        constr_slack.colind[i + 1] = parent_cond->num_true_cons;
+    for (int i = parent_cond->num_true_cons; i < parent_cond->condensed_num_cons; i++){
+        constr_slack.colind[i + 1] = constr_slack.colind[i];
     }
+    if (constr_slack.colind[parent_cond->condensed_num_cons] != parent_cond->num_true_cons) throw std::logic_error("build_restoration_jacobian: Something went wrong");
     
     //Lower part
-    Sparse_Matrix dep_bounds(num_bound_dep_vars, nVar + nCon_new, num_bound_dep_vars * 2);
+    Sparse_Matrix dep_bounds(num_bound_dep_vars, nVar, 2*num_bound_dep_vars);
     
     ind_1 = 0;
     ind_2 = 0;
@@ -1011,16 +1055,15 @@ void CondensableRestorationProblem::build_restoration_jacobian(const Sparse_Matr
         dep_bounds.row[ind_1 + i] = i;
         dep_bounds.colind[ind_2 + i + 1] = ind_1 + i + 1;
     }
-
-    Sparse_Matrix mats[2]{jac_orig, std::move(constr_slack)};
+    
+    Sparse_Matrix mats[2]{jac_orig, constr_slack};
     mats[0] = horzcat(mats, 2);
     mats[1] = std::move(dep_bounds);
     jac_restoration = vertcat(mats, 2);
 }
 
 
-
-void CondensableRestorationProblem::initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol){
+void CondensableRestorationProblem::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){
     int info;
     double objval;
     
@@ -1029,14 +1072,17 @@ void CondensableRestorationProblem::initialize(Matrix &xi, Matrix &lambda, doubl
     
     // Call parent initialize to initialize sparse constraint Jacobian
     parent->initialize(xi_parent, lambda, jac_orig.nz.get(), jac_orig.row.get(), jac_orig.colind.get());
-    xi_parent = xi_ref;
+    
+    for (int i = 0; i < parent->nVar; i++){
+        xi_parent(i) = xi_ref(i);
+    }
     lambda.Initialize(0.);
     
     //Save original jacobian and build restoration-jacobian
     Sparse_Matrix jac_restoration;
     build_restoration_jacobian(jac_orig, jac_restoration);
     std::copy(jac_restoration.nz.get(), jac_restoration.nz.get() + jac_restoration.nnz(), jacNz);
-    std::copy(jac_restoration.row.get(), jac_restoration.row.get() + jac_restoration.nnz(), jacNz);
+    std::copy(jac_restoration.row.get(), jac_restoration.row.get() + jac_restoration.nnz(), jacIndRow);
     std::copy(jac_restoration.colind.get(), jac_restoration.colind.get() + jac_restoration.n + 1, jacIndCol);
     
     // Initialize slack variables such that the constraints are feasible, allocate and use vector for original constraints
@@ -1070,7 +1116,7 @@ void CondensableRestorationProblem::initialize(Matrix &xi, Matrix &lambda, doubl
     
     // Set diagonal scaling matrix
     diagScale.Dimension(parent->nVar).Initialize(1.0);
-    for(int i = 0; i < parent->nVar; i++){
+    for (int i = 0; i < parent->nVar; i++){
         if(fabs(xi_ref(i)) > 1.0){
             diagScale(i) = 1.0/fabs(xi_ref(i));
         }
@@ -1084,11 +1130,12 @@ void CondensableRestorationProblem::initialize(Matrix &xi, Matrix &lambda, doubl
 void CondensableRestorationProblem::evaluate(
                                 const Matrix &xi, const Matrix &lambda,
                                 double *objval, Matrix &constr,
-                                Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-                                SymMatrix *&hess, int dmode, int *info){
+                                Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
+                                SymMatrix *hess, int dmode, int *info){
     
+    int num_bound_dep_vars = parent_cond->condensed_num_cons - parent_cond->num_true_cons;
     double diff, regTerm;
-    Matrix slack, relaxed_constr, dep_bounds;
+    Matrix relaxed_constr, dep_bounds;
     
     // The first nVar elements of the variable vector correspond to the variables of the original problem
     xi_parent.Submatrix(xi, parent->nVar, 1, 0, 0);
@@ -1119,7 +1166,7 @@ void CondensableRestorationProblem::evaluate(
         ind_1 += parent_cond->cblocks[i].size;
     }
     
-    dep_bounds.Submatrix(constr, parent->nVar - parent_cond->condensed_num_vars, 1, parent->nCon, 0);
+    dep_bounds.Submatrix(constr, num_bound_dep_vars, 1, parent->nCon, 0);
     ind_1 = 0;
     ind_2 = 0;
     
@@ -1136,27 +1183,27 @@ void CondensableRestorationProblem::evaluate(
     if (dmode < 0) return;
     
     *objval = 0.0;
-    for (int i = 0; i < parent->nCon; i++){
+    for (int i = 0; i < parent_cond->condensed_num_cons; i++){
         *objval += slack(i) * slack(i);
     }
     *objval = 0.5 * rho * (*objval);
     
     regTerm = 0.0;
-    for(int i = 0; i < parent->nVar; i++){
+    for (int i = 0; i < parent->nVar; i++){
         diff = xi_parent(i) - xi_ref(i);
         regTerm += diagScale(i) * diagScale(i) * diff * diff;
     }
     regTerm = 0.5 * zeta * regTerm;
     *objval += regTerm;
     
-    if(dmode > 0){
+    if (dmode > 0){
         // gradient w.r.t. xi (regularization term)
-        for(int i=0; i<parent->nVar; i++){
+        for (int i = 0; i < parent->nVar; i++){
             gradObj(i) = zeta * diagScale(i) * diagScale(i) * (xi_parent(i) - xi_ref(i));
         }
         
         // gradient w.r.t. slack variables
-        for(int i=parent->nVar; i<nVar; i++){
+        for(int i = parent->nVar; i < nVar; i++){
             gradObj(i) = rho * xi(i);
         }
         
@@ -1164,7 +1211,7 @@ void CondensableRestorationProblem::evaluate(
         build_restoration_jacobian(jac_orig, jac_restoration);
         
         std::copy(jac_restoration.nz.get(), jac_restoration.nz.get() + jac_restoration.nnz(), jacNz);
-        std::copy(jac_restoration.row.get(), jac_restoration.row.get() + jac_restoration.nnz(), jacNz);
+        std::copy(jac_restoration.row.get(), jac_restoration.row.get() + jac_restoration.nnz(), jacIndRow);
         std::copy(jac_restoration.colind.get(), jac_restoration.colind.get() + jac_restoration.n + 1, jacIndCol);
     }
     
