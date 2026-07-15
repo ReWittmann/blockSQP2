@@ -458,22 +458,7 @@ void Condenser::setup(){
     
     target_threads = std::make_unique<std::jthread[]>(num_targets - 1);
 }
-/*
-Condenser(const Condenser &C){
-    num_cblocks = C.num_cblocks;
-    num_vblocks = C.num_vblocks;
-    num_hessblocks = C.num_hessblocks;
-    num_targets = C.num_targets;
 
-    cblocks = C.cblocks;
-    vblocks = C.vblocks;
-    hess_block_sizes = C.hess_block_sizes;
-    targets = C.targets;
-
-    num_vars = C.num_vars;
-    num_cons = C.num_cons;
-    condensed_num_vars = C.condensed_num_vars;
-}*/
 
 Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
     num_cblocks = C.num_cblocks;
@@ -506,18 +491,6 @@ Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
     condensed_v_ends = std::move(C.condensed_v_ends);
 	hess_block_ranges = std::move(C.hess_block_ranges);
 
-    // C.cranges = nullptr;
-    // C.vranges = nullptr;
-    // C.c_starts = nullptr;
-    // C.c_ends = nullptr;
-    // C.v_starts = nullptr;
-    // C.v_ends = nullptr;
-    // C.h_starts = nullptr;
-    // C.h_ends = nullptr;
-    // C.condensed_v_starts = nullptr;
-    // C.condensed_v_ends = nullptr;
-    // C.hess_block_ranges = nullptr;
-
     // add_dep_bounds = C.add_dep_bounds;
     condensed_num_cons = C.condensed_num_cons;
 
@@ -530,8 +503,8 @@ Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
     T_Slices = std::move(C.T_Slices);
     O_Slices = std::move(C.O_Slices);
 
-    lb_dep_var = C.lb_dep_var;
-    ub_dep_var = C.ub_dep_var;
+    // lb_dep_var = C.lb_dep_var;
+    // ub_dep_var = C.ub_dep_var;
 }
 
 

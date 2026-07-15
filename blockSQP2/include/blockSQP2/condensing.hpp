@@ -264,8 +264,8 @@ class Condenser{
     ///Condensed QP data
 
     //Bounds on dependent variables in condensed QP, which can be manually added to a QP condensed with option add_dep_bounds = 1
-    Matrix lb_dep_var;
-    Matrix ub_dep_var;
+    // Matrix lb_dep_var;
+    // Matrix ub_dep_var;
 
     Condenser(int arg_add_dep_bounds = 1);
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);

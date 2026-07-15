@@ -212,6 +212,7 @@ class Sparse_Matrix{
 		Sparse_Matrix(const CSR_Matrix &M);
 		Sparse_Matrix();
     
+    inline int nnz(){return colind[n];}
     Sparse_Matrix &Dimension(int M, int N, int NNZ);
     
 		void operator=(const Sparse_Matrix &M);
