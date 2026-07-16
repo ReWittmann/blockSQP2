@@ -19,11 +19,11 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Ocean(
+OCprob = OCProblems.Satellite_Deorbiting_1(
                     nt = 100,
                     refine = 1,
                     parallel = True,
-                    integrator = 'RK4',
+                    integrator = 'RK4'
                     )
 
 ipopts = dict()
@@ -37,8 +37,13 @@ S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 
 
 # S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : None, "jit" : False, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}})#, 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":False, "fatrop.print_level":10, "jit_options": {"flags": "-O3", "verbose": True}})#, {'ipopt':ipopts})
-#See fatrop source code - legacy/src/OCPCInterface.cpp for options
-# S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : 'manual', 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":True, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}, \
+#See fatrop source code - c_interface/src/OCPCInterface.cpp for options
+# S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : 'manual', 
+#                                           'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*(OCprob.ntS+1), 'N':OCprob.ntS, 
+#                                           "jit":True,
+#                                           "expand": False,
+#                                           "jit_options": {"flags": "-Os", "verbose": False},
+#                                           "fatrop.print_level":10,
 #                                           'fatrop':{'tol':1e-6, 'acceptable_tol':1e-4}
 #                                           })
 

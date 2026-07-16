@@ -96,11 +96,7 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     //Setup the feasibility restoration problem
     if (param->enable_rest){
         rest_param = std::unique_ptr<SQPoptions>(create_restoration_options(param));
-        
-        rest_xi.Dimension(prob->nVar + prob->nCon);
-        rest_lambda.Dimension(prob->nVar + prob->nCon + prob->nCon);
-        rest_lambdaQP.Dimension(prob->nVar + prob->nCon + prob->nCon);
-   }
+    }
 }
 
 SQPmethod::SQPmethod(): prob(nullptr), param(nullptr), stats(nullptr), vars(nullptr), sub_QP(nullptr), sub_QPs_par(nullptr), scaled_prob(nullptr),

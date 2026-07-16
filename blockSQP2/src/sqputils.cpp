@@ -31,9 +31,7 @@
  #include <blockSQP2/general_purpose.hpp>
  #include <blockSQP2/restoration.hpp>
  #include <blockSQP2/qpsolver.hpp>
-//  #include <fstream>
  #include <cmath>
- #include <chrono>
 
 
 namespace blockSQP2{
@@ -226,20 +224,21 @@ Matrix SQPmethod::get_lambda(){
 
 
 void SQPmethod::get_xi(Matrix &xi_hold){
+    xi_hold.Dimension(prob->nVar);
     if (param->automatic_scaling){
         for (int i = 0; i < prob->nVar; i++){
             xi_hold(i) = vars->xi(i)/scaled_prob->scaling_factors[i];
         }
+        return;
     }
-    else{
-        for (int i = 0; i < prob->nVar; i++){
-            xi_hold(i) = vars->xi(i);
-        }
+    for (int i = 0; i < prob->nVar; i++){
+        xi_hold(i) = vars->xi(i);
     }
     return;
 }
 
 void SQPmethod::get_lambda(Matrix &lambda_hold){
+    lambda_hold.Dimension(prob->nVar + prob->nCon);
     for (int i = 0; i < prob->nVar + prob->nCon; i++){
         lambda_hold(i) = vars->lambda(i);
     }
@@ -247,6 +246,7 @@ void SQPmethod::get_lambda(Matrix &lambda_hold){
 }
 
 void SQPmethod::get_lambdaQP(Matrix &lambdaQP_hold){
+    lambdaQP_hold.Dimension(prob->nVar + prob->nCon);
     for (int i = 0; i < prob->nVar + prob->nCon; i++){
         lambdaQP_hold(i) = vars->lambdaQP(i);
     }

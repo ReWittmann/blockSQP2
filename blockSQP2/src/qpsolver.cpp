@@ -170,7 +170,10 @@ BasicCQPsolver::BasicCQPsolver(BasicQPsolver *arg_inner_QPsol, Condenser *arg_co
     inner_QPsol->set_reg_indices(std::move(inner_regInd), inner_regInd_l);
 }
 
-BasicCQPsolver::~BasicCQPsolver(){}
+BasicCQPsolver::~BasicCQPsolver(){
+    if (QPsol_own) delete inner_QPsol;
+    if (condenser_own) delete condenser;
+}
 
 void BasicCQPsolver::set_cond_update_flags(bool up_h, bool up_hess, bool up_A, bool up_bounds){
     h_cond_updated = up_h;
@@ -301,8 +304,6 @@ CQPsolver::CQPsolver(BasicQPsolver *arg_inner_QPsol, Condenser *arg_cond, bool a
 }
 
 CQPsolver::~CQPsolver(){
-    if (QPsol_own) delete inner_QPsol;
-    if (condenser_own) delete condenser;
 }
 
 
@@ -838,7 +839,7 @@ BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, 
     QPsol = create_QPsolver(nVarQP, nConQP, nHessQP, blockIdx, Qparam);
     
     //Wrap condensing step over external QP solver
-    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
+    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser, true, false);
     return QPsol;
 }
 
@@ -869,7 +870,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
         QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
     }
     QPsol = create_QPsolver(nVarQP, nConQP, nHessQP, blockIdx, param->qpsol_options, -1);
-    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser, true, true);
+    if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser, true, false);
     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
     return QPsols_par;
 }
@@ -945,7 +946,7 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
         QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
     }
     QPsol = create_QPsolver(nVarQP, nConQP, nHessQP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), -1);
-    QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
+    QPsol = new CQPsolver(QPsol, prob->condenser, true, false);
     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
     return QPsols_par;
 }

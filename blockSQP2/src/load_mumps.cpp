@@ -91,16 +91,19 @@ void *get_plugin_handle(int ind){
 
 #ifdef LINUX            
     //Search for libdmumps_c_syn.so in current directory
-    const char* get_current_lib_dir(){
+    // const char* get_current_lib_dir(){
+    std::string get_current_lib_dir(){
         Dl_info info;
         //Get address of any function (e.g. this function) in this shared object,
         bool load_success = dladdr((void*) &get_current_lib_dir, &info);
         if (!load_success) throw std::runtime_error(std::string("dladdr failed to obtain path to libblockSQP"));
-        char* path_ = new char[PATH_MAX];
-        std::strncpy(path_, info.dli_fname, PATH_MAX);
-        path_[PATH_MAX - 1] = '\0';
-        const char* dir = dirname(path_);
-        return dir;
+        // char* path_ = new char[PATH_MAX];
+        std::unique_ptr<char[]> dlPath = std::make_unique<char[]>(PATH_MAX);
+        // std::strncpy(path_, info.dli_fname, PATH_MAX);
+        std::strncpy(dlPath.get(), info.dli_fname, PATH_MAX);
+        dlPath[PATH_MAX - 1] = '\0';
+        const char* dir = dirname(dlPath.get());
+        return std::string(dir);
     }
     
     void load_mumps_libs(int N_plugins){

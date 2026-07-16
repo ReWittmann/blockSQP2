@@ -156,9 +156,9 @@ int SQPmethod::fullstep(){
         }
         
         // Compute problem functions at trial point
-        prob->evaluate( vars->trialXi, &objTrial, vars->constr, &info );
+        prob->evaluate( vars->trialXi, &objTrial, vars->trialConstr, &info );
         stats->nFunCalls++;
-        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
+        cNormTrial = lInfConstraintNorm( vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con );
         // Reduce step if evaluation fails, if lower bound is violated or if objective or a constraint is NaN
         if( info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial) )
         {
@@ -361,7 +361,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
         // Solve SOC QP to obtain new, corrected deltaXi
         // (store in separate vector to avoid conflict with original deltaXi -> need it in linesearch!)
         QPresults infoQP = solve_SOC_QP(deltaXiSOC, lambdaQPSOC);
-            
+        
         if (infoQP != QPresults::success)
             return false; // Could not solve QP, abort SOC
 
@@ -457,18 +457,24 @@ int SQPmethod::feasibilityRestorationPhase(){
         if (prob->condenser == nullptr)
             rest_prob = std::make_unique<RestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         else{
+            //Relax only true constraints, ignoring matching conditions/state bounds. 
+            //Faster and seems to be enough for all examples. 
+            //Some matching conditions will still be relaxed if partial condensing is used.
             rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+            
+            //Relax state bounds as well. More expensive, may be requires for some problems (but we have seen no example yet)
+            // rest_prob = std::make_unique<CondensableRestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         }
         
         rest_method = std::make_unique<SQPmethod>(rest_prob.get(), rest_param.get(), rest_stats.get());
         rest_method->init();
     }
     //Invoke the restoration loop with setup problem and method
-    return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
+    return innerRestorationPhase(warmStart);
 }
 
 
-int SQPmethod::innerRestorationPhase(BasicRestorationProblem *Rprob, SQPmethod *Rmeth, bool RwarmStart, double min_stepsize_sum){
+int SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
     int info;
     int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresults ret;
@@ -496,9 +502,9 @@ int SQPmethod::innerRestorationPhase(BasicRestorationProblem *Rprob, SQPmethod *
         rest_prob->recover_xi(rest_xi, vars->trialXi);
         
         // Compute objective at trial point
-        prob->evaluate(vars->trialXi, &objTrial, vars->constr, &info);
+        prob->evaluate(vars->trialXi, &objTrial, vars->trialConstr, &info);
         stats->nFunCalls++;
-        cNormTrial = lInfConstraintNorm(vars->trialXi, vars->constr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
+        cNormTrial = lInfConstraintNorm(vars->trialXi, vars->trialConstr, prob->lb_var, prob->ub_var, prob->lb_con, prob->ub_con);
         if (info != 0 || objTrial < prob->objLo || objTrial > prob->objUp || !(objTrial == objTrial) || !(cNormTrial == cNormTrial))
             continue;
         
@@ -961,7 +967,7 @@ int bound_correction_method::feasibilityRestorationPhase(){
     else warmStart = 1;
     
     //Invoke the restoration phase with setup problem and method
-    return innerRestorationPhase(rest_prob.get(), rest_method.get(), warmStart);
+    return innerRestorationPhase(warmStart);
 }
 
 

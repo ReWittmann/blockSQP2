@@ -107,30 +107,15 @@ class SQPmethod{
         void updateStepBounds();
         /// Update the bounds on the current step for a second order correction, i.e. lb_s = lb - constr(trialXi) + constrJac(Xi)*deltaXi = prob->lb_con - vars->trialConstr + vars->AdeltaXi
         void updateStepBoundsSOC();
-        
-        /// Solve a QP with QPOPT or qpOASES to obtain a step deltaXi and estimates for the Lagrange multipliers.
-        //If hess_type is 0, solution is tried with increasingly convexified hessian approximations. If hess_type is 1, only convex hessian approximations are used. If hess_type is 2, only the (scaled) identity is used as hessian
-        //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        
-        /////////////////////////////////NEW
-        /// Resolve options, iteration state and call parameters and dispatch the appropriate solve[*]QP_* method. 
-        //virtual int solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
-        //int solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
-        //int solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-        //int solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
-        
+                
         // Dispatch to best solveQP variant based on parameters, options, iteration state etc.
         virtual QPresults solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
             QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
             QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
-            // QPresults solveQP_seq_default(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
-            
-            // QPresults solveQP_par_default(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
         
-        /// Sequentially try to solve increasingly convexified QPs. 
         virtual QPresults solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
         
         //For idx = 1,..., maxQP - 2, compute series of increasing Hessian regularization factors.
@@ -182,7 +167,7 @@ class SQPmethod{
         /// Start feasibility restoration phase (solve NLP)
         virtual int feasibilityRestorationPhase();
         /// Main loop of restoration phase - check acceptability of the filter after each step
-        int innerRestorationPhase(BasicRestorationProblem *argRestProb, SQPmethod *argRestMeth, bool argWarmStart, double min_stepsize_sum = 1.0);
+        int innerRestorationPhase(bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
         
@@ -233,11 +218,7 @@ class SQPmethod{
         void calcSR1(int dpos, int iBlock, SymMatrix *hess);
         /// [blockwise] Compute new approximation for Hessian by BFGS update with Powell modification
         void calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping);
-
-        /// Oren-Luenberger sizing of initial Hessian
-        // void sizeInitialHessian(int dpos, int iBlock, SymMatrix *hess, int option);
-        /// Centered Oren-Luenberger sizing
-        // void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);
+        
         
         void sizeInitialHessian(Sizings sizingType, int dpos, int iBlock, SymMatrix *hess);
         void sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess);

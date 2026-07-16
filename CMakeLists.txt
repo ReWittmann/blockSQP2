@@ -235,8 +235,8 @@ elseif(WIN32)
 	if(MINGW)
 		target_compile_options(blockSQP2 PRIVATE 
 			-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
-			$<$<CONFIG:Debug>:-O0>
-			$<$<CONFIG:Release>:-O3 -DMATRIX_DEBUG>
+			$<$<CONFIG:Debug>:-O0 -g -DMATRIX_DEBUG>
+			$<$<CONFIG:Release>:-O3>
 			# -O3
 			# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
 			)
@@ -431,6 +431,13 @@ set_target_properties(example1_redundant
 add_executable(example_condensing blockSQP2/examples/example_condensing.cpp)
 target_link_libraries(example_condensing blockSQP2)
 set_target_properties(example_condensing
+	PROPERTIES
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
+)
+
+add_executable(example_condensing_2 blockSQP2/examples/example_condensing_2.cpp)
+target_link_libraries(example_condensing_2 blockSQP2)
+set_target_properties(example_condensing_2
 	PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin"
 )

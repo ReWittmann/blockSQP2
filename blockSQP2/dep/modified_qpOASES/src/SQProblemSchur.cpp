@@ -3155,7 +3155,7 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 	numFactorizations++;
 
 	// If matrix is singular, add bounds/remove constraints according to zero pivots
-	if (retval == RET_KKT_MATRIX_SINGULAR && idxRec < 10)
+	if (retval == RET_KKT_MATRIX_SINGULAR && idxRec < 20)
 	{
 		if( repairSingularWorkingSet( ) == SUCCESSFUL_RETURN )
 			return resetSchurComplement( allowInertiaCorrection, idxRec + 1);
@@ -3502,7 +3502,6 @@ returnValue SQProblemSchur::correctInertia( )
 	real_t oldDetS;
 	int_t nFR = getNFR( );
 	int_t k, number, neig, nAdded;
-	int_t *freeBoundIdx = new int_t[nFR];
 	int_t *numberarray;
 
 	/* method may only be called after refactorization or if one bound/constraint
@@ -3519,6 +3518,7 @@ returnValue SQProblemSchur::correctInertia( )
 	if( neig == getNAC( ) )
 		return SUCCESSFUL_RETURN;
 
+	int_t *freeBoundIdx = new int_t[nFR];
 	/* get bound numbers in the order in which they are in the non-basis */
 	bounds.getFree()->getNumberArray( &numberarray );
 	for( k=0; k<nFR; k++ )
@@ -3545,6 +3545,7 @@ returnValue SQProblemSchur::correctInertia( )
 			{
 				if ( options.printLevel == PL_HIGH )
 					MyPrintf("In correctInertia: Adding bound[%i] = %i failed!\n", k, number );
+				delete[] freeBoundIdx;
 				return THROWERROR( RET_INERTIA_CORRECTION_FAILED );
 			}
 

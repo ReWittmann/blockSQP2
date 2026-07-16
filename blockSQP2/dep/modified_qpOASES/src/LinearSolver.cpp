@@ -346,7 +346,6 @@ returnValue LapackDenseSolver::factorize()
         // rank = info - 1;
 		rank = dim - 1;
 		zpiv = info - 1;
-		printf("LapackDenseSolver: KKT_MATRIX_SINGULAR, rank = %i, zpiv = %i\n", rank, zpiv);
         return RET_KKT_MATRIX_SINGULAR;
     }
     if (info < 0) return THROWERROR(RET_MATRIX_FACTORISATION_FAILED);

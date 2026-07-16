@@ -145,7 +145,7 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
         }
     }
     for (; ind < prob->n_vblocks; ind++){
-        if (!prob->vblocks[ind].dependent && prob->vblocks[ind].size != fvbsize) throw std::logic_error("Currently, all free variables blocks must have the same size for the new scaling heuristic");
+        if (!prob->vblocks[ind].dependent && prob->vblocks[ind].size != fvbsize) throw std::logic_error("For now, the scaling heuristic requires all free variable blocks to have the same size");
     }
     
     auto set_to_zero = [lcount = fvbsize](auto* arr){for (int lind = 0; lind < lcount; lind++) arr[lind] = 0;};

@@ -35,11 +35,12 @@ namespace blockSQP2{
 
 struct vblock{
     vblock();
-	vblock(int SIZE, bool DEP);
+	vblock(int SIZE, bool DEP, bool B_IMPL);
 	int size;
 	bool dependent;
+    bool bounds_implicit;
 	bool removed;
-    //bool bounds_implicit;
+    bool bounds_removed;
 };
 
 //Future: Have more general dependency graphs for variables for advanced condensing in more than one pass
@@ -133,7 +134,7 @@ struct condensing_data{
 	//without continuity conditions
     std::vector<Sparse_Matrix> J_free_k; //J_f_0, ..., J_f_{n_stages}
     std::vector<Sparse_Matrix> J_dep_k; //J_d_1, ..., J_d_{n_stages - 1}
-
+    
     std::vector<CSR_Matrix> J_d_CSR_k; //J_d_CSR_1, ..., J_d_CSR_{n_stages}
     std::vector<Sparse_Matrix> J_reduced_k; //J_reduced_0, ..., J_reduced_{n_stages}
     
@@ -144,38 +145,42 @@ struct condensing_data{
     Sparse_Matrix G_sparse;
     SymMatrix H_dense;
     Sparse_Matrix J_reduced;
-
+    
 	//Dependent and free variable bounds
 	Matrix D_lb;
 	Matrix D_ub;
 	Matrix F_lb;
 	Matrix F_ub;
-
+    
 	//Jacobian w.r.t. all free variables of target, times vector g from condensing. Needed to offset constraint-bounds.
 	Matrix Jtimes_g;
-
-    //Convexification coefficient of the hessian, H = H_1 * (1 - t_h) + H_2 * t_h
-    double t_H;
-
-	//Copy of the blocks of the original hessian, to calculate convex combinations with fallback hessian
-	std::vector<Matrix> R_k_1;
-	std::vector<Matrix> Q_k_1;
-	std::vector<Matrix> S_k_1;
-	std::vector<Matrix> h_k_1;
-
-    Matrix h_1;
-    SymMatrix H_dense_1;
-
-    //Blocks of an alternative/fallback - hessian, on which the linear term of the condensed QP also depends
-    std::vector<Matrix> R_k_2;
-    std::vector<Matrix> Q_k_2;
-    std::vector<Matrix> S_k_2;
-
-    std::vector<Matrix> h_k_2;
-    LT_Block_Matrix H_2;
-
-    Matrix h_2;
-    SymMatrix H_dense_2;
+    
+    //Indices of dependent variables whose bounds are marked implicit
+    std::unique_ptr<int[]> impl_bounds_indices;
+    int impl_bounds_indices_l;
+    
+    // //Convexification coefficient of the hessian, H = H_1 * (1 - t_h) + H_2 * t_h
+    // double t_H;
+    
+	// //Copy of the blocks of the original hessian, to calculate convex combinations with fallback hessian
+	// std::vector<Matrix> R_k_1;
+	// std::vector<Matrix> Q_k_1;
+	// std::vector<Matrix> S_k_1;
+	// std::vector<Matrix> h_k_1;
+    
+    // Matrix h_1;
+    // SymMatrix H_dense_1;
+    
+    // //Blocks of an alternative/fallback - hessian, on which the linear term of the condensed QP also depends
+    // std::vector<Matrix> R_k_2;
+    // std::vector<Matrix> Q_k_2;
+    // std::vector<Matrix> S_k_2;
+    
+    // std::vector<Matrix> h_k_2;
+    // LT_Block_Matrix H_2;
+    
+    // Matrix h_2;
+    // SymMatrix H_dense_2;
 };
 
 
@@ -193,10 +198,13 @@ class Condenser{
 	int* hess_block_sizes;
 	condensing_target* targets;
     
-	//Additional option: How should dependent variable bounds be added to the condensed QP:
-    //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
-    int add_dep_bounds;
+	// //Additional option: How should dependent variable bounds be added to the condensed QP:
+    // //  0: not, 1: inactive, -inf<= Gu + g <= inf, 2: active, lb_dep <= Gu + g <= ub_dep
+    // int add_dep_bounds;
     
+    //Additional option: How should implicit/explicit dependent variable bounds be added to the condensed QP:
+    //  0: omit all, 1: omit dep, 2: omit none
+    const int add_dep_bounds;
     
     ///Layout data calculated from constructor arguments by calling the "setup" method///
 	int num_vars;
@@ -256,10 +264,10 @@ class Condenser{
     ///Condensed QP data
 
     //Bounds on dependent variables in condensed QP, which can be manually added to a QP condensed with option add_dep_bounds = 1
-    Matrix lb_dep_var;
-    Matrix ub_dep_var;
+    // Matrix lb_dep_var;
+    // Matrix ub_dep_var;
 
-    Condenser();
+    Condenser(int arg_add_dep_bounds = 1);
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
 	Condenser(Condenser &&C);
 	virtual ~Condenser();
@@ -271,7 +279,7 @@ class Condenser{
     void print_info();
 
     //Setter of changing how dependent variable bounds are added
-    void set_dep_bound_handling(int opt);
+    // void set_dep_bound_handling(int opt);
 
     //For starting index start, get index of hessian block that starts at start
 	int get_hessblock_index(int start);
@@ -356,7 +364,7 @@ class PartialCondenser : public Condenser{
     std::unique_ptr<condensing_target[]> targets_hold;
     int n_split;
     
-    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_SPLIT, int DEP_BOUNDS = 2);
+    PartialCondenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int n_SPLIT, int DEP_BOUNDS = 1);
     virtual ~PartialCondenser();
     
     virtual Condenser *layout_copy();

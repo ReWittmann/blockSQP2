@@ -87,7 +87,7 @@ public:
             }
         }
         else if (dmode == 2){
-            hessNz = new double *[nBlocks];
+            hessNz = new double *[nBlocks]();
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
         
@@ -104,7 +104,7 @@ public:
             }
         }
         else if (dmode == 2){
-            hessNz = new double *[nBlocks];
+            hessNz = new double *[nBlocks]();
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
         
@@ -120,6 +120,7 @@ public:
     virtual void reduceConstrVio(Matrix &xi, int *info){
         if (reduce_constr_vio != nullptr){
             (*reduce_constr_vio)(closure, xi.array, info);
+            return;
         }
         *info = 1;
     };
@@ -134,9 +135,10 @@ CDLEXP void delete_vblock_array(void *ptr){
     delete[] static_cast<vblock *>(ptr);
 }
 
-CDLEXP void vblock_array_set(void *ptr, int index, int size, char dependent){
+CDLEXP void vblock_array_set(void *ptr, int index, int size, char dependent, char bounds_implicit){
     static_cast<vblock *>(ptr)[index].size = size;
     static_cast<vblock *>(ptr)[index].dependent = bool(dependent);
+    static_cast<vblock *>(ptr)[index].bounds_implicit = bool(bounds_implicit);
 }
 
 // QPsolver
@@ -656,10 +658,8 @@ inline Condenser *castCND(void *ptr){
 }
 
 CDLEXP void *create_Condenser(void *arg_vblocks, int N_vblocks, void *arg_cblocks, int N_cblocks, void *arg_hsizes, int N_hsizes, void *arg_targets, int N_targets, int arg_dep_bounds){
-    // return new Condenser(static_cast<vblock *>(arg_vblocks), N_vblocks, static_cast<cblock *>(arg_cblocks), N_cblocks, static_cast<int *>(arg_hsizes), N_hsizes, static_cast<condensing_target *>(arg_targets), N_targets, arg_dep_bounds);
     try{
         return static_cast<void*>(new Condenser(static_cast<vblock *>(arg_vblocks), N_vblocks, static_cast<cblock *>(arg_cblocks), N_cblocks, static_cast<int *>(arg_hsizes), N_hsizes, static_cast<condensing_target *>(arg_targets), N_targets, arg_dep_bounds));
-        // return static_cast<int>(static_cast<SQPmethod *>(ptr)->run(maxIt, warmStart));
     }
     catch (std::exception &E){
         strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);

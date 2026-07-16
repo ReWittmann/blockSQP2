@@ -47,6 +47,11 @@ namespace blockSQP2{
 class BasicRestorationProblem : public Problemspec{
     public:
     Problemspec *parent;
+    
+    double rho;
+    double zeta;
+    
+    BasicRestorationProblem(Problemspec *parentProblem, double param_rho, double param_zeta);
     //Update the reference point if it enters into the restoration problem
     virtual void update_xi_ref(const Matrix &xiReference);
 
@@ -68,8 +73,8 @@ class RestorationProblem : public BasicRestorationProblem{
         //Submatrix containing slack variables
         Matrix slack;
 
-        double rho;
-        double zeta;
+        // double rho;
+        // double zeta;
     public:
         RestorationProblem( Problemspec *parentProblem, const Matrix &xiReference, double param_rho, double param_zeta);
         virtual ~RestorationProblem();
@@ -131,8 +136,8 @@ class TC_restoration_Problem: public BasicRestorationProblem{
     //Submatrix containing slack variables
     Matrix slack;
     
-    double rho;
-    double zeta;
+    // double rho;
+    // double zeta;
     
     Matrix constr_orig;
     
@@ -141,7 +146,7 @@ class TC_restoration_Problem: public BasicRestorationProblem{
     std::unique_ptr<int[]> jac_orig_colind;
     
     public:
-    TC_restoration_Problem(Problemspec *parent_Problem, const Matrix &xi_Reference, double param_rho, double param_zeta);
+    TC_restoration_Problem(Problemspec *parentProblem, const Matrix &xi_Reference, double param_rho, double param_zeta);
     virtual ~TC_restoration_Problem();
     
     void update_xi_ref(const Matrix &xiReference);
@@ -180,7 +185,6 @@ public:
     virtual ~TC_feasibility_Problem();
     
     virtual void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
-    
     virtual void evaluate(const Matrix &xi, const Matrix &lambda,
                             double *objval, Matrix &constr,
                            Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
@@ -193,43 +197,39 @@ public:
 
 
 
-// class condensable_Restoration_Problem: public Problemspec{
-// public:
-//     Problemspec *parent;
-//     Condenser *parent_cond;
-
-//     Matrix xi_ref;
-//     Matrix diagScale;
-
-//     double zeta;
-//     double rho;
-
-//     Matrix constr_orig;
-//     double *jac_orig_nz = nullptr;
-//     int *jac_orig_row = nullptr;
-//     int *jac_orig_colind = nullptr;
-
-
-
-// public:
-//     condensable_Restoration_Problem(Problemspec *parent_Problem, Condenser *parent_cond, const Matrix &xi_Reference);
-//     ~condensable_Restoration_Problem();
-
-//     /// Set initial values for xi and lambda, may also set matrix for linear constraints (sparse version)
-//     virtual void initialize(Matrix &xi, Matrix &lambda, double *&jacNz, int *&jacIndRow, int *&jacIndCol);
-
-//     /// Evaluate all problem functions and their derivatives (sparse version)
-//     virtual void evaluate(const Matrix &xi, const Matrix &lambda,
-//                            double *objval, Matrix &constr,
-//                            Matrix &gradObj, double *&jacNz, int *&jacIndRow, int *&jacIndCol,
-//                            SymMatrix *&hess, int dmode, int *info);
-
-
-//     void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
-//     void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig);
-//     void recover_multipliers(const Matrix &lambda_rest, Matrix &lambda_orig, double &lambda_step_norm);
-
-// };
+class CondensableRestorationProblem: public BasicRestorationProblem{
+    public:
+    Condenser *parent_cond;
+    Matrix xi_ref;
+    Matrix diagScale;
+    
+    Matrix xi_parent;
+    Matrix slack;
+    
+    Matrix constr_orig;
+    Sparse_Matrix jac_orig;
+    
+    
+    public:
+    CondensableRestorationProblem(Problemspec *parentProblem, const Matrix &xi_Reference, double param_rho, double param_zeta);
+    ~CondensableRestorationProblem();
+    
+    void update_xi_ref(const Matrix &xiReference);
+    
+    void build_restoration_jacobian(const Sparse_Matrix &jac_orig, Sparse_Matrix &jac_restoration);
+    
+    /// Set initial values for xi and lambda, may also set matrix for linear constraints (sparse version)
+    virtual void initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol);
+    /// Evaluate all problem functions and their derivatives (sparse version)
+    virtual void evaluate(const Matrix &xi, const Matrix &lambda,
+                           double *objval, Matrix &constr,
+                           Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol,
+                           SymMatrix *hess, int dmode, int *info);
+    
+    virtual void recover_xi(const Matrix &xi_rest, Matrix &xi_orig);
+    virtual void recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig);
+    
+};
 
 
 

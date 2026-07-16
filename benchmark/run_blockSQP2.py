@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -34,13 +34,12 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
-
 itMax = 100                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
-sol_plot = True
+sol_plot = False
 
 
 # start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
@@ -73,11 +72,10 @@ opts = blockSQP2.SQPoptions(
     
     automatic_scaling = True,
     
-    max_extra_steps = 10,                    #Extra steps for improved accuracy
+    max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
     max_filter_overrides = 0,
     
-    test_opt_enable_conv_downscaling = True,
     qpsol = 'qpOASES',
     qpsol_options = QPopts
 )
@@ -90,14 +88,14 @@ opts = blockSQP2.SQPoptions(
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 #Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
-vblocks = [blockSQP2.vblock(size, dep) for size, dep in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies)]
+vblocks = [blockSQP2.vblock(size, dep, impl) for size, dep, impl in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies, OCprob.vBlock_bounds_implicit)]
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
 
 targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
 
-condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 2)
-# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 2)
+condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 1)
+# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 1)
 # condenser = None
 
 #Define blockSQP Problemspec
@@ -130,13 +128,14 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 # scaledProb = blockSQP2.ScaledProblem(prob)
 # scalingFactors = np.ones(prob.nVar, dtype = np.float64)
 # for i in range(OCprob.ntS + 1):
-#     OCprob.set_stage_control(scalingFactors, i, 10.0)
+#     OCprob.set_stage_state(scalingFactors, i, [1.0]*6 + [1.0]*3)
 # scaledProb.set_scale(scalingFactors)
 
 stats = blockSQP2.SQPstats("./solver_outputs")
 
 t0 = time.monotonic()
 optimizer = blockSQP2.SQPmethod(prob, opts, stats)
+# optimizer = blockSQP2.SQPmethod(scaledProb, opts, stats)
 optimizer.init()
 
 if (step_plots):

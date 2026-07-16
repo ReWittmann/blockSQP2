@@ -101,13 +101,13 @@ int main(){
     blockSQP2::vblock *vblocks = new blockSQP2::vblock[7];
     vblocks[0] = blockSQP2::vblock(1, false, false);
     
-    vblocks[1] = blockSQP2::vblock(2, true, false);
+    vblocks[1] = blockSQP2::vblock(2, true, true);
     vblocks[2] = blockSQP2::vblock(1, false, false);
     
-    vblocks[3] = blockSQP2::vblock(2, true, false);
+    vblocks[3] = blockSQP2::vblock(2, true, true);
     vblocks[4] = blockSQP2::vblock(1, false, false);
     
-    vblocks[5] = blockSQP2::vblock(2, true, false);
+    vblocks[5] = blockSQP2::vblock(2, true, true);
     vblocks[6] = blockSQP2::vblock(1, false, false);
     
     
@@ -137,6 +137,24 @@ int main(){
     
     std::cout << "A =\n" << con_jac.dense() << "\n";
     
+    
+    int row_indices[3] = {1,3,5};
+    int ri = 6;
+    blockSQP2::Sparse_Matrix con_jac_mod_0 = con_jac.without_rows(&ri, 1);
+    blockSQP2::Sparse_Matrix con_jac_mod = con_jac_mod_0.without_rows(row_indices, 3);
+    std::cout << "A_mod = \n" << con_jac_mod.dense() << "\n";
+    
+    blockSQP2::Matrix con_jac_mod_2 = con_jac.dense().without_rows(row_indices, 3);
+    std::cout << "A_mod_2 = \n" << con_jac_mod_2 << "\n";
+    
+    std::unique_ptr<blockSQP2::Matrix[]> MAT_arr = std::make_unique<blockSQP2::Matrix[]>(2);
+    MAT_arr[0] = con_jac_mod.dense(); MAT_arr[1] = con_jac_mod_2;
+    blockSQP2::Matrix VC = vertcat(MAT_arr.get(), 2);
+    std::cout << "VC = \n" << VC << "\n";
+    
+    blockSQP2::Sparse_Matrix SMAT_arr[2] = {con_jac, con_jac_mod};
+    blockSQP2::Sparse_Matrix SVC = vertcat(SMAT_arr, 2);
+    std::cout << "SVC = \n" << SVC.dense() << "\n";
     
     //full_block = 0.25 * ([1,-1,1]*[1,-1,1]^T + [1,1,0]*[1,1,0]^T + [-1,1,2]*[-1,1,2]^T)
     blockSQP2::SymMatrix full_block(3);

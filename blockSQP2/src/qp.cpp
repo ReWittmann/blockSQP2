@@ -151,6 +151,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             for (int i = 0; i < vars->nBlocks; i++){
                 vars->hess_conv[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
             }
+            vars->hess = vars->hess_conv.get();
         }
         else{
             if (idx == 1){
@@ -651,134 +652,8 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     // If second or later convexified QP was accepted, compare step with that of the BFGS QP
     bool sol_set = false;
     
-    // int convKappaShift = 0;
-    // if (vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
-    //     deltaXi = vars->par_QP_sols_prim[1];
-    //     lambdaQP = vars->par_QP_sols_dual[1];
-        
-    //     std::cout << "Attempting to lower kappa...\n";
-    //     //Save fallback QP hotstart point.
-    //     // sub_QP->set_hotstart_point(sub_QPs_par[maxQP - 1].get());
-    //     double solTime = sub_QPs_par[1]->get_solutionTime();
-    //     int j, tj;
-    //     std::cout << "solTime = " << solTime << "\n";
-        
-    //     if (param->sparse)
-    //         sub_QP->set_constr(vars->sparse_constrJac.nz.get(), vars->sparse_constrJac.row.get(), vars->sparse_constrJac.colind.get());
-    //     else
-    //         sub_QP->set_constr(vars->constrJac);
-    //     sub_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-    //     sub_QP->set_lin(vars->gradObj);
-    //     sub_QP->set_use_hotstart(vars->use_homotopy);
-        
-    //     for (tj = 0; tj < maxQP - 1; tj++){
-    //         sub_QPs_par[tj]->set_hotstart_point(sub_QPs_par[1].get());
-    //     }
-    //     sub_QP->set_hotstart_point(sub_QPs_par[1].get());
-        
-    //     // Solve zero-th lower reg. QP in main thread, rest in worker threads
-    //     for (int J = 0; J < 2; J++){
-    //         std::cout << "J = " << J << "\n";
-    //         for (tj = 0; tj < maxQP - 1; tj++){
-    //             QP_results_p[tj] = std::promise<QPresults>(); 
-    //             QP_results_f[tj] = QP_results_p[tj].get_future();
-    //             // sub_QPs_par[j]->set_hotstart_point(sub_QPs_par[1].get());
-    //         }
-    //         // sub_QP->set_hotstart_point(sub_QPs_par[1].get());
-            
-    //         for (j = 0; j < maxQP; j++){
-    //             QP_results[j] = QPresults::undef;
-    //             // sub_QPs_par[j]->set_hotstart_point(sub_QPs_par[1].get());
-    //         }
-            
-    //         computeLowerRegularizedHessian(J*maxQP + 0, maxQP);
-    //         // sub_QPs_par[0]->set_hess(vars->hess);
-    //         sub_QP->set_hess(vars->hess);
-            
-    //         for (j = 1; j < maxQP; j++){
-    //         // for (j = 0; j < maxQP - 1; j++){
-    //             tj = j - 1;
-    //             computeLowerRegularizedHessian(J*maxQP + j, maxQP);
-    //             sub_QPs_par[tj]->set_hess(vars->hess);
-    //             QP_threads[tj] = std::jthread(
-    //                 [](std::stop_token stp, BasicQPsolver *arg_QPS, std::promise<QPresults> arg_PRM, Matrix &arg_1, Matrix &arg_2){
-    //                     arg_QPS->solve(stp, std::move(arg_PRM), arg_1, arg_2);
-    //                     },
-    //                 sub_QPs_par[tj].get(), std::move(QP_results_p[tj]), std::ref(vars->par_QP_sols_prim[j]), std::ref(vars->par_QP_sols_dual[j])
-    //             );
-    //         }
-    //         // sub_QPs_par[0]->set_timeLimit(TimeLimitTypes::custom, solTime*2);
-    //         sub_QP->set_timeLimit(TimeLimitTypes::custom, solTime*2);
-    //         T0 = steady_clock::now();
-    //         // QP_results[0] = sub_QPs_par[0]->solve(vars->par_QP_sols_prim[0], vars->par_QP_sols_dual[0]);
-            
-    //         QP_results[0] = sub_QP->solve(vars->par_QP_sols_prim[0], vars->par_QP_sols_dual[0]);
-    //         T1 = steady_clock::now();
-    //         TF = T1 + microseconds(duration_cast<microseconds>((T1 - T0)*(2.0)).count());
-    //         j = -1 + int(QP_results[0] == QPresults::success);
-            
-    //         //j ~ index of solved QP with lowest regularization
-    //         for (tj = 0; tj < maxQP - 1; tj++){
-    //             QP_results_fs[tj] = QP_results_f[tj].wait_until(TF);
-    //             if (QP_results_fs[tj] == std::future_status::ready){
-    //                 std::cout << "Thread " << tj << " was ready\n";
-    //                 QP_results[tj + 1] = QP_results_f[tj].get();
-    //                 if (QP_results[tj + 1] == QPresults::success) j = tj + 1;
-    //             }
-    //             else {QP_threads[tj].request_stop(); std::cout << "Thread " << tj << " was not ready\n";}
-    //         }
-    //         for (tj = 0; tj < maxQP - 1; tj++) QP_threads[tj].join();
-            
-    //         std::cout << "j = " << j << "\n";
-    //         if (j >= 0){
-    //             deltaXi = vars->par_QP_sols_prim[j];
-    //             lambdaQP = vars->par_QP_sols_dual[j];
-    //             sol_set = true;
-    //             vars->QP_num_accepted = vars->hess_num_accepted;
-    //             std::cout << "shifting kappa by " << j+1 << "\n";
-    //             // vars->convKappa *= std::pow(2, -(j+1));
-    //             convKappaShift -= j+1;
-    //             BasicQPsolver *tempBQP;// = (j == 0) ? sub_QP.get() : sub_QPs_par[j-1].get();
-    //             // if (j != 2){
-    //             //     tempBQP = sub_QPs_par[1].release();
-    //             //     sub_QPs_par[1] = (j == 0) ? std::move(sub_QP) : std::move(sub_QPs_par[j-1]);
-    //             //     if (j == 0) sub_QP.reset(tempBQP); else sub_QPs_par[j-1].reset(tempBQP);
-    //             // }
-    //             tempBQP = (j == 0) ? sub_QP.get() : sub_QPs_par[j-1].get();
-    //             for (int ind = 0; ind < maxQP - 1; ind++){
-    //                 sub_QPs_par[ind]->set_hotstart_point(tempBQP);
-    //             }
-    //             sub_QP->set_hotstart_point(tempBQP);
-    //         }
-    //         if (j < maxQP - 1) break;
-    //     }
-    //     vars->convKappa *= std::pow(2, convKappaShift);
-    //     // sub_QPs_par[maxQP - 1]->set_hotstart_point(sub_QP.get());
-    // }
-    // if (vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
-    //     int j = 0;
-    //     double solTime = sub_QPs_par[1]->get_solutionTime();
-    //     for (; j < 10; j++){
-    //         computeLowerRegularizedHessian(j, maxQP);
-    //         sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);
-    //         sub_QPs_par[1]->set_hess(vars->hess, false);
-    //         QPresults QP_result_temp = sub_QPs_par[1]->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
-    //         if (QP_result_temp == QPresults::success){
-    //             deltaXi = vars->deltaXi_temp; 
-    //             lambdaQP = vars->lambdaQP_temp;
-    //             sol_set = true;
-    //             for (int ind = 0; ind < maxQP - 1; ind++){
-    //                 sub_QPs_par[ind]->set_hotstart_point(sub_QPs_par[1].get());
-    //             }
-    //             continue;
-    //         }
-    //         else break;
-    //     }
-    //     vars->convKappa *= std::pow(2, -j);
-    //     vars->QP_num_accepted = vars->hess_num_accepted;
-    // }
     // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
+    if (param->conv_strategy > 0 && maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
         int j = 0;
         // double s_prev = 0.;
         for (; j < 5; j++){
@@ -1100,10 +975,11 @@ QPresults SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
     
     updateStepBoundsSOC();
     SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-
-    QPresults QP_result = SOC_QP->solve(deltaXi, lambdaQP);
+    SOC_QP->set_timeLimit(TimeLimitTypes::past_avg);
+    
+    QPresults res = SOC_QP->solve(deltaXi, lambdaQP);
     stats->qpIterations += SOC_QP->get_QP_it();
-    return QP_result;
+    return res;
 }
 
 
