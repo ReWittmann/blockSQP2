@@ -36,8 +36,8 @@ Problemspec::~Problemspec(){}
 //Default: Do nothing. Cant make these pure virtual since we only need either dense or sparse version.
 void Problemspec::initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){}
 void Problemspec::initialize(Matrix &xi, Matrix &lambda, double *jacNz, int *jacIndRow, int *jacIndCol){}
-void Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info){}
-void Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info ){}
+void Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, Matrix &constrJac, SymMatrix *hess, int dmode, int *info){*info = 1;}
+void Problemspec::evaluate(const Matrix &xi, const Matrix &lambda, double *objval, Matrix &constr, Matrix &gradObj, double *jacNz, int *jacIndRow, int *jacIndCol, SymMatrix *hess, int dmode, int *info){*info = 1;}
 
 void Problemspec::evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info){
     Matrix lambdaDummy, gradObjDummy;

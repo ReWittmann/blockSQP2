@@ -16,7 +16,7 @@ class CXXobjHolder:
     """
     cxx_obj : c_void_p = c_void_p(None)
     deleter : typing.Callable = lambda ptr: None
-    deps : typing.List['CXXobjHolder'] = []
+    deps : typing.List['CXXobjHolder']
     def __init__(self, cxx_obj : c_void_p, deleter : typing.Callable[[c_void_p], None], *deps):
         self.cxx_obj = cxx_obj
         self.deleter = deleter

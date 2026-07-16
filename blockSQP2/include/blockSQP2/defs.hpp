@@ -79,18 +79,12 @@ enum class Hessians : int{
     BFGS = 2,
     
     finite_diff = 4,
-    //pos_def_exact = 5,
-    //undamped_BFGS = 6,
+    //pos_def_exact = *,
+    //undamped_BFGS = *,
     exact = 5,
     pos_def_exact = 6,
     undamped_BFGS = 7,
-    
     last_block_default = -100
-    
-    /*
-    exact = 5,
-    pos_def_exact = 6,
-    */
 };
 
 //Identity Hessian may still be "updated" through sizing

@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.F8_Aircraft(
+OCprob = OCProblems.Hanging_Chain(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -42,8 +42,8 @@ plot_title = True                           #Put name of problem in plot?
 sol_plot = False
 
 
-start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
-# start = OCprob.start_point
+# start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
+start = OCprob.start_point
 ###############################
 QPopts = blockSQP2.qpOASES_options(
     matrixSparsity = -1

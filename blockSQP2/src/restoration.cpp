@@ -1214,12 +1214,12 @@ void CondensableRestorationProblem::evaluate(
         std::copy(jac_restoration.row.get(), jac_restoration.row.get() + jac_restoration.nnz(), jacIndRow);
         std::copy(jac_restoration.colind.get(), jac_restoration.colind.get() + jac_restoration.n + 1, jacIndCol);
     }
-    
     *info = 0;
 }
 
 
 void CondensableRestorationProblem::recover_xi(const Matrix &xi_rest, Matrix &xi_orig){
+    xi_orig.Dimension(parent->nVar);
     for (int i = 0; i < parent->nVar; i++){
         xi_orig(i) = xi_rest(i);
     }
@@ -1227,6 +1227,7 @@ void CondensableRestorationProblem::recover_xi(const Matrix &xi_rest, Matrix &xi
 }
 
 void CondensableRestorationProblem::recover_lambda(const Matrix &lambda_rest, Matrix &lambda_orig){
+    lambda_orig.Dimension(parent->nVar + parent->nCon);
     int ind_1 = 0;
     int ind_2 = parent->nVar + parent_cond->num_true_cons;
     for (int i = 0; i < parent_cond->num_vblocks; i++){

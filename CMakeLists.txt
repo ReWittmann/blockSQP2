@@ -235,8 +235,8 @@ elseif(WIN32)
 	if(MINGW)
 		target_compile_options(blockSQP2 PRIVATE 
 			-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
-			$<$<CONFIG:Debug>:-O0>
-			$<$<CONFIG:Release>:-O3 -DMATRIX_DEBUG>
+			$<$<CONFIG:Debug>:-O0 -g -DMATRIX_DEBUG>
+			$<$<CONFIG:Release>:-O3>
 			# -O3
 			# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
 			)

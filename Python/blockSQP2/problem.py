@@ -129,7 +129,7 @@ class Problem(CXXobjCreator):
         return self._stepModifier
     
     @stepModifier.setter
-    def set_stepModifier(self, stepM_func : typing.Optional[typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]]):
+    def stepModifier(self, stepM_func : typing.Optional[typing.Callable[[np.ndarray[np.float64], np.ndarray[np.float64]], int]]):
         self._stepModifier = stepM_func
     
     
@@ -216,6 +216,8 @@ class Problem(CXXobjCreator):
                     hess_eval = self.hess(xi_arr, lam_arr[self.nVar:self.nVar+self.nCon])
                     for i in range(len(self.blockIdx) - 1):
                         hess_list[i][:] = hess_eval[i]
+        except KeyboardInterrupt:
+            raise
         except Exception:
             info[0] = 1
         else:

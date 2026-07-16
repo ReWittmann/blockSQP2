@@ -151,6 +151,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             for (int i = 0; i < vars->nBlocks; i++){
                 vars->hess_conv[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
             }
+            vars->hess = vars->hess_conv.get();
         }
         else{
             if (idx == 1){
@@ -652,7 +653,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     bool sol_set = false;
     
     // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-    if (maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
+    if (param->conv_strategy > 0 && maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
         int j = 0;
         // double s_prev = 0.;
         for (; j < 5; j++){
@@ -974,7 +975,8 @@ QPresults SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){
     
     updateStepBoundsSOC();
     SOC_QP->set_bounds(vars->delta_lb_var, vars->delta_ub_var, vars->delta_lb_con, vars->delta_ub_con);
-
+    SOC_QP->set_timeLimit(TimeLimitTypes::past_avg);
+    
     QPresults res = SOC_QP->solve(deltaXi, lambdaQP);
     stats->qpIterations += SOC_QP->get_QP_it();
     return res;

@@ -2285,7 +2285,6 @@ class F8_Aircraft(OCProblem):
         for i in range(0, self.ntS):
             self.set_stage_state(self.start_point, i, self.x_init)
             self.set_stage_param(self.start_point, i, 5./self.ntS)
-            # self.set_stage_control(self.start_point, i, 1.0)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
     
     def perturbed_start_point(self, ind):

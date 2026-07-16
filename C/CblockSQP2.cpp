@@ -87,7 +87,7 @@ public:
             }
         }
         else if (dmode == 2){
-            hessNz = new double *[nBlocks];
+            hessNz = new double *[nBlocks]();
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
         
@@ -104,7 +104,7 @@ public:
             }
         }
         else if (dmode == 2){
-            hessNz = new double *[nBlocks];
+            hessNz = new double *[nBlocks]();
             hessNz[nBlocks - 1] = hess[nBlocks - 1].array;
         }
         
@@ -120,6 +120,7 @@ public:
     virtual void reduceConstrVio(Matrix &xi, int *info){
         if (reduce_constr_vio != nullptr){
             (*reduce_constr_vio)(closure, xi.array, info);
+            return;
         }
         *info = 1;
     };

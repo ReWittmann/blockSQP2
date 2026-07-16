@@ -27,25 +27,25 @@ import OCProblems
 
 
 Examples = [
-            # OCProblems.Batch_Reactor,
-            # OCProblems.Cart_Pendulum,
-            # OCProblems.Catalyst_Mixing,
-            # OCProblems.Cushioned_Oscillation,
-            # OCProblems.Ducted_Fan,
-            # OCProblems.Egerstedt_Standard,
-            # OCProblems.Electric_Car,
-            # OCProblems.Goddard_Rocket,
-            # OCProblems.Hang_Glider,
-            # OCProblems.Hanging_Chain,
-            # OCProblems.Lotka_Volterra_Fishing,
-            # OCProblems.Particle_Steering,
-            # OCProblems.Quadrotor_Helicopter,
-            # OCProblems.Three_Tank_Multimode,
-            # OCProblems.Time_Optimal_Car,
-            # OCProblems.Tubular_Reactor,
+            OCProblems.Batch_Reactor,
+            OCProblems.Cart_Pendulum,
+            OCProblems.Catalyst_Mixing,
+            OCProblems.Cushioned_Oscillation,
+            OCProblems.Ducted_Fan,
+            OCProblems.Egerstedt_Standard,
+            OCProblems.Electric_Car,
+            OCProblems.Goddard_Rocket,
+            OCProblems.Hang_Glider,
+            OCProblems.Hanging_Chain,
+            OCProblems.Lotka_Volterra_Fishing,
+            OCProblems.Particle_Steering,
+            OCProblems.Quadrotor_Helicopter,
+            OCProblems.Three_Tank_Multimode,
+            OCProblems.Time_Optimal_Car,
+            OCProblems.Tubular_Reactor,
             # OCProblems.Lotka_OED,
             # OCProblems.Fermenter
-            OCProblems.Satellite_Deorbiting_1
+            # OCProblems.Satellite_Deorbiting_1
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -206,7 +206,7 @@ Experiments = [
                
                # (opt_CS2_par, "par"),
                (opt_CS2_par_new, "par_new"),
-               (opt_CS2_par_new_noScale, "par_new_noScale")
+               # (opt_CS2_par_new_noScale, "par_new_noScale")
                ]
 
 

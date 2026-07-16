@@ -40,10 +40,6 @@
 
 namespace blockSQP2{
 
-extern int Ccount; ///< Count constructor calls
-extern int Dcount; ///< Count destructor calls
-extern int Ecount; ///< Count assign operator calls
-
 class SymMatrix;
 
 /**
@@ -215,8 +211,8 @@ class Sparse_Matrix{
     inline int nnz(){return colind[n];}
     Sparse_Matrix &Dimension(int M, int N, int NNZ);
     
-		void operator=(const Sparse_Matrix &M);
-		void operator=(Sparse_Matrix &&M);
+		Sparse_Matrix &operator=(const Sparse_Matrix &M);
+		Sparse_Matrix &operator=(Sparse_Matrix &&M);
 		Sparse_Matrix operator+(const Sparse_Matrix &M2) const;
 		Sparse_Matrix get_slice(int m_start, int m_end, int n_start, int n_end) const;
     
@@ -249,8 +245,8 @@ public:
     CSR_Matrix(const Sparse_Matrix &M1);
     CSR_Matrix();
     ~CSR_Matrix();
-    void operator=(const CSR_Matrix &M1);
-    void operator=(CSR_Matrix &&M1);
+    CSR_Matrix &operator=(const CSR_Matrix &M1);
+    CSR_Matrix &operator=(CSR_Matrix &&M1);
 
     int m;
     int n;

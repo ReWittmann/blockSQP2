@@ -20,7 +20,7 @@ inline Matrix &Matrix::Dimension(int M, int N, int LDIM){
             deallocate();
             m = M;
             n = N;
-            if (ldim < m) ldim = m;
+            ldim = (std::max)(m, LDIM);
             allocate();
         }
     }
@@ -29,7 +29,6 @@ inline Matrix &Matrix::Dimension(int M, int N, int LDIM){
 
 inline const Matrix &Matrix::Initialize(double val) const{
     for (int j = 0; j < n; j++) std::fill(array + j*ldim, array + m + j*ldim, val);
-    // std::fill(array, array + ldim*n, val);
     return *this;
 }
 

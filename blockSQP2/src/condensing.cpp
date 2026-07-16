@@ -389,6 +389,9 @@ void Condenser::setup(){
     switch (add_dep_bounds){
         case 0:
             condensed_num_cons = num_true_cons;
+            for (int i = 0; i < num_vblocks; i++){
+                if (vblocks[i].removed) vblocks[i].bounds_removed = true;
+            }
             break;
         case 1:
             condensed_num_cons = num_true_cons;
