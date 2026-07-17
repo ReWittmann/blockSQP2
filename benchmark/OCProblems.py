@@ -5176,3 +5176,135 @@ class Satellite_Deorbiting_2(OCProblem):
             plt.title('')
         plt.show()
         plt.close()
+        
+
+
+class Lotka_Shared_OED(OCProblem):
+    default_params = {'alpha0': 1.0,
+                      'alpha1': 1.0,
+                      'alpha2': 1.2,
+                      'c1':0.1, 
+                      'c2':0.4, 
+                      't0':0., 
+                      'tf':20.0, 
+                      'x_init':[1.5,0.5,1.0],
+                      'M1': 4.0,
+                      'M2': 4.0,
+                      'M3': 4.0,
+                      'reg_init': 0.1
+                      }
+    def build_problem(self):
+        self.set_OCP_data(3+9+6,0,4,3, [0.,0.,0.] + [-np.inf]*15, [np.inf, np.inf, np.inf] + [np.inf]*15,[],[],[0.]*4,[1.]*4)
+        
+        alpha0, alpha1, alpha2, c1, c2, t0, tf, x_init, M1, M2, M3, reg_init = (self.model_params[key] for key in ['alpha0', 'alpha1', 'alpha2', 'c1', 'c2', 't0', 'tf', 'x_init', 'M1', 'M2', 'M3', 'reg_init'])
+        self.fix_time_horizon(self.model_params['t0'], self.model_params['tf'])
+        self.fix_initial_value(self.model_params['x_init'] + [0.]*15)
+        self.mark_state_bounds_implicit()
+        
+        x = cs.MX.sym('x', 3)
+        u = cs.MX.sym('u', 1)
+        x0, x1, x2 = cs.vertsplit(x)
+        theta = cs.MX.sym('theta', 3)
+        alpha0_s, alpha1_s, alpha2_s = cs.vertsplit(theta)
+        
+        f_expr = cs.vertcat( x0 - alpha0_s * x0 * x1 - x0 * x2,
+                            -x1 + alpha1_s * x0 * x1 - c1 * x1 * u, 
+                            -x2 + alpha2_s * x0 * x2 - c2 * x2 * u
+                            )
+        
+        f_x_expr = cs.jacobian(f_expr, x)
+        f_theta_expr = cs.jacobian(f_expr, theta)
+        
+        #Fix theta in the expressions
+        f = cs.Function('f', [x, u, theta], [f_expr])
+        f_x = cs.Function('f_x', [x, u, theta], [f_x_expr])
+        f_theta = cs.Function('f_p', [x,u,theta], [f_x_expr])
+        
+        f_expr = f(x, u, cs.DM([alpha0, alpha1, alpha2]))
+        f_x_expr = f_x(x, u, cs.DM([alpha0, alpha1, alpha2]))
+        f_theta_expr = f_theta(x, u, cs.DM([alpha0, alpha1, alpha2]))
+        
+        
+        G = cs.MX.sym('G', x.numel(), theta.numel())
+        dG = f_x_expr@G + f_theta_expr
+        G_rhs = cs.vec(dG)
+        
+        w = cs.MX.sym('w', 3)
+        w1,w2,w3 = cs.vertsplit(w)
+        
+        F = cs.MX.sym('F', (x.numel()*(x.numel() + 1))//2)
+        dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
+        # dF = w1*(G@dh1) @ (G@dh1).T + w2*(G@dh2) @ (G@dh2).T + w3*(G@dh3) @ (G@dh3).T
+        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
+        
+        
+        F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[1,1], dF[2,1], dF[2,2])
+        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+        quad_expr = w
+        dt = cs.MX.sym('dt', 1)
+        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        
+        F_rhs_tf = self.x_eval[3+9:3+9+6,-1]
+        
+        print(F_rhs_tf.shape)
+        F_tf = cs.MX.zeros(3,3)
+        for j in range(3):
+            for i in range(0, j):
+                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+            F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
+            for i in range(j + 1, 3):
+                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+        
+        self.set_objective(cs.trace(cs.inv(F_tf)))
+        self.add_constraint(self.q_tf, [0.,0.,0.], [M1,M2,M3])
+        
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        # for i in range(self.ntS+1):
+        #     self.set_stage_state(self.start_point, i, self.model_params['x_init'])
+        
+        L_t = tf - t0
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0, M1/L_t, M2/L_t, M3/L_t])
+        self.integrate_full(self.start_point)
+        
+        
+        
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        s_ind = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [0.1, *s_ind[1:4]])
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x0, x1, x2 = self.get_state_arrays_expanded(xi)[0:3]
+        u, w1, w2, w3 = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
+        plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
+        plt.plot(self.time_grid_ref, x2, 'y:', label = '$x_2$')
+        
+        plt.step(self.time_grid_ref, u, 'r', label = r'$u$')
+        plt.step(self.time_grid_ref, w1, 'g--', label = r'$w_1$')
+        plt.step(self.time_grid_ref, w2, 'b:', label = r'$w_2$')
+        plt.step(self.time_grid_ref, w3, 'c-.', label = r'$w_3$')
+        plt.legend(fontsize='x-large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Lotka shared OED'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+        plt.close()

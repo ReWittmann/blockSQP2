@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_OED(
+OCprob = OCProblems.Lotka_Shared_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -39,7 +39,7 @@ itMax = 100                                  #max number of steps
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
-sol_plot = False
+sol_plot = True
 
 
 # start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
@@ -58,7 +58,7 @@ opts = blockSQP2.SQPoptions(
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
-    hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
+    hess_approx = 'exact',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
     fallback_approx = 'BFGS',               # ''   ''
     fallback_sizing = 'COL',                # ''   ''

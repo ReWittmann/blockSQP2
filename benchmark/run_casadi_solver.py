@@ -19,7 +19,7 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Satellite_Deorbiting_1(
+OCprob = OCProblems.Lotka_Shared_OED(
                     nt = 100,
                     refine = 1,
                     parallel = True,
