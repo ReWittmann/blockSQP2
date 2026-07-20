@@ -26,7 +26,7 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Shared_OED(
+OCprob = OCProblems.Batch_Reactor_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -36,7 +36,7 @@ OCprob = OCProblems.Lotka_Shared_OED(
                     )
 itMax = 100                                  #max number of steps
 
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 sol_plot = True
@@ -58,7 +58,7 @@ opts = blockSQP2.SQPoptions(
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
-    hess_approx = 'exact',                    #'SR1'/'BFGS'/'exact'
+    hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
     fallback_approx = 'BFGS',               # ''   ''
     fallback_sizing = 'COL',                # ''   ''
@@ -127,8 +127,8 @@ prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
 
 # scaledProb = blockSQP2.ScaledProblem(prob)
 # scalingFactors = np.ones(prob.nVar, dtype = np.float64)
-# for i in range(OCprob.ntS + 1):
-#     OCprob.set_stage_state(scalingFactors, i, [1.0]*6 + [1.0]*3)
+# for i in range(OCprob.ntS):
+#     OCprob.set_stage_control(scalingFactors, i, [1.0] + [1.0, 1.0])
 # scaledProb.set_scale(scalingFactors)
 
 stats = blockSQP2.SQPstats("./solver_outputs")

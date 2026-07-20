@@ -19,7 +19,7 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Lotka_Shared_OED(
+OCprob = OCProblems.Batch_Reactor_OED(
                     nt = 100,
                     refine = 1,
                     parallel = True,
@@ -28,8 +28,8 @@ OCprob = OCProblems.Lotka_Shared_OED(
 
 ipopts = dict()
 ipopts['hessian_approximation'] = 'exact'
-ipopts['tol'] = 1e-5
-ipopts['constr_viol_tol'] = 1e-5
+ipopts['tol'] = 1e-7
+ipopts['constr_viol_tol'] = 1e-7
 ipopts['max_iter'] = itMax
 
 sp = OCprob.start_point

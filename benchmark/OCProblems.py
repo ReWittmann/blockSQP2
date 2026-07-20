@@ -4130,7 +4130,7 @@ class Dielectrophoretic_Particle(OCProblem):
         if isinstance(title,str):
             ttl = title
         elif title == True:
-            ttl = 'Lotka Volterra fishing problem'
+            ttl = 'Dielectrophoretic Particle problem'
         if ttl is not None:
             if isinstance(it, int):
                 ttl = ttl + f', iteration {it}'
@@ -5179,6 +5179,131 @@ class Satellite_Deorbiting_2(OCProblem):
         
 
 
+# class Lotka_Shared_OED(OCProblem):
+#     default_params = {'alpha0': 1.0,
+#                       'alpha1': 1.0,
+#                       'alpha2': 1.2,
+#                       'c1':0.1, 
+#                       'c2':0.4, 
+#                       't0':0., 
+#                       'tf':20.0, 
+#                       'x_init':[1.5,0.5,1.0],
+#                       'M1': 4.0,
+#                       'M2': 4.0,
+#                       'M3': 4.0,
+#                       'reg_init': 0.1
+#                       }
+#     def build_problem(self):
+#         self.set_OCP_data(3+9+6,0,4,3, [0.,0.,0.] + [-np.inf]*15, [np.inf, np.inf, np.inf] + [np.inf]*15,[],[],[0.]*4,[1.]*4)
+        
+#         alpha0, alpha1, alpha2, c1, c2, t0, tf, x_init, M1, M2, M3, reg_init = (self.model_params[key] for key in ['alpha0', 'alpha1', 'alpha2', 'c1', 'c2', 't0', 'tf', 'x_init', 'M1', 'M2', 'M3', 'reg_init'])
+#         self.fix_time_horizon(self.model_params['t0'], self.model_params['tf'])
+#         self.fix_initial_value(self.model_params['x_init'] + [0.]*15)
+#         self.mark_state_bounds_implicit()
+        
+#         x = cs.MX.sym('x', 3)
+#         u = cs.MX.sym('u', 1)
+#         x0, x1, x2 = cs.vertsplit(x)
+#         theta = cs.MX.sym('theta', 3)
+#         alpha0_s, alpha1_s, alpha2_s = cs.vertsplit(theta)
+        
+#         f_expr = cs.vertcat( x0 - alpha0_s * x0 * x1 - x0 * x2,
+#                             -x1 + alpha1_s * x0 * x1 - c1 * x1 * u, 
+#                             -x2 + alpha2_s * x0 * x2 - c2 * x2 * u
+#                             )
+        
+#         f_x_expr = cs.jacobian(f_expr, x)
+#         f_theta_expr = cs.jacobian(f_expr, theta)
+        
+#         #Fix theta in the expressions
+#         f = cs.Function('f', [x, u, theta], [f_expr])
+#         f_x = cs.Function('f_x', [x, u, theta], [f_x_expr])
+#         f_theta = cs.Function('f_p', [x,u,theta], [f_x_expr])
+        
+#         f_expr = f(x, u, cs.DM([alpha0, alpha1, alpha2]))
+#         f_x_expr = f_x(x, u, cs.DM([alpha0, alpha1, alpha2]))
+#         f_theta_expr = f_theta(x, u, cs.DM([alpha0, alpha1, alpha2]))
+        
+        
+#         G = cs.MX.sym('G', x.numel(), theta.numel())
+#         dG = f_x_expr@G + f_theta_expr
+#         G_rhs = cs.vec(dG)
+        
+#         w = cs.MX.sym('w', 3)
+#         w1,w2,w3 = cs.vertsplit(w)
+        
+#         F = cs.MX.sym('F', (x.numel()*(x.numel() + 1))//2)
+#         dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
+#         # dF = w1*(G@dh1) @ (G@dh1).T + w2*(G@dh2) @ (G@dh2).T + w3*(G@dh3) @ (G@dh3).T
+#         dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
+        
+        
+#         F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[1,1], dF[2,1], dF[2,2])
+#         ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+#         quad_expr = w
+#         dt = cs.MX.sym('dt', 1)
+#         self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+#         self.multiple_shooting()
+        
+#         F_rhs_tf = self.x_eval[3+9:3+9+6,-1]
+#         F_tf = cs.MX.zeros(3,3)
+#         for j in range(3):
+#             for i in range(0, j):
+#                 F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+#             F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
+#             for i in range(j + 1, 3):
+#                 F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+        
+#         self.set_objective(cs.trace(cs.inv(F_tf))/theta.numel())
+#         self.add_constraint(self.q_tf, [0.,0.,0.], [M1,M2,M3])
+#         self.build_NLP()
+#         self.start_point = np.zeros(self.nVar)
+        
+#         L_t = tf - t0
+#         for i in range(self.ntS):
+#             self.set_stage_control(self.start_point, i, [0, M1/L_t, M2/L_t, M3/L_t])
+#         self.integrate_full(self.start_point)
+        
+        
+        
+#     def perturbed_start_point(self, ind):
+#         s = copy.copy(self.start_point)
+#         s_ind = self.get_stage_control(s, ind)
+#         self.set_stage_control(s, ind, [0.1, *s_ind[1:4]])
+#         return s
+    
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         x0, x1, x2 = self.get_state_arrays_expanded(xi)[0:3]
+#         u, w1, w2, w3 = self.get_control_plot_arrays(xi)
+        
+#         plt.figure(dpi = dpi)
+#         plt.plot(self.time_grid_ref, x0, 'g-.', label = '$x_0$')
+#         plt.plot(self.time_grid_ref, x1, 'b--', label = '$x_1$')
+#         plt.plot(self.time_grid_ref, x2, 'y:', label = '$x_2$')
+        
+#         plt.step(self.time_grid_ref, u, 'r', label = r'$u$')
+#         plt.step(self.time_grid_ref, w1, 'g--', label = r'$w_1$')
+#         plt.step(self.time_grid_ref, w2, 'b:', label = r'$w_2$')
+#         plt.step(self.time_grid_ref, w3, 'c-.', label = r'$w_3$')
+#         plt.legend(fontsize='x-large')
+        
+#         ttl = None
+#         if isinstance(title,str):
+#             ttl = title
+#         elif title == True:
+#             ttl = 'Lotka shared OED'
+#         if ttl is not None:
+#             if isinstance(it, int):
+#                 ttl = ttl + f', iteration {it}'
+#             plt.title(ttl)
+#         else:
+#             plt.title('')
+            
+#         plt.show()
+#         plt.close()
+
+
 class Lotka_Shared_OED(OCProblem):
     default_params = {'alpha0': 1.0,
                       'alpha1': 1.0,
@@ -5232,9 +5357,8 @@ class Lotka_Shared_OED(OCProblem):
         w = cs.MX.sym('w', 3)
         w1,w2,w3 = cs.vertsplit(w)
         
-        F = cs.MX.sym('F', (x.numel()*(x.numel() + 1))//2)
+        F = cs.MX.sym('F', (theta.numel()*(theta.numel() + 1))//2)
         dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
-        # dF = w1*(G@dh1) @ (G@dh1).T + w2*(G@dh2) @ (G@dh2).T + w3*(G@dh3) @ (G@dh3).T
         dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
         
         
@@ -5247,8 +5371,6 @@ class Lotka_Shared_OED(OCProblem):
         self.multiple_shooting()
         
         F_rhs_tf = self.x_eval[3+9:3+9+6,-1]
-        
-        print(F_rhs_tf.shape)
         F_tf = cs.MX.zeros(3,3)
         for j in range(3):
             for i in range(0, j):
@@ -5257,14 +5379,10 @@ class Lotka_Shared_OED(OCProblem):
             for i in range(j + 1, 3):
                 F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
         
-        self.set_objective(cs.trace(cs.inv(F_tf)))
+        self.set_objective(cs.trace(cs.inv(F_tf))/theta.numel())
         self.add_constraint(self.q_tf, [0.,0.,0.], [M1,M2,M3])
-        
         self.build_NLP()
-        
         self.start_point = np.zeros(self.nVar)
-        # for i in range(self.ntS+1):
-        #     self.set_stage_state(self.start_point, i, self.model_params['x_init'])
         
         L_t = tf - t0
         for i in range(self.ntS):
@@ -5308,3 +5426,669 @@ class Lotka_Shared_OED(OCProblem):
             
         plt.show()
         plt.close()
+        
+        
+class Lotka_OED_new(OCProblem):
+    default_params = {
+        'tf':12, 
+        'p1':1,
+        'p2':1,
+        'p3':1,
+        'p4':1,
+        'p5':0.4,
+        'p6':0.2,
+        'x_init':[0.5,0.7],
+        'M':4.0,
+        'fishing':True,
+        'epsilon': 0.0,
+        'transform_obj':False
+        }
+    def build_problem(self):
+        self.set_OCP_data(2 + 4 + 3, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
+        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
+        self.fix_time_horizon(0.,tf)
+        self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
+        self.mark_state_bounds_implicit()
+        
+        x = cs.MX.sym('x', 2)
+        x1,x2 = cs.vertsplit(x)
+        u = cs.MX.sym('u', 1)
+        p = cs.MX.sym('p', 2)
+        p2_s, p4_s = cs.vertsplit(p)
+        
+        f_expr = cs.vertcat(p1*x1 - p2_s*x1*x2 - p5*u*x1,
+                           -p3*x2 + p4_s*x1*x2 - p6*u*x2
+                            )
+        f_x_expr = cs.jacobian(f_expr, x)
+        f_p_expr = cs.jacobian(f_expr, p)
+        
+        f = cs.Function('f', [x,u,p], [f_expr])
+        f_x = cs.Function('f', [x,u,p], [f_x_expr])
+        f_p = cs.Function('f', [x,u,p], [f_p_expr])
+        
+        f_expr = f(x,u, cs.DM([p2,p4]))
+        f_x_expr = f_x(x,u, cs.DM([p2,p4]))
+        f_p_expr = f_p(x,u, cs.DM([p2,p4]))
+        
+        
+        G = cs.MX.sym('G', x.numel(), p.numel())
+        dG = f_x_expr@G + f_p_expr
+        G_rhs = cs.vec(dG)
+        
+        w = cs.MX.sym('w', 2)
+        w1,w2 = cs.vertsplit(w)
+        
+        F = cs.MX.sym('F', (p.numel()*(p.numel() + 1))//2)
+        dh1, dh2 = cs.DM([1,0]), cs.DM([0,1])
+        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G)
+        
+        F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[1,1])
+        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+        
+        # S = cs.MX.sym('S', 9)
+        # x1, x2, G11, G12, G21, G22, F11, F12, F22 = cs.vertsplit(S)
+        
+        # C = cs.MX.sym('C', 3)
+        # u, w1, w2 = cs.vertsplit(C)
+        
+        # dt = cs.MX.sym('dt', 1)
+        # ode_rhs = cs.vertcat(
+        #         p1*x1 - p2*x1*x2 - p5*u*x1,
+        #         -p3*x2 + p4*x1*x2 - p6*u*x2,
+        #         (p1 - p2*x2 - p5*u)*G11 + (-p2*x1)*G21 - x1*x2,
+        #         (p1 - p2*x2 - p5*u)*G12 + (-p2*x1)*G22,
+        #         (p4*x2)*G11 + (-p3 + p4*x1 - p6*u)*G21,
+        #         (p4*x2)*G12 + (-p3 + p4*x1 - p6*u)*G22  + x1*x2,
+        #         w1*(G11**2) + w2*(G21**2),
+        #         w1*G11*G12 + w2*G21*G22,
+        #         w1*(G12**2) + w2*(G22**2)
+        # )
+        
+        
+        dt = cs.MX.sym('dt', 1)
+        quad_expr = w
+        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        
+        F_rhs_tf = self.x_eval[2 + 2*2:2 + 2*2 + 3, -1]
+        F_tf = cs.MX.zeros(2,2)
+        for j in range(2):
+            for i in range(0, j):
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+            F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2]
+            for i in range(j + 1, 2):
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+        
+        self.set_objective(cs.trace(cs.inv(F_tf)))
+        
+        
+        # F11T,F12T,F22T = cs.vertsplit(self.x_eval[6:9,-1])
+        
+        # obj_expr = (1/(F11T*F22T - F12T*F12T))*(F22T + F11T)
+        # if transform_obj:
+        #     self.set_objective(-obj_expr**-2)
+        # else:
+        #     # self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
+        #     self.set_objective(obj_expr)
+        
+        
+        
+        self.add_constraint(self.q_tf - M, -np.inf, 0.)
+        self.build_NLP()
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0.,1/3,1/3])
+        self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        u,w1,w2 = self.get_control_plot_arrays(xi)
+        x1, x2, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays_expanded(xi)
+        
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid_ref, x1, 'tab:olive', linestyle='-.', label = r'$x_1$')
+        ax.plot(self.time_grid_ref, x2, 'tab:cyan', linestyle='-.', label = r'$x_2$')
+        ax.step(self.time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
+        ax.step(self.time_grid_ref, w1, 'tab:blue', linestyle=':', label = r'$w_1$')
+        ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w_2$')
+        
+        ax.set_ylim(0.,4.)
+        ax.legend(fontsize = 'large', loc = 'upper left')
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Lotka OED problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        plt.show()
+        plt.close()
+        
+
+class Catalyst_Mixing_OED(OCProblem):
+    default_params = {
+        'p1': 1.0,
+        'p2': 10.0,
+        'p3': 1.0,
+        'M1': 0.2,
+        'M2': 0.2,
+        'reg_init': 1e-2
+        }
+    def build_problem(self):
+        self.set_OCP_data(2 + 4 + 3,0,3,2,[-np.inf,-np.inf] + [-np.inf]*7,[np.inf,np.inf] + [np.inf]*7,[],[],[0.] + [0.]*2,[1.] + [1.]*2)
+        self.fix_time_horizon(0,1)
+        T_l = 1.0
+        self.fix_initial_value([1.,0.] + [0.]*7)
+        self.mark_state_bounds_implicit()
+        
+        p1,p2,p3,M1,M2,reg_init = (self.model_params[key] for key in ('p1', 'p2', 'p3', 'M1', 'M2', 'reg_init'))
+        
+        x = cs.MX.sym('x', 2)
+        x1,x2 = cs.vertsplit(x)
+        u = cs.MX.sym('u',1)
+        p = cs.MX.sym('p', 2)
+        p1_s, p2_s = cs.vertsplit(p)
+        
+        dt = cs.MX.sym('dt', 1)
+        f_expr = cs.vertcat(u*(p2_s*x2 - p1_s*x1), 
+                            u*(p1_s*x1 - p2_s*x2) - (1-u)*p3*x2
+                            )
+        f_x_expr = cs.jacobian(f_expr, x)
+        f_p_expr = cs.jacobian(f_expr, p)
+        
+        f = cs.Function('f', [x,u,p], [f_expr])
+        f_x = cs.Function('f', [x,u,p], [f_x_expr])
+        f_p = cs.Function('f', [x,u,p], [f_p_expr])
+        
+        f_expr = f(x,u,cs.DM([p1,p2]))
+        f_x_expr = f_x(x,u,cs.DM([p1,p2]))
+        f_p_expr = f_p(x,u,cs.DM([p1,p2]))
+        
+        
+        G = cs.MX.sym('G', x.numel(), p.numel())
+        dG = f_x_expr@G + f_p_expr
+        G_rhs = cs.vec(dG)
+        
+        
+        w = cs.MX.sym('w', 2)
+        w1,w2 = cs.vertsplit(w)
+        
+        F = cs.MX.sym('F', (p.numel()*(p.numel() + 1))//2)
+        dh1, dh2 = cs.DM([1,0]), cs.DM([0,1])
+        
+        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G)
+        
+        
+        
+        F11scale = 1.0
+        F21scale = 1.0
+        F22scale = 1.0
+        F_rhs = cs.vertcat(F11scale*dF[0,0], F21scale*dF[1,0], F22scale*dF[1,1])
+        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+        
+        dt = cs.MX.sym('dt', 1)
+        quad_expr = w
+        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
+        self.multiple_shooting()
+        
+        F_rhs_tf_11 = self.x_eval[2 + 2*2 + 0,-1]/F11scale
+        F_rhs_tf_21 = self.x_eval[2 + 2*2 + 1,-1]/F21scale
+        F_rhs_tf_22 = self.x_eval[2 + 2*2 + 2,-1]/F22scale
+        F_rhs_tf = cs.vertcat(F_rhs_tf_11, F_rhs_tf_21, F_rhs_tf_22)
+        
+        # F_rhs_tf = self.x_eval[2 + 2*2:2 + 2*2 + 3, -1]
+        F_tf = cs.MX.zeros(2,2)
+        for j in range(2):
+            for i in range(0, j):
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+            F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2] + reg_init
+            for i in range(j + 1, 2):
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+        
+        self.set_objective(cs.trace(cs.inv(F_tf)))
+        
+        
+        # F11T,F12T,F22T = cs.vertsplit(self.x_eval[6:9,-1])
+        
+        # obj_expr = (1/(F11T*F22T - F12T*F12T))*(F22T + F11T)
+        # if transform_obj:
+        #     self.set_objective(-obj_expr**-2)
+        # else:
+        #     # self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
+        #     self.set_objective(obj_expr)
+        
+        
+        
+        self.add_constraint(self.q_tf - cs.DM([M1,M2]), -np.inf, 0.)
+        self.build_NLP()
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [1.0,M1/T_l,M2/T_l])
+        self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.9, 0., 0.])
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        fig, ax = plt.subplots(dpi=dpi)
+        x1,x2, G11, G21, G12, G22, F11, F21, F22 = self.get_state_arrays_expanded(xi)
+        u, w1, w2 = self.get_control_plot_arrays(xi)
+        ax.plot(self.time_grid_ref, x1, 'tab:green', linestyle='-.', label = r'$x_1$')
+        ax.plot(self.time_grid_ref, x2, 'tab:blue', linestyle='--', label = r'$x_2$')
+        ax.step(self.time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
+        ax.step(self.time_grid_ref, w1, 'tab:green', linestyle='--', label = r'$w_1$')
+        ax.step(self.time_grid_ref, w2, 'tab:blue', linestyle='-.', label = r'$w_2$')
+
+        ax.step(self.time_grid_ref, G11, 'tab:red', linestyle=':', label = r'$G_{11}$')
+        ax.step(self.time_grid_ref, G21, 'tab:red', linestyle=':', label = r'$G_{21}$')
+        ax.step(self.time_grid_ref, G12, 'tab:red', linestyle=':', label = r'$G_{12}$')
+        ax.step(self.time_grid_ref, G22, 'tab:red', linestyle=':', label = r'$G_{22}$')
+        
+        ax.step(self.time_grid_ref, G11, 'tab:green', linestyle='-.', label = r'$F_{11}$')
+        ax.step(self.time_grid_ref, F21, 'tab:green', linestyle='--', label = r'$F_{21}$')
+        ax.step(self.time_grid_ref, F22, 'tab:green', linestyle='-', label = r'$F_{22}$')
+
+        
+        ax.legend(fontsize = 'large')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Catalyst mixing'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(copy.deepcopy(ttl))
+        else:
+            plt.title('')
+        
+        plt.show()
+        plt.close()
+        
+
+class Dielectrophoretic_Particle_OED(OCProblem):
+    default_params = {
+        'x0': 1.,
+        'xf': 2.,
+        'alpha':-0.75,
+        'c':1.,
+        'M1': 2.0,
+        'M2': 2.0,
+        'reg_init': 1e-2
+        }
+    
+    def build_problem(self):
+        self.set_OCP_data(2 + 4 + 3,0,3,2,[-np.inf,-np.inf] + [-np.inf]*7,[np.inf, np.inf] + [np.inf]*7,[],[],[-1]+[0.,0.],[1] + [1.,1.])
+        x0,xf,alpha,c,M1,M2,reg_init = (self.model_params[key] for key in ('x0','xf','alpha','c','M1','M2','reg_init'))
+        self.fix_initial_value([x0, 0.] + [0.]*7)
+        self.fix_time_horizon(0., 8.0)
+        T_l = 8.0
+        self.mark_state_bounds_implicit()
+        
+        x = cs.MX.sym('x', 2)
+        x0, x1 = cs.vertsplit(x)
+        
+        u = cs.MX.sym('u', 1)
+        theta = cs.MX.sym('theta', 2)
+        alpha_s, c_s = cs.vertsplit(theta)
+        
+        f_expr = cs.vertcat( x1*u + alpha_s*u**2, 
+                            -c_s*x1 + u)
+        f_x_expr = cs.jacobian(f_expr, x)
+        f_theta_expr = cs.jacobian(f_expr, theta)
+        
+        f = cs.Function('f', [x,u,theta], [f_expr])
+        f_x = cs.Function('f', [x,u,theta], [f_x_expr])
+        f_theta = cs.Function('f', [x,u,theta], [f_theta_expr])
+        
+        f_expr = f(x,u,cs.DM([alpha,c]))
+        f_x_expr = f_x(x,u,cs.DM([alpha,c]))
+        f_theta_expr = f_theta(x,u,cs.DM([alpha,c]))
+        
+        G = cs.MX.sym('G', x.numel(), theta.numel())
+        dG = f_x_expr@G + f_theta_expr
+        G_rhs = cs.vec(dG)
+        
+        w = cs.MX.sym('w', 2)
+        w1,w2 = cs.vertsplit(w)
+        
+        F = cs.MX.sym('F', (theta.numel()*(theta.numel() + 1))//2)
+        dh1, dh2 = cs.DM([1,0]), cs.DM([0,1])
+        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G)
+        
+        F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[1,1])
+        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+        
+        dt = cs.MX.sym('dt', 1)
+        quad_expr = w
+        
+        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad':dt*quad_expr}
+        self.multiple_shooting()
+        
+        F_rhs_tf = self.x_eval[2 + 2*2 : 2 + 2*2 + 3, -1]
+        
+        F_tf = cs.MX.zeros(2,2)
+        for j in range(2):
+            for i in range(0, j):
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+            F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2] + reg_init
+            for i in range(j + 1, 2):
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+        
+        self.set_objective(cs.trace(cs.inv(F_tf)))
+        self.add_constraint(self.q_tf, [0., 0.], [M1,M2])
+        self.add_constraint(self.x_eval[0,-1], xf, xf)
+        
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [1.0, M1/T_l, M2/T_l])
+        self.integrate_full(self.start_point)
+        
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x0, x1 = self.get_state_arrays_expanded(xi)[0:2]
+        u, w1, w2 = self.get_control_plot_arrays(xi)
+        time_grid_ref = self.time_grid_ref
+        
+        # plt.figure(dpi = dpi)
+        fig,ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid_ref, x0, 'tab:green', linestyle='-.', label = '$x_0$')
+        ax.plot(time_grid_ref, x1, 'tab:blue', linestyle='--', label = '$x_1$')
+        ax.step(time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
+        ax.step(time_grid_ref, w1, 'tab:green', linestyle='-', label = r'$w_1$')
+        ax.step(time_grid_ref, w2, 'tab:blue', linestyle='-', label = r'$w_2$')
+
+        
+        ax.legend(fontsize='x-large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Dielectrophoretic Particle OED'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        plt.show()
+        plt.close()
+        
+# Seems ill posed, neither blockSQP nor ipopt work
+class Three_Tank_OED(OCProblem):
+    default_params = {'T': 12, 
+                      'c1': 1., 
+                      'c2': 2., 
+                      'c3': 0.8, 
+                      'k1': 2, 
+                      'k2': 3, 
+                      'k3': 1, 
+                      'k4': 3,
+                      'M1': 2.0,
+                      'M2': 2.0,
+                      'M3': 2.0,
+                      'reg_init': 1e-1
+                      }
+    def build_problem(self):
+        self.set_OCP_data(3+9+6, 0, 3+3, 4, [0., 0., 0.] + [-np.inf]*15, [np.inf,np.inf,np.inf] + [np.inf]*15, [],[], [0.,0.,0.] + [0.]*3, [1.,1.,1.] + [1.]*3)
+        self.fix_time_horizon(0, self.model_params['T'])
+        self.fix_initial_value([2.,2.,2.] + [0.]*15)
+        self.mark_state_bounds_implicit()
+        
+        T, c1, c2, c3, k1, k2, k3, k4, M1, M2, M3, reg_init = (self.model_params[key] for key in ['T', 'c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4', 'M1', 'M2', 'M3', 'reg_init'])
+        
+        x = cs.MX.sym('x', 3)
+        x1,x2,x3 = cs.vertsplit(x)
+        theta = cs.MX.sym('theta', 3)
+        c1_s, c2_s, c3_s = cs.vertsplit(theta)
+        
+        u = cs.MX.sym('u', 3)
+        u1,u2,u3 = cs.vertsplit(u)
+        dt = cs.MX.sym('dt')
+        
+        f_expr = cs.vertcat(-cs.sqrt(x1) + c1_s*u1 + c2_s*u2 - u3*cs.sqrt(c3_s*x1),
+                              cs.sqrt(x1) - cs.sqrt(x2),
+                              cs.sqrt(x2) - cs.sqrt(x3) + u3*cs.sqrt(c3_s*x1)
+                              )
+        f_x_expr = cs.jacobian(f_expr, x)
+        f_theta_expr = cs.jacobian(f_expr, theta)
+        
+        f = cs.Function('f', [x,u,theta], [f_expr])
+        f_x = cs.Function('f', [x,u,theta], [f_x_expr])
+        f_theta = cs.Function('f', [x,u,theta], [f_theta_expr])
+        
+        f_expr = f(x,u,cs.DM([c1, c2, c3]))
+        f_x_expr = f_x(x,u,cs.DM([c1, c2, c3]))
+        f_theta_expr = f_theta(x,u,cs.DM([c1, c2, c3]))
+        
+        
+        G = cs.MX.sym('G', x.numel(), theta.numel())
+        dG = f_x_expr@G + f_theta_expr
+        G_rhs = cs.vec(dG)
+        
+        w = cs.MX.sym('w', 3)
+        w1,w2,w3 = cs.vertsplit(w)
+        
+        F = cs.MX.sym('F', (theta.numel()*(theta.numel() + 1))//2)
+        dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
+        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
+        
+        F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[1,1], dF[2,1], dF[2,2])
+        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+        dt = cs.MX.sym('dt', 1)
+        quad_expr = cs.vertcat(w, k1*(x2-k2)**2 + k3*(x3-k4)**2)
+        
+        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad':dt*quad_expr}
+        self.multiple_shooting()
+        
+        F_rhs_tf = self.x_eval[3 + 3*3 : 3 + 3*3 + 6, -1]
+        
+        F_tf = cs.MX.zeros(3,3)
+        for j in range(3):
+            for i in range(0, j):
+                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+            F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
+            for i in range(j + 1, 3):
+                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+        
+        self.set_objective(cs.trace(cs.inv(F_tf)))
+        # self.set_objective(self.q_tf[3,-1])
+        self.add_constraint(self.q_tf, [0., 0., 0, -np.inf], [M1, M2, M3, np.inf])
+        self.add_constraint(cs.sum1(self.u_eval), 1., 1.)
+        
+        self.build_NLP()
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0.5,0.5,0., M1/T,M2/T,M3/T])
+        self.integrate_full(self.start_point)
+        
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x1,x2,x3 = self.get_state_arrays(xi)[0:3]
+        u1,u2,u3, w1,w2,w3 = self.get_control_plot_arrays(xi)[0:6]
+        
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid, x1, 'tab:olive', linestyle='--', label = r'$x_1$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
+        ax.plot(self.time_grid, x2, 'tab:purple', linestyle='-.', label = r'$x_2$')
+        ax.plot(self.time_grid, x3, 'tab:cyan', linestyle=':', label = r'$x_3$')
+        ax.step(self.time_grid_ref, u1, 'tab:olive', linestyle='-', label = r'$u_1$')
+        ax.step(self.time_grid_ref, u2, 'tab:red', linestyle='-', label = r'$u_2$')
+        ax.step(self.time_grid_ref, u3, 'grey', label = r'$u_3$')
+        
+        
+        ax.step(self.time_grid_ref, w1, 'tab:olive', linestyle='-.', label = r'$w_1$')
+        ax.step(self.time_grid_ref, w2, 'tab:red', linestyle='-.', label = r'$w_2$')
+        ax.step(self.time_grid_ref, w3, 'grey', linestyle = '-.', label = r'$w_3$')
+        ax.legend(prop={'size': 13.4}, loc = 'upper right')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Three tank problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+        plt.close()
+        
+
+class Batch_Reactor_OED(OCProblem):
+    default_params = {
+        'p1': 4000,
+        'p2': 2500,
+        'p3': 620000,
+        'p4': 5000,
+        'M1': 0.4,
+        'M2': 0.4,
+        'reg_init': 1e-3
+        }
+    def build_problem(self):
+        self.set_OCP_data(2 + 4*2 + 10, 0, 1 + 2, 2, [-np.inf,-np.inf] + [-np.inf]*18, [np.inf,np.inf] + [np.inf]*18, [], [], [298] + [0.]*2, [398] + [1.]*2)
+        self.mark_state_bounds_implicit()
+        
+        p1, p2, p3, p4, M1, M2, reg_init = (self.model_params[key] for key in ['p1', 'p2', 'p3', 'p4', 'M1', 'M2', 'reg_init'])
+        self.fix_initial_value([1.0,0.0] + [0.]*18)
+        self.fix_time_horizon(0,1)
+        
+        x = cs.MX.sym('x', 2)
+        x1,x2 = cs.vertsplit(x)
+        
+        theta = cs.MX.sym('theta', 4)
+        p1_s, p2_s, p3_s, p4_s = cs.vertsplit(theta)
+        
+        T = cs.MX.sym('T', 1)
+        k1 = p1_s*cs.exp(-p2_s/T)
+        k2 = p3_s*cs.exp(-p4_s/T)
+        
+        f_expr = cs.vertcat(-k1*x1**2, 
+                             k1*x1**2 - k2*x2
+                             )
+        f_x_expr = cs.jacobian(f_expr, x)
+        f_theta_expr = cs.jacobian(f_expr, theta)
+        
+        f = cs.Function('f', [x,T,theta], [f_expr])
+        f_x = cs.Function('f', [x,T,theta], [f_x_expr])
+        f_theta = cs.Function('f', [x,T,theta], [f_theta_expr])
+        
+        f_expr = f(x,T,cs.DM([p1, p2, p3, p4]))
+        f_x_expr = f_x(x,T,cs.DM([p1, p2, p3, p4]))
+        f_theta_expr = f_theta(x,T,cs.DM([p1, p2, p3, p4]))
+        
+        
+        G = cs.MX.sym('G', x.numel(), theta.numel())
+        dG = f_x_expr@G + f_theta_expr
+        G_rhs = cs.vec(dG)
+        
+        w = cs.MX.sym('w', 2)
+        w1,w2 = cs.vertsplit(w)
+        
+        F = cs.MX.sym('F', (theta.numel()*(theta.numel() + 1))//2)
+        dh1, dh2 = cs.DM([1,0]), cs.DM([0,1])
+        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G)
+        
+        F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[3,0], dF[1,1], dF[2,1], dF[3,1], dF[2,2], dF[3,2], dF[3,3])
+        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+        
+        quad_expr = w
+        
+        dt = cs.MX.sym('dt', 1)
+        quad_expr = w
+        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, T, w),'ode': dt*ode_rhs, 'quad':dt*quad_expr}
+        self.multiple_shooting()
+        
+        F_rhs_tf = self.x_eval[2 + 4*2 : 2 + 4*2 + 10, -1]
+        
+        F_tf = cs.MX.zeros(4,4)
+        for j in range(4):
+            for i in range(0, j):
+                F_tf[i,j] = F_rhs_tf[i + j*4 - (j*(j+1))//2]
+            F_tf[j,j] = F_rhs_tf[j*5 - (j*(j+1))//2] + reg_init
+            for i in range(j + 1, 4):
+                F_tf[i,j] = F_rhs_tf[j + i*4 - (i*(i+1))//2]
+        
+        self.set_objective(cs.trace(cs.inv(F_tf)))
+        # self.set_objective(self.q_tf[3,-1])
+        self.add_constraint(self.q_tf, [0., 0.], [M1, M2])
+        
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, 298)
+        self.integrate_full(self.start_point)
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 300)
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x1,x2 = self.get_state_arrays_expanded(xi)[0:2]
+        T, w1, w2 = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
+        plt.plot(self.time_grid, x2, 'tab:blue', linestyle = '-.', label = r'$x_2$')
+        plt.step(self.time_grid_ref, (T-298)*0.05, 'tab:red', label = r'$(u-298)\cdot 0.05$')
+        
+        plt.step(self.time_grid_ref, w1, 'tab:green', linestyle = '-.', label = r'$w_1$')
+        plt.step(self.time_grid_ref, w2, 'tab:orange', linestyle = ':', label = r'$w_2$')
+        
+        plt.legend(fontsize='large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Batch reactor OED'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+        plt.close()
+        
