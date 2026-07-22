@@ -121,7 +121,8 @@ class SQPoptions{
     int max_conv_QPs = 4;                       //Maximum number of convexified QPs in each SQP iteration.
     double conv_tau_H = 2./3.;                  //See paper/manual
     double conv_kappa_0 = 1./16.;
-    double conv_kappa_max = 8.;
+    // double conv_kappa_max = 8.;
+    double conv_kappa_max = std::numeric_limits<double>::infinity();
     bool par_QPs = false;                  //Only possible for threadsafe linear solvers (not MUMPS), but possible with workarounds on windows and linux
     bool enable_QP_cancellation = true;
     

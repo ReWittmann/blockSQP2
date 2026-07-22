@@ -47,7 +47,7 @@ class Options(CXXobjCreator):
                  conv_strategy: int = 1,
                  max_conv_QPs: int = 4,
                  conv_kappa_0: float = 1./16.,
-                 conv_kappa_max: float = 8.0,
+                 conv_kappa_max: float = float('inf'),
                  enable_linesearch: bool = True,
                  max_linesearch_steps: int = 10,
                  max_consec_reduced_steps: int = 8,

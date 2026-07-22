@@ -27,25 +27,26 @@ import OCProblems
 
 
 Examples = [
-            OCProblems.Batch_Reactor,
-            OCProblems.Cart_Pendulum,
-            OCProblems.Catalyst_Mixing,
-            OCProblems.Cushioned_Oscillation,
-            OCProblems.Ducted_Fan,
-            OCProblems.Egerstedt_Standard,
-            OCProblems.Electric_Car,
-            OCProblems.Goddard_Rocket,
-            OCProblems.Hang_Glider,
-            OCProblems.Hanging_Chain,
-            OCProblems.Lotka_Volterra_Fishing,
-            OCProblems.Particle_Steering,
-            OCProblems.Quadrotor_Helicopter,
-            OCProblems.Three_Tank_Multimode,
-            OCProblems.Time_Optimal_Car,
-            OCProblems.Tubular_Reactor,
-            # OCProblems.Lotka_OED,
-            # OCProblems.Fermenter
-            # OCProblems.Satellite_Deorbiting_1
+            (OCProblems.Batch_Reactor, dict()),
+            (OCProblems.Cart_Pendulum, dict()),
+            (OCProblems.Catalyst_Mixing, dict()),
+            (OCProblems.Cushioned_Oscillation, dict()),
+            (OCProblems.Ducted_Fan, dict()),
+            (OCProblems.Egerstedt_Standard, dict()),
+            (OCProblems.Electric_Car, dict()),
+            (OCProblems.Goddard_Rocket, dict()),
+            (OCProblems.Hang_Glider, dict()),
+            (OCProblems.Hanging_Chain, dict()),
+            (OCProblems.Lotka_Volterra_Fishing, dict()),
+            (OCProblems.Particle_Steering, dict()),
+            (OCProblems.Quadrotor_Helicopter, dict()),
+            (OCProblems.Three_Tank_Multimode, dict()),
+            (OCProblems.Time_Optimal_Car, dict()),
+            (OCProblems.Tubular_Reactor, dict()),
+            (OCProblems.Lotka_OED, dict()),
+            # (OCProblems.Fermenter, dict()),
+            # (OCProblems.Satellite_Deorbiting_1, dict()),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3)
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -161,27 +162,27 @@ opt_CS2_par = blockSQP2.SQPoptions(
     max_filter_overrides = 0, 
     automatic_scaling = True, 
     scaling_Theta_min = 0.1,
-    scaling_Theta_max = 5.0
+    scaling_Theta_max = 10.0
     )
 
 opt_CS2_par_new = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
     conv_strategy = 2,
     par_QPs = True,
-    max_filter_overrides = 2, 
+    max_filter_overrides = 0, 
     automatic_scaling = True, 
     scaling_Theta_min = 0.1,
-    scaling_Theta_max = 10.0
+    scaling_Theta_max = 1.0,
     )
 
 opt_CS2_par_new_noScale = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
     conv_strategy = 2,
     par_QPs = True,
-    max_filter_overrides = 2, 
+    max_filter_overrides = 0, 
     automatic_scaling = False, 
     scaling_Theta_min = 0.1,
-    scaling_Theta_max = 10.0
+    scaling_Theta_max = 1.0,
     )
 
 condensing = True
@@ -204,9 +205,9 @@ Experiments = [
                # (opt_CS2_S5, "scaling_0p2_10"),
                # (opt_CS2_S6, "scaling_0p2_5"),
                
-               # (opt_CS2_par, "par"),
-               (opt_CS2_par_new, "par_new"),
-               # (opt_CS2_par_new_noScale, "par_new_noScale")
+                (opt_CS2_par, "par_scale"),
+                # (opt_CS2_par_new, "par_scale_new"),
+                # (opt_CS2_par_new_noScale, "par_noScale")
                ]
 
 
@@ -234,8 +235,8 @@ else:
 
 titles = [EXP_name for _, EXP_name in Experiments]
 OCP_experiment.print_heading(out, titles)
-for OCclass in Examples:        
-    OCprob = OCclass(nt = 100, integrator = 'RK4', parallel = True)
+for OCclass, OCargs in Examples:        
+    OCprob = OCclass(nt = 100, integrator = 'RK4', parallel = True, **OCargs)
     itMax = 200
     titles = []
     EXP_N_SQP = []

@@ -3568,9 +3568,14 @@ class Batch_Distillation(OCProblem):
                       }
     # tscale = 1e1 #1e2
     # uscale = 1.0 #1.0
-    M0scale = 1e-2
-    MDscale = 1e-2
-    xDscale = 1e2
+    
+    M0scale = 1.0
+    # M0scale = 1e-2
+    MDscale = 1.0
+    # MDscale = 1e-2
+    xDscale = 1.0
+    # xDscale = 1e2
+    
     # xCscale = 2.0
     # x0scale = 2.0
     
@@ -5020,12 +5025,13 @@ class Satellite_Deorbiting_2(OCProblem):
             'm0': 150,
             'omegaE':7.2921e-5,
             'MDTH': 1.0,
-            'rscale': 1.0e-2, #1.0e-2
-            # 'vscale': 1.0e-1, #1.0e-1
+            # 'rscale': 1.0e-4, #1.0e-2
+            'rscale': 1.0,
             'thetascale': 1.0,
             'vrscale': 1.0,
-            'vthetascale': 1.0e-4,
-            'mscale': 1.0e1   #1.0e1
+            # 'vthetascale': 1.0e-4,
+            'vthetascale': 1.0,
+            'mscale': 1.0   #1.0e1
             }
     
     def build_problem(self):
@@ -6056,6 +6062,8 @@ class Batch_Reactor_OED(OCProblem):
         self.start_point = np.zeros(self.nVar)
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, 298)
+            self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
         self.integrate_full(self.start_point)
 
     def perturbed_start_point(self, ind):
@@ -6091,4 +6099,5 @@ class Batch_Reactor_OED(OCProblem):
             
         plt.show()
         plt.close()
+        
         

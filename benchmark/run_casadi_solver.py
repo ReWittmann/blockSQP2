@@ -23,13 +23,14 @@ OCprob = OCProblems.Batch_Reactor_OED(
                     nt = 100,
                     refine = 1,
                     parallel = True,
-                    integrator = 'RK4'
+                    integrator = 'RK4',
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_3
                     )
 
 ipopts = dict()
 ipopts['hessian_approximation'] = 'exact'
-ipopts['tol'] = 1e-7
-ipopts['constr_viol_tol'] = 1e-7
+ipopts['tol'] = 1e-8
+ipopts['constr_viol_tol'] = 1e-8
 ipopts['max_iter'] = itMax
 
 sp = OCprob.start_point

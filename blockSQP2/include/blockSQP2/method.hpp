@@ -230,6 +230,7 @@ class SQPmethod{
         
         // Scaling heuristic as described in paper, but applied to each control separately
         void calc_free_variables_scaling_separate(double *SF);
+        void calc_free_variables_scaling_separate_2(double *SF);
         void apply_rescaling(const double *resfactors);
         void scaling_heuristic();
         

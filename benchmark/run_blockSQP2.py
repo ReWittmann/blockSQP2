@@ -26,23 +26,24 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Batch_Reactor_OED(
+OCprob = OCProblems.Hanging_Chain(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
+                    **OCProblems.D_Onofrio_Chemotherapy.param_set_3
                     )
-itMax = 100                                  #max number of steps
+itMax = 300                                  #max number of steps
 
-step_plots = True                           #Plot each iterate?
+step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 sol_plot = True
 
 
-# start = OCprob.perturbed_start_point(10)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
+# start = OCprob.perturbed_start_point(6)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
 ###############################
 QPopts = blockSQP2.qpOASES_options(
@@ -68,13 +69,15 @@ opts = blockSQP2.SQPoptions(
     mem_size = 20,
     opt_tol = 1e-6,                         #Tolerances for termination
     feas_tol = 1e-6,
-    conv_kappa_max = 8.,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
+    conv_kappa_max = np.inf,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     
     automatic_scaling = True,
+    scaling_Theta_min = 1e-1,
+    scaling_Theta_max = 1.0,
     
     max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
-    max_filter_overrides = 0,
+    max_filter_overrides = 2,
     
     qpsol = 'qpOASES',
     qpsol_options = QPopts
