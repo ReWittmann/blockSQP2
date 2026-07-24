@@ -224,67 +224,34 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
         rgamma[i] = (count_gamma[i] > 0) ? std::exp(rgamma[i]/count_gamma[i]) : 1.0;
         
         S_u[i] = -1.0;
-        if (rgamma[i] > param->scaling_Theta_max){
-            S_u[i] = rgamma[i]/param->scaling_Theta_max;
-        }
-        
-        // if (rgamma[i] >= 1.0){
-        //     // if (rgamma[i] > param->scaling_Theta_max) S_u[i] = rgamma[i]/param->scaling_Theta_max;
-        //     // else if (rdelta[i] < param->scaling_Theta_min) S_u[i] = std::min(rgamma[i], param->scaling_Theta_min/rdelta[i]);
-            
-        //     // else if (rdelta[i] < 1.0){
-        //     //     if (rgamma[i]/rdelta[i] > param->scaling_Theta_max) S_u[i] = rgamma[i]/rdelta[i]/param->scaling_Theta_max;
-        //     // }
-            
-        //     // if (rgamma[i] > param->scaling_Theta_max) S_u[i] = std::min(1/rdelta[i], rgamma[i]/param->scaling_Theta_max);
-        //     if (rgamma[i]*rdelta[i] > param->scaling_Theta_max) S_u[i] = rgamma[i]*rdelta[i]/param->scaling_Theta_max;
-                
+        // if (rgamma[i] > param->scaling_Theta_max){
+        //     S_u[i] = rgamma[i]/param->scaling_Theta_max;
         // }
+        
+        if (rgamma[i] >= 1.0){            
+            S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
+            
+            // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
+            // else S_u[i] = std::max(1.0/rdelta[i], rgamma[i]/param->scaling_Theta_max);
+        }
         else if (rgamma[i] < 1.0){
-            if (rdelta[i] > 1.0){
-                // if (rgamma[i] < param->scaling_Theta_min) S_u[i] = rgamma[i]/param->scaling_Theta_min;
-                // else                                      S_u[i] = std::min(1.0, rdelta[i]*rgamma[i]);
-                
-                // if (rdelta[i]*rgamma[i] < param->scaling_Theta_min) S_u[i] = rdelta[i]*rgamma[i]/param->scaling_Theta_min;
-                // else if (rdelta[i]*rgamma[i] > param->scaling_Theta_max) S_u[i] = rdelta[i]*rgamma[i]/param->scaling_Theta_max;
-                
-                // if (rgamma[i] < param->scaling_Theta_min)
-                //     S_u[i] = std::max(rgamma[i]/param->scaling_Theta_min, 1/rdelta[i]);
-                
-                // if (rgamma[i]*rdelta[i] < param->scaling_Theta_min) S_u[i] = rgamma[i]*rdelta[i]/param->scaling_Theta_min;
-                // else if (rgamma[i]*rdelta[i] > param->scaling_Theta_max) S_u[i] = rgamma[i]*rdelta[i]/param->scaling_Theta_max;
-                
-                // if (rgamma[i]*rdelta[i] < 1.0) S_u[i] = rgamma[i]*rdelta[i];
-                // else if (rgamma[i]*rdelta[i] > param->scaling_Theta_max) S_u[i] = rgamma[i]*rdelta[i]/param->scaling_Theta_max;
-                
-                // if (rgamma[i]*rdelta[i] < param->scaling_Theta_min) S_u[i] = rgamma[i]*rdelta[i]/param->scaling_Theta_min; //ok
-                
-                if (rgamma[i]*rdelta[i] < param->scaling_Theta_min) S_u[i] = rgamma[i]*rdelta[i]/param->scaling_Theta_min;
-                else if (rdelta[i] < param->scaling_Theta_max) S_u[i] = (std::max)(rgamma[i], param->scaling_Theta_min);
-                
-                // S_u[i] = (std::max)(rgamma[i], 1/rdelta[i]);// rgamma[i]*rdelta[i]/param->scaling_Theta_max;
+            if (rdelta[i] > 1.0){                
+                if (rgamma[i] < param->scaling_Theta_min) S_u[i] = (std::max)(rgamma[i]/param->scaling_Theta_min, 1e-2);
+                else                                      S_u[i] = (std::min)(1.0, rdelta[i]*rgamma[i]);
             }
             else S_u[i] = rgamma[i];
         }
+        std::cout << "rdelta[" << i << "] = " << rdelta[i] << ", rgamma[" << i << "] = " << rgamma[i] << ", S_u[" << i << "] = " << S_u[i] << "\n";
     }
     
-    ind_1 = 0;
-    
-    // for (int i = 0; i < fvbsize; i++) S_u[i] = (std::max)(1e-2, S_u[i]);
-    
-    for (int i = 0; i < fvbsize; i++) std::cout << "rdelta[" << i << "] = " << rdelta[i] << ", rgamma[" << i << "] = " << rgamma[i] << "\n";
-    
-    bool printed = false;
+    ind_1 = 0;    
     for (int k = 0; k < prob->n_vblocks; k++){
         if (!prob->vblocks[k].dependent){
             for (int i = 0; i < prob->vblocks[k].size; i++){
                 if (S_u[i] > 0)
                     ret_SF[ind_1 + i] *= S_u[i];
-                
-                if (S_u[i] > 0 && !printed) std::cout << "S_u[" << i << "] = " << S_u[i] << "\n";
             }
         }
-        printed = true;
         ind_1 += prob->vblocks[k].size;
     }
     

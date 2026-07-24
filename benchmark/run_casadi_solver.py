@@ -19,28 +19,29 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Batch_Reactor_OED(
+OCprob = OCProblems.Reentry(
                     nt = 100,
                     refine = 1,
                     parallel = True,
-                    integrator = 'RK4',
-                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_3
+                    integrator = 'cvodes',
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
                     )
 
 ipopts = dict()
 ipopts['hessian_approximation'] = 'exact'
-ipopts['tol'] = 1e-8
-ipopts['constr_viol_tol'] = 1e-8
+ipopts['tol'] = 1e-6
+ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax
 
 sp = OCprob.start_point
-S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 
+
+S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 
 # S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : None, "jit" : False, "fatrop.print_level":10, "jit_options": {"flags": "-Os", "verbose": False}})#, 'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*101, 'N':OCprob.ntS, "jit":False, "fatrop.print_level":10, "jit_options": {"flags": "-O3", "verbose": True}})#, {'ipopt':ipopts})
 #See fatrop source code - c_interface/src/OCPCInterface.cpp for options
 # S = cs.nlpsol('S', 'fatrop', OCprob.NLP, {'structure_detection' : 'manual', 
-#                                           'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*(OCprob.ntS+1), 'N':OCprob.ntS, 
+#                                            'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 'nu': [OCprob.nu]*OCprob.ntS + [0], 'ng': [0]*(OCprob.ntS+1), 'N':OCprob.ntS, 
 #                                           "jit":True,
 #                                           "expand": False,
 #                                           "jit_options": {"flags": "-Os", "verbose": False},

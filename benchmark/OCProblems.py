@@ -3708,7 +3708,7 @@ class Hang_Glider(OCProblem):
             }
     def build_problem(self):
         x0, y0, ytf, dxbc, dybc, c0, c1, S, rho, cmax, m, g, uC, rC = (self.model_params[key] for key in ['x0', 'y0', 'ytf', 'dxbc', 'dybc', 'c0', 'c1', 'S', 'rho', 'cmax', 'm', 'g', 'uC', 'rC'])
-        self.set_OCP_data(4,1,1,0, [0.,0.,-np.inf,-np.inf], [np.inf,np.inf,np.inf,np.inf], [75/self.ntS], [np.inf], [0], [cmax])
+        self.set_OCP_data(4,1,1,0, [0.,0.,-np.inf,-np.inf], [np.inf,np.inf,np.inf,np.inf], [75/self.ntS], [1500/self.ntS], [0], [cmax])
         self.fix_initial_value([x0, dxbc, y0, dybc])
         self.mark_state_bounds_implicit(False,False,True,True)
         
@@ -4423,7 +4423,12 @@ class Lotka_Volterra_Shared(OCProblem):
         plt.close()
 
 class Lotka_Volterra_Competitive(OCProblem):
-    default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[0.5, 1.5]}
+    default_params = {'c1':0.1, 
+                      'c2':0.4, 
+                      't0':0., 
+                      'tf':40.0, 
+                      'x_init':[0.5, 1.5]
+                      }
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[0.,0.],[np.inf, np.inf],[],[],[0.],[1.])
         
@@ -4502,7 +4507,7 @@ class Denbigh_Reaction(OCProblem):
     def build_problem(self):
         E = [self.model_params[key] for key in ['E1','E2','E3','E4']]
 
-        self.set_OCP_data(2,0,1,1, [-1e-6,0.], [1.0, 1.0], [], [], [273.0], [415.0])
+        self.set_OCP_data(2,0,1,1, [0.,0.], [1.0, 1.0], [], [], [273.0], [415.0])
         self.fix_time_horizon(0., 1000.0)
         self.fix_initial_value([1.0, 0.])
         
@@ -4844,12 +4849,12 @@ class Satellite_Deorbiting_1(OCProblem):
             # 'thetascale': 1.0,
             # 'mscale': 1.0e1,
             # 'TSCALE': 1.0
-            # 'rscale': 1e-4,         #good
-            'rscale': 1.0,
+            'rscale': 1e-4,         #good
+            # 'rscale': 1.0,
             'vrscale': 1.0,
             'thetascale': 1.0,
-            # 'vthetascale': 1e-4,    #good
-            'vthetascale': 1.0,
+            'vthetascale': 1e-4,    #good
+            # 'vthetascale': 1.0,
             'mscale': 1,
             'TSCALE': 1.0
             }
@@ -5025,11 +5030,11 @@ class Satellite_Deorbiting_2(OCProblem):
             'm0': 150,
             'omegaE':7.2921e-5,
             'MDTH': 1.0,
-            # 'rscale': 1.0e-4, #1.0e-2
+            # 'rscale': 1.0e-2, #1.0e-2
             'rscale': 1.0,
             'thetascale': 1.0,
             'vrscale': 1.0,
-            # 'vthetascale': 1.0e-4,
+            # 'vthetascale': 1.0e-2,
             'vthetascale': 1.0,
             'mscale': 1.0   #1.0e1
             }
@@ -6101,3 +6106,227 @@ class Batch_Reactor_OED(OCProblem):
         plt.close()
         
         
+
+class Bryson_Denham(OCProblem):
+    default_params = {}
+    def build_problem(self):
+        self.set_OCP_data(2 , 0, 1, 1, [-np.inf,-np.inf], [1/9, np.inf], [], [], [-np.inf], [np.inf])
+        
+        self.fix_initial_value([0., 1.])
+        self.fix_time_horizon(0,1)
+        
+        X = cs.MX.sym('X', 2)
+        x,v = cs.vertsplit(X)
+        
+        w = cs.MX.sym('w', 1)
+        
+        ode_rhs = cs.vertcat(v, w)
+        quad_expr = 0.5 * w**2
+        
+        dt = cs.MX.sym('dt', 1)
+        self.ODE = {'x': X, 'p':cs.vertcat(dt, w),'ode': dt*ode_rhs, 'quad':dt*quad_expr}
+        self.multiple_shooting()
+        
+        self.set_objective(self.q_tf)
+        self.add_constraint(self.x_eval[:,-1], [0., -1.], [0., -1.])
+        
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS):
+            self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
+
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        x, v = self.get_state_arrays_expanded(xi)[0:2]
+        w = self.get_control_plot_arrays(xi)
+        
+        plt.figure(dpi = dpi)
+        plt.plot(self.time_grid_ref, x, 'tab:green', linestyle = '--', label = r'$x$')
+        plt.plot(self.time_grid_ref, v, 'tab:blue', linestyle = '-.', label = r'$v$')
+        plt.step(self.time_grid_ref, w, 'tab:red', label = r'$w$')
+        
+        
+        plt.legend(fontsize='large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Batch reactor OED'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+        plt.close()
+
+
+
+class Moon_Landing(OCProblem):
+    default_params = {
+            'c': 2.349,
+            'h0': 1.0,
+            'v0': -0.783,
+            'm0': 1.0,
+            'Tmax': 1.227
+            }
+    
+    def build_problem(self):
+        c, h0, v0, m0, Tmax = (self.model_params[key] for key in ('c', 'h0', 'v0', 'm0', 'Tmax'))
+        
+        self.set_OCP_data(3,1,1,0,[-np.inf, -np.inf, 0.],[np.inf, np.inf, np.inf],[0.1/self.ntS],[100/self.ntS],[0],[Tmax])
+        self.fix_initial_value([h0, v0, m0])
+        self.mark_state_bounds_implicit(True, True, False)
+        
+        x = cs.MX.sym('x', 3)
+        h,v,m = cs.vertsplit(x)
+        
+        T = cs.MX.sym('T', 1)
+        
+        ode_rhs = cs.vertcat(v, -1 + T/m, -T/c)
+        dt = cs.MX.sym('dt', 1)
+        self.ODE = {'x': x, 'p':cs.vertcat(dt, T),'ode': dt*ode_rhs}
+        self.multiple_shooting()
+        self.set_objective(-self.x_eval[2,-1])
+        self.add_constraint(self.x_eval[:2,-1], [0.,0.], [0.,0.])
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS):
+            self.set_stage_param(self.start_point, i, 1.0/self.ntS)
+            self.set_stage_control(self.start_point, i, Tmax)
+            self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
+        # self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        h, v, m = self.get_state_arrays_expanded(xi)
+        T = self.get_control_plot_arrays(xi)
+        dt_arr = self.get_param_arrays_expanded(xi)
+        time_grid_ref = np.cumsum(np.concatenate([[0], dt_arr])).reshape(-1)
+        
+        fig,ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid_ref, h, 'tab:green', linestyle='-.', label = '$h$')
+        ax.plot(time_grid_ref, v, 'tab:blue', linestyle='--', label = '$v$')
+        ax.plot(time_grid_ref, m, 'tab:red', linestyle='-.', label = '$m$')
+        
+        ax.step(time_grid_ref, T, 'tab:red', linestyle='-', label = r'$T$')
+        ax.legend(fontsize='x-large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Moon Landing problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        plt.show()
+        plt.close()
+
+
+class Reentry(OCProblem):
+    default_params = {
+        'R': 209,
+        'beta': 4.26,
+        'rho0': 2.704e-3,
+        'g': 3.2172e-4,
+        'Sm': 53200,
+        'c1': 1.175,
+        'c2': 0.9,
+        'c3': 0.6
+        }
+    
+    def build_problem(self):
+        R, beta, rho0, g, Sm, c1, c2, c3 = (self.model_params[key] for key in ('R', 'beta', 'rho0', 'g', 'Sm', 'c1', 'c2', 'c3'))
+        
+        self.set_OCP_data(3,1,1,1,[0.2, -0.2, 0.006],[0.4, 0.1, 0.02],[220/self.ntS],[240/self.ntS],[-np.pi/2],[np.pi/2])
+        self.fix_initial_value([0.36, -8.1*(np.pi/180), 4./R])
+        
+        x = cs.MX.sym('x', 3)
+        v, gamma, xi = cs.vertsplit(x, 1)
+        u = cs.MX.sym('u')
+        
+        C_D = c1 - c2*cs.cos(u)
+        C_L = c3*cs.sin(u)
+        rho = rho0 * cs.exp(-beta*R*xi)
+
+        vdot = -0.5*Sm*rho*v**2 * C_D - g*cs.sin(gamma)/(1 + xi)**2
+        gammadot = 0.5*Sm*rho*v*C_L + v*cs.cos(gamma)/(R*(1 + xi)) - g*cs.cos(gamma)/(v*(1 + xi)**2)
+        xidot = v*cs.sin(gamma)/R
+        
+        ode_rhs = cs.vertcat(vdot, gammadot, xidot)
+        quad_rhs = 10 * v**3 * cs.sqrt(rho)
+        
+        dt = cs.MX.sym('dt', 1)
+        self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs, 'quad': dt*quad_rhs}
+        self.multiple_shooting()
+        self.set_objective(self.q_tf)
+        self.add_constraint(self.x_eval[:,-1], [0.27, 0., 2.5/R], [0.27, 0., 2.5/R])
+        self.build_NLP()
+        
+        self.start_point = np.zeros(self.nVar)
+        for i in range(self.ntS):
+            self.set_stage_param(self.start_point, i, 230.0/self.ntS)
+            self.set_stage_control(self.start_point, i, 0.5)
+            self.set_stage_state(self.start_point, i, self.x_init)
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)
+        # self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        self.set_stage_control(s, ind, 0.1)
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        v, gamma, xivar = self.get_state_arrays_expanded(xi)
+        u = self.get_control_plot_arrays(xi)
+        dt_arr = self.get_param_arrays_expanded(xi)
+        time_grid_ref = np.cumsum(np.concatenate([[0], dt_arr])).reshape(-1)
+        
+        fig,ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid_ref, v, 'tab:green', linestyle='-.', label = r'$v$')
+        ax.plot(time_grid_ref, gamma, 'tab:blue', linestyle='--', label = r'$\gamma$')
+        ax.plot(time_grid_ref, xivar, 'tab:red', linestyle='-.', label = r'$\xi$')
+        
+        ax.step(time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
+        ax.legend(fontsize='x-large')
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Reentry problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+        
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        plt.show()
+        plt.close()

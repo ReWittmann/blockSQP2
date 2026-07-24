@@ -26,16 +26,15 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Hanging_Chain(
+OCprob = OCProblems.Reentry(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
-                    integrator = 'RK4',     #ODE integrator
+                    integrator = 'cvodes',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    **OCProblems.D_Onofrio_Chemotherapy.param_set_3
                     )
-itMax = 300                                  #max number of steps
+itMax = 200                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
@@ -47,7 +46,7 @@ sol_plot = True
 start = OCprob.start_point
 ###############################
 QPopts = blockSQP2.qpOASES_options(
-    matrixSparsity = -1
+    matrixSparsity = 0
     )
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
@@ -59,7 +58,7 @@ opts = blockSQP2.SQPoptions(
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
-    hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
+    hess_approx = 'exact',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
     fallback_approx = 'BFGS',               # ''   ''
     fallback_sizing = 'COL',                # ''   ''
@@ -73,7 +72,7 @@ opts = blockSQP2.SQPoptions(
     
     automatic_scaling = True,
     scaling_Theta_min = 1e-1,
-    scaling_Theta_max = 1.0,
+    scaling_Theta_max = 10.0,
     
     max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
