@@ -19,16 +19,16 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Reentry(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,
                     refine = 1,
                     parallel = True,
-                    integrator = 'cvodes',
+                    integrator = 'RK4',
                     # **OCProblems.D_Onofrio_Chemotherapy.param_set_4
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'exact'
+ipopts['hessian_approximation'] = 'limited-memory'
 ipopts['tol'] = 1e-6
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax

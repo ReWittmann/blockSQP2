@@ -29,7 +29,7 @@ import OCProblems
 OCprob = OCProblems.Reentry(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
-                    integrator = 'cvodes',     #ODE integrator
+                    integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
@@ -58,7 +58,7 @@ opts = blockSQP2.SQPoptions(
     enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
     indef_delay = 3,                        #Only use fallback Hessian in first # iterations
     
-    hess_approx = 'exact',                    #'SR1'/'BFGS'/'exact'
+    hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
     fallback_approx = 'BFGS',               # ''   ''
     fallback_sizing = 'COL',                # ''   ''
@@ -103,8 +103,8 @@ condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 1)
 #Define blockSQP Problemspec
 #See class OCProblems.OCProblem and blockSQP2/Problem.py for field specifications
 prob = blockSQP2.Problemspec(OCprob.nVar, OCprob.nCon)
-prob.nVar = OCprob.nVar
-prob.nCon = OCprob.nCon
+# prob.nVar = OCprob.nVar
+# prob.nCon = OCprob.nCon
 
 #Pass necessary callbacks to Problemspec
 prob.f = OCprob.f                           #objective

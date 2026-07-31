@@ -6110,7 +6110,7 @@ class Batch_Reactor_OED(OCProblem):
 class Bryson_Denham(OCProblem):
     default_params = {}
     def build_problem(self):
-        self.set_OCP_data(2 , 0, 1, 1, [-np.inf,-np.inf], [1/9, np.inf], [], [], [-np.inf], [np.inf])
+        self.set_OCP_data(2, 0, 1, 1, [-np.inf,-np.inf], [1/9, np.inf], [], [], [-np.inf], [np.inf])
         
         self.fix_initial_value([0., 1.])
         self.fix_time_horizon(0,1)
@@ -6308,10 +6308,10 @@ class Reentry(OCProblem):
         fig,ax = plt.subplots(dpi=dpi)
         ax.plot(time_grid_ref, v, 'tab:green', linestyle='-.', label = r'$v$')
         ax.plot(time_grid_ref, gamma, 'tab:blue', linestyle='--', label = r'$\gamma$')
-        ax.plot(time_grid_ref, xivar, 'tab:red', linestyle='-.', label = r'$\xi$')
+        ax.plot(time_grid_ref, xivar*10, 'tab:olive', linestyle='-.', label = r'$\xi\cdot 10$')
         
-        ax.step(time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
-        ax.legend(fontsize='x-large')
+        ax.step(time_grid_ref, u/5, 'tab:red', linestyle='-', label = r'$u/5$')
+        ax.legend(fontsize='x-large', loc = 'upper right')
         
         ttl = None
         if isinstance(title,str):
