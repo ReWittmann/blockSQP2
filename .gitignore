@@ -36,3 +36,7 @@ manual.log
 manual.synctex.gz
 manual.out
 manual.toc
+
+gen.c
+tmp_casadi*
+

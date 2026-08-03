@@ -26,17 +26,18 @@ import OCProblems
 
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Reentry(
-                    nt = 100,               #number of shooting intervals
+OCprob = OCProblems.D_Onofrio_Chemotherapy(
+                    nt = 101,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
-                    integrator = 'RK4',     #ODE integrator
+                    integrator = 'cvodes',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
+                    **OCProblems.D_Onofrio_Chemotherapy.param_set_2,
                     )
 itMax = 200                                  #max number of steps
 
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                           #Put name of problem in plot?
 sol_plot = True
@@ -44,6 +45,7 @@ sol_plot = True
 
 # start = OCprob.perturbed_start_point(6)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
+# OCprob.integrate_full(start)
 ###############################
 QPopts = blockSQP2.qpOASES_options(
     matrixSparsity = 0
@@ -70,9 +72,9 @@ opts = blockSQP2.SQPoptions(
     feas_tol = 1e-6,
     conv_kappa_max = np.inf,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     
-    automatic_scaling = True,
-    scaling_Theta_min = 1e-1,
-    scaling_Theta_max = 10.0,
+    automatic_scaling = False,
+    scaling_Theta_min = 1e-2,
+    scaling_Theta_max = 2.0,
     
     max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance

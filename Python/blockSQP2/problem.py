@@ -157,7 +157,7 @@ class Problem(CXXobjCreator):
             xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))            
             lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))
             constr_arr = np.ctypeslib.as_array(constr, shape=(self.nCon,))
-        
+            
             objval[0] = self.f(xi_arr)
             constr_arr[:] = self.g(xi_arr)
             if dmode > 0:
@@ -186,6 +186,7 @@ class Problem(CXXobjCreator):
             info[0] = 0
     
     def evaluate_sparse(self, _, xi : c_double_p, lam : c_double_p, objval : c_double_p, constr : c_double_p, gradObj : c_double_p, jac_nz : c_double_p, jac_row : c_int_p, jac_colind : c_int_p, hess : POINTER(c_double_p), dmode : c_int, info : c_int_p):
+        #TODO: Pass python exceptions through C++
         try:
             xi_arr = np.ctypeslib.as_array(xi, shape=(self.nVar,))
             lam_arr = np.ctypeslib.as_array(lam, shape=(self.nVar + self.nCon,))

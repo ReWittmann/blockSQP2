@@ -203,7 +203,7 @@ class OCProblem:
     #parallel - parallelize ODE integration over shooting intervals
     #N_threads - number of threads for integration parallelization
     #kwargs - problem specific parameters, see problem default parameters
-    def __init__(self, nt = 100, refine = 1, integrator = 'rk4', parallel = True, N_threads = 4, **kwargs):
+    def __init__(self, nt = 100, refine = 1, integrator = 'RK4', parallel = True, N_threads = 4, **kwargs):
         if hasattr(self, 'default_params'):
             self.model_params = copy.copy(self.default_params)
         else:
@@ -819,23 +819,50 @@ def from_block_LT(HLT, dim):
 
 class Lotka_Volterra_Fishing(OCProblem):
     default_params = {
-            'c0':0.4, 
-            'c1':0.2, 
-            'x_init':[0.5,0.7], 
-            't0':0., 
-            'tf':12.
-            }
+        'c0':0.4, 
+        'c1':0.2, 
+        'x_init':[0.5,0.7], 
+        't0':0., 
+        'tf':12.
+        }
+    
+    param_set_1 = {
+        'c0': 0.4,
+        'c1': 0.2,
+        'x_init':[0.5,0.7],
+        't0':0.,
+        'tf':12.0,
+        }
+    
+    param_set_2 = {
+        'c0': 0.4,
+        'c1': 0.2,
+        'x_init':[1.0,0.1],
+        't0':0.,
+        'tf':16.0,
+        }
+    
+    param_set_3 = {
+        'c0': 0.4,
+        'c1': 0.2,
+        'x_init':[1.0,0.01],
+        't0':0.,
+        'tf':24.0,
+        }
     
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[0,0],[np.inf, np.inf],[],[],[0],[1])
-        self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
-        self.fix_initial_value(self.model_params['x_init'])
+        
+        c0, c1, x_init, t0, tf = (self.model_params[key] for key in ('c0', 'c1', 'x_init', 't0', 'tf'))
+        self.fix_time_horizon(t0, tf)
+        self.fix_initial_value(x_init)
         self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         w = cs.MX.sym('w', 1)
         x0, x1 = cs.vertsplit(x)
-        ode_rhs = cs.vertcat(x0 - x0*x1 - self.model_params['c0']*x0*w, -x1 + x0*x1 - self.model_params['c1']*x1*w)
+        ode_rhs = cs.vertcat( x0 - x0*x1 - c0*x0*w, 
+                             -x1 + x0*x1 - c1*x1*w)
         quad_expr = (x0 - 1)**2 + (x1 - 1)**2
         dt = cs.MX.sym('dt', 1)
         self.ODE = {'x': x, 'p':cs.vertcat(dt, w),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
@@ -1046,9 +1073,8 @@ class Goddard_Rocket(OCProblem):
         r_eval = self.x_eval[0,:]
         
         max_drag_expr = A*(v_eval**2) * cs.exp(-k * (r_eval - r0))
-        term_alt_expr = r_eval[-1] - rT
         self.add_constraint(max_drag_expr, -np.inf, C)
-        self.add_constraint(term_alt_expr, 0., np.inf)
+        self.add_constraint(r_eval[-1], rT, np.inf)
         
         self.start_point = np.zeros(self.nVar)
         nt_acc = math.ceil(self.ntS*2/5)
@@ -1445,11 +1471,12 @@ class Bioreactor(OCProblem):
 class Hanging_Chain(OCProblem):
     default_params = {'a':1, 'b':3, 'Lp': 4}
     def build_problem(self):
-        self.set_OCP_data(1,0,1,2,[0.], [10.], [], [], [-10.], [20.])
+        self.set_OCP_data(1,0,1,2, [0.], [10.], [], [], [-10.], [20.])
         
         a,b,Lp = (self.model_params[key] for key in ['a', 'b', 'Lp'])
         self.fix_initial_value([a])
         self.fix_time_horizon(0,1)
+        self.mark_state_bounds_implicit()
         
         x1 = cs.MX.sym('x1',1)
         u = cs.MX.sym('u',1)
@@ -1587,18 +1614,34 @@ class Hanging_Chain_MAYER(Hanging_Chain):
 
 
 class Catalyst_Mixing(OCProblem):
+    default_params = {
+        'alpha': 10
+        }
     
+    param_set_1 = {
+        'alpha': 10
+        }
+    
+    param_set_2 = {
+        'alpha': 4
+        }
+    
+    param_set_2 = {
+        'alpha': 25
+        }
     def build_problem(self):
         self.set_OCP_data(2,0,1,0,[-np.inf,-np.inf],[np.inf,np.inf],[],[],[0.],[1.])
         self.fix_time_horizon(0,1)
         self.fix_initial_value([1.,0.])
         self.mark_state_bounds_implicit()
         
+        alpha = self.model_params['alpha']
+        
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
         w = cs.MX.sym('w',1)
         dt = cs.MX.sym('dt', 1)
-        ode_rhs = cs.vertcat(w*(10*x2-x1), w*(x1 - 10*x2) - (1-w)*x2)
+        ode_rhs = cs.vertcat(w*(alpha*x2-x1), w*(x1 - alpha*x2) - (1-w)*x2)
         
         self.ODE = {'x':x, 'p':cs.vertcat(dt,w), 'ode': dt*ode_rhs}
         self.multiple_shooting()
@@ -1644,7 +1687,12 @@ class Catalyst_Mixing(OCProblem):
         
 
 class Cushioned_Oscillation(OCProblem):
-    default_params = {'m':5.,'c':10.,'x0':2.,'v0':5.,'umm':5.}
+    default_params = {
+        'm':5.,
+        'c':10.,
+        'x0':2.,
+        'v0':5.,
+        'umm':5.}
     def build_problem(self):
         m,c,x0,v0,umm = (self.model_params[key] for key in ['m', 'c', 'x0', 'v0', 'umm'])
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf], [np.inf,np.inf], [8/self.ntS],[20/self.ntS], [-umm], [umm])
@@ -1820,9 +1868,10 @@ class D_Onofrio_Chemotherapy(OCProblem):
     
     def build_problem(self):
         zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
-        self.set_OCP_data(2,0,2,3,[1e-1,1e-1], [np.inf,np.inf], [], [], [0.,0.],[u0max,u1max])
+        self.set_OCP_data(2,0,2,3,[0.,0.], [np.inf,np.inf], [], [], [0.,0.],[u0max,u1max])
         self.fix_initial_value([x00,x10])
         self.fix_time_horizon(0., self.model_params['duration'])
+        # self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
         x0,x1 = cs.vertsplit(x)
@@ -2741,7 +2790,21 @@ class Supermarket_Refrigeration(OCProblem):
         
 
 class Three_Tank_Multimode(OCProblem):
-    default_params = {'T':12, 'c1':1, 'c2':2, 'c3':0.8, 'k1':2, 'k2':3, 'k3':1, 'k4':3}
+    default_params = {'T':12, 
+                      'c1':1, 
+                      'c2':2, 
+                      'c3':0.8, 
+                      'k1':2, 
+                      'k2':3, 
+                      'k3':1, 
+                      'k4':3}
+    
+    param_set_1 = {'k2':3, 
+                   'k4':3}
+    
+    param_set_2 = {'k2':2, 
+                   'k4':4}
+    
     def build_problem(self):
         self.set_OCP_data(3,0,3,1,[0.,0.,0.], [np.inf,np.inf,np.inf], [],[], [0.,0.,0.], [1.,1.,1.])
         self.fix_time_horizon(0, self.model_params['T'])
@@ -2877,6 +2940,10 @@ class Three_Tank_Multimode_MAYER(Three_Tank_Multimode):
 
 class Time_Optimal_Car(OCProblem):
     default_params = {'vmax':33.}
+    
+    param_set_1 = {'vmax': 33.}
+    param_set_2 = {'vmax': 15}
+    
     def build_problem(self):
         self.set_OCP_data(2,1,1,0,[0.,0.],[330.,self.model_params['vmax']],[0.1/self.ntS], [500/self.ntS], [-2.], [1.])
         self.fix_initial_value([0.,0.])
@@ -3191,7 +3258,9 @@ class Ocean(OCProblem):
         D = nu*(0.3*S-Spreind)**2
         DL = DL0 + R0 + S0 - R - S
         
-        ode_rhs = cs.vertcat(u1 - u2 - gamma*(S - omega*DL), -u1, cs.DM(1.))
+        ode_rhs = cs.vertcat(u1 - u2 - gamma*(S - omega*DL), 
+                             -u1, 
+                             cs.DM(1.))
         
         quad = cs.exp(-rho*t)*(U - A - u1*C - D)
         self.ODE = {'x':x, 'p':cs.vertcat(dt,u), 'ode':dt*ode_rhs, 'quad':dt*quad}
@@ -3245,6 +3314,15 @@ class Lotka_OED(OCProblem):
         'epsilon': 0.0,
         'transform_obj':False
         }
+    
+    param_set_2 = {
+        'tf': 20
+        }
+    
+    param_set_3 = {
+        'x_init': [1.0, 0.5]
+        }
+    
     def build_problem(self):
         self.set_OCP_data(9, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
         tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
@@ -3303,7 +3381,7 @@ class Lotka_OED(OCProblem):
         ax.step(self.time_grid_ref, w1, 'tab:blue', linestyle=':', label = r'$w_1$')
         ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w_2$')
         
-        ax.set_ylim(0.,4.)
+        # ax.set_ylim(0.,4.)
         ax.legend(fontsize = 'large', loc = 'upper left')
         ax.set_xlabel('t', fontsize = 17.5)
         ax.xaxis.set_label_coords(1.015,-0.006)
@@ -3509,7 +3587,7 @@ class Fermenter(OCProblem):
         
         # self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
         self.set_objective(2*(S1_acc*S2_acc)/P_acc)
-        print(self.q_eval.shape)
+        
         self.add_constraint(cs.cumsum(self.q_eval, 1), np.array([0.,0.,0.]) - np.array([0., 0.009, 0.009]), np.array([0.05,0.2,0.025]) - np.array([0., 0.009, 0.009]))
 
         self.build_NLP()
@@ -3589,7 +3667,7 @@ class Batch_Distillation(OCProblem):
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
-
+    
     def build_problem(self):
         M0init, MDinit, x0init, xinit, xCinit, xDinit, alpha, V, m, mC = (self.model_params[key] for key in ['M0init', 'MDinit', 'x0init', 'xinit', 'xCinit', 'xDinit', 'alpha', 'V', 'm', 'mC'])
         # self.set_OCP_data(10,1,1,0, [0.]*9 + [MDinit],[np.inf]*10,[0.5/self.ntS * self.tscale],[10/self.ntS * self.tscale], [0. * self.uscale], [15. * self.uscale])
@@ -4360,7 +4438,14 @@ class Robbins(OCProblem):
         
 
 class Lotka_Volterra_Shared(OCProblem):
-    default_params = {'c1':0.1, 'c2':0.4, 't0':0., 'tf':40.0, 'x_init':[1.5,0.5,1.0]}
+    default_params = {'c1':0.1, 
+                      'c2':0.4, 
+                      't0':0., 
+                      'tf':40.0, 
+                      'x_init':[1.5,0.5,1.0]}
+    
+    param_set_2 = {'x_init':[1.5,0.5,1.0]}
+    param_set_2 = {'x_init':[1.5,1.0,0.5]}
     def build_problem(self):
         self.set_OCP_data(3,0,1,1,[0.,0.,0.],[np.inf, np.inf, np.inf],[],[],[0.],[1.])
         
@@ -4429,6 +4514,9 @@ class Lotka_Volterra_Competitive(OCProblem):
                       'tf':40.0, 
                       'x_init':[0.5, 1.5]
                       }
+    param_set_1 = {'x_init': [0.5, 1.5]}
+    param_set_2 = {'x_init': [1.5, 0.5]}
+    
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[0.,0.],[np.inf, np.inf],[],[],[0.],[1.])
         
@@ -4507,7 +4595,7 @@ class Denbigh_Reaction(OCProblem):
     def build_problem(self):
         E = [self.model_params[key] for key in ['E1','E2','E3','E4']]
 
-        self.set_OCP_data(2,0,1,1, [0.,0.], [1.0, 1.0], [], [], [273.0], [415.0])
+        self.set_OCP_data(2,0,1,1, [-0.01,-0.01], [1.0, 1.0], [], [], [273.0], [415.0])
         self.fix_time_horizon(0., 1000.0)
         self.fix_initial_value([1.0, 0.])
         
@@ -4709,6 +4797,14 @@ class Rocket_Landing(OCProblem):
         'vscale': 1e-2,
         'mscale': 1e-4,
         'tscale': 1.0, #leave at 1.0
+        
+        
+        'TscalePlt': 1e-6,
+        'xscalePlt': 1e-3,
+        'zscalePlt': 1e-3,
+        'vscalePlt': 1e-2,
+        'mscalePlt': 1e-4,
+        'tscalePlt': 1.0, #leave at 1.0
     }
     
     def build_problem(self):
@@ -4793,6 +4889,7 @@ class Rocket_Landing(OCProblem):
     
     def plot(self, xi, dpi = None, title = None, it = None):
         Tscale, xscale, zscale, vscale, mscale, tscale = (self.model_params[key] for key in ['Tscale', 'xscale', 'zscale', 'vscale', 'mscale', 'tscale'])
+        TscalePlt, xscalePlt, zscalePlt, vscalePlt, mscalePlt, tscalePlt = (self.model_params[key] for key in ['TscalePlt', 'xscalePlt', 'zscalePlt', 'vscalePlt', 'mscalePlt', 'tscalePlt'])
         
         # x_,z_,vx_,vz_,m_ = self.get_state_arrays_expanded(xi)# / [xscale, zscale, vscale, vscale, mscale]
         # x,z,vx,vz,m = (x_/xscale, z_/zscale, vx_/vscale, vz_/vscale, m_/mscale)
@@ -4806,13 +4903,13 @@ class Rocket_Landing(OCProblem):
         Tscale = self.model_params['Tscale']
         
         plt.figure(dpi=dpi)
-        plt.plot(time_grid_ref, x*20, 'm-', label = r'x $\cdot$ ' + str(xscale) + r'$\cdot 20$')
-        plt.plot(time_grid_ref, z, 'g--', label = r'z $\cdot$ ' + str(zscale))
-        plt.plot(time_grid_ref, vx, 'b:', label = r'vx $\cdot$ ' + str(vscale))
-        plt.plot(time_grid_ref, vz, 'c-.', label = r'vz $\cdot$ ' + str(vscale))
-        plt.plot(time_grid_ref, (m - self.model_params['mdry']*mscale)*5.0, 'y-.', label = r'(m - mdry)$\cdot$' + str(mscale) + r'$\cdot 5.0$')
+        plt.plot(time_grid_ref, x*20/Tscale * TscalePlt, 'm-', label = r'x $\cdot$ ' + str(xscale) + r'$\cdot 20$')
+        plt.plot(time_grid_ref, z/zscale * zscalePlt, 'g--', label = r'z $\cdot$ ' + str(zscale))
+        plt.plot(time_grid_ref, vx/vscale * vscalePlt, 'b:', label = r'vx $\cdot$ ' + str(vscale))
+        plt.plot(time_grid_ref, vz/vscale * vscalePlt, 'c-.', label = r'vz $\cdot$ ' + str(vscale))
+        plt.plot(time_grid_ref, (m/mscale - self.model_params['mdry'])*mscalePlt*5.0, 'y-.', label = r'(m - mdry)$\cdot$' + str(mscale) + r'$\cdot 5.0$')
         
-        plt.step(time_grid_ref, T, 'r', label = r'T$\cdot$ ' + str(Tscale))
+        plt.step(time_grid_ref, T/Tscale * TscalePlt, 'r', label = r'T$\cdot$ ' + str(Tscale))
         plt.step(time_grid_ref, theta*10, 'g', label = r'theta$\cdot 10$')
         
         plt.legend(fontsize='small', loc = 'upper left')
@@ -4831,7 +4928,7 @@ class Rocket_Landing(OCProblem):
         plt.close()
 
 
-class Satellite_Deorbiting_1(OCProblem):
+class Satellite_Deorbiting(OCProblem):
     default_params = {
             'mu':3.986e14,
             'RE': 6.371e6,
@@ -6058,7 +6155,7 @@ class Batch_Reactor_OED(OCProblem):
             for i in range(j + 1, 4):
                 F_tf[i,j] = F_rhs_tf[j + i*4 - (i*(i+1))//2]
         
-        self.set_objective(cs.trace(cs.inv(F_tf)))
+        self.set_objective(cs.trace(cs.inv(F_tf))/4)
         # self.set_objective(self.q_tf[3,-1])
         self.add_constraint(self.q_tf, [0., 0.], [M1, M2])
         

@@ -815,7 +815,7 @@ z = cs.horzcat(*z_arr)
 
 
 t0 = 0
-tF = 3600
+tF = 36000
 time_grid = np.concatenate([np.linspace(t0, tF/2, ntC + 1), np.array([tF])])
 dt_grid = cs.diff(cs.DM(time_grid).T, 1, 1)
 
@@ -965,7 +965,7 @@ f_u_expr = cs.jacobian(obj_expr, cs.vertcat(u_arr[0], x_arr[1]))
 f_u = cs.Function('f_u', [xopt], [f_u_expr])
 
 NLP = {'x': xopt, 'f': obj_expr, 'g': constr_expr}
-S = cs.nlpsol('S', 'ipopt', NLP, {'ipopt':{'hessian_approximation': 'limited-memory', 'max_iter': 20}})
+S = cs.nlpsol('S', 'ipopt', NLP, {'ipopt':{'hessian_approximation': 'limited-memory', 'max_iter': 40}})
 out = S(x0 = x_start, lbx = lb_var, ubx = ub_var, lbg = lb_con, ubg = ub_con)
 
 

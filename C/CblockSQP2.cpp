@@ -92,6 +92,26 @@ public:
         }
         
         (*evaluate_dense)(closure, xi.array, lambda.array, objval, constr.array, gradObj.array, constrJac.array, hessNz, dmode, info);
+        
+        int numNan = 0;
+        numNan += std::isnan(*objval);
+        for (int i = 0; i < nCon; i++) numNan += std::isnan(constr(i));
+        if (dmode > 0){
+            for (int i = 0; i < nVar; i++) numNan += std::isnan(gradObj(i));
+            for (int i = 0; i < nCon*nVar; i++) numNan += std::isnan(constrJac.array[i]);
+            if (dmode == 2){
+                const int arrLen = (hess[nBlocks - 1].m * (hess[nBlocks - 1].m + 1))/2;
+                for (int i = 0; i < arrLen; i++) numNan += std::isnan(hess[nBlocks - 1].array[i]);
+            }
+            if (dmode == 3){
+                for (int k = 0; k < nBlocks; k++){
+                    const int arrLen = (hess[k].m * (hess[k].m + 1))/2;
+                    for (int i = 0; i < arrLen; i++) numNan += std::isnan(hess[k].array[i]);
+                }
+            }
+        }
+        if (numNan > 0) *info = 1;
+        
         delete[] hessNz;
     }
     
@@ -109,11 +129,36 @@ public:
         }
         
         (*evaluate_sparse)(closure, xi.array, lambda.array, objval, constr.array, gradObj.array, jacNz, jacIndRow, jacIndCol, hessNz, dmode, info);
+        
+        int numNan = 0;
+        numNan += std::isnan(*objval);
+        for (int i = 0; i < nCon; i++) numNan += std::isnan(constr(i));
+        if (dmode > 0){
+            for (int i = 0; i < nVar; i++) numNan += std::isnan(gradObj(i));
+            for (int i = 0; i < nnz; i++) numNan += std::isnan(jacNz[i]);
+            if (dmode == 2){
+                const int arrLen = (hess[nBlocks - 1].m * (hess[nBlocks - 1].m + 1))/2;
+                for (int i = 0; i < arrLen; i++) numNan += std::isnan(hess[nBlocks - 1].array[i]);
+            }
+            if (dmode == 3){
+                for (int k = 0; k < nBlocks; k++){
+                    const int arrLen = (hess[k].m * (hess[k].m + 1))/2;
+                    for (int i = 0; i < arrLen; i++) numNan += std::isnan(hess[k].array[i]);
+                }
+            }
+        }
+        if (numNan > 0) *info = 1;
+        
         delete[] hessNz;
     }
 
     virtual void evaluate(const Matrix &xi, double *objval, Matrix &constr, int *info){
         (*evaluate_simple)(closure, xi.array, objval, constr.array, info);
+        
+        int numNan = 0;
+        numNan += std::isnan(*objval);
+        for (int i = 0; i < nCon; i++) numNan += std::isnan(constr(i));
+        if (numNan > 0) *info = 1;
     }
     
     // Optional Methods

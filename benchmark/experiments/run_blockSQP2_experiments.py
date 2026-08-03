@@ -25,29 +25,32 @@ import blockSQP2
 import OCP_experiment
 import OCProblems
 
-
+# Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
-            # (OCProblems.Batch_Reactor, dict()),
-            # (OCProblems.Cart_Pendulum, dict()),
-            # (OCProblems.Catalyst_Mixing, dict()),
-            # (OCProblems.Cushioned_Oscillation, dict()),
-            # (OCProblems.Ducted_Fan, dict()),
-            # (OCProblems.Egerstedt_Standard, dict()),
-            # (OCProblems.Electric_Car, dict()),
-            # (OCProblems.Goddard_Rocket, dict()),
-            # (OCProblems.Hang_Glider, dict()),
-            # (OCProblems.Hanging_Chain, dict()),
-            # (OCProblems.Lotka_Volterra_Fishing, dict()),
-            # (OCProblems.Particle_Steering, dict()),
-            # (OCProblems.Quadrotor_Helicopter, dict()),
-            # (OCProblems.Three_Tank_Multimode, dict()),
-            # (OCProblems.Time_Optimal_Car, dict()),
-            # (OCProblems.Tubular_Reactor, dict()),
-            # (OCProblems.Lotka_OED, dict()),
-            # (OCProblems.Fermenter, dict()),
-            # (OCProblems.Satellite_Deorbiting_1, dict()),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4)
-            (OCProblems.Denbigh_Reaction, dict())
+            # (OCProblems.Batch_Reactor, dict(), "Batch_Reactor"),
+            # (OCProblems.Cart_Pendulum, dict(), None),
+            # (OCProblems.Catalyst_Mixing, dict(), None),
+            # (OCProblems.Cushioned_Oscillation, dict(), None),
+            # (OCProblems.Ducted_Fan, dict(), None),
+            # (OCProblems.Egerstedt_Standard, dict(), None),
+            # (OCProblems.Electric_Car, dict(), None),
+            # (OCProblems.Goddard_Rocket, dict(), 'Goddard\'s Rocket'),
+            # (OCProblems.Hang_Glider, dict(), None),
+            # (OCProblems.Hanging_Chain, dict(), None),
+            # (OCProblems.Lotka_Volterra_Fishing, dict(), None),
+            # (OCProblems.Particle_Steering, dict(), None),
+            # (OCProblems.Quadrotor_Helicopter, dict(), None),
+            # (OCProblems.Three_Tank_Multimode, dict(), None),
+            # (OCProblems.Time_Optimal_Car, dict(), None),
+            # (OCProblems.Tubular_Reactor, dict(), None),
+            # (OCProblems.Lotka_OED, dict(), None),
+            # (OCProblems.Fermenter, dict(), None),
+            # (OCProblems.Satellite_Deorbiting_1, dict(), None),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_1"),
+            (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_2 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_2"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_3"),
+            (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_4"),
+            # (OCProblems.Denbigh_Reaction, dict(), None)
             ]
 OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
 
@@ -172,9 +175,10 @@ opt_CS2_par_new = blockSQP2.SQPoptions(
     par_QPs = True,
     max_filter_overrides = 0, 
     automatic_scaling = True, 
-    scaling_Theta_min = 0.1,
-    scaling_Theta_max = 100.0,
+    scaling_Theta_min = 0.01,
+    scaling_Theta_max = 10.0,
     )
+
 
 opt_CS2_par_new_noScale = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
@@ -182,8 +186,8 @@ opt_CS2_par_new_noScale = blockSQP2.SQPoptions(
     par_QPs = True,
     max_filter_overrides = 0, 
     automatic_scaling = False, 
-    scaling_Theta_min = 0.1,
-    scaling_Theta_max = 1.0,
+    # scaling_Theta_min = 0.1,
+    # scaling_Theta_max = 1.0,
     )
 
 condensing = True
@@ -206,9 +210,9 @@ Experiments = [
                # (opt_CS2_S5, "scaling_0p2_10"),
                # (opt_CS2_S6, "scaling_0p2_5"),
                
-                (opt_CS2_par, "par_scale"),
-                # (opt_CS2_par_new, "par_scale_new"),
-                (opt_CS2_par_new_noScale, "par_noScale")
+                # (opt_CS2_par, "par_scale"),
+                (opt_CS2_par_new, "par_scale_new"),
+                # (opt_CS2_par_new_noScale, "par_noScale")
                ]
 
 
@@ -216,8 +220,8 @@ plot_folder = cD / Path("out_blockSQP2_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
-nPert0 = 0
-nPertF = 40
+nPert0 = 10
+nPertF = 20
 
 #Write results to a file?
 file_output = True
@@ -236,9 +240,9 @@ else:
 
 titles = [EXP_name for _, EXP_name in Experiments]
 OCP_experiment.print_heading(out, titles)
-for OCclass, OCargs in Examples:        
-    OCprob = OCclass(nt = 100, integrator = 'collocation', parallel = True, **OCargs)
-    itMax = 200
+for OCclass, OCargs, OCname in Examples:        
+    OCprob = OCclass(nt = 100, parallel = True, **OCargs)
+    itMax = 300
     titles = []
     EXP_N_SQP = []
     EXP_N_secs = []
@@ -252,8 +256,11 @@ for OCclass, OCargs in Examples:
         titles.append(EXP_name)
         n_EXP += 1
     ###############################################################################
+    if OCname is None:
+        OCname = OCclass.__name__
+    
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP2")
+        suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP2")
     OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

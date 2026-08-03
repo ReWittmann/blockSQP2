@@ -29,25 +29,10 @@ import casadi as cs
 
 
 def create_prob_cond(OCprob : OCProblems.OCProblem):
-    # vBlocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))
-    # cBlocks = blockSQP2.cblock_array(len(OCprob.cBlock_sizes))
-    # hBlocks = blockSQP2.int_array(len(OCprob.hessBlock_sizes))
-    # targets = blockSQP2.condensing_targets(1)
-    # for i in range(len(OCprob.vBlock_sizes)):
-    #     vBlocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
-    # for i in range(len(OCprob.cBlock_sizes)):
-    #     cBlocks[i] = blockSQP2.cblock(OCprob.cBlock_sizes[i])
-    # for i in range(len(OCprob.hessBlock_sizes)):
-    #     hBlocks[i] = OCprob.hessBlock_sizes[i]
-    # targets[0] = blockSQP2.condensing_target(*OCprob.ctarget_data)
-    
     vBlocks = [blockSQP2.vblock(size, dep, impl) for size, dep, impl in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies, OCprob.vBlock_bounds_implicit)]
     cBlocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
     hBlocks = [size for size in OCprob.hessBlock_sizes]
     targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
-
-    
-    # HOLD = [vBlocks, cBlocks, hBlocks, targets]
     
     cond = blockSQP2.PartialCondenser(vBlocks, cBlocks, hBlocks, targets, 4, 1)
     
@@ -67,7 +52,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
     prob.vblocks = vBlocks
     
-    return prob, cond#, HOLD
+    return prob, cond
 
 def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
     """Run blockSQP2 on the given problem for start points perturbed at nPert0:nPertF
