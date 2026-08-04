@@ -224,19 +224,15 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
         rgamma[i] = (count_gamma[i] > 0) ? std::exp(rgamma[i]/count_gamma[i]) : 1.0;
         
         S_u[i] = -1.0;
-        // if (rgamma[i] > param->scaling_Theta_max){
-        //     S_u[i] = rgamma[i]/param->scaling_Theta_max;
-        // }
-        
         if (rgamma[i] >= 1.0){            
-            // S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
+            S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
             
             // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
             // else S_u[i] = std::max(1.0/rdelta[i], rgamma[i]/param->scaling_Theta_max);
             
             // S_u[i] = (std::min)((std::min)(rgamma[i], 1.0/rdelta[i]), param->scaling_Theta_max/rdelta[i]);
-            if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
-            else S_u[i] = std::max(1.0, std::min(param->scaling_Theta_max/rdelta[i], rgamma[i]));
+            // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
+            // else S_u[i] = std::max(1.0, std::min(param->scaling_Theta_max/rdelta[i], rgamma[i]));
             
         }
         else if (rgamma[i] < 1.0){

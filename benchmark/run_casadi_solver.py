@@ -19,13 +19,13 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.D_Onofrio_Chemotherapy(
+OCprob = OCProblems.Fermenter(
                     nt = 100,
                     refine = 1,
-                    integrator = 'cvodes',
+                    # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    **OCProblems.D_Onofrio_Chemotherapy.param_set_2
+                    # **OCProblems.Lotka_Volterra_Fishing.param_set_3
                     )
 
 ipopts = dict()

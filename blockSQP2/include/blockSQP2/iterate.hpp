@@ -177,6 +177,8 @@ class SQPiterate{
         std::unique_ptr<Matrix[]> par_QP_sols_prim;
         std::unique_ptr<Matrix[]> par_QP_sols_dual;
         
+        bool restUseCRP;
+        
     public:
         /// Call allocation and initializing routines
         SQPiterate(Problemspec* prob, const SQPoptions* param);

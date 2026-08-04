@@ -165,9 +165,9 @@ class SQPmethod{
         /// Start feasibility restoration heuristic
         int feasibilityRestorationHeuristic();
         /// Start feasibility restoration phase (solve NLP)
-        virtual int feasibilityRestorationPhase();
+        virtual RestorationResults feasibilityRestorationPhase();
         /// Main loop of restoration phase - check acceptability of the filter after each step
-        int innerRestorationPhase(bool argWarmStart, double min_stepsize_sum = 1.0);
+        RestorationResults innerRestorationPhase(bool argWarmStart, double min_stepsize_sum = 1.0);
         /// Check if full step reduces KKT error
         int kktErrorReduction( );
         
@@ -258,7 +258,7 @@ class bound_correction_method : public SQPmethod{
     // filterLineSearch that applies bound correction to the full step
     virtual bool filterLineSearch();
     // feasiblity restoration phase also uses the bound_correction_method and the TC_restoration_problem
-    virtual int feasibilityRestorationPhase();
+    virtual RestorationResults feasibilityRestorationPhase();
 };
 
 } // namespace blockSQP2

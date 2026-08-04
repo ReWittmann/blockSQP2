@@ -726,6 +726,25 @@ class OCProblem:
     def plot(self, xi, dpi = None, title = None, it = None):
         raise NotImplementedError('No plot functionality implemented for this problem')
             
+    def finish_plot(self, ax, title, it, default_title):
+        ax.set_xlabel('t', fontsize = 17.5)
+        ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = default_title
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+        plt.close()
+    
     
     def perturbed_start_point(self, ind):
         raise NotImplementedError('No perturbed start points implemented for this problem')
@@ -823,7 +842,8 @@ class Lotka_Volterra_Fishing(OCProblem):
         'c1':0.2, 
         'x_init':[0.5,0.7], 
         't0':0., 
-        'tf':12.
+        'tf':12.,
+        'auto_init': False
         }
     
     param_set_1 = {
@@ -832,6 +852,7 @@ class Lotka_Volterra_Fishing(OCProblem):
         'x_init':[0.5,0.7],
         't0':0.,
         'tf':12.0,
+        'auto_init': False
         }
     
     param_set_2 = {
@@ -840,6 +861,7 @@ class Lotka_Volterra_Fishing(OCProblem):
         'x_init':[1.0,0.1],
         't0':0.,
         'tf':16.0,
+        'auto_init': False
         }
     
     param_set_3 = {
@@ -848,12 +870,13 @@ class Lotka_Volterra_Fishing(OCProblem):
         'x_init':[1.0,0.01],
         't0':0.,
         'tf':24.0,
+        'auto_init': True
         }
     
     def build_problem(self):
         self.set_OCP_data(2,0,1,1,[0,0],[np.inf, np.inf],[],[],[0],[1])
         
-        c0, c1, x_init, t0, tf = (self.model_params[key] for key in ('c0', 'c1', 'x_init', 't0', 'tf'))
+        c0, c1, x_init, t0, tf, auto_init = (self.model_params[key] for key in ('c0', 'c1', 'x_init', 't0', 'tf', 'auto_init'))
         self.fix_time_horizon(t0, tf)
         self.fix_initial_value(x_init)
         self.mark_state_bounds_implicit()
@@ -875,6 +898,8 @@ class Lotka_Volterra_Fishing(OCProblem):
             self.set_stage_state(self.start_point, i, self.model_params['x_init'])
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0])
+        if auto_init:
+            self.integrate_full(self.start_point)
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
@@ -890,25 +915,28 @@ class Lotka_Volterra_Fishing(OCProblem):
         ax.plot(self.time_grid_ref, x0, 'tab:green', linestyle='-.', label = '$x_0$')
         ax.plot(self.time_grid_ref, x1, 'tab:blue', linestyle='--', label = '$x_1$')
         ax.step(self.time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
+        
         ax.legend(fontsize='x-large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka Volterra fishing problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+        # ttl = None
+        # if isinstance(title,str):
+        #     ttl = title
+        # elif title == True:
+        #     ttl = 'Lotka Volterra fishing problem'
+        # if ttl is not None:
+        #     if isinstance(it, int):
+        #         ttl = ttl + f', iteration {it}'
+        #     plt.title(ttl)
+        # else:
+        #     plt.title('')
         
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
+        # ax.set_xlabel('t', fontsize = 17.5)
+        # ax.xaxis.set_label_coords(1.015,-0.006)
         
-        plt.show()
-        plt.close()
+        # plt.show()
+        # plt.close()
+        
+        self.finish_plot(ax, title, it, "Lotka Volterra fishing problem")
 
 
 class Lotka_Volterra_Fishing_MAYER(OCProblem):
@@ -1285,6 +1313,7 @@ class Calcium_Oscillation(OCProblem):
             
         self.integrate_full(self.start_point)
         
+        #Prevent local minimum with second stimulus (but better objective)
         for i in range(math.floor(0.4*self.ntS), self.ntS):
             self.set_stage_control(self.ub_var, i, 1.0)
     
@@ -1298,29 +1327,34 @@ class Calcium_Oscillation(OCProblem):
         x0, x1, x2, x3 = self.get_state_arrays(xi)
         w = self.get_control_plot_arrays(xi)        
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x0, 'b-', label = 'x0')
-        plt.plot(self.time_grid, x1, 'r-', label = 'x1')
-        plt.plot(self.time_grid, x2, 'g-', label = 'x2')
-        plt.plot(self.time_grid, x3, 'y-', label = 'x3')
-        plt.step(self.time_grid, (w-1.0)*20, 'g', label = '(w-1)*20')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(self.time_grid, x0, 'tab:olive', linestyle = '--', label = r'$x_0$')
+        ax.plot(self.time_grid, x1, 'tab:green', linestyle = '-.', label = r'$x_1$')
+        ax.plot(self.time_grid, x2, 'tab:cyan', linestyle = ':', label = r'$x_2$')
+        ax.plot(self.time_grid, x3, 'tab:blue', linestyle = '-.', label = r'$x_3$')
+        ax.step(self.time_grid, (w-1.0)*20, 'tab:red', label = r'$(w-1)\cdot 20$')
         
-        plt.legend(fontsize='large')
+        ax.legend(fontsize='large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Calcium oscillation'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+        # ax.set_xlabel('t', fontsize = 17.5)
+        # ax.xaxis.set_label_coords(1.015,-0.006)
+        
+        # ttl = None
+        # if isinstance(title,str):
+        #     ttl = title
+        # elif title == True:
+        #     ttl = 'Calcium oscillation'
+        # if ttl is not None:
+        #     if isinstance(it, int):
+        #         ttl = ttl + f', iteration {it}'
+        #     plt.title(ttl)
+        # else:
+        #     plt.title('')
             
-        plt.show()
-        plt.close()
+        # plt.show()
+        # plt.close()
+        
+        self.finish_plot(ax, title, it, 'Calcium Oscillation problem')
 
 
 class Batch_Reactor(OCProblem):
@@ -1626,7 +1660,7 @@ class Catalyst_Mixing(OCProblem):
         'alpha': 4
         }
     
-    param_set_2 = {
+    param_set_3 = {
         'alpha': 25
         }
     def build_problem(self):
@@ -1832,7 +1866,7 @@ class D_Onofrio_Chemotherapy(OCProblem):
         'F':1., 
         'eta':1., 
         'alpha':0., 
-        'duration': 6.
+        'tF': 6.
     }
     
     param_set_1 = {
@@ -1863,14 +1897,11 @@ class D_Onofrio_Chemotherapy(OCProblem):
         'x3max': 10
     }
     
-    def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = True, N_threads = 4, **kwargs):
-        OCProblem.__init__(self,nt=nt,refine=refine,integrator=integrator,parallel=parallel, N_threads = N_threads, **kwargs)
-    
     def build_problem(self):
-        zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha'))
+        zeta, b, mu, d, G, x20, x30, u0max, x2max, x00, x10, u1max, x3max, F, eta, alpha, tF = (self.model_params[key] for key in ('zeta','b','mu','d','G','x20','x30','u0max','x2max','x00','x10','u1max','x3max','F','eta', 'alpha', 'tF'))
         self.set_OCP_data(2,0,2,3,[0.,0.], [np.inf,np.inf], [], [], [0.,0.],[u0max,u1max])
         self.fix_initial_value([x00,x10])
-        self.fix_time_horizon(0., self.model_params['duration'])
+        self.fix_time_horizon(0., tF)
         # self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
@@ -1888,6 +1919,9 @@ class D_Onofrio_Chemotherapy(OCProblem):
         self.set_objective(self.x_eval[0,-1] + alpha*self.q_tf[0])
         self.add_constraint(self.q_tf[1:3] - cs.DM([x2max,x3max]), [-np.inf,-np.inf], [0.,0.])
         self.build_NLP()
+        
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [x2max/tF, x3max/tF])
         self.integrate_full(self.start_point)
     
     def perturbed_start_point(self, ind):
@@ -1900,27 +1934,28 @@ class D_Onofrio_Chemotherapy(OCProblem):
         x0,x1 = self.get_state_arrays(xi)
         u0,u1 = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, x0/100., 'r-', label = 'x0/100')
-        plt.plot(time_grid, x1/100., 'g-', label = 'x1/100')
-        plt.step(time_grid, u0, 'y-', label = 'u0')
-        plt.step(time_grid, u1*75, 'c-', label = 'u1*75')
-        plt.legend(fontsize='large')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(time_grid, x0/100., 'tab:green', linestyle = '--', label = r'$x_0/100$')
+        ax.plot(time_grid, x1/100., 'tab:blue', linestyle = ':', label = r'$x_1/100$')
+        ax.step(time_grid, u0, 'tab:red', label = r'$u_0$')
+        ax.step(time_grid, u1*75, 'tab:blue', linestyle = '-.', label = r'$u_1\cdot75$')
+        ax.legend(fontsize='large', loc = 'upper right')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'D\'Onofrio chemotherapy problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+        self.finish_plot(ax, title, it, 'D\'Onofrio chemotherapy problem')
+        # ttl = None
+        # if isinstance(title,str):
+        #     ttl = title
+        # elif title == True:
+        #     ttl = 'D\'Onofrio chemotherapy problem'
+        # if ttl is not None:
+        #     if isinstance(it, int):
+        #         ttl = ttl + f', iteration {it}'
+        #     plt.title(ttl)
+        # else:
+        #     plt.title('')
             
-        plt.show()   
-        plt.close()
+        # plt.show()   
+        # plt.close()
     
 # class D_Onofrio_Chemotherapy_VT(OCProblem):
 #     default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0.}
@@ -2309,7 +2344,7 @@ class Electric_Car(OCProblem):
         plt.show()
         plt.close()
         
-
+# Several local minima, see mintoc.de
 class F8_Aircraft(OCProblem):
     def build_problem(self):
         self.set_OCP_data(3,1,1,0,[-np.inf,-np.inf,-np.inf], [np.inf,np.inf,np.inf], [1/self.ntS], [100/self.ntS], [-0.05236], [0.05236])
@@ -2466,7 +2501,7 @@ class Gravity_Turn(OCProblem):
         plt.show()
         plt.close()
 
-
+# Many local solutions with similar objective value
 class Oil_Shale_Pyrolysis(OCProblem):
     default_params = {'b1':20.3,
                       'b2':37.4,
@@ -2683,7 +2718,7 @@ class Quadrotor_Helicopter(OCProblem):
         plt.show()
         plt.close()
     
-
+#Seems infeasible, maybe verify problem formulation.
 class Supermarket_Refrigeration(OCProblem):
     default_params = {
     "Qairload": 3000.00,
@@ -2748,7 +2783,7 @@ class Supermarket_Refrigeration(OCProblem):
         
         self.set_stage_state(self.start_point, 0, [1.] + [2.]*2 + [0.2] + [2.]*5)
         for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [1.,1.,1.])
+            self.set_stage_control(self.start_point, i, [1.0,1.0,1.0])
             self.set_stage_param(self.start_point, i, [650/self.ntS])
         self.integrate_full(self.start_point)
         
@@ -3277,26 +3312,29 @@ class Ocean(OCProblem):
         S,R,_ = self.get_state_arrays(xi)
         u1,u2 = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, S-2000, 'r-', label = 'S-2000')
-        plt.plot(self.time_grid, R/1000, 'g-', label = 'R/1000')
-        plt.step(self.time_grid_ref, u1, 'b', label = 'u1')
-        plt.step(self.time_grid_ref, u2, 'c', label = 'u2')
-        plt.legend(fontsize='large')
+        S0, R0 = (self.model_params[key] for key in ('S0', 'R0'))
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Ocean problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(self.time_grid, S-S0, 'tab:green', linestyle = ':', label = 'S-2000')
+        ax.plot(self.time_grid, (R-R0)/100, 'tab:blue', linestyle = '-.', label = 'R/1000')
+        ax.step(self.time_grid_ref, u1*5, 'tab:red', label = r'$u_1\cdot 10$')
+        ax.step(self.time_grid_ref, u2*5, 'tab:grey', linestyle = '-.', label = r'$u_2\cdot 10$')
+        ax.legend(fontsize='large')
+        
+        self.finish_plot(ax, title, it, "Ocean problem")
+        # ttl = None
+        # if isinstance(title,str):
+        #     ttl = title
+        # elif title == True:
+        #     ttl = 'Ocean problem'
+        # if ttl is not None:
+        #     if isinstance(it, int):
+        #         ttl = ttl + f', iteration {it}'
+        #     plt.title(ttl)
+        # else:
+        #     plt.title('')
             
-        plt.show()
+        # plt.show()
 
 
 class Lotka_OED(OCProblem):
@@ -3558,7 +3596,7 @@ class Fermenter(OCProblem):
         self.set_OCP_data(6, 0, 3, 3, [0.,0.,0.,0.,0.3,0.], [0.1,0.04,0.03,0.1,0.45,0.1], [], [], [0.,0.,0.], [15.,1.,30.])
         mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
         self.fix_time_horizon(0.,1.)
-        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1] + [0., 0.009, 0.009])
+        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1])
         x = cs.MX.sym('x', 6)
         P,S1,S2,E,V,G = cs.vertsplit(x)
         u = cs.MX.sym('u', 3)
@@ -3605,31 +3643,35 @@ class Fermenter(OCProblem):
         P,S1,S2,E,V,G = self.get_state_arrays(xi)
         uS1,uS2,uP = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, uS1/5., 'r', label = 'uS1/5.')
-        plt.step(self.time_grid_ref, uS2/15., 'g', label = 'uS2/15.')
-        plt.step(self.time_grid_ref, uP/60., 'b', label = 'uP/60.')
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid, P*10., 'tab:red', linestyle = '--', label = r'$P\cdot 10$')
+        ax.plot(self.time_grid, S1*2, 'tab:green', linestyle = '--', label = r'$S1\cdot 2$')
+        ax.plot(self.time_grid, S2*2, 'tab:brown', linestyle = '--', label = r'$S2\cdot 2$')
+        ax.plot(self.time_grid, E, 'tab:olive', linestyle = '--', label = 'E')
+        ax.plot(self.time_grid, V/3, 'tab:cyan', linestyle = '--', label = 'V/3')
+        ax.plot(self.time_grid, G, 'tab:purple', linestyle = '--', label = 'G')
         
-        plt.plot(self.time_grid, P*10., 'r--', label = r'$P\cdot 10.$')
-        plt.plot(self.time_grid, S1, 'g-.', label = 'S1')
-        plt.plot(self.time_grid, S2, 'b:', label = 'S2')
-        plt.plot(self.time_grid, E, 'y--', label = 'E')
-        plt.plot(self.time_grid, V/3, 'c-.', label = 'V/3')
-        plt.plot(self.time_grid, G, 'm:', label = 'G')
-        plt.legend(fontsize='medium', loc = 'upper center')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Fermenter problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
+        ax.step(self.time_grid_ref, uS1/5., 'tab:red', label = r'$u_{S1}/5$')
+        ax.step(self.time_grid_ref, uS2/15., 'tab:green', label = r'$u_{S2}/15$')
+        ax.step(self.time_grid_ref, uP/60., 'tab:grey', label = r'$u_{P}/60$')
+        
+        ax.legend(fontsize='medium', loc = 'upper center')
+        ax.set_ylim(0, 0.16)
+        
+        self.finish_plot(ax, title, it, "Fermenter problem")
+        # ttl = None
+        # if isinstance(title,str):
+        #     ttl = title
+        # elif title == True:
+        #     ttl = 'Fermenter problem'
+        # if ttl is not None:
+        #     if isinstance(it, int):
+        #         ttl = ttl + f', iteration {it}'
+        #     plt.title(ttl)
+        # else:
+        #     plt.title('')
+        # plt.show()
+        # plt.close()
 
 #Cvodes required
 class Batch_Distillation(OCProblem):
@@ -5691,7 +5733,10 @@ class Catalyst_Mixing_OED(OCProblem):
         'p3': 1.0,
         'M1': 0.2,
         'M2': 0.2,
-        'reg_init': 1e-2
+        'reg_init': 1e-2,
+        
+        'p1scale': 1.0,
+        'p2scale': 1.0
         }
     def build_problem(self):
         self.set_OCP_data(2 + 4 + 3,0,3,2,[-np.inf,-np.inf] + [-np.inf]*7,[np.inf,np.inf] + [np.inf]*7,[],[],[0.] + [0.]*2,[1.] + [1.]*2)
@@ -5700,7 +5745,7 @@ class Catalyst_Mixing_OED(OCProblem):
         self.fix_initial_value([1.,0.] + [0.]*7)
         self.mark_state_bounds_implicit()
         
-        p1,p2,p3,M1,M2,reg_init = (self.model_params[key] for key in ('p1', 'p2', 'p3', 'M1', 'M2', 'reg_init'))
+        p1,p2,p3,M1,M2,reg_init, p1scale, p2scale = (self.model_params[key] for key in ('p1', 'p2', 'p3', 'M1', 'M2', 'reg_init', 'p1scale', 'p2scale'))
         
         x = cs.MX.sym('x', 2)
         x1,x2 = cs.vertsplit(x)
@@ -5708,12 +5753,16 @@ class Catalyst_Mixing_OED(OCProblem):
         p = cs.MX.sym('p', 2)
         p1_s, p2_s = cs.vertsplit(p)
         
+        p1_s, p2_s = p1_s/p1scale, p2_s/p2scale
+        p1, p2 = p1*p1scale, p2*p2scale
+        
         dt = cs.MX.sym('dt', 1)
         f_expr = cs.vertcat(u*(p2_s*x2 - p1_s*x1), 
                             u*(p1_s*x1 - p2_s*x2) - (1-u)*p3*x2
                             )
         f_x_expr = cs.jacobian(f_expr, x)
         f_p_expr = cs.jacobian(f_expr, p)
+        
         
         f = cs.Function('f', [x,u,p], [f_expr])
         f_x = cs.Function('f', [x,u,p], [f_x_expr])
@@ -5782,7 +5831,7 @@ class Catalyst_Mixing_OED(OCProblem):
         self.add_constraint(self.q_tf - cs.DM([M1,M2]), -np.inf, 0.)
         self.build_NLP()
         for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [1.0,M1/T_l,M2/T_l])
+            self.set_stage_control(self.start_point, i, [0.5,M1/T_l,M2/T_l])
         self.integrate_full(self.start_point)
     
     def perturbed_start_point(self, ind):
@@ -5800,14 +5849,14 @@ class Catalyst_Mixing_OED(OCProblem):
         ax.step(self.time_grid_ref, w1, 'tab:green', linestyle='--', label = r'$w_1$')
         ax.step(self.time_grid_ref, w2, 'tab:blue', linestyle='-.', label = r'$w_2$')
 
-        ax.step(self.time_grid_ref, G11, 'tab:red', linestyle=':', label = r'$G_{11}$')
-        ax.step(self.time_grid_ref, G21, 'tab:red', linestyle=':', label = r'$G_{21}$')
-        ax.step(self.time_grid_ref, G12, 'tab:red', linestyle=':', label = r'$G_{12}$')
-        ax.step(self.time_grid_ref, G22, 'tab:red', linestyle=':', label = r'$G_{22}$')
+        # ax.step(self.time_grid_ref, G11, 'tab:red', linestyle=':', label = r'$G_{11}$')
+        # ax.step(self.time_grid_ref, G21, 'tab:red', linestyle=':', label = r'$G_{21}$')
+        # ax.step(self.time_grid_ref, G12, 'tab:red', linestyle=':', label = r'$G_{12}$')
+        # ax.step(self.time_grid_ref, G22, 'tab:red', linestyle=':', label = r'$G_{22}$')
         
-        ax.step(self.time_grid_ref, G11, 'tab:green', linestyle='-.', label = r'$F_{11}$')
-        ax.step(self.time_grid_ref, F21, 'tab:green', linestyle='--', label = r'$F_{21}$')
-        ax.step(self.time_grid_ref, F22, 'tab:green', linestyle='-', label = r'$F_{22}$')
+        # ax.step(self.time_grid_ref, G11, 'tab:green', linestyle='-.', label = r'$F_{11}$')
+        # ax.step(self.time_grid_ref, F21, 'tab:green', linestyle='--', label = r'$F_{21}$')
+        # ax.step(self.time_grid_ref, F22, 'tab:green', linestyle='-', label = r'$F_{22}$')
 
         
         ax.legend(fontsize = 'large')
@@ -5952,135 +6001,136 @@ class Dielectrophoretic_Particle_OED(OCProblem):
         plt.close()
         
 # Seems ill posed, neither blockSQP nor ipopt work
-class Three_Tank_OED(OCProblem):
-    default_params = {'T': 12, 
-                      'c1': 1., 
-                      'c2': 2., 
-                      'c3': 0.8, 
-                      'k1': 2, 
-                      'k2': 3, 
-                      'k3': 1, 
-                      'k4': 3,
-                      'M1': 2.0,
-                      'M2': 2.0,
-                      'M3': 2.0,
-                      'reg_init': 1e-1
-                      }
-    def build_problem(self):
-        self.set_OCP_data(3+9+6, 0, 3+3, 4, [0., 0., 0.] + [-np.inf]*15, [np.inf,np.inf,np.inf] + [np.inf]*15, [],[], [0.,0.,0.] + [0.]*3, [1.,1.,1.] + [1.]*3)
-        self.fix_time_horizon(0, self.model_params['T'])
-        self.fix_initial_value([2.,2.,2.] + [0.]*15)
-        self.mark_state_bounds_implicit()
+# class Three_Tank_OED(OCProblem):
+#     default_params = {'T': 12, 
+#                       'c1': 1., 
+#                       'c2': 2., 
+#                       'c3': 0.8, 
+#                       'k1': 2, 
+#                       'k2': 3, 
+#                       'k3': 1, 
+#                       'k4': 3,
+#                       'M1': 2.0,
+#                       'M2': 2.0,
+#                       'M3': 2.0,
+#                       'reg_init': 1e-1
+#                       }
+#     def build_problem(self):
+#         self.set_OCP_data(3+9+6, 0, 3+3, 4, [0., 0., 0.] + [-np.inf]*15, [np.inf,np.inf,np.inf] + [np.inf]*15, [],[], [0.,0.,0.] + [0.]*3, [1.,1.,1.] + [1.]*3)
+#         self.fix_time_horizon(0, self.model_params['T'])
+#         self.fix_initial_value([2.,2.,2.] + [0.]*15)
+#         self.mark_state_bounds_implicit()
         
-        T, c1, c2, c3, k1, k2, k3, k4, M1, M2, M3, reg_init = (self.model_params[key] for key in ['T', 'c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4', 'M1', 'M2', 'M3', 'reg_init'])
+#         T, c1, c2, c3, k1, k2, k3, k4, M1, M2, M3, reg_init = (self.model_params[key] for key in ['T', 'c1', 'c2', 'c3', 'k1', 'k2', 'k3', 'k4', 'M1', 'M2', 'M3', 'reg_init'])
         
-        x = cs.MX.sym('x', 3)
-        x1,x2,x3 = cs.vertsplit(x)
-        theta = cs.MX.sym('theta', 3)
-        c1_s, c2_s, c3_s = cs.vertsplit(theta)
+#         x = cs.MX.sym('x', 3)
+#         x1,x2,x3 = cs.vertsplit(x)
+#         theta = cs.MX.sym('theta', 3)
+#         c1_s, c2_s, c3_s = cs.vertsplit(theta)
         
-        u = cs.MX.sym('u', 3)
-        u1,u2,u3 = cs.vertsplit(u)
-        dt = cs.MX.sym('dt')
+#         u = cs.MX.sym('u', 3)
+#         u1,u2,u3 = cs.vertsplit(u)
+#         dt = cs.MX.sym('dt')
         
-        f_expr = cs.vertcat(-cs.sqrt(x1) + c1_s*u1 + c2_s*u2 - u3*cs.sqrt(c3_s*x1),
-                              cs.sqrt(x1) - cs.sqrt(x2),
-                              cs.sqrt(x2) - cs.sqrt(x3) + u3*cs.sqrt(c3_s*x1)
-                              )
-        f_x_expr = cs.jacobian(f_expr, x)
-        f_theta_expr = cs.jacobian(f_expr, theta)
+#         f_expr = cs.vertcat(-cs.sqrt(x1) + c1_s*u1 + c2_s*u2 - u3*cs.sqrt(c3_s*x1),
+#                               cs.sqrt(x1) - cs.sqrt(x2),
+#                               cs.sqrt(x2) - cs.sqrt(x3) + u3*cs.sqrt(c3_s*x1)
+#                               )
+#         f_x_expr = cs.jacobian(f_expr, x)
+#         f_theta_expr = cs.jacobian(f_expr, theta)
         
-        f = cs.Function('f', [x,u,theta], [f_expr])
-        f_x = cs.Function('f', [x,u,theta], [f_x_expr])
-        f_theta = cs.Function('f', [x,u,theta], [f_theta_expr])
+#         f = cs.Function('f', [x,u,theta], [f_expr])
+#         f_x = cs.Function('f', [x,u,theta], [f_x_expr])
+#         f_theta = cs.Function('f', [x,u,theta], [f_theta_expr])
         
-        f_expr = f(x,u,cs.DM([c1, c2, c3]))
-        f_x_expr = f_x(x,u,cs.DM([c1, c2, c3]))
-        f_theta_expr = f_theta(x,u,cs.DM([c1, c2, c3]))
+#         f_expr = f(x,u,cs.DM([c1, c2, c3]))
+#         f_x_expr = f_x(x,u,cs.DM([c1, c2, c3]))
+#         f_theta_expr = f_theta(x,u,cs.DM([c1, c2, c3]))
         
         
-        G = cs.MX.sym('G', x.numel(), theta.numel())
-        dG = f_x_expr@G + f_theta_expr
-        G_rhs = cs.vec(dG)
+#         G = cs.MX.sym('G', x.numel(), theta.numel())
+#         dG = f_x_expr@G + f_theta_expr
+#         G_rhs = cs.vec(dG)
         
-        w = cs.MX.sym('w', 3)
-        w1,w2,w3 = cs.vertsplit(w)
+#         w = cs.MX.sym('w', 3)
+#         w1,w2,w3 = cs.vertsplit(w)
         
-        F = cs.MX.sym('F', (theta.numel()*(theta.numel() + 1))//2)
-        dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
-        dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
+#         F = cs.MX.sym('F', (theta.numel()*(theta.numel() + 1))//2)
+#         dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
+#         dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
         
-        F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[1,1], dF[2,1], dF[2,2])
-        ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
+#         F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[1,1], dF[2,1], dF[2,2])
+#         ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
         
-        dt = cs.MX.sym('dt', 1)
-        quad_expr = cs.vertcat(w, k1*(x2-k2)**2 + k3*(x3-k4)**2)
+#         dt = cs.MX.sym('dt', 1)
+#         quad_expr = cs.vertcat(w, k1*(x2-k2)**2 + k3*(x3-k4)**2)
         
-        self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad':dt*quad_expr}
-        self.multiple_shooting()
+#         self.ODE = {'x': cs.vertcat(x, cs.vec(G), F), 'p':cs.vertcat(dt, u, w),'ode': dt*ode_rhs, 'quad':dt*quad_expr}
+#         self.multiple_shooting()
         
-        F_rhs_tf = self.x_eval[3 + 3*3 : 3 + 3*3 + 6, -1]
+#         F_rhs_tf = self.x_eval[3 + 3*3 : 3 + 3*3 + 6, -1]
         
-        F_tf = cs.MX.zeros(3,3)
-        for j in range(3):
-            for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
-            F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
-            for i in range(j + 1, 3):
-                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+#         F_tf = cs.MX.zeros(3,3)
+#         for j in range(3):
+#             for i in range(0, j):
+#                 F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+#             F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
+#             for i in range(j + 1, 3):
+#                 F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
         
-        self.set_objective(cs.trace(cs.inv(F_tf)))
-        # self.set_objective(self.q_tf[3,-1])
-        self.add_constraint(self.q_tf, [0., 0., 0, -np.inf], [M1, M2, M3, np.inf])
-        self.add_constraint(cs.sum1(self.u_eval), 1., 1.)
+#         self.set_objective(cs.trace(cs.inv(F_tf)))
+#         # self.set_objective(self.q_tf[3,-1])
+#         self.add_constraint(self.q_tf, [0., 0., 0, -np.inf], [M1, M2, M3, np.inf])
+#         self.add_constraint(cs.sum1(self.u_eval), 1., 1.)
         
-        self.build_NLP()
-        for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [0.5,0.5,0., M1/T,M2/T,M3/T])
-        self.integrate_full(self.start_point)
+#         self.build_NLP()
+#         for i in range(self.ntS):
+#             self.set_stage_control(self.start_point, i, [0.5,0.5,0., M1/T,M2/T,M3/T])
+#         self.integrate_full(self.start_point)
         
-    def perturbed_start_point(self, ind):
-        s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
-        return s
+#     def perturbed_start_point(self, ind):
+#         s = copy.copy(self.start_point)
+#         self.set_stage_control(s, ind, [0.5, 0.25, 0.25])
+#         return s
     
-    def plot(self, xi, dpi = None, title = None, it = None):
-        x1,x2,x3 = self.get_state_arrays(xi)[0:3]
-        u1,u2,u3, w1,w2,w3 = self.get_control_plot_arrays(xi)[0:6]
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         x1,x2,x3 = self.get_state_arrays(xi)[0:3]
+#         u1,u2,u3, w1,w2,w3 = self.get_control_plot_arrays(xi)[0:6]
         
-        fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(self.time_grid, x1, 'tab:olive', linestyle='--', label = r'$x_1$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
-        ax.plot(self.time_grid, x2, 'tab:purple', linestyle='-.', label = r'$x_2$')
-        ax.plot(self.time_grid, x3, 'tab:cyan', linestyle=':', label = r'$x_3$')
-        ax.step(self.time_grid_ref, u1, 'tab:olive', linestyle='-', label = r'$u_1$')
-        ax.step(self.time_grid_ref, u2, 'tab:red', linestyle='-', label = r'$u_2$')
-        ax.step(self.time_grid_ref, u3, 'grey', label = r'$u_3$')
+#         fig, ax = plt.subplots(dpi=dpi)
+#         ax.plot(self.time_grid, x1, 'tab:olive', linestyle='--', label = r'$x_1$')#, self.time_grid[:,-1], x1, '--', self.time_grid[:,-1], u, 'o')
+#         ax.plot(self.time_grid, x2, 'tab:purple', linestyle='-.', label = r'$x_2$')
+#         ax.plot(self.time_grid, x3, 'tab:cyan', linestyle=':', label = r'$x_3$')
+#         ax.step(self.time_grid_ref, u1, 'tab:olive', linestyle='-', label = r'$u_1$')
+#         ax.step(self.time_grid_ref, u2, 'tab:red', linestyle='-', label = r'$u_2$')
+#         ax.step(self.time_grid_ref, u3, 'grey', label = r'$u_3$')
         
         
-        ax.step(self.time_grid_ref, w1, 'tab:olive', linestyle='-.', label = r'$w_1$')
-        ax.step(self.time_grid_ref, w2, 'tab:red', linestyle='-.', label = r'$w_2$')
-        ax.step(self.time_grid_ref, w3, 'grey', linestyle = '-.', label = r'$w_3$')
-        ax.legend(prop={'size': 13.4}, loc = 'upper right')
+#         ax.step(self.time_grid_ref, w1, 'tab:olive', linestyle='-.', label = r'$w_1$')
+#         ax.step(self.time_grid_ref, w2, 'tab:red', linestyle='-.', label = r'$w_2$')
+#         ax.step(self.time_grid_ref, w3, 'grey', linestyle = '-.', label = r'$w_3$')
+#         ax.legend(prop={'size': 13.4}, loc = 'upper right')
         
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
+#         ax.set_xlabel('t', fontsize = 17.5)
+#         ax.xaxis.set_label_coords(1.015,-0.006)
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Three tank problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
+#         ttl = None
+#         if isinstance(title,str):
+#             ttl = title
+#         elif title == True:
+#             ttl = 'Three tank problem'
+#         if ttl is not None:
+#             if isinstance(it, int):
+#                 ttl = ttl + f', iteration {it}'
+#             plt.title(ttl)
+#         else:
+#             plt.title('')
             
-        plt.show()
-        plt.close()
-        
+#         plt.show()
+#         plt.close()
 
+
+#Lots of local minima.
 class Batch_Reactor_OED(OCProblem):
     default_params = {
         'p1': 4000,
@@ -6089,13 +6139,23 @@ class Batch_Reactor_OED(OCProblem):
         'p4': 5000,
         'M1': 0.4,
         'M2': 0.4,
-        'reg_init': 1e-3
+        'reg_init': 1e-3,
+        
+        'p1scale': 400/4000,
+        'p2scale': 400/2500,
+        'p3scale': 400/620000,
+        'p4scale': 400/5000,
+        
+        # 'p1scale': 1.0,
+        # 'p2scale': 1.0,
+        # 'p3scale': 1.0,
+        # 'p4scale': 1.0,
         }
-    def build_problem(self):
-        self.set_OCP_data(2 + 4*2 + 10, 0, 1 + 2, 2, [-np.inf,-np.inf] + [-np.inf]*18, [np.inf,np.inf] + [np.inf]*18, [], [], [298] + [0.]*2, [398] + [1.]*2)
+    def build_problem(self):                                                                                                 # Increase lower control bound to force good? local optimum
+        self.set_OCP_data(2 + 4*2 + 10, 0, 1 + 2, 2, [-np.inf,-np.inf] + [-np.inf]*18, [np.inf,np.inf] + [np.inf]*18, [], [], [298 + 60] + [0.]*2, [398] + [1.]*2)
         self.mark_state_bounds_implicit()
         
-        p1, p2, p3, p4, M1, M2, reg_init = (self.model_params[key] for key in ['p1', 'p2', 'p3', 'p4', 'M1', 'M2', 'reg_init'])
+        p1, p2, p3, p4, M1, M2, reg_init, p1scale, p2scale, p3scale, p4scale = (self.model_params[key] for key in ['p1', 'p2', 'p3', 'p4', 'M1', 'M2', 'reg_init', 'p1scale', 'p2scale', 'p3scale', 'p4scale'])
         self.fix_initial_value([1.0,0.0] + [0.]*18)
         self.fix_time_horizon(0,1)
         
@@ -6104,6 +6164,10 @@ class Batch_Reactor_OED(OCProblem):
         
         theta = cs.MX.sym('theta', 4)
         p1_s, p2_s, p3_s, p4_s = cs.vertsplit(theta)
+        
+        p1_s, p2_s, p3_s, p4_s = p1_s/p1scale, p2_s/p2scale, p3_s/p3scale, p4_s/p4scale
+        p1, p2, p3, p4 = p1*p1scale, p2*p2scale, p3*p3scale, p4*p4scale
+        
         
         T = cs.MX.sym('T', 1)
         k1 = p1_s*cs.exp(-p2_s/T)
@@ -6114,6 +6178,7 @@ class Batch_Reactor_OED(OCProblem):
                              )
         f_x_expr = cs.jacobian(f_expr, x)
         f_theta_expr = cs.jacobian(f_expr, theta)
+        
         
         f = cs.Function('f', [x,T,theta], [f_expr])
         f_x = cs.Function('f', [x,T,theta], [f_x_expr])
@@ -6163,7 +6228,7 @@ class Batch_Reactor_OED(OCProblem):
         
         self.start_point = np.zeros(self.nVar)
         for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, 298)
+            self.set_stage_control(self.start_point, i, 398)
             self.set_stage_state(self.start_point, i, self.x_init)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
         self.integrate_full(self.start_point)
@@ -6176,6 +6241,8 @@ class Batch_Reactor_OED(OCProblem):
     def plot(self, xi, dpi = None, title = None, it = None):
         x1,x2 = self.get_state_arrays_expanded(xi)[0:2]
         T, w1, w2 = self.get_control_plot_arrays(xi)
+        
+        asdf = self.get_state_arrays_expanded(xi)[2:]
         
         plt.figure(dpi = dpi)
         plt.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')

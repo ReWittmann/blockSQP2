@@ -130,6 +130,18 @@ public:
 
 #define PAR_QP_MAX 8
 
+
+
+
+enum class RestorationResults{
+    success = 0, 
+    max_rest_it_reached = 1,
+    converged = 2,
+    rest_infeasibility = 3,
+    other_error = 4 
+};
+
+
 } // namespace blockSQP2
 
 

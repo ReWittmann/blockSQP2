@@ -212,6 +212,8 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     }
     
     it_saved = false;
+    
+    restUseCRP = false;
 }
 
 SQPiterate::SQPiterate(){}

@@ -46,13 +46,19 @@ Examples = [
             # (OCProblems.Lotka_OED, dict(), None),
             # (OCProblems.Fermenter, dict(), None),
             # (OCProblems.Satellite_Deorbiting_1, dict(), None),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_1"),
-            (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_2 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_2"),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_3"),
-            (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4 | {'integrator': 'cvodes'}, "D_Onofrio_Chemotherapy_4"),
-            # (OCProblems.Denbigh_Reaction, dict(), None)
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_1"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_2 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_2"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_3"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_4"),
+            # (OCProblems.Denbigh_Reaction, dict(), None),
+            
+            (OCProblems.Fermenter, dict(), None),
             ]
-OCProblems.Goddard_Rocket.__name__ = 'Goddard\'s Rocket'
+
+
+Ext = [
+       ()
+       ]
 
 #SR1_BFGS
 opt_SR1_BFGS = blockSQP2.SQPoptions()
@@ -165,8 +171,8 @@ opt_CS2_par = blockSQP2.SQPoptions(
     par_QPs = True,
     max_filter_overrides = 0, 
     automatic_scaling = True, 
-    scaling_Theta_min = 0.1,
-    scaling_Theta_max = 10.0
+    scaling_Theta_min = 0.01,
+    scaling_Theta_max = 2.0
     )
 
 opt_CS2_par_new = blockSQP2.SQPoptions(
@@ -175,8 +181,8 @@ opt_CS2_par_new = blockSQP2.SQPoptions(
     par_QPs = True,
     max_filter_overrides = 0, 
     automatic_scaling = True, 
-    scaling_Theta_min = 0.01,
-    scaling_Theta_max = 10.0,
+    scaling_Theta_min = 0.1,
+    scaling_Theta_max = 2.0,
     )
 
 
@@ -210,9 +216,9 @@ Experiments = [
                # (opt_CS2_S5, "scaling_0p2_10"),
                # (opt_CS2_S6, "scaling_0p2_5"),
                
-                # (opt_CS2_par, "par_scale"),
+                (opt_CS2_par, "par_scale"),
                 (opt_CS2_par_new, "par_scale_new"),
-                # (opt_CS2_par_new_noScale, "par_noScale")
+                (opt_CS2_par_new_noScale, "par_noScale")
                ]
 
 
@@ -220,8 +226,8 @@ plot_folder = cD / Path("out_blockSQP2_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
-nPert0 = 10
-nPertF = 20
+nPert0 = 0
+nPertF = 10
 
 #Write results to a file?
 file_output = True

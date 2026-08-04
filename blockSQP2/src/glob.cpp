@@ -442,7 +442,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
  *
  * "The dreaded restoration phase" -- Nick Gould
  */
-int SQPmethod::feasibilityRestorationPhase(){
+RestorationResults SQPmethod::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
     if (param->enable_rest == 0) throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
 
@@ -460,8 +460,10 @@ int SQPmethod::feasibilityRestorationPhase(){
             //Relax only true constraints, ignoring matching conditions/state bounds. 
             //Faster and seems to be enough for all examples. 
             //Some matching conditions will still be relaxed if partial condensing is used.
-            rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
             
+            if (!vars->restUseCRP) rest_prob = std::make_unique<TC_restoration_Problem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+            else rest_prob = std::make_unique<CondensableRestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
+                
             //Relax state bounds as well. More expensive, may be requires for some problems (but we have seen no example yet)
             // rest_prob = std::make_unique<CondensableRestorationProblem>(prob, vars->xi, param->rest_rho, param->rest_zeta);
         }
@@ -470,13 +472,23 @@ int SQPmethod::feasibilityRestorationPhase(){
         rest_method->init();
     }
     //Invoke the restoration loop with setup problem and method
-    return innerRestorationPhase(warmStart);
+    // return innerRestorationPhase(warmStart);
+    
+    RestorationResults restRet = innerRestorationPhase(warmStart);
+    
+    if (restRet == RestorationResults::rest_infeasibility && prob->condenser != nullptr && !vars->restUseCRP){
+        std::cout << "TC_restoration_Problem failed, switch to CRP\n";
+        vars->restUseCRP = true;
+        vars->steptype = StepTypes::rest_heuristic; //Setting this to something other than rest_phase to force warmStart to be false in recursive call
+        return feasibilityRestorationPhase();
+    }
+    return restRet;
 }
 
 
-int SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
+RestorationResults SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
     int info;
-    int feas_result = 1; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
+    RestorationResults restResult = RestorationResults::max_rest_it_reached; //0: Success, 1: max_rest_IT reached, 2: converged/locally infeasible, 3: Some error occurred
     SQPresults ret;
     int maxRestIt = 20;
     double cNormTrial, objTrial, stepsize_sum = 0.;
@@ -487,8 +499,9 @@ int SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
         RwarmStart = 1;
         
         // If restMethod yields error, stop restoration phase
-        if (int(ret) < 0){
-            feas_result = 3;
+        if (ret == SQPresults::restoration_failure) return RestorationResults::rest_infeasibility;
+        else if (int(ret) < 0){
+            restResult = RestorationResults::other_error;
             break;
         }
         
@@ -512,27 +525,19 @@ int SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
         if (!pairInFilter(cNormTrial, objTrial)){
             // success
             std::cout << "Found a point acceptable for the filter.\n";
-            feas_result = 0;
+            restResult = RestorationResults::success;
             break;
         }
         
-        // If minimum norm NLP has converged, declare local infeasibility
-        /*
-        if (rest_method->vars->tol < param->opt_tol && rest_method->vars->cNormS < param->feas_tol){
-            std::cout << "feas_ret = " << static_cast<int>(ret) << "\n";
-            feas_result = 2;
-            break;
-        }
-        */
-        
+        // If minimum norm NLP has converged, declare local infeasibility        
         if (static_cast<int>(ret) > 0){
-            feas_result = 2;
+            restResult = RestorationResults::converged;
             break;
         }
     }
     
     // Success, locally infeasible or maximum restoration iterations reached
-    if (feas_result == 0 || feas_result == 2){        
+    if (restResult == RestorationResults::success || restResult == RestorationResults::converged){        
         for (int i = 0; i < prob->nVar; i++){
             vars->deltaXi(i) = -vars->xi(i);
             vars->deltaXi(i) += vars->trialXi(i);
@@ -542,17 +547,17 @@ int SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
         rest_prob->recover_lambda(rest_lambda, vars->trialLambda);
         rest_prob->recover_lambda(rest_lambdaQP, vars->lambdaQP);
         
-        if (feas_result == 0){
+        if (restResult == RestorationResults::success){
             acceptStep(vars->deltaXi, vars->trialLambda, 1.0, 0);
             // Original blockSQP does not add restoration result to filter, though this is done in the Biegler/Waechter filter line search paper
             //augmentFilter(cNormTrial, objTrial);
         }
-        else if (feas_result == 2){
+        else if (restResult == RestorationResults::converged){
             //If restoration method converged and remaining constraint violation is small, try overriding the filter
             if (cNormTrial < 1e-4 && vars->remaining_filter_overrides > 0){
                 force_accept(vars->deltaXi, vars->trialLambda, 1.0, 0);
                 vars->remaining_filter_overrides -= 1;
-                feas_result = 0;
+                restResult = RestorationResults::success;
             }
             else{
                 acceptStep(vars->deltaXi, vars->trialLambda, 1.0, 0);
@@ -570,13 +575,12 @@ int SQPmethod::innerRestorationPhase(bool RwarmStart, double min_stepsize_sum){
         vars->n_scaleIt = 0;
     }
     
-    
-    if (feas_result == 2){
+    if (restResult == RestorationResults::converged){
         stats->printProgress( prob, vars.get(), param, 0 );
-        printf("The problem seems to be locally infeasible. Infeasibilities minimized.\n");
+        std::cout << "The problem seems to be locally infeasible. Infeasibilities minimized.\n";
     }
     
-    return feas_result;
+    return restResult;
 }
 
 
@@ -945,7 +949,7 @@ bool bound_correction_method::filterLineSearch(){
 }
 
 
-int bound_correction_method::feasibilityRestorationPhase(){
+RestorationResults bound_correction_method::feasibilityRestorationPhase(){
     // No Feasibility restoration phase
     if (param->enable_rest == 0) [[unlikely]] throw std::logic_error("feasibility restoration called when enable_rest == 0, this should not happen");
     

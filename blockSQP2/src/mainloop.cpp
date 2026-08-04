@@ -139,7 +139,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 
                 if (qpError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                     std::cout << "Start feasibility restoration phase\n";
-                    qpError = bool(feasibilityRestorationPhase());
+                    qpError = bool(static_cast<int>(feasibilityRestorationPhase()));
                     vars->steptype = StepTypes::rest_phase;
                 }
                 
@@ -177,16 +177,17 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 else std::cout << "Failed.\n";
             }
             
+            RestorationResults restRet = RestorationResults::other_error;
             // Invoke feasibility restoration phase
             if (feasError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
                 std::cout << "Start feasibility restoration phase.\n";
-                feasError = feasibilityRestorationPhase();
+                restRet = feasibilityRestorationPhase();
                 vars->steptype = StepTypes::rest_phase;
             }
             
             // If everything failed, abort.
-            if (feasError == 1 || feasError > 2) return print_SQPresult(SQPresults::restoration_failure, param->result_print_color);
-            else if (feasError == 2) return print_SQPresult(SQPresults::local_infeasibility, param->result_print_color);
+            if (restRet == RestorationResults::max_rest_it_reached || restRet == RestorationResults::rest_infeasibility || restRet == RestorationResults::other_error) return print_SQPresult(SQPresults::restoration_failure, param->result_print_color);
+            else if (restRet == RestorationResults::converged) return print_SQPresult(SQPresults::local_infeasibility, param->result_print_color);
         }
 
         /////////////////////////////////////////////////////////////
