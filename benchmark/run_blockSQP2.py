@@ -24,16 +24,16 @@ sys.path += [str(cD.parent/Path("Python"))]
 import blockSQP2
 import OCProblems
 
-
+#TODO Satellite_Deorbiting, Lotka Shared OED, Catalyst Mixing OED, Diel OED, Batch Reactor OED, Apollo_Reentry
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Fermenter(
+OCprob = OCProblems.Cart_Pendulum(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
+                    **OCProblems.Cart_Pendulum.param_set_2,
                     # vmax = 15
                     # a = 100
                     )
@@ -70,7 +70,7 @@ opts = blockSQP2.SQPoptions(
     
     lim_mem = True,
     mem_size = 20,
-    opt_tol = 1e-6,                         #Tolerances for termination
+    opt_tol = 1e-7,                         #Tolerances for termination
     feas_tol = 1e-6,
     conv_kappa_max = np.inf,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     

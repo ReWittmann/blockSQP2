@@ -22,6 +22,7 @@ sys.path += [str(cD.parent/Path("Python"))]
 import OCProblems
 import blockSQP2
 import numpy as np
+import typing
 import time
 import datetime
 import matplotlib.pyplot as plt
@@ -459,7 +460,7 @@ class out_dummy:
         pass
 
 
-def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True):
+def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[dict, str]], dirPath : Path, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -476,8 +477,8 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
     titles = [EXP_name for _, EXP_name in Experiments]
     print_heading(out, titles)
     #########
-    for OCclass in Examples:        
-        OCprob = OCclass(nt=100, integrator='RK4', parallel = True)
+    for OCclass, OCargs, OCname in Examples:        
+        OCprob = OCclass(**OCargs, **kwargs)
         itMax = 200
         # ipopts_base = {'max_iter':itMax}
         EXP_N_SQP = []
@@ -491,14 +492,17 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
             EXP_type_sol.append(ret_type_sol)
             n_EXP += 1
         ###############################################################################
+        if OCname is None:
+            OCname = OCclass.__name__
+        
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-            suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "ipopt")
-        print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+            suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
+        print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
     out.close()
 
 
-def run_blockSQP2_experiments(Examples : list[type[OCProblems.OCProblem]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
+def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], dict, typing.Optional[str]]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -513,8 +517,8 @@ def run_blockSQP2_experiments(Examples : list[type[OCProblems.OCProblem]], Exper
     titles = [EXP_name for _, EXP_name in Experiments]
     print_heading(out, titles)
     
-    for OCclass in Examples:        
-        OCprob = OCclass(**kwargs)
+    for OCclass, OCargs, OCname in Examples:        
+        OCprob = OCclass(**OCargs, **kwargs)
         itMax = 200
         titles = []
         EXP_N_SQP = []
@@ -528,9 +532,12 @@ def run_blockSQP2_experiments(Examples : list[type[OCProblems.OCProblem]], Exper
             EXP_type_sol.append(ret_type_sol)
             titles.append(EXP_name)
             n_EXP += 1
+        
+        if OCname is None:
+            OCname = OCclass.__name__
         ###############################################################################
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-            suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = "blockSQP")
-        print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+            suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP")
+        print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
     out.close()

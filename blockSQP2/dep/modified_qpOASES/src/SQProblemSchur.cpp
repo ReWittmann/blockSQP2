@@ -3155,7 +3155,7 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 	numFactorizations++;
 
 	// If matrix is singular, add bounds/remove constraints according to zero pivots
-	if (retval == RET_KKT_MATRIX_SINGULAR && idxRec < 20)
+	if (retval == RET_KKT_MATRIX_SINGULAR && idxRec < 50)
 	{
 		if( repairSingularWorkingSet( ) == SUCCESSFUL_RETURN )
 			return resetSchurComplement( allowInertiaCorrection, idxRec + 1);

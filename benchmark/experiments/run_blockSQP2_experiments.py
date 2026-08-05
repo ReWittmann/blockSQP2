@@ -46,19 +46,15 @@ Examples = [
             # (OCProblems.Lotka_OED, dict(), None),
             # (OCProblems.Fermenter, dict(), None),
             # (OCProblems.Satellite_Deorbiting_1, dict(), None),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_1"),
+            (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_1"),
             # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_2 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_2"),
             # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_3"),
             # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_4"),
             # (OCProblems.Denbigh_Reaction, dict(), None),
             
-            (OCProblems.Fermenter, dict(), None),
+            # (OCProblems.Fermenter, dict(), None),
             ]
 
-
-Ext = [
-       ()
-       ]
 
 #SR1_BFGS
 opt_SR1_BFGS = blockSQP2.SQPoptions()
@@ -268,5 +264,5 @@ for OCclass, OCargs, OCname in Examples:
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP2")
-    OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()

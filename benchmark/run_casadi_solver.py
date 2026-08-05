@@ -19,13 +19,13 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Fermenter(
+OCprob = OCProblems.Batch_Reactor_OED(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    # **OCProblems.Lotka_Volterra_Fishing.param_set_3
+                    # **OCProblems.Cart_Pendulum.param_set_2
                     )
 
 ipopts = dict()
@@ -49,6 +49,8 @@ S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
 #                                           "fatrop.print_level":10,
 #                                           'fatrop':{'tol':1e-6, 'acceptable_tol':1e-4}
 #                                           })
+
+# S = cs.nlpsol('S', 'sqpmethod', OCprob.NLP)
 
 # worhp_opts = {}#'TolOpti':1e-9}
 # worhp_opts = {'TolOpti':1e-6, 'ScaledKKT':False}#'TolOpti':1e-9}
