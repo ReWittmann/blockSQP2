@@ -19,13 +19,13 @@ import time
 
 itMax = 1000
 
-OCprob = OCProblems.Batch_Reactor_OED(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    # **OCProblems.Cart_Pendulum.param_set_2
+                    # **OCProblems.Lotka_Shared_OED.param_set_2,
                     )
 
 ipopts = dict()

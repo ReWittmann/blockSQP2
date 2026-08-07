@@ -608,7 +608,49 @@ class OCProblem:
         self.hess_lag_expr = cs.jacobian(self.grad_lag_expr, xopt)
         self._hess_lag = cs.Function('hess_lag', [xopt, lam], [self.hess_lag_expr])
         self.hess_lag = lambda xi, lambd: self.to_blocks_LT(self._hess_lag(xi, lambd))
-
+        
+        #Inplace versions (for UNO solver)
+        def grad_f_inplace(xi, ret):
+            ret[:] = np.array(self._grad_f(xi), dtype = np.float64, copy = False)
+        self.grad_f_inplace = grad_f_inplace
+        def g_inplace(xi, ret):
+            ret[:] = np.array(self._g(xi), dtype = np.float64, copy = False).reshape(-1)
+        self.g_inplace = g_inplace
+        def jac_g_nz_inplace(xi, ret):
+            ret[:] = np.asarray(self._jac_g(xi).nz[:], dtype = np.float64).reshape(-1)
+        self.jac_g_nz_inplace = jac_g_nz_inplace
+        
+        jac_g_col_arr = []
+        for i in range(self.nVar):
+            jac_g_col_arr.append(np.ones(self.jac_g_colind[i+1] - self.jac_g_colind[i], dtype = np.int64)*i)
+        self.jac_g_col = np.concatenate(jac_g_col_arr)
+        
+        
+        objmult = cs.MX.sym('objmult')
+        lag_objmult_expr = self.NLP['f']*objmult - lam.T @ g_expr
+        grad_lag_objmult_expr = cs.jacobian(lag_objmult_expr, xopt)
+        hess_lag_objmult_expr = cs.jacobian(grad_lag_objmult_expr, xopt)
+        self._hess_lag_objmult = cs.Function('hess_lag_objmult', [xopt, objmult, lam], [hess_lag_objmult_expr])
+        def hess_lag_objmult_inplace(xi, arg_objmult, lambd, ret):
+            hlBlocks = self.to_blocks_LT(self._hess_lag_objmult(xi, arg_objmult, lambd))
+            ret[:] = np.concatenate(hlBlocks)
+        self.hess_lag_objmult_inplace = hess_lag_objmult_inplace
+        
+        offset = 0
+        hess_LT_row_arr = []
+        hess_LT_col_arr = []
+        self.hess_LT_nnz = 0
+        for bsize in self.hessBlock_sizes:
+            for j in range(bsize):
+                hess_LT_row_arr.append(np.arange(j, bsize) + offset)
+                hess_LT_col_arr.append(np.ones(bsize - j, dtype = np.int64)*(j + offset))
+            offset += bsize
+            self.hess_LT_nnz += (bsize*(bsize+1))//2
+        self.hess_LT_row = np.concatenate(hess_LT_row_arr)
+        self.hess_LT_col = np.concatenate(hess_LT_col_arr)
+        
+        
+        
     
     def get_stage_state(self, xi, i:int):
         if i == 0:
@@ -3307,7 +3349,13 @@ class Ocean(OCProblem):
             self.set_stage_control(self.start_point, i, [30.,10.])
             self.set_stage_state(self.start_point, i, self.x_init)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        s_ind = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, s_ind + cs.DM([1.0, 1.0]))
+        return s
+    
     def plot(self, xi, dpi = None, title = None, it = None):
         S,R,_ = self.get_state_arrays(xi)
         u1,u2 = self.get_control_plot_arrays(xi)
@@ -3605,8 +3653,10 @@ class Fermenter(OCProblem):
         
         #In Le, first term in rhs for S1, S2 and G enters with positive sign, negative in Janka and MUSCOD
         #Janka and MUSCOD seem to be correct
+        
+        Pdot = mup*E*S1*S2 - P*(uS1+uS2)/(25*V)
         ode_rhs = cs.vertcat(
-                mup*E*S1*S2 - P*(uS1+uS2)/(25*V),
+                Pdot,
                 -gx1*E*S1*S2*G - gp1*E*S1*S2 + (0.42*uS1 - S1*(uS1 + uS2))/(25*V),
                 -gx2*E*S1*S2*G - gp2*E*S1*S2 + (0.333*uS2 - S2*(uS1 + uS2))/(25*V),
                 mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
@@ -3614,7 +3664,7 @@ class Fermenter(OCProblem):
                 -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
         )
         
-        quad = cs.vertcat(uP*P + (uS1 + uS2 - uP)/25 * P + V*(mup*E*S1*S2 - P*(uS1+uS2)/(25*V)),#P,
+        quad = cs.vertcat(uP*P + (uS1 + uS2 - uP)/25 * P + V*Pdot,
                 0.0168*uS1,
                 0.01332*uS2)
         
@@ -4173,7 +4223,7 @@ class Cart_Pendulum(OCProblem):
 
 class Dielectrophoretic_Particle(OCProblem):
     default_params = {
-        'x0': 1.,
+        'x00': 1.,
         'xf': 2.,
         'alpha':-0.75,
         'c':1.
@@ -4181,8 +4231,8 @@ class Dielectrophoretic_Particle(OCProblem):
     
     def build_problem(self):
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf],[np.inf, np.inf],[0.01],[np.inf],[-1],[1])
-        x0,xf,alpha,c = (self.model_params[key] for key in self.default_params.keys())
-        self.fix_initial_value([x0, 0.])
+        x00,xf,alpha,c = (self.model_params[key] for key in ('x00', 'xf', 'alpha', 'c'))
+        self.fix_initial_value([x00, 0.])
         self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
@@ -4206,7 +4256,7 @@ class Dielectrophoretic_Particle(OCProblem):
         
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, 0.1)
+        self.set_stage_control(s, ind, 0.9)
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
@@ -4474,7 +4524,7 @@ class Lotka_Volterra_Shared(OCProblem):
               -x1 + x0 * x1 - c1 * x1 * u, 
               -x2 + 1.2 * x0 * x2 - c2 * x2 * u)
         
-        quad_expr = (x1 - 1)**2 + (x2 - 1)**2 + 1e-3*u**2 + (x0 - 1.7)**2
+        quad_expr = (x0 - 1.7)**2 + (x1 - 1)**2 + (x2 - 1)**2 + 1e-3*u**2
         dt = cs.MX.sym('dt', 1)
         self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
         self.multiple_shooting()
@@ -4932,7 +4982,10 @@ class Satellite_Deorbiting(OCProblem):
             'g0': 9.81,
             'umax': 20,
             'm0': 150,
+            'mdry': 100,
             'omegaE':7.2921e-5,
+            'h0': 450000,
+            'hreentry': 120000,
             # 'rscale': 1.0e-2,
             # 'vscale': 1.0e-1,
             # 'thetascale': 1.0,
@@ -4949,17 +5002,13 @@ class Satellite_Deorbiting(OCProblem):
             }
     
     def build_problem(self):
-        mu, RE, rho0, H, CD, A, Isp, g0, umax, omegaE, rscale, thetascale, mscale, vrscale, vthetascale, TSCALE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'omegaE', 'rscale', 'thetascale', 'mscale', 'vrscale', 'vthetascale', 'TSCALE'])
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, m0, mdry, omegaE, h0, hreentry, rscale, thetascale, mscale, vrscale, vthetascale, TSCALE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'm0', 'mdry', 'omegaE', 'h0', 'hreentry', 'rscale', 'thetascale', 'mscale', 'vrscale', 'vthetascale', 'TSCALE'])
         
-        h0 = 450000
         r0 = RE + h0
         theta0 = 0.
         vr0 = 0.
         vorb = np.sqrt(mu/r0)
-        m0 = 150
-        mdry = 100
         
-        hreentry = 120000
         rfinal = RE + hreentry
         
         self.set_OCP_data(5,1,2,0, [(RE+5000. - RE)*rscale, -2*np.pi*thetascale, -10000.*vrscale, 0.*vthetascale, (mdry - 0.1)*mscale], [(r0 + 100000. - RE)*rscale, 2*np.pi*thetascale, 10000.*vrscale, 20000*vthetascale, (m0 + 0.1)*mscale], [300/self.ntS * TSCALE], [21600/self.ntS * TSCALE], [-umax, -umax], [umax, umax])
@@ -4974,13 +5023,13 @@ class Satellite_Deorbiting(OCProblem):
             h_safe = cs.fmax(h, -100000)
             return rho0 * cs.exp(-h_safe / H)
         
-        # Relative velocity components
-        def relative_velocity(v_r_val, v_theta_val, r_val):
-            v_rel_r = v_r_val
-            v_rel_theta = v_theta_val - omegaE * r_val
-            v_rel_sq = v_rel_r**2 + v_rel_theta**2
-            v_rel = safe_sqrt(v_rel_sq)
-            return v_rel_r, v_rel_theta, v_rel
+        # # Relative velocity components
+        # def relative_velocity(v_r_val, v_theta_val, r_val):
+        #     v_rel_r = v_r_val
+        #     v_rel_theta = v_theta_val - omegaE * r_val
+        #     v_rel_sq = v_rel_r**2 + v_rel_theta**2
+        #     v_rel = safe_sqrt(v_rel_sq)
+        #     return v_rel_r, v_rel_theta, v_rel
         
         X = cs.MX.sym('X', 5)
         r_, theta_, vr_, vtheta_, m_ = cs.vertsplit(X)
@@ -4998,8 +5047,16 @@ class Satellite_Deorbiting(OCProblem):
         rsafe = cs.fmax(r, RE + 10000)
         msafe = cs.fmax(m, mdry)
         
-        rho = atmospheric_density(rsafe)
-        vrelr, vreltheta, vrel = relative_velocity(vr, vtheta, rsafe)
+        # rho = atmospheric_density(rsafe)
+        hsafe = cs.fmax(rsafe - RE, -100000)
+        rho = rho0 * cs.exp(-hsafe/H)
+        
+        # vrelr, vreltheta, vrel = relative_velocity(vr, vtheta, rsafe)
+        
+        vrelr = vr
+        vreltheta = vtheta - omegaE*rsafe
+        vrel = safe_sqrt(vrelr**2 + vreltheta**2)
+        
         
         centrifugal = vtheta**2/rsafe
         gravity = mu/(rsafe**2)
@@ -5066,10 +5123,10 @@ class Satellite_Deorbiting(OCProblem):
         time_grid_ref = np.cumsum(np.concatenate([np.array([0]), dte]))/TSCALE
         
         fix, ax = plt.subplots(dpi=dpi)
-        ax.plot(time_grid, (r - RE)/1000, 'tab:cyan', linestyle = '--', label = r'(r - Re)/1000')
+        ax.plot(time_grid, (r - RE)/1000, 'tab:cyan', linestyle = '--', label = r'(r - RE)/1000')
         ax.plot(time_grid, theta*50, 'tab:green', linestyle = ':', label = r'$\theta\cdot 50$')
         ax.plot(time_grid, vr, 'tab:blue', linestyle = '--', label = r'$v_r$')
-        ax.plot(time_grid, vtheta - vorb, 'tab:olive', linestyle = '-.', label = r'$v_\theta - vorb$')
+        ax.plot(time_grid, vtheta - vorb, 'tab:olive', linestyle = '-.', label = r'$v_\theta - v_\theta(0)$')
         ax.plot(time_grid, (m - 100.)*4, 'tab:blue', linestyle = ':', label = r'(m - 100)$\cdot 4$')
         
         ax.step(time_grid_ref, ur*20, 'tab:red', label = r'$u_r \cdot 20$')
@@ -5278,6 +5335,9 @@ class Lotka_Shared_OED(OCProblem):
                       'M3': 4.0,
                       'reg_init': 0.1
                       }
+    param_set_1 = {'x_init':[1.5,0.5,1.0]}
+    param_set_2 = {'x_init':[1.5,1.0,0.5]}
+    
     def build_problem(self):
         self.set_OCP_data(3+9+6,0,4,3, [0.,0.,0.] + [-np.inf]*15, [np.inf, np.inf, np.inf] + [np.inf]*15,[],[],[0.]*4,[1.]*4)
         
@@ -5445,7 +5505,7 @@ class Lotka_OED_new(OCProblem):
                 F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf)))
-        self.add_constraint(self.q_tf - M, -np.inf, 0.)
+        self.add_constraint(self.q_tf, -np.inf, M)
         self.build_NLP()
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0.,1/3,1/3])
@@ -5578,7 +5638,7 @@ class Catalyst_Mixing_OED(OCProblem):
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, [0.9, 0., 0.])
+        self.set_stage_control(s, ind, [0.6, 0., 0.])
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
@@ -5951,7 +6011,7 @@ class Batch_Reactor_OED(OCProblem):
 
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, 300)
+        self.set_stage_control(s, ind, 390)
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
@@ -6174,7 +6234,7 @@ class Apollo_Reentry(OCProblem):
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, 0.1)
+        self.set_stage_control(s, ind, 0.6)
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
