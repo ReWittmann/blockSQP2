@@ -25,13 +25,13 @@ import unopy
 import OCProblems
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Cart_Pendulum(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
-                                            #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
+                    **OCProblems.Cart_Pendulum.param_set_1,                        #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 itMax = 200                                  #max number of steps
 
@@ -56,30 +56,23 @@ def create_UNO_model(OCprob:OCProblems.OCProblem, start_pert = None):
         model.set_initial_primal_iterate(OCprob.start_point)
     return model
 
-ret_f = np.zeros(OCprob.nVar)   
-OCprob.grad_f_inplace(OCprob.start_point, ret_f)
-
-ret_g = np.zeros(OCprob.nCon)
-OCprob.g_inplace(OCprob.start_point, ret_g)
-
-ret_jac_g = np.zeros(OCprob.jac_g_nnz)
-OCprob.jac_g_nz_inplace(OCprob.start_point, ret_jac_g)
-
-ret_hess = np.zeros(OCprob.hess_LT_nnz)
-OCprob.hess_lag_objmult_inplace(OCprob.start_point, 1, np.zeros(OCprob.nCon), ret_hess)
-
 UNOmodel = create_UNO_model(OCprob)
 UNOsol = unopy.UnoSolver()
 UNOsol.set_preset("filtersqp")
+UNOsol.set_option("max_iterations", 300)
 UNOsol.set_option("QP_solver", "BQPD")
-# UNOsol.set_option("hessian_model", "LBFGS")
+UNOsol.set_option("hessian_model", "exact")
 UNOsol.set_option("linear_solver", "MUMPS")
 
 t0 = time.time()
 result = UNOsol.optimize(UNOmodel)
 t1 = time.time()    
 
-OCprob.plot(result.primal_solution)
+OCprob.plot(result.primal_solution, dpi = 200)
+
+it = result.number_iterations
+secs = result.cpu_time
+ret = result.optimization_status
 
 time.sleep(0.25)
 print("\n", t1 - t0, "s")

@@ -1139,8 +1139,8 @@ class Goddard_Rocket(OCProblem):
         self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs}
         self.multiple_shooting()
         
-        v_eval = self.x_eval[1,:]
-        r_eval = self.x_eval[0,:]
+        v_eval = self.x_eval[1,1:]
+        r_eval = self.x_eval[0,1:]
         
         max_drag_expr = A*(v_eval**2) * cs.exp(-k * (r_eval - r0))
         self.add_constraint(max_drag_expr, -np.inf, C)
@@ -1183,37 +1183,12 @@ class Goddard_Rocket(OCProblem):
         ax.step(time_grid, u, 'tab:red', label = '$u$')
         ax.legend(fontsize = 'large')
         
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
-        
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Goddard\'s rocket problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Goddard\'s rocket problem')
+
 
 #Goddard rocket with only state, control bounds and terminal constraints by adding the air friction as a differential state.
 #Formulated by a fellow PhD.
 class Goddard_Rocket_MOD(Goddard_Rocket):
-    default_params = {
-        'rT':1.01, 
-        'b':7.0, 
-        'A':310.0, 
-        'k':500.0, 
-        'Tmax':3.5, 
-        'C':0.6, 
-        'x_init':[1.0,0.0,1.0]
-        }
-    
     def build_problem(self):
         Tmax, A, b, k, rT, C = (self.model_params[key] for key in ('Tmax', 'A', 'b', 'k', 'rT', 'C'))
         
@@ -1263,28 +1238,83 @@ class Goddard_Rocket_MOD(Goddard_Rocket):
         u = self.get_control_plot_arrays(xi)
         r,v,m,_ = self.get_state_arrays_expanded(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, (r - 1)*100, 'b--', label = r'$(r-1)\cdot 100$')
-        plt.plot(time_grid, v*20, 'g:', label = r'$v\cdot 20$')
-        plt.plot(time_grid, m, 'y-.', label = '$m$')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(time_grid, (r - 1)*100, 'b--', label = r'$(r-1)\cdot 100$')
+        ax.plot(time_grid, v*20, 'g:', label = r'$v\cdot 20$')
+        ax.plot(time_grid, m, 'y-.', label = '$m$')
         
-        plt.step(time_grid, u, 'r', label = '$u$')
-        plt.legend(fontsize = 'large')
+        ax.step(time_grid, u, 'r', label = '$u$')
+        ax.legend(fontsize = 'large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Goddard\'s rocket problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, "Goddard\'s rocket problem")
+        
+class Goddard_Rocket_noParams(Goddard_Rocket):
+    def build_problem(self):
+        #                                                                   Set upper bound to time, so fatrop does not enter region of local infeasibility
+        self.set_OCP_data(3 + 1,0,1,0,[1.0,0.,0.,0.],[np.inf,np.inf,np.inf,0.25/self.ntS],[],[],[0],[1])
+        self.fix_initial_value(self.model_params['x_init'] + [None])
+        self.fix_time_horizon(0, 1)
+        
+        x = cs.MX.sym('x', self.nx)
+        r,v,m,dt = cs.vertsplit(x)
+        r0,v0,m0,_ = self.x_init
+        
+        u = cs.MX.sym('u', self.nu)
+        # p = cs.MX.sym('p', self.np)
+        
+        # dt = p
+        
+        Tmax, A, b, k, rT, C = (self.model_params[key] for key in ('Tmax', 'A', 'b', 'k', 'rT', 'C'))
+        
+        ode_rhs = cs.vertcat(v,\
+                            -1/(r**2) + (1/m) * (Tmax*u - A*(v**2) * cs.exp(-k * (r - r0))),\
+                            -b*u,
+                            0
+                            )
+        dt_ = cs.MX.sym('dt_')
+        self.ODE = {'x': x, 'p':cs.vertcat(dt_, u),'ode': dt*ode_rhs}
+        self.multiple_shooting()
+        
+        r_eval = self.x_eval[0,1:]
+        v_eval = self.x_eval[1,1:]
+        
+        # r_eval = self.x_eval[0,1]
+        # v_eval = self.x_eval[1,1]
+        
+        max_drag_expr = A*(v_eval**2) * cs.exp(-k * (r_eval - r0))
+        self.add_constraint(max_drag_expr, -np.inf, C)
+        self.add_constraint(r_eval[-1], rT, np.inf)
+        
+        self.start_point = np.zeros(self.nVar)
+        nt_acc = math.ceil(self.ntS*2/5)
+        nt_dec = math.floor(self.ntS*3/5)
+        for i in range(nt_acc):
+            self.set_stage_control(self.start_point, i, [1.0])
+            # self.set_stage_param(self.start_point, i, [0.4/(b*0.4)/self.ntS])
+        for i in range(nt_acc,nt_acc+nt_dec):
+            self.set_stage_control(self.start_point, i, [0.0])
+            # self.set_stage_param(self.start_point, i, [0.4/(b*0.4)/self.ntS])
+        self.set_stage_state(self.start_point, 0, 0.4/(b*0.4)/self.ntS)
+        self.integrate_full(self.start_point)
+        self.set_objective(-self.x_eval[2,-1])
+        self.build_NLP()
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        u = self.get_control_plot_arrays(xi)
+        r,v,m,t_arr = self.get_state_arrays_expanded(xi)
+        time_grid = np.cumsum(t_arr).reshape(-1)
+        
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid, (r - 1)*100, 'tab:blue', linestyle = ':', label = r'$(r-1)\cdot 100$')
+        ax.plot(time_grid, v*20, 'tab:green', linestyle = '--', label = r'$v\cdot 20$')
+        ax.plot(time_grid, m, 'tab:olive', linestyle = '-.', label = '$m$')
+        
+        
+        ax.step(time_grid, u, 'tab:red', label = '$u$')
+        ax.legend(fontsize = 'large')
+        
+        self.finish_plot(ax, title, it, 'Goddard\'s rocket problem')
+
         
 
 class Calcium_Oscillation(OCProblem):
@@ -1694,17 +1724,17 @@ class Catalyst_Mixing(OCProblem):
         'alpha': 10
         }
     
-    param_set_1 = {
-        'alpha': 10
-        }
+    # param_set_1 = {
+    #     'alpha': 10
+    #     }
     
-    param_set_2 = {
-        'alpha': 4
-        }
+    # param_set_2 = {
+    #     'alpha': 4
+    #     }
     
-    param_set_3 = {
-        'alpha': 25
-        }
+    # param_set_3 = {
+    #     'alpha': 25
+    #     }
     def build_problem(self):
         self.set_OCP_data(2,0,1,0,[-np.inf,-np.inf],[np.inf,np.inf],[],[],[0.],[1.])
         self.fix_time_horizon(0,1)
@@ -1769,6 +1799,7 @@ class Cushioned_Oscillation(OCProblem):
         'x0':2.,
         'v0':5.,
         'umm':5.}
+    
     def build_problem(self):
         m,c,x0,v0,umm = (self.model_params[key] for key in ['m', 'c', 'x0', 'v0', 'umm'])
         self.set_OCP_data(2,1,1,0,[-np.inf,-np.inf], [np.inf,np.inf], [8/self.ntS],[20/self.ntS], [-umm], [umm])
@@ -1814,19 +1845,7 @@ class Cushioned_Oscillation(OCProblem):
         ax.set_xlabel('t', fontsize = 17.5)
         ax.xaxis.set_label_coords(1.015,-0.006)
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'cushioned oscillation problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Cushioned oscillation problem')
         
         
 class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
@@ -1861,33 +1880,6 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
         s = copy.copy(self.start_point)
         self.set_stage_control(s, ind, 0.1)
         return s
-    
-    def plot(self, xi, dpi = None, title = None, it = None):
-        TSCALE = self.model_params['TSCALE']
-        x,v = self.get_state_arrays(xi)
-        u = self.get_control_plot_arrays(xi)
-        p = self.get_param_arrays(xi)
-        time_grid = np.cumsum(np.concatenate([[0], p.reshape(-1)]))/TSCALE
-        
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, x, 'tab:blue', linestyle = '--', label = 'x')
-        plt.plot(time_grid, v, 'tab:green', linestyle = '-.', label = 'v')
-        plt.step(time_grid, u, 'tab:red', label = 'u')
-        plt.legend(loc='upper right')
-        
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'cushioned oscillation problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
         
 #Cvodes recommended
 class D_Onofrio_Chemotherapy(OCProblem):

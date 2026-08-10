@@ -27,32 +27,44 @@ import OCProblems
 
 # Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
-            # (OCProblems.Batch_Reactor, dict(), "Batch_Reactor"),
+            # (OCProblems.Apollo_Reentry, dict(), None),
+            # (OCProblems.Batch_Distillation, dict(), None),
+            # (OCProblems.Batch_Reactor, dict(), None),
+            # (OCProblems.Batch_Reactor_OED, dict(), None),
+            # (OCProblems.Calcium_Oscillation, dict(), None),
             # (OCProblems.Cart_Pendulum, dict(), None),
+            # (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2),
             # (OCProblems.Catalyst_Mixing, dict(), None),
+            # (OCProblems.Catalyst_Mixing_OED, dict(), None),
             # (OCProblems.Cushioned_Oscillation, dict(), None),
+            # (OCProblems.Dielectrophoretic_Particle, dict(), None),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1, "D_Onofrio_Chemotherapy"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_2, "D_Onofrio_Chemotherapy_2"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3, "D_Onofrio_Chemotherapy_3"),
+            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4, "D_Onofrio_Chemotherapy_4"),
             # (OCProblems.Ducted_Fan, dict(), None),
             # (OCProblems.Egerstedt_Standard, dict(), None),
             # (OCProblems.Electric_Car, dict(), None),
+            # (OCProblems.Fermenter, dict(), None),
             # (OCProblems.Goddard_Rocket, dict(), 'Goddard\'s Rocket'),
             # (OCProblems.Hang_Glider, dict(), None),
             # (OCProblems.Hanging_Chain, dict(), None),
             # (OCProblems.Lotka_Volterra_Fishing, dict(), None),
+            # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_2, "Lotka_Volterra_Fishing_2"),
+            # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_3, "Lotka_Volterra_Fishing_3"),
+            # (OCProblems.Lotka_OED, dict(), None),
+            # (OCproblems.Lotka_Volterra_Competitive, dict(), None),
+            # (OCproblems.Lotka_Volterra_Competitive, OCproblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
+            # (OCproblems.Lotka_Volterra_Shared, dict(), None),
+            # (OCproblems.Lotka_Volterra_Shared, OCproblems.Lotka_Volterra_Shared.param_set_2, "Lotka_Volterra_Shared_2"),
+            # (OCproblems.Lotka_Shared_OED, dict(), None),
+            # (OCproblems.Ocean, dict(), None),
             # (OCProblems.Particle_Steering, dict(), None),
             # (OCProblems.Quadrotor_Helicopter, dict(), None),
+            # (OCProblems.Satellite_Deorbiting, dict(), None),
             # (OCProblems.Three_Tank_Multimode, dict(), None),
             # (OCProblems.Time_Optimal_Car, dict(), None),
             # (OCProblems.Tubular_Reactor, dict(), None),
-            # (OCProblems.Lotka_OED, dict(), None),
-            # (OCProblems.Fermenter, dict(), None),
-            # (OCProblems.Satellite_Deorbiting_1, dict(), None),
-            (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_1 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_1"),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_2 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_2"),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_3 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_3"),
-            # (OCProblems.D_Onofrio_Chemotherapy, OCProblems.D_Onofrio_Chemotherapy.param_set_4 | {'integrator': 'RK4'}, "D_Onofrio_Chemotherapy_4"),
-            # (OCProblems.Denbigh_Reaction, dict(), None),
-            
-            # (OCProblems.Fermenter, dict(), None),
             ]
 
 
@@ -250,6 +262,12 @@ for OCclass, OCargs, OCname in Examples:
     EXP_N_secs = []
     EXP_type_sol = []
     n_EXP = 0
+    
+    #Hack: Test for less points for Batch_Distillation due to very long runtime
+    if issubclass(OCclass, OCProblems.Batch_Distillation):
+        nPertFsave = nPertF
+        nPertF = 2
+    
     for EXP_opts, EXP_name in Experiments:
         ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, COND = condensing)
         EXP_N_SQP.append(ret_N_SQP)
@@ -265,4 +283,9 @@ for OCclass, OCargs, OCname in Examples:
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP2")
     OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    
+    #Hack
+    if issubclass(OCclass, OCProblems.Batch_Distillation):
+        nPertF = nPertFsave
+        
 out.close()

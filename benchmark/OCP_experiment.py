@@ -19,6 +19,7 @@ except:
     cD = Path.cwd()
 sys.path += [str(cD.parent/Path("Python"))]
 
+import copy
 import OCProblems
 import blockSQP2
 import numpy as np
@@ -95,8 +96,8 @@ def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, 
     N_SQP = []
     N_secs = []
     type_sol = []
+    S = cs.nlpsol('S', plugin, NLP, opts)
     for j in range(nPert0, nPertF):
-        S = cs.nlpsol('S', plugin, NLP, opts)
         start_it = OCprob.perturbed_start_point(j)
         
         t0 = time.monotonic()
@@ -111,6 +112,101 @@ def casadi_solver_perturbed_starts(plugin : str, OCprob : OCProblems.OCProblem, 
             N_SQP.append(stats['n_call_nlp_grad_f'] - 1)
         elif plugin == 'fatrop':
             N_SQP.append(stats['iterations_count'])
+        type_sol.append(int(stats['success']))
+        N_secs.append(t1 - t0)
+    return N_SQP, N_secs, type_sol
+
+
+
+def reorder_constr_for_fatrop(constr_expr, lb_con, ub_con, ntS, nx, n_path_constr, n_term_constr, path_constr_0 = False, path_constr_F = True):
+    if n_path_constr == 0:
+        return constr_expr, lb_con, ub_con
+    
+    match_arr = []
+    lb_match_arr = []
+    ub_match_arr = []
+    
+    path_constr_arr = []
+    lb_path_constr_arr = []
+    ub_path_constr_arr = []
+    
+    offset = 0
+    for i in range(ntS):
+        match_arr.append(constr_expr[offset:offset+nx])
+        lb_match_arr.append(lb_con[offset:offset+nx])
+        ub_match_arr.append(ub_con[offset:offset+nx])
+        offset += nx
+    for i in range(ntS + int(path_constr_0)):
+        path_constr_arr.append(constr_expr[offset:offset+n_path_constr])
+        lb_path_constr_arr.append(lb_con[offset:offset+n_path_constr])
+        ub_path_constr_arr.append(ub_con[offset:offset+n_path_constr])
+        offset += n_path_constr
+    term_constr = constr_expr[offset:offset+n_term_constr]
+    lb_term_constr = lb_con[offset:offset+n_term_constr]
+    ub_term_constr = ub_con[offset:offset+n_term_constr]
+    
+    
+    constr_arr = []
+    lb_con_arr = []
+    ub_con_arr = []
+    constr_arr.append(match_arr[0])
+    lb_con_arr.append(lb_match_arr[0])
+    ub_con_arr.append(ub_match_arr[0])
+    if path_constr_0:
+        constr_arr.append(path_constr_arr[0])
+        lb_con_arr.append(lb_path_constr_arr[0])
+        ub_con_arr.append(ub_path_constr_arr[0])
+    
+    for i in range(ntS-1):
+        constr_arr.append(match_arr[1+i])
+        lb_con_arr.append(lb_match_arr[1+i])
+        ub_con_arr.append(ub_match_arr[1+i])
+        
+        constr_arr.append(path_constr_arr[int(path_constr_0) + i])
+        lb_con_arr.append(lb_path_constr_arr[int(path_constr_0) + i])
+        ub_con_arr.append(ub_path_constr_arr[int(path_constr_0) + i])
+        
+    constr_arr.append(path_constr_arr[int(path_constr_0) + ntS-1])
+    lb_con_arr.append(lb_path_constr_arr[int(path_constr_0) + ntS-1])
+    ub_con_arr.append(ub_path_constr_arr[int(path_constr_0) + ntS-1])
+    
+    constr_arr.append(term_constr)
+    lb_con_arr.append(lb_term_constr)
+    ub_con_arr.append(ub_term_constr)
+    
+    return cs.vertcat(*constr_arr), np.concatenate(lb_con_arr), np.concatenate(ub_con_arr)
+
+#Note: Fatrop does not support parameter equality constraints, need to be formulated as states with derivative zero
+def fatrop_perturbed_starts(OCprob : OCProblems.OCProblem, n_path_constr, n_term_constr, arg_opts : dict, nPert0, nPertF, itMax = 200):
+    NLP = copy.deepcopy(OCprob.NLP)
+    
+    g_expr_ft, lb_con_ft, ub_con_ft = reorder_constr_for_fatrop(NLP['g'], OCprob.lb_con, OCprob.ub_con, OCprob.ntS, OCprob.nx, n_path_constr, n_term_constr)
+    NLP['g'] = g_expr_ft
+    
+    opts = copy.deepcopy(arg_opts)
+    opts.update({
+        'structure_detection': 'manual',
+        'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS,
+        'nu': [OCprob.nu]*OCprob.ntS + [0],
+        'ng': [0] + [n_path_constr]*(OCprob.ntS-1) + [n_path_constr + n_term_constr], 
+        'N':OCprob.ntS, 
+        'expand': False,
+        'jit_options': {'flags': '-Os', 'verbose': False},
+        })
+    
+    N_SQP = []
+    N_secs = []
+    type_sol = []
+    S = cs.nlpsol('S', "fatrop", NLP, opts)
+    
+    for j in range(nPert0, nPertF):
+        # S = cs.nlpsol('S', "fatrop", NLP, opts)
+        start_it = OCprob.perturbed_start_point(j)
+        t0 = time.monotonic()
+        out = S(x0=start_it, lbx=OCprob.lb_var, ubx=OCprob.ub_var, lbg=lb_con_ft, ubg=ub_con_ft)
+        t1 = time.monotonic()
+        stats = S.stats()
+        N_SQP.append(stats['fatrop']['iterations_count'])
         type_sol.append(int(stats['success']))
         N_secs.append(t1 - t0)
     return N_SQP, N_secs, type_sol
