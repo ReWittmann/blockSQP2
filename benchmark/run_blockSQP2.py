@@ -20,19 +20,20 @@ try:
 except:
     cD = Path.cwd()
 sys.path += [str(cD.parent/Path("Python"))]
-
+sys.path += [str(cD/Path("experiments"))]
 import blockSQP2
 import OCProblems
 
+import OCProblems_fatrop
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Goddard_Rocket(
+OCprob = OCProblems.D_Onofrio_Chemotherapy(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    **OCProblems.Cart_Pendulum.param_set_1,
+                    **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
                     )
 itMax = 200                                  #max number of steps
 

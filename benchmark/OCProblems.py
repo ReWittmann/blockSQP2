@@ -1248,74 +1248,6 @@ class Goddard_Rocket_MOD(Goddard_Rocket):
         
         self.finish_plot(ax, title, it, "Goddard\'s rocket problem")
         
-class Goddard_Rocket_noParams(Goddard_Rocket):
-    def build_problem(self):
-        #                                                                   Set upper bound to time, so fatrop does not enter region of local infeasibility
-        self.set_OCP_data(3 + 1,0,1,0,[1.0,0.,0.,0.],[np.inf,np.inf,np.inf,0.25/self.ntS],[],[],[0],[1])
-        self.fix_initial_value(self.model_params['x_init'] + [None])
-        self.fix_time_horizon(0, 1)
-        
-        x = cs.MX.sym('x', self.nx)
-        r,v,m,dt = cs.vertsplit(x)
-        r0,v0,m0,_ = self.x_init
-        
-        u = cs.MX.sym('u', self.nu)
-        # p = cs.MX.sym('p', self.np)
-        
-        # dt = p
-        
-        Tmax, A, b, k, rT, C = (self.model_params[key] for key in ('Tmax', 'A', 'b', 'k', 'rT', 'C'))
-        
-        ode_rhs = cs.vertcat(v,\
-                            -1/(r**2) + (1/m) * (Tmax*u - A*(v**2) * cs.exp(-k * (r - r0))),\
-                            -b*u,
-                            0
-                            )
-        dt_ = cs.MX.sym('dt_')
-        self.ODE = {'x': x, 'p':cs.vertcat(dt_, u),'ode': dt*ode_rhs}
-        self.multiple_shooting()
-        
-        r_eval = self.x_eval[0,1:]
-        v_eval = self.x_eval[1,1:]
-        
-        # r_eval = self.x_eval[0,1]
-        # v_eval = self.x_eval[1,1]
-        
-        max_drag_expr = A*(v_eval**2) * cs.exp(-k * (r_eval - r0))
-        self.add_constraint(max_drag_expr, -np.inf, C)
-        self.add_constraint(r_eval[-1], rT, np.inf)
-        
-        self.start_point = np.zeros(self.nVar)
-        nt_acc = math.ceil(self.ntS*2/5)
-        nt_dec = math.floor(self.ntS*3/5)
-        for i in range(nt_acc):
-            self.set_stage_control(self.start_point, i, [1.0])
-            # self.set_stage_param(self.start_point, i, [0.4/(b*0.4)/self.ntS])
-        for i in range(nt_acc,nt_acc+nt_dec):
-            self.set_stage_control(self.start_point, i, [0.0])
-            # self.set_stage_param(self.start_point, i, [0.4/(b*0.4)/self.ntS])
-        self.set_stage_state(self.start_point, 0, 0.4/(b*0.4)/self.ntS)
-        self.integrate_full(self.start_point)
-        self.set_objective(-self.x_eval[2,-1])
-        self.build_NLP()
-    
-    def plot(self, xi, dpi = None, title = None, it = None):
-        u = self.get_control_plot_arrays(xi)
-        r,v,m,t_arr = self.get_state_arrays_expanded(xi)
-        time_grid = np.cumsum(t_arr).reshape(-1)
-        
-        fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(time_grid, (r - 1)*100, 'tab:blue', linestyle = ':', label = r'$(r-1)\cdot 100$')
-        ax.plot(time_grid, v*20, 'tab:green', linestyle = '--', label = r'$v\cdot 20$')
-        ax.plot(time_grid, m, 'tab:olive', linestyle = '-.', label = '$m$')
-        
-        
-        ax.step(time_grid, u, 'tab:red', label = '$u$')
-        ax.legend(fontsize = 'large')
-        
-        self.finish_plot(ax, title, it, 'Goddard\'s rocket problem')
-
-        
 
 class Calcium_Oscillation(OCProblem):
     default_params = {
@@ -1396,35 +1328,16 @@ class Calcium_Oscillation(OCProblem):
         return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
-        x0, x1, x2, x3 = self.get_state_arrays(xi)
+        x0, x1, x2, x3 = self.get_state_arrays_expanded(xi)
         w = self.get_control_plot_arrays(xi)        
         
         fig, ax = plt.subplots(dpi = dpi)
-        ax.plot(self.time_grid, x0, 'tab:olive', linestyle = '--', label = r'$x_0$')
-        ax.plot(self.time_grid, x1, 'tab:green', linestyle = '-.', label = r'$x_1$')
-        ax.plot(self.time_grid, x2, 'tab:cyan', linestyle = ':', label = r'$x_2$')
-        ax.plot(self.time_grid, x3, 'tab:blue', linestyle = '-.', label = r'$x_3$')
-        ax.step(self.time_grid, (w-1.0)*20, 'tab:red', label = r'$(w-1)\cdot 20$')
-        
+        ax.plot(self.time_grid_ref, x0, 'tab:olive', linestyle = '--', label = r'$x_0$')
+        ax.plot(self.time_grid_ref, x1, 'tab:green', linestyle = '-.', label = r'$x_1$')
+        ax.plot(self.time_grid_ref, x2, 'tab:cyan', linestyle = ':', label = r'$x_2$')
+        ax.plot(self.time_grid_ref, x3, 'tab:blue', linestyle = '-.', label = r'$x_3$')
+        ax.step(self.time_grid_ref, (w-1.0)*20, 'tab:red', label = r'$(w-1)\cdot 20$')
         ax.legend(fontsize='large')
-        
-        # ax.set_xlabel('t', fontsize = 17.5)
-        # ax.xaxis.set_label_coords(1.015,-0.006)
-        
-        # ttl = None
-        # if isinstance(title,str):
-        #     ttl = title
-        # elif title == True:
-        #     ttl = 'Calcium oscillation'
-        # if ttl is not None:
-        #     if isinstance(it, int):
-        #         ttl = ttl + f', iteration {it}'
-        #     plt.title(ttl)
-        # else:
-        #     plt.title('')
-            
-        # plt.show()
-        # plt.close()
         
         self.finish_plot(ax, title, it, 'Calcium Oscillation problem')
 
@@ -1976,20 +1889,6 @@ class D_Onofrio_Chemotherapy(OCProblem):
         ax.legend(fontsize='large', loc = 'upper right')
         
         self.finish_plot(ax, title, it, 'D\'Onofrio chemotherapy problem')
-        # ttl = None
-        # if isinstance(title,str):
-        #     ttl = title
-        # elif title == True:
-        #     ttl = 'D\'Onofrio chemotherapy problem'
-        # if ttl is not None:
-        #     if isinstance(it, int):
-        #         ttl = ttl + f', iteration {it}'
-        #     plt.title(ttl)
-        # else:
-        #     plt.title('')
-            
-        # plt.show()   
-        # plt.close()
     
 # class D_Onofrio_Chemotherapy_VT(OCProblem):
 #     default_params = {'zeta':0.192, 'b':5.85, 'mu': 0.0, 'd':0.00873, 'G':0.15, 'x20':0.0, 'x30':0.0, 'u0max':75., 'x2max':300., 'x00':12000., 'x10':15000., 'u1max':1., 'x3max':2., 'F':1., 'eta':1., 'alpha':0.}
@@ -4263,24 +4162,8 @@ class Dielectrophoretic_Particle(OCProblem):
         ax.plot(time_grid_ref, x1, 'tab:blue', linestyle='--', label = '$x_1$')
         ax.step(time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
         ax.legend(fontsize='x-large')
-        
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Dielectrophoretic Particle problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
-        
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Dielectrophoretic Particle problem')
+
         
 class Double_Oscillator(OCProblem):
     default_params = {
@@ -6020,20 +5903,6 @@ class Batch_Reactor_OED(OCProblem):
         
         ax.legend(fontsize='large')
         self.finish_plot(ax, title, it, "Batch reactor OED")
-        # ttl = None
-        # if isinstance(title,str):
-        #     ttl = title
-        # elif title == True:
-        #     ttl = 'Batch reactor OED'
-        # if ttl is not None:
-        #     if isinstance(it, int):
-        #         ttl = ttl + f', iteration {it}'
-        #     plt.title(ttl)
-        # else:
-        #     plt.title('')
-            
-        # plt.show()
-        # plt.close()
         
         
 
@@ -6222,7 +6091,6 @@ class Apollo_Reentry(OCProblem):
             self.set_stage_control(self.start_point, i, 0.5)
             self.set_stage_state(self.start_point, i, self.x_init)
         self.set_stage_state(self.start_point, self.ntS, self.x_init)
-        # self.integrate_full(self.start_point)
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
@@ -6243,20 +6111,4 @@ class Apollo_Reentry(OCProblem):
         ax.step(time_grid_ref, u/5, 'tab:red', linestyle='-', label = r'$u/5$')
         ax.legend(fontsize='x-large', loc = 'upper right')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Reentry problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
-        
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, "Apollo reentry problem")

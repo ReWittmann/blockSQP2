@@ -129,7 +129,7 @@ class SQPoptions{
     //Scaling
     int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance
     double scaling_Theta_min = 0.1;
-    double scaling_Theta_max = 10.0;
+    double scaling_Theta_max = 2.0;
     
     //Advanced options for numerical experiments
     bool indef_local_only = false;              //Only use fallback as long as KKT error is "large"

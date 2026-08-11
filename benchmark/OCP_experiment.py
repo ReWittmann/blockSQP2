@@ -136,7 +136,7 @@ def reorder_constr_for_fatrop(constr_expr, lb_con, ub_con, ntS, nx, n_path_const
         lb_match_arr.append(lb_con[offset:offset+nx])
         ub_match_arr.append(ub_con[offset:offset+nx])
         offset += nx
-    for i in range(ntS + int(path_constr_0)):
+    for i in range(ntS - 1 + int(path_constr_0) + int(path_constr_F)):
         path_constr_arr.append(constr_expr[offset:offset+n_path_constr])
         lb_path_constr_arr.append(lb_con[offset:offset+n_path_constr])
         ub_path_constr_arr.append(ub_con[offset:offset+n_path_constr])
@@ -144,7 +144,6 @@ def reorder_constr_for_fatrop(constr_expr, lb_con, ub_con, ntS, nx, n_path_const
     term_constr = constr_expr[offset:offset+n_term_constr]
     lb_term_constr = lb_con[offset:offset+n_term_constr]
     ub_term_constr = ub_con[offset:offset+n_term_constr]
-    
     
     constr_arr = []
     lb_con_arr = []
@@ -165,10 +164,10 @@ def reorder_constr_for_fatrop(constr_expr, lb_con, ub_con, ntS, nx, n_path_const
         constr_arr.append(path_constr_arr[int(path_constr_0) + i])
         lb_con_arr.append(lb_path_constr_arr[int(path_constr_0) + i])
         ub_con_arr.append(ub_path_constr_arr[int(path_constr_0) + i])
-        
-    constr_arr.append(path_constr_arr[int(path_constr_0) + ntS-1])
-    lb_con_arr.append(lb_path_constr_arr[int(path_constr_0) + ntS-1])
-    ub_con_arr.append(ub_path_constr_arr[int(path_constr_0) + ntS-1])
+    if path_constr_F:
+        constr_arr.append(path_constr_arr[int(path_constr_0) + ntS-1])
+        lb_con_arr.append(lb_path_constr_arr[int(path_constr_0) + ntS-1])
+        ub_con_arr.append(ub_path_constr_arr[int(path_constr_0) + ntS-1])
     
     constr_arr.append(term_constr)
     lb_con_arr.append(lb_term_constr)
@@ -177,10 +176,10 @@ def reorder_constr_for_fatrop(constr_expr, lb_con, ub_con, ntS, nx, n_path_const
     return cs.vertcat(*constr_arr), np.concatenate(lb_con_arr), np.concatenate(ub_con_arr)
 
 #Note: Fatrop does not support parameter equality constraints, need to be formulated as states with derivative zero
-def fatrop_perturbed_starts(OCprob : OCProblems.OCProblem, n_path_constr, n_term_constr, arg_opts : dict, nPert0, nPertF, itMax = 200):
+def fatrop_perturbed_starts(OCprob : OCProblems.OCProblem, n_path_constr, n_term_constr, path_constr_0, path_constr_F, arg_opts : dict, nPert0, nPertF, itMax = 200):
     NLP = copy.deepcopy(OCprob.NLP)
     
-    g_expr_ft, lb_con_ft, ub_con_ft = reorder_constr_for_fatrop(NLP['g'], OCprob.lb_con, OCprob.ub_con, OCprob.ntS, OCprob.nx, n_path_constr, n_term_constr)
+    g_expr_ft, lb_con_ft, ub_con_ft = reorder_constr_for_fatrop(NLP['g'], OCprob.lb_con, OCprob.ub_con, OCprob.ntS, OCprob.nx, n_path_constr, n_term_constr, path_constr_0, path_constr_F)
     NLP['g'] = g_expr_ft
     
     opts = copy.deepcopy(arg_opts)
@@ -188,7 +187,7 @@ def fatrop_perturbed_starts(OCprob : OCProblems.OCProblem, n_path_constr, n_term
         'structure_detection': 'manual',
         'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS,
         'nu': [OCprob.nu]*OCprob.ntS + [0],
-        'ng': [0] + [n_path_constr]*(OCprob.ntS-1) + [n_path_constr + n_term_constr], 
+        'ng': [n_path_constr*int(path_constr_0)] + [n_path_constr]*(OCprob.ntS-1) + [n_path_constr*int(path_constr_F) + n_term_constr], 
         'N':OCprob.ntS, 
         'expand': False,
         'jit_options': {'flags': '-Os', 'verbose': False},

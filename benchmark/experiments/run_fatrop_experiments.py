@@ -22,16 +22,17 @@ except:
 sys.path += [str(cD.parent)]
 import OCP_experiment
 import OCProblems
+import OCProblems_fatrop
 
 Examples = [
-            # (OCProblems.Apollo_Reentry, dict(), None),        #TODO
-            # (OCProblems.Batch_Distillation, dict(), None),    #TODO
-            # (OCProblems.Batch_Reactor, dict(), None, 0, 0),
+            (OCProblems_fatrop.Apollo_Reentry_noParams, dict(), "Apollo_Reentry", 0, 3, False, True),        #TODO
+            # (OCProblems_fatrop.Batch_Distillation_noParams, dict(), None),    
+            # (OCProblems.Batch_Reactor, dict(), None, 0, 0, False, True),
             # (OCProblems.Batch_Reactor_OED, dict(), None),     #TODO
             # (OCProblems.Calcium_Oscillation, dict(), None),   
-            # (OCProblems.Cart_Pendulum, dict(), None, 0, 0),
-            # (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2", 0, 0),
-            # (OCProblems.Catalyst_Mixing, dict(), None, 0, 0),
+            # (OCProblems.Cart_Pendulum, dict(), None, 0, 0, False, True),
+            # (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2", 0, 0, False, True),
+            # (OCProblems.Catalyst_Mixing, dict(), None, 0, 0, False, True),
             # (OCProblems.Catalyst_Mixing_OED, dict(), None),
             # (OCProblems.Cushioned_Oscillation, dict(), None), #TODO
             # (OCProblems.Dielectrophoretic_Particle, dict(), None), #TODO
@@ -43,7 +44,7 @@ Examples = [
             # (OCProblems.Egerstedt_Standard, dict(), None), #TODO
             # (OCProblems.Electric_Car, dict(), None, 0, 1),
             # (OCProblems.Fermenter, dict(), None), #TODO
-            (OCProblems.Goddard_Rocket_noParams, dict(), 'Goddard\'s Rocket', 1, 1), #TODO
+            # (OCProblems_fatrop.Goddard_Rocket_noParams, dict(), 'Goddard\'s Rocket', 1, 1, False, True), #TODO
             # (OCProblems.Hang_Glider, dict(), None), #TODO
             # (OCProblems.Hanging_Chain, dict(), None), #TODO
             # (OCProblems.Lotka_Volterra_Fishing, dict(), None, 0, 0),
@@ -57,11 +58,11 @@ Examples = [
             # (OCProblems.Lotka_Shared_OED, dict(), None),
             # (OCProblems.Ocean, dict(), None, 0, 0),
             # (OCProblems.Particle_Steering, dict(), None),
-            # (OCProblems.Quadrotor_Helicopter, dict(), None, 1, 0),
-            # (OCProblems.Satellite_Deorbiting, dict(), None, 1, 1),
-            # (OCProblems.Three_Tank_Multimode, dict(), None, 1, 0),
+            # (OCProblems.Quadrotor_Helicopter, dict(), None, 1, 0, True, False),
+            # (OCProblems.Satellite_Deorbiting, dict(), None, 1, 1, True, False), #TODO
+            # (OCProblems.Three_Tank_Multimode, dict(), None, 1, 0, True, False),
             # (OCProblems.Time_Optimal_Car, dict(), None),
-            # (OCProblems.Tubular_Reactor, dict(), None, 0, 0),
+            # (OCProblems.Tubular_Reactor, dict(), None, 0, 0, False, True),
             ]
 
 
@@ -71,7 +72,7 @@ plot_folder = cD / Path("out_fatrop_experiments")
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
 nPert0 = 0
-nPertF = 2
+nPertF = 40
 
 #Write results to a file?
 file_output = True
@@ -96,7 +97,7 @@ else:
 
 titles = [EXP_name for _, EXP_name in Experiments]
 OCP_experiment.print_heading(out, titles)
-for OCclass, OCargs, OCname, n_path_constr, n_term_constr in Examples:        
+for OCclass, OCargs, OCname, n_path_constr, n_term_constr, path_constr_0, path_constr_F in Examples:        
     OCprob = OCclass(nt = 100, parallel = True, **OCargs)
     itMax = 300
     titles = []
@@ -106,7 +107,7 @@ for OCclass, OCargs, OCname, n_path_constr, n_term_constr in Examples:
     n_EXP = 0
     
     for EXP_opts, EXP_name in Experiments:
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.fatrop_perturbed_starts(OCprob, n_path_constr, n_term_constr, EXP_opts, nPert0, nPertF, itMax = itMax)
+        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.fatrop_perturbed_starts(OCprob, n_path_constr, n_term_constr, path_constr_0, path_constr_F, EXP_opts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)

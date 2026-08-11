@@ -64,7 +64,7 @@ class Options(CXXobjCreator):
                  enable_QP_cancellation: bool = True,
                  automatic_scaling: bool = False,
                  scaling_Theta_min: float = 0.1,
-                 scaling_Theta_max: float = 10.0,
+                 scaling_Theta_max: float = 2.0,
                  enable_premature_termination: bool = False,
                  indef_delay: int = 3,
                  test_opt_enable_conv_downscaling: bool = True,
