@@ -1534,27 +1534,12 @@ class Hanging_Chain(OCProblem):
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x = self.get_state_arrays(xi)
-        # u = self.get_control_plot_arrays(xi)
         
         fig, ax = plt.subplots(dpi=dpi)
         ax.plot(self.time_grid, x, 'k-', label = 'chain')
-        # plt.plot(self.time_grid_ref, u*0.1, 'g-', label = 'u*0.1')
         ax.legend(fontsize='large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Hanging chain problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Hanging chain problem')
 
 
 class Hanging_Chain_MAYER(Hanging_Chain):
@@ -2040,28 +2025,16 @@ class Egerstedt_Standard(OCProblem):
         x1,x2 = self.get_state_arrays(xi)
         w1,w2,w3 = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'tab:blue', linestyle = '--', label = r'$x_2$')
-        plt.step(self.time_grid, w1, 'tab:red', label = r'$w_1$')
-        plt.step(self.time_grid, w2, 'tab:olive', linestyle = '-.', label = r'$w_2$')
-        plt.step(self.time_grid, w3, 'tab:cyan', linestyle = ':', label = r'$w_3$')
-        plt.legend(loc = 'center left', fontsize = 'large')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
+        ax.plot(self.time_grid, x2, 'tab:blue', linestyle = '--', label = r'$x_2$')
+        ax.step(self.time_grid, w1, 'tab:red', label = r'$w_1$')
+        ax.step(self.time_grid, w2, 'tab:olive', linestyle = '-.', label = r'$w_2$')
+        ax.step(self.time_grid, w3, 'tab:cyan', linestyle = ':', label = r'$w_3$')
+        ax.legend(loc = 'center left', fontsize = 'large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Egerstedt standard problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Egerstedt standard problem')
+
 
 
 class Egerstedt_Standard_MAYER(Egerstedt_Standard):
@@ -2557,28 +2530,16 @@ class Particle_Steering(OCProblem):
         time_grid = np.cumsum(np.concatenate([[0.],p]))
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
-        plt.plot(time_grid, x2, 'tab:blue', linestyle = '-.', label = r'$x_2$')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
+        ax.plot(time_grid, x2, 'tab:blue', linestyle = '-.', label = r'$x_2$')
         # plt.plot(time_grid, y1, 'tab:green', linestyle = '-.', label = r'$v_1$')
         # plt.plot(time_grid, y2, 'tab:blue', linestyle = '-.', label = r'$v_2$')
-        plt.step(time_grid_ref, u*10, 'tab:red', label = r'$u\cdot 10$')
-        plt.legend(fontsize='large')
+        ax.step(time_grid_ref, u*10, 'tab:red', label = r'$u\cdot 10$')
+        ax.legend(fontsize='large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Particle steering problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Particle steering problem')
+
     
 class Quadrotor_Helicopter(OCProblem):
     default_params = {'g':9.8,'M':1.3,'L':0.305,'I':0.0605}
@@ -2943,26 +2904,13 @@ class Time_Optimal_Car(OCProblem):
         time_grid = np.cumsum(np.concatenate([[0.],p]))
         time_grid_ref = np.cumsum(np.concatenate([[0.],p_exp]))
         
-        plt.figure(dpi = dpi)
-        plt.plot(time_grid, z1, 'tab:blue', linestyle = '--', label = r'$z_1$')
-        plt.plot(time_grid, z2*5, 'tab:green', linestyle = '-.', label = r'$z_2\cdot5$')
-        plt.step(time_grid_ref, u*20, 'tab:red', label = r'$u\cdot20$')
-        plt.legend(fontsize='large')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(time_grid, z1, 'tab:blue', linestyle = '--', label = r'$z_1$')
+        ax.plot(time_grid, z2*5, 'tab:green', linestyle = '-.', label = r'$z_2\cdot5$')
+        ax.step(time_grid_ref, u*20, 'tab:red', label = r'$u\cdot20$')
+        ax.legend(fontsize='large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Time optimal car problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Time optimal car problem')
 
 # \dot{x}, \dot{y} = y, u*(1-x**2)*y - x
 class Van_der_Pol_Oscillator(OCProblem):
@@ -3261,19 +3209,6 @@ class Ocean(OCProblem):
         ax.legend(fontsize='large')
         
         self.finish_plot(ax, title, it, "Ocean problem")
-        # ttl = None
-        # if isinstance(title,str):
-        #     ttl = title
-        # elif title == True:
-        #     ttl = 'Ocean problem'
-        # if ttl is not None:
-        #     if isinstance(it, int):
-        #         ttl = ttl + f', iteration {it}'
-        #     plt.title(ttl)
-        # else:
-        #     plt.title('')
-            
-        # plt.show()
 
 
 class Lotka_OED(OCProblem):
@@ -3290,14 +3225,6 @@ class Lotka_OED(OCProblem):
         'fishing':True,
         'epsilon': 0.0,
         'transform_obj':False
-        }
-    
-    param_set_2 = {
-        'tf': 20
-        }
-    
-    param_set_3 = {
-        'x_init': [1.0, 0.5]
         }
     
     def build_problem(self):
@@ -3358,153 +3285,23 @@ class Lotka_OED(OCProblem):
         ax.step(self.time_grid_ref, w1, 'tab:blue', linestyle=':', label = r'$w_1$')
         ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w_2$')
         
-        # ax.set_ylim(0.,4.)
+        ax.set_ylim(0.,4.)
         ax.legend(fontsize = 'large', loc = 'upper left')
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka OED problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
-        
+        self.finish_plot(ax, title, it, 'Lotka OED problem')
         
     def plot_sensitivities(self, xi, dpi=None, title=None, it=None):
         _, _, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, G11, 'y-', label = r'$G_{11}(t)$')
-        plt.plot(self.time_grid, G12, 'c-', label = r'$G_{12}(t)$')
-        plt.plot(self.time_grid, G21, 'r-', label = r'$G_{21}(t)$')
-        plt.plot(self.time_grid, G22, 'b-', label = r'$G_{22}(t)$')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(self.time_grid, G11, 'y-', label = r'$G_{11}(t)$')
+        ax.plot(self.time_grid, G12, 'c-', label = r'$G_{12}(t)$')
+        ax.plot(self.time_grid, G21, 'r-', label = r'$G_{21}(t)$')
+        ax.plot(self.time_grid, G22, 'b-', label = r'$G_{22}(t)$')
         
-        plt.ylim(-9.,6.)
-        plt.legend(fontsize = 'medium', loc = 'upper left')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka OED problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
-
-
-class Lotka_OED_USCALE(OCProblem):
-    default_params = {'tf':12, 'p1':1,'p2':1,'p3':1,'p4':1,'p5':0.4, 'p6':0.2, 'x_init':[0.5,0.7], 'M':4.0, 'fishing':True, 'epsilon': 0.0, 'USCALE': 0.1}
-    def build_problem(self):
-        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon,USCALE= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'USCALE'])
-        self.set_OCP_data(9, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])*USCALE] + [1.]*2)
-        self.fix_time_horizon(0.,tf)
-        self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
-        
-        S = cs.MX.sym('S', 9)
-        x1, x2, G11, G12, G21, G22, F11, F12, F22 = cs.vertsplit(S)
-        #(Measurement -) Controls C
-        C = cs.MX.sym('C', 3)
-        u_, w1, w2 = cs.vertsplit(C)
-        u = u_/USCALE
-        # C_init = cs.DM([0., 1/3, 1/3])
-        
-        dt = cs.MX.sym('dt', 1)
-        ode_rhs = cs.vertcat(
-                p1*x1 - p2*x1*x2 - p5*u*x1,
-                -p3*x2 + p4*x1*x2 - p6*u*x2,
-                (p1 - p2*x2 - p5*u)*G11 + (-p2*x1)*G21 - x1*x2,
-                (p1 - p2*x2 - p5*u)*G12 + (-p2*x1)*G22,
-                (p4*x2)*G11 + (-p3 + p4*x1 - p6*u)*G21,
-                (p4*x2)*G12 + (-p3 + p4*x1 - p6*u)*G22  + x1*x2,
-                w1*(G11**2) + w2*(G21**2),
-                w1*G11*G12 + w2*G21*G22,
-                w1*(G12**2) + w2*(G22**2)
-        )
-        quad_expr = cs.vertcat(w1, w2)
-        self.ODE = {'x': S, 'p':cs.vertcat(dt, C),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
-        self.multiple_shooting()
-        F11T,F12T,F22T = cs.vertsplit(self.x_eval[6:9,-1])
-        self.set_objective((1/(F11T*F22T - F12T*F12T))*(F22T + F11T))
-        self.add_constraint(self.q_tf - M, -np.inf, 0.)
-        self.build_NLP()
-        for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [0.*USCALE,1/3,1/3])
-        self.integrate_full(self.start_point)
-    
-    def perturbed_start_point(self, ind):
-        s = copy.copy(self.start_point)
-        self.set_stage_control(s, ind, 0.1*0.1)
-        return s
-    
-    def plot(self, xi, dpi = None, title = None, it = None):
-        USCALE = self.model_params['USCALE']
-        u_,w1,w2 = self.get_control_plot_arrays(xi)
-        u = u_/USCALE
-        x1, x2, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays(xi)
-        
-        plt.figure(dpi = dpi)
-        
-        plt.plot(self.time_grid, x1, 'y-', label = r'Biomass prey $x_1(t)$')
-        plt.plot(self.time_grid, x2, 'b-', label = r'Biomass predator $x_2(t)$')
-        plt.step(self.time_grid_ref, u, 'r-', label = r'Fishing control $u$')
-        plt.step(self.time_grid_ref, w1, 'c-', label = r'sampling $w^{(1)}$')
-        plt.step(self.time_grid_ref, w2, 'g--', label = r'sampling $w^{(2)}$')
-        
-        plt.ylim(0.,4.)
-        
-        plt.legend(fontsize = 'medium', loc = 'upper left')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka OED problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
-        
-        
-    def plot_sensitivities(self, xi, dpi=None, title=None, it=None):
-        _, _, G11, G12, G21, G22, F11, F12, F22 = self.get_state_arrays(xi)
-        
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, G11, 'y-', label = r'$G_{11}(t)$')
-        plt.plot(self.time_grid, G12, 'c-', label = r'$G_{12}(t)$')
-        plt.plot(self.time_grid, G21, 'r-', label = r'$G_{21}(t)$')
-        plt.plot(self.time_grid, G22, 'b-', label = r'$G_{22}(t)$')
-        
-        plt.ylim(-9.,6.)
-        plt.legend(fontsize = 'medium', loc = 'upper left')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Lotka OED problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
-
+        ax.ylim(-9.,6.)
+        ax.legend(fontsize = 'medium', loc = 'upper left')
+        self.finish_plot(ax, title, it, 'Lotka_OED_problem')
 
 
 class Fermenter(OCProblem):
@@ -3785,26 +3582,15 @@ class Hang_Glider(OCProblem):
         p = self.get_param_arrays_expanded(xi)
         time_grid = np.cumsum(np.concatenate([[0], p])).reshape(-1)
         
-        plt.figure(dpi=dpi)
-        plt.step(time_grid, cL, 'tab:red', label = r'$c_L$')
-        plt.plot(time_grid, x/500, 'tab:green', linestyle = '-', label = r'$x/500$')
-        plt.plot(time_grid, (y-900)/100, 'tab:blue', linestyle = '-', label = r'$(y-900)/100$')
-        plt.plot(time_grid, dx/10, 'tab:green', linestyle = ':', label = r'$v_x/10$')
-        plt.plot(time_grid, dy/10, 'tab:blue', linestyle = ':', label = r'$v_y/10$')
-        plt.legend(fontsize='large', loc = 'upper right')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Hang glider problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.step(time_grid, cL, 'tab:red', label = r'$c_L$')
+        ax.plot(time_grid, x/500, 'tab:green', linestyle = '-', label = r'$x/500$')
+        ax.plot(time_grid, (y-900)/100, 'tab:blue', linestyle = '-', label = r'$(y-900)/100$')
+        ax.plot(time_grid, dx/10, 'tab:green', linestyle = ':', label = r'$v_x/10$')
+        ax.plot(time_grid, dy/10, 'tab:blue', linestyle = ':', label = r'$v_y/10$')
+        ax.legend(fontsize='large', loc = 'upper right')
+        
+        self.finish_plot(ax, title, it, 'Hang glider problem')
 
 
 class Tubular_Reactor(OCProblem):
@@ -4303,13 +4089,8 @@ class Ducted_Fan(OCProblem):
 
         ax.legend(fontsize='x-large')
         
-        add_title(ax, title, it, 'Ducted fan problem')
-
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
+        self.finish_plot(ax, title, it, 'Ducted fan problem')
         
-        plt.show()
-        plt.close()
         
 class Robbins(OCProblem):
     default_params = {

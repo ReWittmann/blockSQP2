@@ -28,7 +28,7 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems_fatrop.Apollo_Reentry_noParams(
+OCprob = OCProblems.Hang_Glider(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
@@ -43,7 +43,7 @@ ipopts['tol'] = 1e-6
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax
 
-sp = OCprob.perturbed_start_point(0)
+sp = OCprob.start_point
 
 
 S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})

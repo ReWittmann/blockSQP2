@@ -29,13 +29,13 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads(
+OCprob = OCProblems_fatrop.Time_Optimal_Car_noParams(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
                     )
 
 fatropts = {

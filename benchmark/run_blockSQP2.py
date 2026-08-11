@@ -26,14 +26,14 @@ import OCProblems
 
 import OCProblems_fatrop
 #Check OCProblems.py for available examples
-OCprob = OCProblems.D_Onofrio_Chemotherapy(
+OCprob = OCProblems.Time_Optimal_Car(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
-                    # integrator = 'RK4',     #ODE integrator
+                    integrator = 'RK4',     #ODE integrator
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
                     )
 itMax = 200                                  #max number of steps
 
@@ -72,7 +72,7 @@ opts = blockSQP2.SQPoptions(
     feas_tol = 1e-6,
     conv_kappa_max = np.inf,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     
-    # automatic_scaling = True,
+    automatic_scaling = True,
     scaling_Theta_min = 1e-1,
     scaling_Theta_max = 2.0,
     
