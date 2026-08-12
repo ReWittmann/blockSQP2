@@ -791,9 +791,6 @@ QPresults SharedCQPsolver::correction_solve(Matrix &deltaXi, Matrix &lambdaQP){
 
 
 
-
-
-
 BasicQPsolver *create_QPsolver(int nVarQP, int nConQP, int nHessQP, int *blockIdx, const QPsolver_options *Qparam, int par_ind){
     // BasicQPsolver *QPsol = nullptr;
     #ifdef QPSOLVER_QPOASES
@@ -845,7 +842,7 @@ BasicQPsolver *create_QPsolver(const Problemspec *prob, const SQPiterate *vars, 
 
 
 std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
-    if (prob->condenser != nullptr && param->conv_strategy == 2) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
+    if (prob->condenser != nullptr && param->conv_strategy == ConvexificationStrategies::reduced_regularization) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
     std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
     
@@ -876,56 +873,6 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Pro
 }
 
 
-
-// std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
-//     if (prob->condenser != nullptr && param->conv_strategy == 2 && param->qpsol == QPsolvers::qpOASES) return create_QPsolvers_par_cond(prob, vars, param, arg_N_QP);
-//     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
-//     std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
-    
-//     #ifdef SOLVER_MUMPS
-//     if (param->qpsol != QPsolvers::qpOASES || param->qpsol_options->condensed){
-//     #endif
-    
-//         for (int i = 0; i < N_QP; i++){
-//             QPsols_par[i] = std::unique_ptr<BasicQPsolver>(create_QPsolver(prob, vars, param->qpsol_options));
-//         }
-//         return QPsols_par;
-    
-//     #ifdef SOLVER_MUMPS
-//     }
-//     //Work around the MUMPS sparse solver not being thread safe (Currently only possible on linux and windows)
-//     int n_QP, m_QP, n_hess_QP, *blockIdx;
-//     BasicQPsolver *QPsol = nullptr;
-//     if (prob->condenser == nullptr){
-//         m_QP = prob->nCon;
-//         n_QP = prob->nVar;
-//         n_hess_QP = vars->nBlocks;
-//         blockIdx = vars->blockIdx.get();
-//     }
-//     else{
-//         m_QP = prob->condenser->condensed_num_cons;
-//         n_QP = prob->condenser->condensed_num_vars;
-//         n_hess_QP = prob->condenser->condensed_num_hessblocks;
-//         blockIdx = prob->condenser->condensed_blockIdx.get();
-//     }
-    
-//     load_mumps_libs(N_QP - 1);
-//     for (int i = 0; i < N_QP - 1; i++){
-//         QPsol = new qpOASES_MUMPS_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options), get_fptr_dmumps_c(i));
-//         if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
-//         QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
-//     }
-    
-//     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-//     if (prob->condenser != nullptr) QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
-//     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
-    
-//     return QPsols_par;
-//     #endif
-// }
-
-
-
 std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
     std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
@@ -950,38 +897,6 @@ std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(cons
     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
     return QPsols_par;
 }
-
-
-
-// std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> create_QPsolvers_par_cond(const Problemspec *prob, const SQPiterate *vars, const SQPoptions *param, int arg_N_QP){
-//     #ifdef QPSOLVER_QPOASES
-    
-//     int N_QP = arg_N_QP == -1 ? param->max_conv_QPs + 1 : arg_N_QP;
-//     std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> QPsols_par = std::make_unique<std::unique_ptr<BasicQPsolver>[]>(N_QP);
-    
-//     int n_QP, m_QP, n_hess_QP, *blockIdx;
-//     BasicQPsolver *QPsol = nullptr;
-//     m_QP = prob->condenser->condensed_num_cons;
-//     n_QP = prob->condenser->condensed_num_vars;
-//     n_hess_QP = prob->condenser->condensed_num_hessblocks;
-//     blockIdx = prob->condenser->condensed_blockIdx.get();
-    
-//     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-//     QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
-//     QPsols_par[0] = std::unique_ptr<BasicQPsolver>(QPsol);
-//     for (int i = 1; i < N_QP - 1; i++){
-//         QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-//         QPsol = new SharedCQPsolver(dynamic_cast<CQPsolver*>(QPsols_par[0].get()), QPsol, true);
-//         QPsols_par[i] = std::unique_ptr<BasicQPsolver>(QPsol);
-//     }
-//     QPsol = new qpOASES_solver(n_QP, m_QP, n_hess_QP, blockIdx, static_cast<const qpOASES_options*>(param->qpsol_options));
-//     QPsol = new CQPsolver(QPsol, prob->condenser->layout_copy(), true, true);
-//     QPsols_par[N_QP - 1] = std::unique_ptr<BasicQPsolver>(QPsol);
-//     return QPsols_par;
-    
-//     #endif
-//     throw std::logic_error("create_QPsolvers_par_cond: Error, currently only supports qpOASES");
-// }
 
 
 
@@ -1144,32 +1059,11 @@ void qpOASES_solver::set_hess(SymMatrix *const hess, bool pos_def){
     return;
 }
 
-// void qpOASES_solver::set_constr(const Matrix &constr_jac){
-//     Transpose(constr_jac, jacT);
-//     A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
-//     return;
-// }
 void qpOASES_solver::set_constr(const Matrix &constr_jac){
     Transpose(constr_jac, jacT);
     A_qp = std::make_unique<qpOASES::DenseMatrix>(nCon, nVar, nVar, jacT.array);
     return;
 }
-
-// void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
-//     if (A_qp_nz == nullptr){
-//         A_qp_nz = std::make_unique<double[]>(jac_colind[nVar]);
-//         A_qp_row = std::make_unique<int[]>(jac_colind[nVar]);
-//         A_qp_colind = std::make_unique<int[]>(nVar + 1);
-//     }
-//     std::copy(jac_nz, jac_nz + jac_colind[nVar], A_qp_nz.get());
-//     std::copy(jac_row, jac_row + jac_colind[nVar], A_qp_row.get());
-//     std::copy(jac_colind, jac_colind + nVar + 1, A_qp_colind.get());
-    
-//     A_qp = std::make_unique<qpOASES::SparseMatrix>(nCon, nVar, A_qp_row.get(), A_qp_colind.get(), A_qp_nz.get());
-    
-//     matrices_changed = true;
-//     return;
-// }
 
 void qpOASES_solver::set_constr(double *const jac_nz, int *const jac_row, int *const jac_colind){
     if (sparseMatrices){

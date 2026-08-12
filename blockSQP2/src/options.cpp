@@ -54,8 +54,8 @@ void SQPoptions::pass_qpsol_options(std::unique_ptr<QPsolver_options> arg_qpsol_
 }
 
 void SQPoptions::optionsConsistency(Problemspec *problem){
-    if ((automatic_scaling || (conv_strategy == 2 && max_conv_QPs > 1)) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
-        throw ParameterError("automatic_scaling or convexification strategy 2 activated, but no structure information (vblocks) provided to problem specification");
+    if ((automatic_scaling || (conv_strategy == ConvexificationStrategies::reduced_regularization && max_conv_QPs > 1)) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
+        throw ParameterError("automatic_scaling or reduced convexification strategy activated, but no structure information (vblocks) provided to problem specification");
     if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
     

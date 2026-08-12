@@ -26,7 +26,7 @@ import OCProblems
 
 import OCProblems_fatrop
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Time_Optimal_Car(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -54,11 +54,11 @@ opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
     
-    max_conv_QPs = 4,                       #max number of additional QPs per SQP iteration including fallback Hess QP
-    conv_strategy = 2,                      #Convexification strategy, 2 requires passing vblocks
-    par_QPs = True,                        #Enable parallel solution of QPs
-    enable_QP_cancellation = True,          #Enable cancellation of long running QP threads
-    indef_delay = 3,                        #Only use fallback Hessian in first # iterations
+    max_conv_QPs = 4,                          #max number of additional QPs per SQP iteration including fallback Hess QP
+    conv_strategy = 'reduced_regularization',  #Convexification strategy, reduced_regularization requires passing vblocks
+    par_QPs = True,                            #Enable parallel solution of QPs
+    enable_QP_cancellation = True,             #Enable cancellation of long running QP threads
+    indef_delay = 3,                           #Only use fallback Hessian in first # iterations
     
     hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
@@ -68,7 +68,7 @@ opts = blockSQP2.SQPoptions(
     
     lim_mem = True,
     mem_size = 20,
-    opt_tol = 1e-6,                         #Tolerances for termination
+    opt_tol = 1e-6,                             #Tolerances for termination
     feas_tol = 1e-6,
     conv_kappa_max = np.inf,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     

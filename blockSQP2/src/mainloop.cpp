@@ -440,7 +440,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         }
         
         //Adjust scaling factor if indefinite hessians are attempted to be convexified by adding scaled identities
-        if (param->conv_strategy >= 1 && param->max_conv_QPs > 1 && vars->steptype == StepTypes::linesearch && stats->itCount > param->indef_delay && !vars->conv_qp_only){
+        if (is_regularization(param->conv_strategy) && param->max_conv_QPs > 1 && vars->steptype == StepTypes::linesearch && stats->itCount > param->indef_delay && !vars->conv_qp_only){
             if (param->max_conv_QPs > 2){
                 //If more than one convexified indefinite QP is tried, shift convexification factor of the successful QP to the last attempted convexified QP.
                 //If more than two convexified indefinite QPs are tried and none were accepted, shift last factor to first factor.
@@ -455,7 +455,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             if (vars->convKappa > param->conv_kappa_max) vars->convKappa = param->conv_kappa_max;
         }
         //The scaling factor adjustment in one line of code
-        //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->max_conv_QPs + 1 + (param->max_conv_QPs - 3) * (vars->hess_num_accepted == param->max_conv_QPs))*(param->max_conv_QPs > 2) + (1 - 2*(vars->hess_num_accepted < param->max_conv_QPs))*(param->max_conv_QPs <= 2))) * (param->conv_strategy >= 1 && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (param->conv_strategy < 1 || vars->hess_num_accepted == 0 || vars->steptype != 0);
+        //vars->convKappa = std::min(1.0e2, vars->convKappa*std::pow(2, (vars->hess_num_accepted - param->max_conv_QPs + 1 + (param->max_conv_QPs - 3) * (vars->hess_num_accepted == param->max_conv_QPs))*(param->max_conv_QPs > 2) + (1 - 2*(vars->hess_num_accepted < param->max_conv_QPs))*(param->max_conv_QPs <= 2))) * (is_regularization(param->conv_strategy) && vars->hess_num_accepted > 0 && vars->steptype == 0) + vars->convKappa * (!is_regularization(param->conv_strategy) || vars->hess_num_accepted == 0 || vars->steptype != 0);
         vars->hess = vars->hess1.get();
         skipLineSearch = false;
     }

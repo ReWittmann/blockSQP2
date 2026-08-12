@@ -129,7 +129,7 @@ double SQPmethod::computeLowerRegularizationFactor(int idx, int maxQP){
 
 
 void SQPmethod::computeNextHessian(int idx, int maxQP){
-    if ((idx == 1 && param->conv_strategy == 0) || (idx == maxQP - 1 && param->conv_strategy > 0)){
+    if ((idx == 1 && param->conv_strategy == ConvexificationStrategies::convex_combinations) || (idx == maxQP - 1 && is_regularization(param->conv_strategy))){
         // If last block contains pos. def. exact Hessian, we need to copy it
         if (param->last_block_approx == Hessians::pos_def_exact)
             for (int i=0; i<vars->hess[vars->nBlocks-1].m; i++)
@@ -147,7 +147,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
     // 'Nontrivial' convex combinations
     if (maxQP > 2 && idx < maxQP - 1){
         //Store convex combination in vars->hess_conv, to avoid having to restore the second Hessian if full memory updates are used
-        if (param->conv_strategy == 0){
+        if (param->conv_strategy == ConvexificationStrategies::convex_combinations){
             for (int i = 0; i < vars->nBlocks; i++){
                 vars->hess_conv[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
             }
@@ -161,14 +161,14 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
             
             double delta_regF = computeRegularizationFactor(idx, maxQP) - vars->hess_conv_regF;
             vars->hess_conv_regF += delta_regF;
-            if (param->conv_strategy == 1){
+            if (param->conv_strategy == ConvexificationStrategies::full_regularization){
                 for (int i = 0; i < vars->nBlocks; i++){
                     for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
                         vars->hess_conv[i](j,j) += delta_regF;
                     }
                 }
             }
-            else if (param->conv_strategy == 2){
+            else if (param->conv_strategy == ConvexificationStrategies::reduced_regularization){
                 int ind_b = 0, offset = 0, ind_1 = 0;
                 for (int k = 0; k < prob->n_vblocks; k++){
                     for (int i = 0; i < prob->vblocks[k].size; i++){
@@ -190,63 +190,20 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
 }
 
 
-
-// void SQPmethod::computeLowerRegularizedHessian(int idx, int maxQP){
-//     if (param->conv_strategy < 1)
-//         throw ParameterError("computeLowerRegularizedHessian should only be called for conv_stragegy == 1 or 2");
-//     double idScale;
-    
-//     if (idx == 0){
-//         for (int i = 0; i < vars->nBlocks; i++){
-//             vars->hess_conv[i] = vars->hess1[i];
-//         }
-//     }
-//     idScale = vars->convKappa * std::pow(2, -idx - (maxQP - 2)) * (1.0 - 2*(idx > 0));
-    
-//     if (param->conv_strategy == 1){
-//         for (int i = 0; i < vars->nBlocks; i++){
-//             for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
-//                 vars->hess_conv[i](j,j) += idScale;
-//             }
-//         }
-//     }
-//     else if (param->conv_strategy == 2){
-//         int ind_b = 0, offset = 0, ind_1 = 0;
-//         for (int k = 0; k < prob->n_vblocks; k++){
-//             for (int i = 0; i < prob->vblocks[k].size; i++){
-//                 if (ind_1 + i == vars->blockIdx[ind_b + 1]){
-//                     ind_b += 1;
-//                     offset = ind_1 + i;
-//                 }
-//                 if (!prob->vblocks[k].dependent){
-//                     vars->hess_conv[ind_b](ind_1 + i - offset, ind_1 + i - offset) += idScale;
-//                 }
-//             }
-//             ind_1 += prob->vblocks[k].size;
-//         }
-//     }
-//     vars->hess = vars->hess_conv.get();
-// }
-
-
 void SQPmethod::computeLowerRegularizedHessian(int idx, int maxQP){
-    if (param->conv_strategy < 1)
-        throw ParameterError("computeLowerRegularizedHessian should only be called for conv_stragegy == 1 or 2");
+    if (!is_regularization(param->conv_strategy))
+        throw ParameterError("computeLowerRegularizedHessian should only be called for conv_strategy == *_regularization");
     
-    // if (idx == 0){
-    //     for (int i = 0; i < vars->nBlocks; i++) vars->hess_conv[i] = vars->hess1[i];
-    //     vars->hess_conv_regF = 0.0;
-    // }
     double delta_regF = computeLowerRegularizationFactor(idx, maxQP) - vars->hess_conv_regF;
     vars->hess_conv_regF += delta_regF;
-    if (param->conv_strategy == 1){
+    if (param->conv_strategy == ConvexificationStrategies::full_regularization){
         for (int i = 0; i < vars->nBlocks; i++){
             for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
                 vars->hess_conv[i](j,j) += delta_regF;
             }
         }
     }
-    else if (param->conv_strategy == 2){
+    else if (param->conv_strategy == ConvexificationStrategies::reduced_regularization){
         int ind_b = 0, offset = 0, ind_1 = 0;
         for (int k = 0; k < prob->n_vblocks; k++){
             for (int i = 0; i < prob->vblocks[k].size; i++){
@@ -358,10 +315,10 @@ QPresults SQPmethod::solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type){
                            );
     if (QP_loop_active){
         if (param->par_QPs){
-            if (prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_par_cond_reduced(deltaXi, lambdaQP);
+            if (prob->condenser != nullptr && param->conv_strategy == ConvexificationStrategies::reduced_regularization) return solveQP_par_cond_reduced(deltaXi, lambdaQP);
             return solveQP_par(deltaXi, lambdaQP);
         }
-        if (prob->condenser != nullptr && param->conv_strategy == 2) return solveQP_seq_cond_reduced(deltaXi, lambdaQP);
+        if (prob->condenser != nullptr && param->conv_strategy == ConvexificationStrategies::reduced_regularization) return solveQP_seq_cond_reduced(deltaXi, lambdaQP);
         return solveQP_seq(deltaXi, lambdaQP);
     }
     return solve_convex_QP(deltaXi, lambdaQP, hess_type == 2, param->par_QPs ? sub_QPs_par[param->max_conv_QPs].get() : sub_QP.get());
@@ -436,7 +393,7 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
             //Save the number of the first hessian for which the QP solved (even though the step may still be replaced by the step from the convex Hessian)
             vars->hess_num_accepted = l;
             vars->QP_num_accepted = l;
-            if (param->conv_strategy > 0 && l < maxQP - 1){
+            if (is_regularization(param->conv_strategy) && l < maxQP - 1){
                 // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
                 if (l == 1 && param->test_opt_enable_conv_downscaling){
                     int j = 0;
@@ -653,7 +610,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     bool sol_set = false;
     
     // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
-    if (param->conv_strategy > 0 && maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
+    if (is_regularization(param->conv_strategy) && maxQP > 2 && vars->hess_num_accepted == 1 && param->test_opt_enable_conv_downscaling){
         int j = 0;
         // double s_prev = 0.;
         for (; j < 5; j++){
@@ -733,7 +690,7 @@ QPresults SQPmethod::solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
             //Save the number of the first hessian for which the QP solved (even though the step may still be replaced by the step from the convex Hessian)
             vars->hess_num_accepted = l;
             vars->QP_num_accepted = l;
-            if (param->conv_strategy > 0 && l < maxQP - 1){
+            if (is_regularization(param->conv_strategy) && l < maxQP - 1){
                 // If the first regularized Hessian was accepted, attempt to lower the regularization factor.
                 if (l == 1 && param->test_opt_enable_conv_downscaling){
                     int j = 0;

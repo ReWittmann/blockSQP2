@@ -44,7 +44,7 @@ class Options(CXXobjCreator):
                  COL_tau_2: float = 1.0e4,
                  OL_eps: float = 1.0e-4,
                  BFGS_damping_factor: float = 1./3.,
-                 conv_strategy: int = 1,
+                 conv_strategy: str = "full_regularization",
                  max_conv_QPs: int = 4,
                  conv_kappa_0: float = 1./16.,
                  conv_kappa_max: float = float('inf'),
@@ -193,7 +193,12 @@ class Options(CXXobjCreator):
         BSQP.SQPoptions_set_BFGS_damping_factor(cxx_obj, c_double(self.BFGS_damping_factor))
         
         # Convexification strategy
-        BSQP.SQPoptions_set_conv_strategy(cxx_obj, c_int(self.conv_strategy))
+        # BSQP.SQPoptions_set_conv_strategy(cxx_obj, c_int(self.conv_strategy))
+        ret = BSQP.SQPoptions_set_conv_strategy(cxx_obj, c_char_p(self.conv_strategy.encode('utf-8')))
+        if ret > 0:
+            error_message = BSQP.get_error_message()
+            raise Exception(cast(error_message, c_char_p).value.decode('utf-8'))
+        
         BSQP.SQPoptions_set_max_conv_QPs(cxx_obj, c_int(self.max_conv_QPs))
         BSQP.SQPoptions_set_conv_kappa_0(cxx_obj, c_double(self.conv_kappa_0))
         BSQP.SQPoptions_set_conv_kappa_max(cxx_obj, c_double(self.conv_kappa_max))

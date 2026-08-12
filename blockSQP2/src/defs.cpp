@@ -156,4 +156,24 @@ Sizings Sizings_from_string(std::string_view Sname){
     throw std::invalid_argument(std::string("Sizings_from_string: Name \"") + std::string(Sname) + std::string("\" does not match any available sizing strategy"));
 }
 
+std::string to_string(ConvexificationStrategies convS){
+    switch (convS){
+        case ConvexificationStrategies::convex_combinations:    return "convex_combinations";
+        case ConvexificationStrategies::full_regularization:    return "full_regularization";
+        case ConvexificationStrategies::reduced_regularization: return "reduced_regularization";
+    }
+    return "";
+}
+
+ConvexificationStrategies ConvexificationStrategies_from_string(std::string_view Sname){
+    if (Sname == to_string(ConvexificationStrategies::convex_combinations))
+        return ConvexificationStrategies::convex_combinations;
+    if (Sname == to_string(ConvexificationStrategies::full_regularization))
+        return ConvexificationStrategies::full_regularization;
+    if (Sname == to_string(ConvexificationStrategies::reduced_regularization))
+        return ConvexificationStrategies::reduced_regularization;
+    throw std::invalid_argument(std::string("ConvexificationStrategies_from_string: Name \"") + std::string(Sname) + std::string("\" does not match any available convexification strategy"));
+}
+
+
 } // namespace blockSQP2

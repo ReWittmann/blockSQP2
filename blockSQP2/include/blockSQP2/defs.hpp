@@ -115,6 +115,18 @@ std::string to_print_string(Sizings sizing);
 Sizings Sizings_from_string(std::string_view Sname);
 
 
+enum class ConvexificationStrategies : int{
+    convex_combinations = 0,
+    full_regularization = 1,
+    reduced_regularization = 2
+};
+std::string to_string(ConvexificationStrategies convS);
+ConvexificationStrategies ConvexificationStrategies_from_string(std::string_view Sname);
+inline bool is_regularization(ConvexificationStrategies convS){
+    return convS == ConvexificationStrategies::full_regularization || convS == ConvexificationStrategies::reduced_regularization;
+}
+
+
 class NotImplementedError : public std::logic_error{
 public:
     NotImplementedError(std::string info) : std::logic_error("Missing implementation of " + info){}

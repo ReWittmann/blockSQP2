@@ -289,7 +289,7 @@ CDLEXP void SQPoptions_set_block_hess(void *ptr, int val){
 // }
 CDLEXP int SQPoptions_set_sizing(void *ptr, char* val){
     try{
-        castOPT(ptr)->sizing = Sizings_from_string(std::string(val));
+        castOPT(ptr)->sizing = Sizings_from_string(std::string_view(val));
         return 0;
     }
     catch (std::exception &E){
@@ -300,7 +300,7 @@ CDLEXP int SQPoptions_set_sizing(void *ptr, char* val){
 }
 CDLEXP int SQPoptions_set_fallback_sizing(void *ptr, char* val){
     try{
-        castOPT(ptr)->fallback_sizing = Sizings_from_string(std::string(val));
+        castOPT(ptr)->fallback_sizing = Sizings_from_string(std::string_view(val));
         return 0;
     }
     catch (std::exception &E){
@@ -343,7 +343,7 @@ CDLEXP void SQPoptions_set_min_damping_quotient(void *ptr, double val){
 
 CDLEXP int SQPoptions_set_hess_approx(void *ptr, char* val){
     try{
-        castOPT(ptr)->hess_approx = Hessians_from_string(std::string(val));
+        castOPT(ptr)->hess_approx = Hessians_from_string(std::string_view(val));
         return 0;
     }
     catch (std::exception &E){
@@ -354,7 +354,7 @@ CDLEXP int SQPoptions_set_hess_approx(void *ptr, char* val){
 }
 CDLEXP int SQPoptions_set_fallback_approx(void *ptr, char* val){
     try{
-        castOPT(ptr)->fallback_approx = Hessians_from_string(std::string(val));
+        castOPT(ptr)->fallback_approx = Hessians_from_string(std::string_view(val));
         return 0;
     }
     catch (std::exception &E){
@@ -378,9 +378,22 @@ CDLEXP void SQPoptions_set_mem_size(void *ptr, int val){
 CDLEXP void SQPoptions_set_skip_first_linesearch(void *ptr, int val){
     castOPT(ptr)->skip_first_linesearch = val;
 }
-CDLEXP void SQPoptions_set_conv_strategy(void *ptr, int val){
-    castOPT(ptr)->conv_strategy = val;
+// CDLEXP void SQPoptions_set_conv_strategy(void *ptr, int val){
+//     castOPT(ptr)->conv_strategy = val;
+// }
+CDLEXP int SQPoptions_set_conv_strategy(void *ptr, char *val){
+    try{
+        castOPT(ptr)->conv_strategy = ConvexificationStrategies_from_string(std::string_view(val));
+        return 0;
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return 1;
+    
 }
+
 CDLEXP void SQPoptions_set_max_conv_QPs(void *ptr, int val){
     castOPT(ptr)->max_conv_QPs = val;
 }
