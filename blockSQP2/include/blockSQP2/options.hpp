@@ -120,7 +120,7 @@ class SQPoptions{
     // int conv_strategy = 1;                      //Convexification strategy, 0: convex combination between Hess and fallback, 1: add scaled identities, 2: add scaled identities to free components, requires providint vblocks to problem
     ConvexificationStrategies conv_strategy = ConvexificationStrategies::full_regularization;
     int max_conv_QPs = 4;                       //Maximum number of convexified QPs in each SQP iteration.
-    double conv_tau_H = 2./3.;                  //See paper/manual
+    double conv_tau_H = 0.5;//2./3.;                  //
     double conv_kappa_0 = 1./16.;
     // double conv_kappa_max = 8.;
     double conv_kappa_max = std::numeric_limits<double>::infinity();

@@ -1,15 +1,29 @@
+# blockSQP2 -- A structure-exploiting nonlinear programming solver based
+#              on blockSQP by Dennis Janka.
+# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+
+# Licensed under the zlib license. See LICENSE for more details.
+
+
+# \file run_ipopt_experiments.py
+# \author Reinhold Wittmann
+# \date 2025
+#
+# Script to benchmark the NLP solver ipopt several problems 
+# for perturbed start points for different options.
+
 import sys
 from pathlib import Path
 try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
-
-import blockSQP2
+sys.path += [str(cD.parent)]
 import OCP_experiment
 import OCProblems
 
+
+# Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
             (OCProblems.Apollo_Reentry, dict(), None),
             # (OCProblems.Batch_Distillation, dict(), None),
@@ -50,33 +64,17 @@ Examples = [
             (OCProblems.Time_Optimal_Car, dict(), None),
             (OCProblems.Tubular_Reactor, dict(), None),
             ]
-
-opt_rr = blockSQP2.SQPoptions()
-opt_rr.max_conv_QPs = 4
-opt_rr.conv_strategy = 'reduced_regularization'
-opt_rr.par_QPs = True
-opt_rr.enable_QP_cancellation = True
-opt_rr.automatic_scaling = False
-
-opt_rr_scale = blockSQP2.SQPoptions()
-opt_rr_scale.max_conv_QPs = 4
-opt_rr_scale.conv_strategy = 'reduced_regularization'
-opt_rr_scale.par_QPs = True
-opt_rr_scale.enable_QP_cancellation = True
-opt_rr_scale.automatic_scaling = True
-
 Experiments = [
-               (opt_rr, "Reduced regularization, no scaling"),
-               (opt_rr_scale, "Reduced regularization, automatic scaling")
-               ]
-
-plot_folder = cD / Path("out_scaling_comparison")
+                ({'ipopt': {'hessian_approximation': 'limited-memory', 'tol': 1e-6}}, "Ipopt, limited-memory, tol 1e-6"),
+                ({'ipopt': {'hessian_approximation': "exact", 'tol': 1e-6}}, "Ipopt, exact Hessian"),
+                ]
 
 
-OCP_experiment.run_blockSQP2_experiments(Examples, Experiments,\
-                                        plot_folder,\
-                                        nPert0 = 0, nPertF = 10,
-                                        integrator = 'RK4',
-                                        use_condensing = True
-                                        )
-
+plot_folder = cD / Path("out_ipopt_experiments")
+OCP_experiment.run_ipopt_experiments(Examples, 
+                                     Experiments, 
+                                     plot_folder, 
+                                     nPert0 = 0, 
+                                     nPertF = 10,
+                                     file_output = True
+                                     )

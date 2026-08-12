@@ -52,80 +52,6 @@ double SQPmethod::computeRegularizationFactor(int idx, int maxQP){
 double SQPmethod::computeLowerRegularizationFactor(int idx, int maxQP){
     return computeRegularizationFactor(-idx, maxQP);
 }
-    
-// void SQPmethod::computeNextHessian(int idx, int maxQP){
-//     double idScale;
-//     // Compute fallback update only once
-//     if ((idx == 1 && param->conv_strategy == 0) || (idx == maxQP - 1 && param->conv_strategy > 0)){
-//         // If last block contains pos. def. exact Hessian, we need to copy it
-//         if (param->last_block_approx == Hessians::pos_def_exact)
-//             for (int i=0; i<vars->hess[vars->nBlocks-1].m; i++)
-//                 for (int j=i; j<vars->hess[vars->nBlocks-1].m; j++)
-//                     vars->hess2[vars->nBlocks-1]( i,j ) = vars->hess1[vars->nBlocks-1]( i,j );
-        
-//         // Limited memory: compute fallback update only when needed
-//         if (param->lim_mem && !vars->hess2_updated){
-//             if (is_update(param->fallback_approx)){
-//                 calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
-//             }
-//             vars->hess2_updated = true;
-//         }
-//     }
-    
-//     // 'Nontrivial' convex combinations
-//     if (maxQP > 2 && idx < maxQP - 1){
-//         //Store convex combination in vars->hess_conv, to avoid having to restore the second Hessian if full memory updates are used
-//         if (param->conv_strategy == 0){
-//             for (int i = 0; i < vars->nBlocks; i++){
-//                 vars->hess_conv[i] = vars->hess1[i] * (1 - static_cast<double>(idx)/static_cast<double>(maxQP - 1)) + vars->hess2[i] * (static_cast<double>(idx)/static_cast<double>(maxQP - 1));
-//             }
-//         }
-//         else if (param->conv_strategy == 1){
-//             if (idx == 1){
-//                 //Copy the first Hessian to reserved space
-//                 for (int i = 0; i < vars->nBlocks; i++){
-//                     vars->hess_conv[i] = vars->hess1[i];
-//                 }
-//             }
-            
-//             //Regularize intermediate Hessian by adding scaled identity
-//             idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
-//             for (int i = 0; i < vars->nBlocks; i++){
-//                 for (int j = 0; j < vars->blockIdx[i+1] - vars->blockIdx[i]; j++){
-//                     vars->hess_conv[i](j,j) += idScale;
-//                 }
-//             }
-//         }
-//         else if (param->conv_strategy == 2){
-//             if (idx == 1){
-//                 //Copy the first Hessian to reserved space
-//                 for (int i = 0; i < vars->nBlocks; i++){
-//                     vars->hess_conv[i] = vars->hess1[i];
-//                 }
-//             }
-            
-//             //Regularize intermediate Hessian by adding scaled identity to free components
-//             idScale = vars->convKappa * std::pow(2, idx - maxQP + 2) * (1.0 - 0.5*(idx > 1));
-//             int ind_b = 0, offset = 0, ind_1 = 0;
-//             for (int k = 0; k < prob->n_vblocks; k++){
-//                 for (int i = 0; i < prob->vblocks[k].size; i++){
-//                     if (ind_1 + i == vars->blockIdx[ind_b + 1]){
-//                         ind_b += 1;
-//                         offset = ind_1 + i;
-//                     }
-//                     if (!prob->vblocks[k].dependent){
-//                         vars->hess_conv[ind_b](ind_1 + i - offset, ind_1 + i - offset) += idScale;
-//                     }
-//                 }
-//                 ind_1 += prob->vblocks[k].size;
-//             }
-//         }
-//         vars->hess = vars->hess_conv.get();
-//     }
-//     else{
-//         vars->hess = vars->hess2.get();
-//     }
-// }
 
 
 void SQPmethod::computeNextHessian(int idx, int maxQP){
@@ -412,7 +338,8 @@ QPresults SQPmethod::solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP){
                     vars->QP_num_accepted = vars->hess_num_accepted;
                 }
                 //For regularized indefinite hessians, compare steplength to fallback hessian to avoid over-regularized hessians leading to small steps.
-                else if (l > 1){ 
+                // else if (l > 1){ 
+                if (l > 0){
                     computeConvexHessian();
                     sub_QP->set_hess(vars->hess, true);
                     sub_QP->set_timeLimit(TimeLimitTypes::standard);
@@ -629,7 +556,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
         vars->convKappa *= std::pow(2, -j);
         vars->QP_num_accepted = vars->hess_num_accepted;
     }
-    else if (vars->hess_num_accepted > 1 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == QPresults::success){
+    if (vars->hess_num_accepted > 0 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == QPresults::success){
         double s_indf_N = l2VectorNorm(vars->par_QP_sols_prim[vars->hess_num_accepted]);
         double s_conv_N = l2VectorNorm(vars->par_QP_sols_prim[maxQP - 1]);
         if (s_indf_N < param->conv_tau_H*s_conv_N){
@@ -711,7 +638,7 @@ QPresults SQPmethod::solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
                     vars->QP_num_accepted = vars->hess_num_accepted;
                 }
                 //For regularized indefinite hessians, compare steplength to fallback hessian to avoid over-regularized hessians leading to small steps.
-                else if (l > 1){ 
+                if (l > 0){ 
                     computeConvexHessian();
                     sub_QP->set_hess(vars->hess, true);
                     sub_QP->set_timeLimit(TimeLimitTypes::standard);
@@ -895,7 +822,8 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
         vars->convKappa *= std::pow(2, -j);
         vars->QP_num_accepted = vars->hess_num_accepted;
     }
-    else if (vars->hess_num_accepted > 1 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == QPresults::success){
+    // else if (vars->hess_num_accepted > 1 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == QPresults::success){
+    if (vars->hess_num_accepted > 0 && vars->hess_num_accepted < maxQP - 1 && QP_results[maxQP - 1] == QPresults::success){
         double s_indf_N = l2VectorNorm(vars->par_QP_sols_prim[vars->hess_num_accepted]);
         double s_conv_N = l2VectorNorm(vars->par_QP_sols_prim[maxQP - 1]);
         if (s_indf_N < param->conv_tau_H*s_conv_N){

@@ -5,13 +5,15 @@
 # Licensed under the zlib license. See LICENSE for more details.
 
 
-# \file run_blockSQP_experiments.py
+# \file run_UNO_experiments.py
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Script to benchmark blockSQP2 on several problems 
-# for perturbed start points for different options
+# Script to benchmark the NLP solver UNO on several problems 
+# for perturbed start points for different options.
 
+import numpy as np
+import time
 import datetime
 import sys
 from pathlib import Path
@@ -19,16 +21,16 @@ try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[1]), str(cD.parents[2]/Path("Python"))]
-
-import blockSQP2
-import OCP_experiment
+sys.path += [str(cD.parents[1])]
+import unopy
 import OCProblems
+import OCP_experiment
+
 
 # Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
             (OCProblems.Apollo_Reentry, dict(), None),
-            (OCProblems.Batch_Distillation, dict(), None),
+            # (OCProblems.Batch_Distillation, dict(), None),
             (OCProblems.Batch_Reactor, dict(), None),
             (OCProblems.Batch_Reactor_OED, dict(), None),
             (OCProblems.Calcium_Oscillation, dict(), None),
@@ -67,52 +69,31 @@ Examples = [
             (OCProblems.Tubular_Reactor, dict(), None),
             ]
 
-
-#SR1_BFGS
-opt_SR1_BFGS = blockSQP2.SQPoptions(
-    max_conv_QPs = 1,
-    max_filter_overrides = 0,
-    BFGS_damping_factor = 0.2
-)
-
-#Convexification strategy 0
-opt_cc = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'convex_combinations',
-)
-
-#Convexification strategy 1
-opt_fr = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'full regularization',
-)
-
-#Convexification strategy 2
-opt_fr_scaling = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'reduced regularization',
-    automatic_scaling = True
-)
-
-opt_full = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'reduced regularization',
-    par_QPs = True,
-    max_filter_overrides = 0,
-    automatic_scaling = True,
-    
-    )
-
-
-use_condensing = True
-
 #Select option sets to test for
+
+opt_ipopt_LBFGS = {
+    'preset': 'ipopt',
+    'hessian_model': 'LBFGS'
+    }
+opt_ipopt_exact = {
+    'preset': 'ipopt',
+    'hessian_model': 'exact'
+    }
+opt_filtersqp_LBFGS = {
+    'preset': 'filtersqp',
+    'hessian_model': 'LBFGS'
+    }
+opt_filtersqp_exact = {
+    'preset': 'filtersqp',
+    'hessian_model': 'exact'
+    }
+
 Experiments = [
-                (opt_full, "blockSQP2 (full)"),
-               ]
+                # (opt_ipopt_exact, "UNO (ipopt preset, exact Hessian)"),
+                (opt_filtersqp_exact, "UNO (filtersqp preset, exact Hessian)")
+                ]
 
-
-plot_folder = cD / Path("out_blockSQP2_experiments")
+plot_folder = cD / Path("out_UNO_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
@@ -122,12 +103,63 @@ nPertF = 10
 #Write results to a file?
 file_output = True
 
+
+
+def create_UNO_model(OCprob:OCProblems.OCProblem, start_pert = None):
+    model = unopy.Model(unopy.PROBLEM_NONLINEAR,
+                        OCprob.nVar,
+                        unopy.ZERO_BASED_INDEXING
+                        )
+    model.set_variables_lower_bounds(OCprob.lb_var)
+    model.set_variables_upper_bounds(OCprob.ub_var)
+    
+    model.set_objective(unopy.MINIMIZE, OCprob.f, OCprob.grad_f_inplace)
+    model.set_constraints(OCprob.nCon, OCprob.g_inplace, OCprob.lb_con, OCprob.ub_con, OCprob.jac_g_nnz, np.array(OCprob.jac_g_row), OCprob.jac_g_col, OCprob.jac_g_nz_inplace)
+    
+    model.set_lagrangian_sign_convention(unopy.MULTIPLIER_NEGATIVE)
+    model.set_lagrangian_hessian(OCprob.hess_LT_nnz, unopy.LOWER_TRIANGLE, OCprob.hess_LT_row, OCprob.hess_LT_col, OCprob.hess_lag_objmult_inplace)
+    
+    if start_pert is not None:
+        model.set_initial_primal_iterate(OCprob.perturbed_start_point(start_pert))
+    else:
+        model.set_initial_primal_iterate(OCprob.start_point)
+    return model
+
+def set_UNO_options(UNOsol, **kwargs):
+    for key in kwargs:
+        if key == 'preset':
+            continue
+        UNOsol.set_option(key, kwargs[key])
+    if 'preset' in kwargs:
+        UNOsol.set_preset(kwargs['preset'])
+    
+def UNOsolver_perturbed_starts(OCprob : OCProblems.OCProblem, arg_opts : dict, nPert0, nPertF, itMax = 200):
+    UNOmodel = create_UNO_model(OCprob)
+    
+    N_SQP = []
+    N_secs = []
+    type_sol = []
+    for j in range(nPert0, nPertF):
+        UNOmodel.set_initial_primal_iterate(OCprob.perturbed_start_point(j))
+        UNOsol = unopy.UnoSolver()
+        set_UNO_options(UNOsol, **arg_opts, max_iterations = itMax)
+        
+        t0 = time.monotonic()
+        result = UNOsol.optimize(UNOmodel)
+        t1 = time.monotonic()
+        
+        N_SQP.append(result.number_iterations)
+        type_sol.append(int(result.optimization_status == unopy.OptimizationStatus.SUCCESS))
+        N_secs.append(t1 - t0)
+    return N_SQP, N_secs, type_sol
+
+
 #Run all example problems for all option sets for perturbed start points
 dirPath = plot_folder
 dirPath.mkdir(parents = True, exist_ok = True)
 if file_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-    pref = "blockSQP2"
+    pref = "UNO"
     filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
     out = open(filePath, 'w')
 else:
@@ -144,13 +176,8 @@ for OCclass, OCargs, OCname in Examples:
     EXP_type_sol = []
     n_EXP = 0
     
-    #Hack: Test for less points for Batch_Distillation due to very long runtime
-    if issubclass(OCclass, OCProblems.Batch_Distillation):
-        nPertFsave = nPertF
-        nPertF = nPert0 + 2
-    
     for EXP_opts, EXP_name in Experiments:
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, use_condensing = use_condensing)
+        ret_N_SQP, ret_N_secs, ret_type_sol = UNOsolver_perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)
@@ -162,11 +189,8 @@ for OCclass, OCargs, OCname in Examples:
     
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP2")
+        suptitle = OCname, dirPath = dirPath, savePrefix = "UNO")
     OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
-    
-    #Hack
-    if issubclass(OCclass, OCProblems.Batch_Distillation):
-        nPertF = nPertFsave
-        
 out.close()
+
+

@@ -56,7 +56,7 @@ def create_prob_cond(OCprob : OCProblems.OCProblem):
     
     return prob, cond
 
-def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions, nPert0, nPertF, COND = False, itMax = 100):
+def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions, nPert0, nPertF, use_condensing = True, itMax = 100):
     """Run blockSQP2 on the given problem for start points perturbed at nPert0:nPertF
     Return a vector of the iteration counts, the solution times in seconds and a vector of return codes
     indication the success: < 0 - failure, 0 - max it reached, 1 - partial success, > 1 success"""
@@ -69,7 +69,7 @@ def perturbed_starts(OCprob : OCProblems.OCProblem, opts : blockSQP2.SQPoptions,
         
         prob, cond = create_prob_cond(OCprob)
         prob.x_start = start_it
-        if COND:
+        if use_condensing:
             prob.condenser = cond
         
         stats = blockSQP2.SQPstats("./solver_outputs")        
@@ -253,7 +253,7 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP[i], c = cmap[i])
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
-        ax_it.set_xlabel('location of perturbation', size = labelsize)
+        ax_it.set_xlabel('start point index', size = labelsize)
         ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
       
         
@@ -262,7 +262,7 @@ def plot_all(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,
         ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs[i], c = cmap[i])
         ax_time.set_ylabel("solution time in seconds", size = labelsize)
         ax_time.set_ylim(bottom = 0)
-        ax_time.set_xlabel("location of perturbation", size = labelsize)
+        ax_time.set_xlabel("start point index", size = labelsize)
         ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_time.set_xticks(xticks)
 
@@ -318,7 +318,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_it.scatter(list(range(nPert0,nPertF)), EXP_N_SQP_S[i])#, c = cmap[i])
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
-        ax_it.set_xlabel('location of perturbation', size = labelsize)
+        ax_it.set_xlabel('start point index', size = labelsize)
         ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
@@ -326,7 +326,7 @@ def plot_successful(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_ty
         ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs_S[i])#, c = cmap[i])
         ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
-        ax_time.set_xlabel("location of perturbation", size = labelsize)
+        ax_time.set_xlabel("start point index", size = labelsize)
         ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         
         ax_time.set_xticks(xticks)
@@ -413,7 +413,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
 
         ax_it.set_ylabel('SQP iterations', size = labelsize)
         ax_it.set_ylim(bottom = 0)
-        ax_it.set_xlabel('location of perturbation', size = labelsize)
+        ax_it.set_xlabel('start point index', size = labelsize)
         ax_it.set_title(r"$\mu = " + f"{EXP_N_SQP_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_SQP_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_it.set_xticks(xticks)
         ax_it.tick_params(labelsize = labelsize - 1)
@@ -425,7 +425,7 @@ def plot_varshape(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, EXP_type
         
         ax_time.set_ylabel("solution time [s]", size = labelsize)
         ax_time.set_ylim(bottom = 0)
-        ax_time.set_xlabel("location of perturbation", size = labelsize)
+        ax_time.set_xlabel("start point index", size = labelsize)
         ax_time.set_title(r"$\mu = " + f"{EXP_N_secs_mu[i]:.2f}" + r"\ \sigma = " + f"{EXP_N_secs_sigma[i]:.2f}" + "$", size = axtitlesize)
         ax_time.tick_params(labelsize = labelsize - 1)
         ax_time.set_xticks(xticks)
@@ -486,7 +486,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
         ax_it.set_ylabel(titles[i], size = labelsize)
         ax_it.set_ylim(bottom = 0)
         if i == n_EXP - 1:
-            ax_it.set_xlabel('location of perturbation', size = labelsize)
+            ax_it.set_xlabel('start point index', size = labelsize)
         if i == 0:
             ax_it.set_title('SQP iterations', size = axtitlesize)
             
@@ -497,7 +497,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
         ax_time.scatter(list(range(nPert0,nPertF)), EXP_N_secs_S[i])
         ax_time.set_ylim(bottom = 0)
         if i == n_EXP - 1:
-            ax_time.set_xlabel("location of perturbation", size = labelsize)
+            ax_time.set_xlabel("start point index", size = labelsize)
         if i == 0:
             ax_time.set_title('solution time [s]', size = axtitlesize)
         ax_time.set_xticks(xticks)
@@ -597,7 +597,7 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
     out.close()
 
 
-def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], dict, typing.Optional[str]]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, **kwargs):
+def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], dict, typing.Optional[str]]], Experiments : list[tuple[blockSQP2.SQPoptions, str]], dirPath : str, nPert0 = 0, nPertF = 40, file_output = True, use_condensing = True, **kwargs):
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
@@ -621,7 +621,7 @@ def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], 
         EXP_type_sol = []
         n_EXP = 0
         for EXP_opts, EXP_name in Experiments:
-            ret_N_SQP, ret_N_secs, ret_type_sol = perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
+            ret_N_SQP, ret_N_secs, ret_type_sol = perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, use_condensing = use_condensing)
             EXP_N_SQP.append(ret_N_SQP)
             EXP_N_secs.append(ret_N_secs)
             EXP_type_sol.append(ret_type_sol)

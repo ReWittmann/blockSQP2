@@ -229,11 +229,6 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
             
             // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
             // else S_u[i] = std::max(1.0/rdelta[i], rgamma[i]/param->scaling_Theta_max);
-            
-            // S_u[i] = (std::min)((std::min)(rgamma[i], 1.0/rdelta[i]), param->scaling_Theta_max/rdelta[i]);
-            // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
-            // else S_u[i] = std::max(1.0, std::min(param->scaling_Theta_max/rdelta[i], rgamma[i]));
-            
         }
         else if (rgamma[i] < 1.0){
             if (rdelta[i] > 1.0){                
@@ -242,7 +237,7 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
             }
             else S_u[i] = rgamma[i];
         }
-        std::cout << "rdelta[" << i << "] = " << rdelta[i] << ", rgamma[" << i << "] = " << rgamma[i] << ", S_u[" << i << "] = " << S_u[i] << "\n";
+        // std::cout << "rdelta[" << i << "] = " << rdelta[i] << ", rgamma[" << i << "] = " << rgamma[i] << ", S_u[" << i << "] = " << S_u[i] << "\n";
     }
     
     ind_1 = 0;    

@@ -5067,7 +5067,7 @@ class Lotka_Shared_OED(OCProblem):
         
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)
-        s_ind = self.get_stage_control(s, ind)
+        s_ind = self.get_stage_control(s, ind).reshape(-1)
         self.set_stage_control(s, ind, [0.1, *s_ind[1:4]])
         return s
     
@@ -5863,15 +5863,17 @@ class Apollo_Reentry(OCProblem):
         self.ODE = {'x': x, 'p':cs.vertcat(dt, u),'ode': dt*ode_rhs, 'quad': dt*quad_rhs}
         self.multiple_shooting()
         self.set_objective(self.q_tf)
-        self.add_constraint(self.x_eval[:,-1], [0.27, 0., 2.5/R], [0.27, 0., 2.5/R])
+        
+        x_final = [0.27, 0., 2.5/R]
+        self.add_constraint(self.x_eval[:,-1], x_final, x_final)
         self.build_NLP()
         
         self.start_point = np.zeros(self.nVar)
         for i in range(self.ntS):
             self.set_stage_param(self.start_point, i, 230.0/self.ntS)
             self.set_stage_control(self.start_point, i, 0.5)
-            self.set_stage_state(self.start_point, i, self.x_init)
-        self.set_stage_state(self.start_point, self.ntS, self.x_init)
+            self.set_stage_state(self.start_point, i, self.x_init)#np.array(self.x_init)*(1 - i/(self.ntS+1)) + np.array(x_final)*(i/(self.ntS+1)))
+        self.set_stage_state(self.start_point, self.ntS, self.x_init)#x_final)
     
     def perturbed_start_point(self, ind):
         s = copy.copy(self.start_point)

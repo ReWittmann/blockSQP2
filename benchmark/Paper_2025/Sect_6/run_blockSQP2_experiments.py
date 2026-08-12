@@ -28,7 +28,7 @@ import OCProblems
 # Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
             (OCProblems.Apollo_Reentry, dict(), None),
-            (OCProblems.Batch_Distillation, dict(), None),
+            # (OCProblems.Batch_Distillation, dict(), None),
             (OCProblems.Batch_Reactor, dict(), None),
             (OCProblems.Batch_Reactor_OED, dict(), None),
             (OCProblems.Calcium_Oscillation, dict(), None),
@@ -84,19 +84,19 @@ opt_cc = blockSQP2.SQPoptions(
 #Convexification strategy 1
 opt_fr = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
-    conv_strategy = 'full regularization',
+    conv_strategy = 'full_regularization',
 )
 
 #Convexification strategy 2
 opt_fr_scaling = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
-    conv_strategy = 'reduced regularization',
+    conv_strategy = 'reduced_regularization',
     automatic_scaling = True
 )
 
 opt_full = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
-    conv_strategy = 'reduced regularization',
+    conv_strategy = 'reduced_regularization',
     par_QPs = True,
     max_filter_overrides = 0,
     automatic_scaling = True,

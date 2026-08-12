@@ -28,7 +28,7 @@ opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
 opts.max_conv_QPs = 1
-opts.conv_strategy = 2
+opts.conv_strategy = 'reduced_regularization'
 opts.par_QPs = False
 opts.enable_QP_cancellation = True
 opts.indef_delay = 1
@@ -51,10 +51,11 @@ opts.enable_premature_termination = False
 opts.max_filter_overrides = 0
 
 
-vBlocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))
-for i in range(len(OCprob.vBlock_sizes)):
-    vBlocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
+# vBlocks = blockSQP2.vblock_array(len(OCprob.vBlock_sizes))
+# for i in range(len(OCprob.vBlock_sizes)):
+#     vBlocks[i] = blockSQP2.vblock(OCprob.vBlock_sizes[i], OCprob.vBlock_dependencies[i])
 
+vblocks = [blockSQP2.vblock(vbsize, vbdep, vbimpl) for vbsize, vbdep, vbimpl in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies, OCprob.vBlock_bounds_implicit)]
 
 #Define blockSQP Problemspec
 prob = blockSQP2.Problemspec()
@@ -71,7 +72,7 @@ prob.hess = OCprob.hess_lag
 prob.set_blockIndex(OCprob.hessBlock_index)
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
-prob.vblocks = vBlocks
+prob.vblocks = vblocks
 
 prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
