@@ -164,7 +164,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     remaining_filter_overrides = param->max_filter_overrides;
     
     // Flags
-    conv_qp_only = param->indef_local_only;
+    conv_qp_only = false; //param->indef_local_only;
     conv_qp_solved = false;
     hess2_updated = true;
     use_homotopy = true;            

@@ -30,7 +30,7 @@ Examples = [
             (OCProblems.Egerstedt_Standard, dict(), None),
             (OCProblems.Electric_Car, dict(), None),
             (OCProblems.Fermenter, dict(), None),
-            (OCProblems.Goddard_Rocket, dict(), 'Goddard\'s Rocket'),
+            (OCProblems.Goddard_Rocket, dict(), None),
             (OCProblems.Hang_Glider, dict(), None),
             (OCProblems.Hanging_Chain, dict(), None),
             (OCProblems.Lotka_Volterra_Fishing, dict(), None),
@@ -76,7 +76,6 @@ plot_folder = cD / Path("out_scaling_comparison")
 OCP_experiment.run_blockSQP2_experiments(Examples, Experiments,\
                                         plot_folder,\
                                         nPert0 = 0, nPertF = 10,
-                                        integrator = 'RK4',
                                         use_condensing = True
                                         )
 

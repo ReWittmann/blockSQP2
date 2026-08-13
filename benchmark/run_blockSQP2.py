@@ -25,7 +25,7 @@ import blockSQP2
 import OCProblems
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Apollo_Reentry(
+OCprob = OCProblems.Egerstedt_Standard(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4

@@ -28,13 +28,13 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems.Hang_Glider(
+OCprob = OCProblems.Cart_Pendulum(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    # **OCProblems.Cart_Pendulum.param_set_2,
+                    **OCProblems.Cart_Pendulum.param_set_1,
                     )
 
 ipopts = dict()

@@ -375,12 +375,12 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         updateDeltaGammaData();
         
         //If we appear to be reasonably close to a local optimum, enable SR1 updates for faster local convergence if only convex QPs were enabled before
-        if (vars->tol <= 1e-4 && vars->cNormS <= 1e-4 && stats->itCount >= 8){
+        // if (vars->tol <= 1e-4 && vars->cNormS <= 1e-4 && stats->itCount >= 8){
         //if (vars->tol <= std::sqrt(param->opttol) && vars->cNormS <= std::sqrt(param->nlinfeastol) && it >= 8){
-            vars->nearSol = true;
-            vars->conv_qp_only = false;
-        }
-        if (vars->milestone > std::max(vars->tol, vars->cNormS)) vars->milestone = std::max(vars->tol, vars->cNormS);
+        //     vars->nearSol = true;
+        //     vars->conv_qp_only = false;
+        // }
+        // if (vars->milestone > std::max(vars->tol, vars->cNormS)) vars->milestone = std::max(vars->tol, vars->cNormS);
         
         
         if (!vars->it_saved){

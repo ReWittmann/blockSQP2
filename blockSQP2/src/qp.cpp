@@ -810,12 +810,11 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
         for (; j < 5; j++){
             // computeLowerRegularizedHessian(j, maxQP);
             sub_QPs_par[1]->set_reg(computeLowerRegularizationFactor(j, maxQP));
-            sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);
+            sub_QPs_par[1]->set_timeLimit(TimeLimitTypes::past_avg);//BUG
             QPresults QP_result_temp = sub_QPs_par[1]->solve(vars->deltaXi_temp, vars->lambdaQP_temp);
             if (QP_result_temp == QPresults::success){
-                deltaXi = vars->deltaXi_temp; 
-                lambdaQP = vars->lambdaQP_temp;
-                sol_set = true;
+                vars->par_QP_sols_prim[vars->hess_num_accepted] = vars->deltaXi_temp; 
+                vars->par_QP_sols_dual[vars->hess_num_accepted] = vars->lambdaQP_temp;
             }
             else break;
         }
