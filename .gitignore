@@ -40,4 +40,4 @@ manual.toc
 gen.c
 tmp_casadi*
 jit_tmp*
-codegen_
+codegen_*

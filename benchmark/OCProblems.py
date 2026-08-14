@@ -3218,8 +3218,8 @@ class Lotka_OED(OCProblem):
         'p2':1,
         'p3':1,
         'p4':1,
-        'p5':0.4,
-        'p6':0.2,
+        'c1':0.4,
+        'c2':0.2,
         'x_init':[0.5,0.7],
         'M':4.0,
         'fishing':True,
@@ -3229,7 +3229,7 @@ class Lotka_OED(OCProblem):
     
     def build_problem(self):
         self.set_OCP_data(9, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
-        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
+        tf,p1,p2,p3,p4,c1,c2,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'c1', 'c2','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
         self.mark_state_bounds_implicit()
@@ -3242,12 +3242,12 @@ class Lotka_OED(OCProblem):
         
         dt = cs.MX.sym('dt', 1)
         ode_rhs = cs.vertcat(
-                p1*x1 - p2*x1*x2 - p5*u*x1,
-                -p3*x2 + p4*x1*x2 - p6*u*x2,
-                (p1 - p2*x2 - p5*u)*G11 + (-p2*x1)*G21 - x1*x2,
-                (p1 - p2*x2 - p5*u)*G12 + (-p2*x1)*G22,
-                (p4*x2)*G11 + (-p3 + p4*x1 - p6*u)*G21,
-                (p4*x2)*G12 + (-p3 + p4*x1 - p6*u)*G22  + x1*x2,
+                p1*x1 - p2*x1*x2 - c1*u*x1,
+                -p3*x2 + p4*x1*x2 - c2*u*x2,
+                (p1 - p2*x2 - c1*u)*G11 + (-p2*x1)*G21 - x1*x2,
+                (p1 - p2*x2 - c1*u)*G12 + (-p2*x1)*G22,
+                (p4*x2)*G11 + (-p3 + p4*x1 - c2*u)*G21,
+                (p4*x2)*G12 + (-p3 + p4*x1 - c2*u)*G22  + x1*x2,
                 w1*(G11**2) + w2*(G21**2),
                 w1*G11*G12 + w2*G21*G22,
                 w1*(G12**2) + w2*(G22**2)
@@ -3304,6 +3304,15 @@ class Lotka_OED(OCProblem):
         self.finish_plot(ax, title, it, 'Lotka_OED_problem')
 
 
+
+
+
+
+
+
+
+
+
 class Fermenter(OCProblem):
     #Janka PhD and Le master's thesis params
     default_params = {'mux':2e5,
@@ -3327,6 +3336,104 @@ class Fermenter(OCProblem):
     
     def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
         OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
+    
+    def build_problem(self):
+        self.set_OCP_data(6 + 3, 0, 3, 3-3, [0.,0.,0.,0.,0.3,0.] + [0.,0.,0.], [0.1,0.04,0.03,0.1,0.45,0.1] + [0.05,0.2,0.025], [], [], [0.,0.,0.], [15.,1.,30.])
+        mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
+        self.fix_time_horizon(0.,1.)
+        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1] + [0., 0.009, 0.009])
+        x = cs.MX.sym('x', 6)
+        P,S1,S2,E,V,G = cs.vertsplit(x)
+        u = cs.MX.sym('u', 3)
+        uS1,uS2,uP = cs.vertsplit(u)
+        dt = cs.MX.sym('dt', 1)
+        
+        #In Le, first term in rhs for S1, S2 and G enters with positive sign, negative in Janka and MUSCOD
+        #Janka and MUSCOD seem to be correct
+        
+        Pdot = mup*E*S1*S2 - P*(uS1+uS2)/(25*V)
+        ode_rhs = cs.vertcat(
+                Pdot,
+                -gx1*E*S1*S2*G - gp1*E*S1*S2 + (0.42*uS1 - S1*(uS1 + uS2))/(25*V),
+                -gx2*E*S1*S2*G - gp2*E*S1*S2 + (0.333*uS2 - S2*(uS1 + uS2))/(25*V),
+                mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
+                uS1 + uS2 - uP,
+                -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
+        )
+        
+        qstates = cs.MX.sym('qstates', 3)
+        quad = cs.vertcat(uP*P + (uS1 + uS2 - uP)/25 * P + V*Pdot,
+                0.0168*uS1,
+                0.01332*uS2)
+        
+        self.ODE = {'x':cs.vertcat(x, qstates), 'p':cs.vertcat(dt, u), 'ode':dt*cs.vertcat(ode_rhs, quad)}
+        self.multiple_shooting()
+        
+        # P_acc, S1_acc, S2_acc = cs.vertsplit(self.q_tf + cs.DM([0., 0.009, 0.009]))
+        P_acc, S1_acc, S2_acc = cs.vertsplit(self.x_eval[6:9,-1])
+        
+        # self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
+        self.set_objective(2*(S1_acc*S2_acc)/P_acc)
+
+        self.build_NLP()
+        for i in range(self.ntS):
+            self.set_stage_control(self.start_point, i, [0., 0., 0.])
+        self.integrate_full(self.start_point)
+    
+    def perturbed_start_point(self, ind):
+        s = copy.copy(self.start_point)
+        val0, val1, val2 = self.get_stage_control(s, ind)
+        self.set_stage_control(s, ind, [val0 + 0.1, val1 + 0.1, val2 + 0.1])
+        return s
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        P,S1,S2,E,V,G, _, _, _ = self.get_state_arrays(xi)
+        uS1,uS2,uP = self.get_control_plot_arrays(xi)
+        
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.plot(self.time_grid, P*10., 'tab:red', linestyle = '--', label = r'$P\cdot 10$')
+        ax.plot(self.time_grid, S1*2, 'tab:green', linestyle = '--', label = r'$S1\cdot 2$')
+        ax.plot(self.time_grid, S2*2, 'tab:brown', linestyle = '--', label = r'$S2\cdot 2$')
+        ax.plot(self.time_grid, E, 'tab:olive', linestyle = '--', label = 'E')
+        ax.plot(self.time_grid, V/3, 'tab:cyan', linestyle = '--', label = 'V/3')
+        ax.plot(self.time_grid, G, 'tab:purple', linestyle = '--', label = 'G')
+        
+        ax.step(self.time_grid_ref, uS1/5., 'tab:red', label = r'$u_{S1}/5$')
+        ax.step(self.time_grid_ref, uS2/15., 'tab:green', label = r'$u_{S2}/15$')
+        ax.step(self.time_grid_ref, uP/60., 'tab:grey', label = r'$u_{P}/60$')
+        
+        ax.legend(fontsize='medium', loc = 'upper center')
+        ax.set_ylim(0, 0.16)
+        
+        self.finish_plot(ax, title, it, "Fermenter problem")
+
+
+
+#Since quadratures need to be bounded at every point and depend on all previous states,
+#the constraint jacobian gains a lot of nozero entries, making it many times more expensive to calculate
+class Fermenter_quads(Fermenter):
+    # #Janka PhD and Le master's thesis params
+    # default_params = {'mux':2e5,
+    #                   'mup':5000,
+    #                   'gxg':5e4,
+    #                   'gx1':1e5,
+    #                   'gp1':2e4,
+    #                   'gx2':1500,
+    #                   'gp2':5e4
+    #                   }
+    
+    # #MUSCOD II example params
+    # # default_params = {'mux':2e5,
+    # #                   'mup':5000,
+    # #                   'gxg':5e4,
+    # #                   'gx1':1e5,
+    # #                   'gp1':2e4,
+    # #                   'gx2':0.5e4,
+    # #                   'gp2':1.5e3
+    # #                   }
+    
+    # def __init__(self, nt = 100, refine = 1, integrator = 'cvodes', parallel = False, N_threads = 4, **kwargs):
+    #     OCProblem.__init__(self, nt=nt, refine=refine, integrator=integrator, parallel=parallel, N_threads = N_threads, **kwargs)
 
     def build_problem(self):
         self.set_OCP_data(6, 0, 3, 3, [0.,0.,0.,0.,0.3,0.], [0.1,0.04,0.03,0.1,0.45,0.1], [], [], [0.,0.,0.], [15.,1.,30.])
@@ -3371,11 +3478,11 @@ class Fermenter(OCProblem):
             self.set_stage_control(self.start_point, i, [0., 0., 0.])
         self.integrate_full(self.start_point)
     
-    def perturbed_start_point(self, ind):
-        s = copy.copy(self.start_point)
-        val0, val1, val2 = self.get_stage_control(s, ind)
-        self.set_stage_control(s, ind, [val0 + 0.1, val1 + 0.1, val2 + 0.1])
-        return s
+    # def perturbed_start_point(self, ind):
+    #     s = copy.copy(self.start_point)
+    #     val0, val1, val2 = self.get_stage_control(s, ind)
+    #     self.set_stage_control(s, ind, [val0 + 0.1, val1 + 0.1, val2 + 0.1])
+    #     return s
     
     def plot(self, xi, dpi = None, title = None, it = None):
         P,S1,S2,E,V,G = self.get_state_arrays(xi)
@@ -3547,8 +3654,8 @@ class Hang_Glider(OCProblem):
         dt = cs.MX.sym('dt')
         
         r = (x/rC - 2.5)**2
-        u = uC*(1 - r)*cs.exp(-r)
-        w = dy - u
+        U = uC*(1 - r)*cs.exp(-r)
+        w = dy - U
         v = cs.sqrt(dx**2 + w**2)
         
         D = 1/2 * (c0 + c1*cL**2)*rho*S*v**2
@@ -5096,8 +5203,8 @@ class Lotka_OED_new(OCProblem):
         'p2':1,
         'p3':1,
         'p4':1,
-        'p5':0.4,
-        'p6':0.2,
+        'c1':0.4,
+        'c2':0.2,
         'x_init':[0.5,0.7],
         'M':4.0,
         'fishing':True,
@@ -5106,7 +5213,7 @@ class Lotka_OED_new(OCProblem):
         }
     def build_problem(self):
         self.set_OCP_data(2 + 4 + 3, 0, 3, 2, [0.,0.]+[-np.inf]*7, [np.inf]*9,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
-        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
+        tf,p1,p2,p3,p4,c1,c2,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'c1', 'c2','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon])
         self.mark_state_bounds_implicit()
@@ -5117,8 +5224,8 @@ class Lotka_OED_new(OCProblem):
         p = cs.MX.sym('p', 2)
         p2_s, p4_s = cs.vertsplit(p)
         
-        f_expr = cs.vertcat(p1*x1 - p2_s*x1*x2 - p5*u*x1,
-                           -p3*x2 + p4_s*x1*x2 - p6*u*x2
+        f_expr = cs.vertcat(p1*x1 - p2_s*x1*x2 - c1*u*x1,
+                           -p3*x2 + p4_s*x1*x2 - c2*u*x2
                             )
         f_x_expr = cs.jacobian(f_expr, x)
         f_p_expr = cs.jacobian(f_expr, p)

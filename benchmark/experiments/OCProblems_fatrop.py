@@ -661,72 +661,71 @@ class Ducted_Fan_noParams(OCProblems.Ducted_Fan):
         
         self.finish_plot(ax, title, it, 'Ducted fan problem')
 
-#Somehow, the sensitivities of this Fermenter version are much faster to evaluate ...
-class Fermenter_noQuads(OCProblems.Fermenter):
-    def build_problem(self):
-        self.set_OCP_data(6 + 3, 0, 3, 3-3, [0.,0.,0.,0.,0.3,0.] + [0.,0.,0.], [0.1,0.04,0.03,0.1,0.45,0.1] + [0.05,0.2,0.025], [], [], [0.,0.,0.], [15.,1.,30.])
-        mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
-        self.fix_time_horizon(0.,1.)
-        self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1] + [0., 0.009, 0.009])
-        x = cs.MX.sym('x', 6)
-        P,S1,S2,E,V,G = cs.vertsplit(x)
-        u = cs.MX.sym('u', 3)
-        uS1,uS2,uP = cs.vertsplit(u)
-        dt = cs.MX.sym('dt', 1)
+# class Fermenter_noQuads(OCProblems.Fermenter):
+#     def build_problem(self):
+#         self.set_OCP_data(6 + 3, 0, 3, 3-3, [0.,0.,0.,0.,0.3,0.] + [0.,0.,0.], [0.1,0.04,0.03,0.1,0.45,0.1] + [0.05,0.2,0.025], [], [], [0.,0.,0.], [15.,1.,30.])
+#         mux, mup, gxg, gx1, gp1, gx2, gp2 = (self.model_params[key] for key in ['mux', 'mup', 'gxg', 'gx1', 'gp1', 'gx2', 'gp2'])
+#         self.fix_time_horizon(0.,1.)
+#         self.fix_initial_value([0.,0.03,0.03,0.01,0.3,0.1] + [0., 0.009, 0.009])
+#         x = cs.MX.sym('x', 6)
+#         P,S1,S2,E,V,G = cs.vertsplit(x)
+#         u = cs.MX.sym('u', 3)
+#         uS1,uS2,uP = cs.vertsplit(u)
+#         dt = cs.MX.sym('dt', 1)
         
-        #In Le, first term in rhs for S1, S2 and G enters with positive sign, negative in Janka and MUSCOD
-        #Janka and MUSCOD seem to be correct
+#         #In Le, first term in rhs for S1, S2 and G enters with positive sign, negative in Janka and MUSCOD
+#         #Janka and MUSCOD seem to be correct
         
-        Pdot = mup*E*S1*S2 - P*(uS1+uS2)/(25*V)
-        ode_rhs = cs.vertcat(
-                Pdot,
-                -gx1*E*S1*S2*G - gp1*E*S1*S2 + (0.42*uS1 - S1*(uS1 + uS2))/(25*V),
-                -gx2*E*S1*S2*G - gp2*E*S1*S2 + (0.333*uS2 - S2*(uS1 + uS2))/(25*V),
-                mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
-                uS1 + uS2 - uP,
-                -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
-        )
+#         Pdot = mup*E*S1*S2 - P*(uS1+uS2)/(25*V)
+#         ode_rhs = cs.vertcat(
+#                 Pdot,
+#                 -gx1*E*S1*S2*G - gp1*E*S1*S2 + (0.42*uS1 - S1*(uS1 + uS2))/(25*V),
+#                 -gx2*E*S1*S2*G - gp2*E*S1*S2 + (0.333*uS2 - S2*(uS1 + uS2))/(25*V),
+#                 mux*E*S1*S2*G - E*(uS1 + uS2)/(25*V),
+#                 uS1 + uS2 - uP,
+#                 -gxg*E*S1*S2*G - G*(uS1+uS2)/(25*V),
+#         )
         
-        qstates = cs.MX.sym('qstates', 3)
-        quad = cs.vertcat(uP*P + (uS1 + uS2 - uP)/25 * P + V*Pdot,
-                0.0168*uS1,
-                0.01332*uS2)
+#         qstates = cs.MX.sym('qstates', 3)
+#         quad = cs.vertcat(uP*P + (uS1 + uS2 - uP)/25 * P + V*Pdot,
+#                 0.0168*uS1,
+#                 0.01332*uS2)
         
-        self.ODE = {'x':cs.vertcat(x, qstates), 'p':cs.vertcat(dt, u), 'ode':dt*cs.vertcat(ode_rhs, quad)}
-        self.multiple_shooting()
+#         self.ODE = {'x':cs.vertcat(x, qstates), 'p':cs.vertcat(dt, u), 'ode':dt*cs.vertcat(ode_rhs, quad)}
+#         self.multiple_shooting()
         
-        # P_acc, S1_acc, S2_acc = cs.vertsplit(self.q_tf + cs.DM([0., 0.009, 0.009]))
-        P_acc, S1_acc, S2_acc = cs.vertsplit(self.x_eval[6:9,-1])
+#         # P_acc, S1_acc, S2_acc = cs.vertsplit(self.q_tf + cs.DM([0., 0.009, 0.009]))
+#         P_acc, S1_acc, S2_acc = cs.vertsplit(self.x_eval[6:9,-1])
         
-        # self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
-        self.set_objective(2*(S1_acc*S2_acc)/P_acc)
+#         # self.set_objective(2*(self.x_eval[7,-1]*self.x_eval[8,-1])/self.x_eval[6,-1])
+#         self.set_objective(2*(S1_acc*S2_acc)/P_acc)
 
-        self.build_NLP()
-        for i in range(self.ntS):
-            self.set_stage_control(self.start_point, i, [0., 0., 0.])
-        self.integrate_full(self.start_point)
+#         self.build_NLP()
+#         for i in range(self.ntS):
+#             self.set_stage_control(self.start_point, i, [0., 0., 0.])
+#         self.integrate_full(self.start_point)
     
     
-    def plot(self, xi, dpi = None, title = None, it = None):
-        P,S1,S2,E,V,G, _, _, _ = self.get_state_arrays(xi)
-        uS1,uS2,uP = self.get_control_plot_arrays(xi)
+#     def plot(self, xi, dpi = None, title = None, it = None):
+#         P,S1,S2,E,V,G, _, _, _ = self.get_state_arrays(xi)
+#         uS1,uS2,uP = self.get_control_plot_arrays(xi)
         
-        fig, ax = plt.subplots(dpi=dpi)
-        ax.plot(self.time_grid, P*10., 'tab:red', linestyle = '--', label = r'$P\cdot 10$')
-        ax.plot(self.time_grid, S1*2, 'tab:green', linestyle = '--', label = r'$S1\cdot 2$')
-        ax.plot(self.time_grid, S2*2, 'tab:brown', linestyle = '--', label = r'$S2\cdot 2$')
-        ax.plot(self.time_grid, E, 'tab:olive', linestyle = '--', label = 'E')
-        ax.plot(self.time_grid, V/3, 'tab:cyan', linestyle = '--', label = 'V/3')
-        ax.plot(self.time_grid, G, 'tab:purple', linestyle = '--', label = 'G')
+#         fig, ax = plt.subplots(dpi=dpi)
+#         ax.plot(self.time_grid, P*10., 'tab:red', linestyle = '--', label = r'$P\cdot 10$')
+#         ax.plot(self.time_grid, S1*2, 'tab:green', linestyle = '--', label = r'$S1\cdot 2$')
+#         ax.plot(self.time_grid, S2*2, 'tab:brown', linestyle = '--', label = r'$S2\cdot 2$')
+#         ax.plot(self.time_grid, E, 'tab:olive', linestyle = '--', label = 'E')
+#         ax.plot(self.time_grid, V/3, 'tab:cyan', linestyle = '--', label = 'V/3')
+#         ax.plot(self.time_grid, G, 'tab:purple', linestyle = '--', label = 'G')
         
-        ax.step(self.time_grid_ref, uS1/5., 'tab:red', label = r'$u_{S1}/5$')
-        ax.step(self.time_grid_ref, uS2/15., 'tab:green', label = r'$u_{S2}/15$')
-        ax.step(self.time_grid_ref, uP/60., 'tab:grey', label = r'$u_{P}/60$')
+#         ax.step(self.time_grid_ref, uS1/5., 'tab:red', label = r'$u_{S1}/5$')
+#         ax.step(self.time_grid_ref, uS2/15., 'tab:green', label = r'$u_{S2}/15$')
+#         ax.step(self.time_grid_ref, uP/60., 'tab:grey', label = r'$u_{P}/60$')
         
-        ax.legend(fontsize='medium', loc = 'upper center')
-        ax.set_ylim(0, 0.16)
+#         ax.legend(fontsize='medium', loc = 'upper center')
+#         ax.set_ylim(0, 0.16)
         
-        self.finish_plot(ax, title, it, "Fermenter problem")
+#         self.finish_plot(ax, title, it, "Fermenter problem")
 
 
 class Hang_Glider_noParams(OCProblems.Hang_Glider):
@@ -1095,7 +1094,7 @@ constr_data = {
             Ducted_Fan_noParams: (0, 6, False, True),
             OCProblems.Egerstedt_Standard: (1, 0, True, False),
             OCProblems.Electric_Car: (0, 1, False, True),
-            Fermenter_noQuads: (0, 0, False, True),
+            OCProblems.Fermenter: (0, 0, False, True),
             Goddard_Rocket_noParams: (1, 1, False, True),
             Hang_Glider_noParams: (0, 3, False, True),
             Hanging_Chain_noQuads: (0, 2, False, True),

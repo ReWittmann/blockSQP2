@@ -87,16 +87,6 @@ ocp.solver_options.tf = Tf
 ocp.solver_options.qp_solver_cond_N = 20
 
 
-# ocp.cost.cost_type = 'LINEAR_LS'
-# ocp.cost.yref = np.array([0.0, np.pi, 0.0])
-# ocp.cost.W = np.diag([np.sqrt(20), np.sqrt(100), np.sqrt(2 * lambda_u)])
-# ocp.cost.Vx = np.array([[1,0,0,0],
-#                         [0,1,0,0], 
-#                         [0,0,0,0]], dtype = np.float64)
-# ocp.cost.Vu = np.array([[0],
-#                         [0],
-#                         [1]], dtype = np.float64)
-
 ocp.cost.cost_type_e = 'EXTERNAL'
 
 ocp.constraints.lbu = np.array([-u_max])

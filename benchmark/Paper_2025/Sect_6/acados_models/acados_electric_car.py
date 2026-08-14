@@ -7,7 +7,6 @@ import time
 def export_electric_car_model() -> AcadosModel:
     model_name = 'electric_car'
 
-
     Kr = 10
     rho = 1.293
     Cx = 0.4

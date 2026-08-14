@@ -29,7 +29,7 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems_fatrop.Time_Optimal_Car_noParams(
+OCprob = OCProblems_fatrop.Hang_Glider_noParams(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
@@ -39,7 +39,7 @@ OCprob = OCProblems_fatrop.Time_Optimal_Car_noParams(
                     )
 
 fatropts = {
-    'jit': False,
+    'jit': True,
     'expand': False,
     'jit_options': {'flags': '-Os', 'verbose': False},
     'fatrop':{'tol':1e-6, 'constr_viol_tol':1e-4, 'print_level': 10, 'max_iter': 300},

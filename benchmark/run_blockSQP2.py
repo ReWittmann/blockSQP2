@@ -23,9 +23,10 @@ sys.path += [str(cD.parent/Path("Python"))]
 sys.path += [str(cD/Path("experiments"))]
 import blockSQP2
 import OCProblems
+import OCProblems_fatrop
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Egerstedt_Standard(
+OCprob = OCProblems.Lotka_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
@@ -34,7 +35,7 @@ OCprob = OCProblems.Egerstedt_Standard(
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
                     )
-itMax = 200                                  #max number of steps
+itMax = 100                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
