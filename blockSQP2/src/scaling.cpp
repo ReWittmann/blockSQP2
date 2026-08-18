@@ -229,14 +229,14 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
         
         if (stats->itCount > 2){
             S_u[i] = -1.0;
-            if (rgamma[i] >= 1.0){            
+            if (rgamma[i] > 1.0){            
                 S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
                 
                 // Equivalent:
                 // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
                 // else S_u[i] = std::max(1.0/rdelta[i], rgamma[i]/param->scaling_Theta_max);
             }
-            else if (rgamma[i] < 1.0){
+            else{
                 if (rdelta[i] > 1.0){
                     if (rgamma[i] < param->scaling_Theta_min) S_u[i] = (std::max)(rgamma[i]/param->scaling_Theta_min, 1e-2);
                     else                                      S_u[i] = (std::min)(1.0, rdelta[i]*rgamma[i]);
