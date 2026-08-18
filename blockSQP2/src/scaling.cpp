@@ -205,6 +205,10 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
         else{
             bardelta_x = 1.0; 
             bargamma_x = 1.0;
+            for (int i = 0; i < fvbsize; i++){
+                bardelta_u[i] = 0.;
+                bargamma_u[i] = 0.;
+            }
         }
         
         for (int i = 0; i < fvbsize; i++){
@@ -223,21 +227,26 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
         rdelta[i] = (count_delta[i] > 0) ? std::exp(rdelta[i]/count_delta[i]) : 1.0;
         rgamma[i] = (count_gamma[i] > 0) ? std::exp(rgamma[i]/count_gamma[i]) : 1.0;
         
-        S_u[i] = -1.0;
-        if (rgamma[i] >= 1.0){            
-            S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
-            
-            // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
-            // else S_u[i] = std::max(1.0/rdelta[i], rgamma[i]/param->scaling_Theta_max);
-        }
-        else if (rgamma[i] < 1.0){
-            if (rdelta[i] > 1.0){                
-                if (rgamma[i] < param->scaling_Theta_min) S_u[i] = (std::max)(rgamma[i]/param->scaling_Theta_min, 1e-2);
-                else                                      S_u[i] = (std::min)(1.0, rdelta[i]*rgamma[i]);
+        if (stats->itCount > 2){
+            S_u[i] = -1.0;
+            if (rgamma[i] >= 1.0){            
+                S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
+                
+                // Equivalent:
+                // if (rgamma[i] < 1.0/rdelta[i]) S_u[i] = rgamma[i];
+                // else S_u[i] = std::max(1.0/rdelta[i], rgamma[i]/param->scaling_Theta_max);
             }
-            else S_u[i] = rgamma[i];
+            else if (rgamma[i] < 1.0){
+                if (rdelta[i] > 1.0){
+                    if (rgamma[i] < param->scaling_Theta_min) S_u[i] = (std::max)(rgamma[i]/param->scaling_Theta_min, 1e-2);
+                    else                                      S_u[i] = (std::min)(1.0, rdelta[i]*rgamma[i]);
+                }
+                else S_u[i] = std::max(rgamma[i], 1e-2);
+            }
         }
-        // std::cout << "rdelta[" << i << "] = " << rdelta[i] << ", rgamma[" << i << "] = " << rgamma[i] << ", S_u[" << i << "] = " << S_u[i] << "\n";
+        else{
+            if (rgamma[i] < 1.0 && rdelta[i] < 1.0) S_u[i] = std::max(rgamma[i], 1e-2);
+        }
     }
     
     ind_1 = 0;    
@@ -255,144 +264,365 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
 }
 
 
-
-
+void SQPmethod::calc_free_variables_scaling_separate_2(double *ret_SF){}
+/*
 void SQPmethod::calc_free_variables_scaling_separate_2(double *ret_SF){
-    // int nIt, pos, ind_1, scdep;
-    // std::unique_ptr<int[]> scfree, count_delta, count_gamma;
+    int nIt, pos, ind_1, dep_offset;
+    std::unique_ptr<int[]> scdep, scfree, count_delta, count_gamma, count_delta_x, count_gamma_x;
+    
+    std::unique_ptr<double[]> bardelta_u, bargamma_u, bardelta_x, bargamma_x, rdelta, rgamma, rdelta_x, rgamma_x, S_u, S_x;
+    
+    if (prob->n_vblocks < 1) return;
+    int ind = 0, fvbsize, dvbsize;
+    
+    for (; ind < prob->n_vblocks; ind++){
+        if (!prob->vblocks[ind].dependent){
+            fvbsize = prob->vblocks[ind].size;
+            break;
+        }
+    }
+    for (; ind < prob->n_vblocks; ind++){
+        if (!prob->vblocks[ind].dependent && prob->vblocks[ind].size != fvbsize) throw std::logic_error("For now, the scaling heuristic requires all free variable blocks to have the same size");
+    }
+    
+    dvbsize = 0;
+    for (ind = 0; ind < prob->n_vblocks && !prob->vblocks[ind].dependent; ind++){}
+    for (; ind < prob->n_vblocks && prob->vblocks[ind].dependent; ind++){
+        dvbsize += prob->vblocks[ind].size;
+    }
+    std::cout << "dvbsize = " << dvbsize << "\n";
+    
+    int size_tmp = 0;
+    bool dep_tmp = false;
+    for (; ind < prob->n_vblocks; ind++){
+        if (prob->vblocks[ind].dependent){
+            size_tmp += prob->vblocks[ind].size;
+            dep_tmp = true;
+        }
+        else{
+            if (dep_tmp && size_tmp != dvbsize) throw std::logic_error("For now, all dependent variable sections must have the same size");
+            dep_tmp = false;
+            size_tmp = 0;
+        }
+    }
+    
+    scfree = std::make_unique<int[]>(fvbsize);
+    count_delta = std::unique_ptr<int[]>(new int[fvbsize]());
+    count_gamma = std::unique_ptr<int[]>(new int[fvbsize]());
+    
+    bardelta_u = std::make_unique<double[]>(fvbsize);
+    bargamma_u = std::make_unique<double[]>(fvbsize);
+    
+    rdelta = std::unique_ptr<double[]>(new double[fvbsize]());
+    rgamma = std::unique_ptr<double[]>(new double[fvbsize]());
+    
+    S_u = std::make_unique<double[]>(fvbsize);
     
     
-    // // double bardelta_x, bargamma_x;
-    // std::unique_ptr<double[]> bardelta_x, bargamma_x, bardelta_u, bargamma_u, rdelta, rgamma, S_u;
+    scdep = std::make_unique<int[]>(dvbsize);
+    count_delta_x = std::unique_ptr<int[]>(new int[dvbsize]());
+    count_gamma_x = std::unique_ptr<int[]>(new int[dvbsize]());
     
-    // if (prob->n_vblocks < 1) return;
-    // int ind = 0, fvbsize;
+    bardelta_x = std::make_unique<double[]>(dvbsize);
+    bargamma_x = std::make_unique<double[]>(dvbsize);
     
-    // for (; ind < prob->n_vblocks; ind++){
-    //     if (!prob->vblocks[ind].dependent){
-    //         fvbsize = prob->vblocks[ind].size;
-    //         break;
-    //     }
-    // }
-    // for (; ind < prob->n_vblocks; ind++){
-    //     if (!prob->vblocks[ind].dependent && prob->vblocks[ind].size != fvbsize) throw std::logic_error("For now, the scaling heuristic requires all free variable blocks to have the same size");
-    // }
+    rdelta_x = std::unique_ptr<double[]>(new double[dvbsize]());
+    rgamma_x = std::unique_ptr<double[]>(new double[dvbsize]());
     
-    // auto set_to_zero = [lcount = fvbsize](auto* arr){for (int lind = 0; lind < lcount; lind++) arr[lind] = 0;};
+    S_x = std::make_unique<double[]>(dvbsize);
     
-    // scfree = std::make_unique<int[]>(fvbsize);
-    // count_delta = std::unique_ptr<int[]>(new int[fvbsize]());
-    // count_gamma = std::unique_ptr<int[]>(new int[fvbsize]());
     
-    // bardelta_u = std::make_unique<double[]>(fvbsize);
-    // bargamma_u = std::make_unique<double[]>(fvbsize);
-    
-    // rdelta = std::unique_ptr<double[]>(new double[fvbsize]());
-    // rgamma = std::unique_ptr<double[]>(new double[fvbsize]());
-    
-    // S_u = std::make_unique<double[]>(fvbsize);
-    
-    // nIt = std::min(vars->n_scaleIt, 5);
-    // for (int j = 0; j < nIt; j++){
-    //     bardelta_x = 0.; bargamma_x = 0.;
-    //     set_to_zero(bardelta_u.get()); set_to_zero(bargamma_u.get()); set_to_zero(scfree.get()); 
-    //     scdep = 0;
-    //     pos = (vars->dg_pos - nIt + 1 + j + vars->dg_nsave)%vars->dg_nsave;
-    //     ind_1 = 0;
-    //     for (int k = 0; k < prob->n_vblocks; k++){
-    //         for (int i = 0; i < prob->vblocks[k].size; i++){
-    //             if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){
-    //                 if (prob->vblocks[k].dependent){
-    //                     bardelta_x += std::abs(vars->deltaMat(ind_1 + i, pos));
-    //                     bargamma_x += std::abs(vars->gammaMat(ind_1 + i, pos));
-    //                     scdep += 1;
-    //                 }
-    //                 else{
-    //                     bardelta_u[i] += std::abs(vars->deltaMat(ind_1 + i, pos));
-    //                     bargamma_u[i] += std::abs(vars->gammaMat(ind_1 + i, pos));
-    //                     scfree[i] += 1;
-    //                 }
-    //             }
-    //         }
-    //         ind_1 += prob->vblocks[k].size;
-    //     }
+    nIt = std::min(vars->n_scaleIt, 5);
+    for (int j = 0; j < nIt; j++){
+        std::fill(bardelta_u.get(), bardelta_u.get() + fvbsize, 0.);
+        std::fill(bargamma_u.get(), bargamma_u.get() + fvbsize, 0.);
+        std::fill(scfree.get(), scfree.get() + fvbsize, 0.);
         
-    //     if (scdep > 0){
-    //         bardelta_x /= scdep;
-    //         bargamma_x /= scdep;
-    //         for (int i = 0; i < fvbsize; i++){
-    //             if (scfree[i] > 0){
-    //                 bardelta_u[i] /= scfree[i];
-    //                 bargamma_u[i] /= scfree[i];
-    //             }
-    //             else{
-    //                 bardelta_u[i] = 0.; 
-    //                 bargamma_u[i] = 0.;
-    //             }
-    //         }
-    //     }
-    //     else{
-    //         bardelta_x = 1.0; 
-    //         bargamma_x = 1.0;
-    //     }
+        std::fill(bardelta_x.get(), bardelta_x.get() + dvbsize, 0.);
+        std::fill(bargamma_x.get(), bargamma_x.get() + dvbsize, 0.);
+        std::fill(scdep.get(), scdep.get() + dvbsize, 0.);
         
-    //     for (int i = 0; i < fvbsize; i++){
-    //         if (bargamma_x > 5e-7 && bargamma_u[i] > 5e-7){
-    //             rgamma[i] += std::log(bargamma_u[i]/bargamma_x);
-    //             count_gamma[i] += 1;
-    //             if (bardelta_x > 5e-7 && bardelta_u[i] > 5e-7){
-    //                 rdelta[i] += std::log(bardelta_u[i]/bardelta_x);
-    //                 count_delta[i] += 1;
-    //             }
-    //         }
-    //     }
-    // }
-    // //If no scaling information was accumulated, rdelta is set to 1.0 => all scaling factors are 1.0
-    // for (int i = 0; i < fvbsize; i++){
-    //     rdelta[i] = (count_delta[i] > 0) ? std::exp(rdelta[i]/count_delta[i]) : 1.0;
-    //     rgamma[i] = (count_gamma[i] > 0) ? std::exp(rgamma[i]/count_gamma[i]) : 1.0;
+        pos = (vars->dg_pos - nIt + 1 + j + vars->dg_nsave)%vars->dg_nsave;
+        ind_1 = 0;
         
-    //     S_u[i] = -1.0;
-    //     if (rgamma[i] > param->scaling_Theta_max){
-    //         S_u[i] = rgamma[i]/param->scaling_Theta_max;
-    //     }
-    //     else if (rgamma[i] < 1.0){
-    //         if (rdelta[i] > 1.0){
-    //             if (rgamma[i] < param->scaling_Theta_min) S_u[i] = rgamma[i]/param->scaling_Theta_min;
-    //             else                                      S_u[i] = std::min(1.0, rdelta[i]*rgamma[i]);
-    //         }
-    //         else S_u[i] = rgamma[i];
-    //     }
-    // }
+        dep_tmp = false;
+        dep_offset = 0;
+        
+        ////////
+        double bardelta_x_acc_2 = 0., bargamma_x_acc_2 = 0.;
+        int scdep_2 = 0;
+        ////////
+        
+        for (int k = 0; k < prob->n_vblocks; k++){
+            for (int i = 0; i < prob->vblocks[k].size; i++){
+                //
+                // if (j == nIt - 1) std::cout << "vars->deltaMat = " << vars->deltaMat(ind_1 + i, pos) << "\n";
+                //
+                if (std::abs(vars->deltaMat(ind_1 + i, pos)) > 1e-8){
+                    if (prob->vblocks[k].dependent){
+                        bardelta_x[i + dep_offset] += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_x[i + dep_offset] += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        
+                        ////////
+                        bardelta_x_acc_2 += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_x_acc_2 += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        scdep_2 += 1;
+                        ////////
+                        
+                        scdep[i + dep_offset] += 1;
+                    }
+                    else{
+                        bardelta_u[i] += std::abs(vars->deltaMat(ind_1 + i, pos));
+                        bargamma_u[i] += std::abs(vars->gammaMat(ind_1 + i, pos));
+                        scfree[i] += 1;
+                    }
+                }
+            }
+            ind_1 += prob->vblocks[k].size;
+            
+            if (!prob->vblocks[k].dependent) dep_offset = 0;
+            else dep_offset += prob->vblocks[k].size;
+        }
+        
+        int dcount = 0;
+        double bardelta_x_acc = 0., bargamma_x_acc = 0.;
+        
+        ////////
+        // for (int i = 0; i < dvbsize; i++) std::cout << "scdep[" << i << "] = " << scdep[i] << "\n";
+        
+        
+        if (scdep_2 > 0){
+            bardelta_x_acc_2 /= scdep_2;
+            bargamma_x_acc_2 /= scdep_2;
+            // std::cout << "bardelta_x_acc_2 = " << bardelta_x_acc_2 << ", bargamma_x_acc_2 = " << bargamma_x_acc_2 << "\n";
+        }
+        ////////
+        
+        double bardelta_x_acc_geom = 0., bargamma_x_acc_geom = 0.;
+        for (int i = 0; i < dvbsize; i++){
+            if (scdep[i] > 0){                                
+                bardelta_x[i] /= scdep[i];
+                bargamma_x[i] /= scdep[i];
+                dcount += 1;
+                
+                // ARITH
+                bardelta_x_acc += bardelta_x[i];
+                bargamma_x_acc += bargamma_x[i];
+                
+                
+                // GEOM
+                bardelta_x_acc_geom += std::log(bardelta_x[i]);
+                bargamma_x_acc_geom += std::log(bargamma_x[i]);
+            }
+            else{
+                bardelta_x[i] = 1.0;
+                bargamma_x[i] = 1.0;
+            }
+        }
+        
+        if (dcount > 0){
+            //ARITH
+            bardelta_x_acc /= dcount;
+            bargamma_x_acc /= dcount;
+            // bardelta_x_acc = bardelta_x_acc_2;
+            // bargamma_x_acc = bargamma_x_acc_2;
+            
+            //GEOM
+            // bardelta_x_acc = std::exp(bardelta_x_acc_geom/dcount);
+            // bargamma_x_acc = std::exp(bargamma_x_acc_geom/dcount);
+            
+            // std::cout << "ARITH: bardelta_x_acc = " << bardelta_x_acc << ", bargamma_x_acc = " << bargamma_x_acc << "\n";
+            // std::cout << "GEOM: bardelta_x_acc = " << bardelta_x_acc_geom << ", bargamma_x_acc = " << bargamma_x_acc_geom << "\n";
+            
+            for (int i = 0; i < fvbsize; i++){
+                if (scfree[i] > 0){
+                    bardelta_u[i] /= scfree[i];
+                    bargamma_u[i] /= scfree[i];
+                }
+                else{
+                    bardelta_u[i] = 0.;
+                    bargamma_u[i] = 0.;
+                }
+            }
+        }
+        else{
+            for (int i = 0; i < fvbsize; i++){
+                bardelta_u[i] = 0.;
+                bargamma_u[i] = 0.;
+            }
+        }
+        
+        // if (scdep > 0){
+        //     bardelta_x /= scdep;
+        //     bargamma_x /= scdep;
+        //     for (int i = 0; i < fvbsize; i++){
+        //         if (scfree[i] > 0){
+        //             bardelta_u[i] /= scfree[i];
+        //             bargamma_u[i] /= scfree[i];
+        //         }
+        //         else{
+        //             bardelta_u[i] = 0.; 
+        //             bargamma_u[i] = 0.;
+        //         }
+        //     }
+        // }
+        // else{
+        //     bardelta_x = 1.0; 
+        //     bargamma_x = 1.0;
+        //     for (int i = 0; i < fvbsize; i++){
+        //         bardelta_u[i] = 0.;
+        //         bargamma_u[i] = 0.;
+        //     }
+        // }
+        
+        // std::cout << "bardelta_x_acc = " << bardelta_x_acc << ", bargamma_x_acc = " << bargamma_x_acc << std::endl;
+        for (int i = 0; i < fvbsize; i++){
+            if (bargamma_x_acc > 5e-7 && bargamma_u[i] > 5e-7){
+            // if (bargamma_x_acc > 5e-7 && bargamma_u[i] > 1e-8){
+                rgamma[i] += std::log(bargamma_u[i]/bargamma_x_acc);
+                count_gamma[i] += 1;
+                if (bardelta_x_acc > 5e-7 && bardelta_u[i] > 5e-7){
+                    rdelta[i] += std::log(bardelta_u[i]/bardelta_x_acc);
+                    count_delta[i] += 1;
+                }
+            }
+        }
+        
+        //NEW
+        for (int i = 0; i < dvbsize; i++){
+            // std::cout << "bardelta_x[" << i << "] = " << bardelta_x[i] << ", bargamma_x[" << i << "] = " << bargamma_x[i] << std::endl;
+        }
+        
+        for (int i = 0; i < dvbsize; i++){
+            // if (bargamma_x_acc > 5e-7 && bargamma_x[i] > 5e-7){
+            if (bargamma_x_acc > 5e-7 && bargamma_x[i] > 1e-8){
+                rgamma_x[i] += std::log(bargamma_x[i]/bargamma_x_acc);
+                
+                // rgamma_x[i] += bargamma_x[i]/bargamma_x_acc;
+                
+                
+                count_gamma_x[i] += 1;
+                if (bardelta_x_acc > 5e-7 && bardelta_x[i] > 1e-8){
+                    rdelta_x[i] += std::log(bardelta_x[i]/bardelta_x_acc);
+                    
+                    // rdelta_x[i] += bardelta_x[i]/bardelta_x_acc;
+                    
+                    
+                    count_delta_x[i] += 1;
+                }
+            }
+        }
+        ///
+        
+        
+    }
+    //If no scaling information was accumulated, rdelta is set to 1.0 => all scaling factors are 1.0
+    for (int i = 0; i < fvbsize; i++){
+        rdelta[i] = (count_delta[i] > 0) ? std::exp(rdelta[i]/count_delta[i]) : 1.0;
+        rgamma[i] = (count_gamma[i] > 0) ? std::exp(rgamma[i]/count_gamma[i]) : 1.0;
+        
+        S_u[i] = -1.0;
+        if (rgamma[i] >= 1.0){            
+            S_u[i] = (std::max)((std::min)(rgamma[i], 1.0/rdelta[i]), rgamma[i]/param->scaling_Theta_max);
+        }
+        else if (rgamma[i] < 1.0){
+            if (rdelta[i] > 1.0){                
+                if (rgamma[i] < param->scaling_Theta_min) S_u[i] = (std::max)(rgamma[i]/param->scaling_Theta_min, 1e-2);
+                else                                      S_u[i] = (std::min)(1.0, rdelta[i]*rgamma[i]);
+            }
+            else S_u[i] = std::max(rgamma[i], 1e-2);
+        }
+        // std::cout << "NEW: rdelta[" << i << "] = " << rdelta[i] << ", rgamma[" << i << "] = " << rgamma[i] << ", S_u[" << i << "] = " << S_u[i] << std::endl;
+    }
     
-    // ind_1 = 0;
-    // for (int k = 0; k < prob->n_vblocks; k++){
-    //     if (!prob->vblocks[k].dependent){
-    //         for (int i = 0; i < prob->vblocks[k].size; i++){
-    //             if (S_u[i] > 0)
-    //                 ret_SF[ind_1 + i] *= S_u[i];
-    //         }
-    //     }
-    //     ind_1 += prob->vblocks[k].size;
-    // }
+    //NEW
+    for (int i = 0; i < dvbsize; i++){
+        rdelta_x[i] = (count_delta_x[i] > 0) ? std::exp(rdelta_x[i]/count_delta_x[i]) : 1.0;
+        rgamma_x[i] = (count_gamma_x[i] > 0) ? std::exp(rgamma_x[i]/count_gamma_x[i]) : 1.0;
+        
+        // rdelta_x[i] = (count_delta_x[i] > 0) ? rdelta_x[i]/count_delta_x[i] : 1.0;
+        // rgamma_x[i] = (count_gamma_x[i] > 0) ? rgamma_x[i]/count_gamma_x[i] : 1.0;
+        
+        // S_x[i] = -1.0;
+        // if (rgamma_x[i] >= 1.0){            
+        //     S_x[i] = (std::max)((std::min)(rgamma_x[i], 1.0/rdelta_x[i]), rgamma_x[i]/param->scaling_Theta_max);
+        // }
+        // else if (rgamma_x[i] < 1.0){
+        //     if (rdelta_x[i] > 1.0){                
+        //         if (rgamma_x[i] < param->scaling_Theta_min) S_x[i] = (std::max)(rgamma_x[i]/param->scaling_Theta_min, 1e-2);
+        //         else                                        S_x[i] = (std::min)(1.0, rdelta_x[i]*rgamma_x[i]);
+                
+        //     }
+        //     else S_x[i] = rgamma_x[i];
+        // }
+        
+        
+        // double Theta_x_max = 10.0;
+        // double Theta_x_min = 10.0;
+        // if (rdelta_x[i] > Theta_x_max && rgamma_x[i] < Theta_x_min) S_x[i] = std::max(Theta_x_max/rdelta_x[i], rgamma_x[i]/Theta_x_min);
+        // else if (rdelta_x[i] < Theta_x_min && rgamma_x[i] > Theta_x_max) S_x[i] = std::min(Theta_x_min/rdelta_x[i], rgamma_x[i]/Theta_x_max);
+        
+        
+        
+        // if (rdelta_x[i] > param->scaling_Theta_max && rgamma_x[i] < param->scaling_Theta_min) S_x[i] = std::max(param->scaling_Theta_max/rdelta_x[i], rgamma_x[i]/param->scaling_Theta_min);
+        // else if (rdelta_x[i] < param->scaling_Theta_min && rgamma_x[i] > param->scaling_Theta_max) std::min(param->scaling_Theta_min/rdelta_x[i], rgamma_x[i]/param->scaling_Theta_max);
+        
+        // if (rdelta_x[i] > 1 && rgamma_x[i] < 1) S_x[i] = std::max(1/rdelta_x[i], rgamma_x[i]);
+        // S_x[i] = std::sqrt(rgamma_x[i]/std::max(rdelta_x[i], 1e-2));
+        
+        // S_x[i] = std::sqrt(rgamma_x[i]/std::max(rdelta_x[i], 1e-2));
+        
+        // std::cout << "NEW: rdelta_x[" << i << "] = " << rdelta_x[i] << ", rgamma_x[" << i << "] = " << rgamma_x[i] << ", S_x[" << i << "] = " << S_x[i] << "\n";
+    }
+    ///
     
-    // return;
+    
+    
+    ind_1 = 0;
+    dep_offset = 0;
+    for (int k = 0; k < prob->n_vblocks; k++){
+        if (!prob->vblocks[k].dependent){
+            for (int i = 0; i < prob->vblocks[k].size; i++){
+                if (S_u[i] > 0)
+                    ret_SF[ind_1 + i] *= S_u[i];
+            }
+            //
+            dep_offset = 0;
+            //
+        }
+        
+        
+        else{
+            for (int i = 0; i < prob->vblocks[k].size; i++){
+                if (S_x[i] > 0)
+                    ret_SF[ind_1 + i] *= S_x[dep_offset + i];
+            }
+            dep_offset += prob->vblocks[k].size;
+        }
+        
+        
+        ind_1 += prob->vblocks[k].size;
+    }
+    
+    
+    
+    
+    return;
 }
 
-
+*/
 
 
 // Invokation of scaling algorithms. Decide if algorithm should be invoked in this iteration and apply the scaling
 void SQPmethod::scaling_heuristic(){
     //Matrix deltai, smallDelta, smallGamma;
     //Scale after iterations 1, 2, 3, 5, 10, 15, ...
-    if ((stats->itCount > 3 && bool(stats->itCount%5)) || vars->n_scaleIt < 1) return;
+    if ((stats->itCount > 5 && bool(stats->itCount%5) && stats->itCount != 7) || vars->n_scaleIt < 1) return;
     
-    for (int i = 0; i < prob->nVar; i++){
-        vars->rescaleFactors[i] = 1.0;
-    }
-    
+    std::fill(vars->rescaleFactors.get(), vars->rescaleFactors.get() + prob->nVar, 1.0);
     calc_free_variables_scaling_separate(vars->rescaleFactors.get());
+    vars->n_scaleIt = 0;
+    
     apply_rescaling(vars->rescaleFactors.get());
 }
 

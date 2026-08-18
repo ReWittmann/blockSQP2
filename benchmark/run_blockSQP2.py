@@ -26,16 +26,16 @@ import OCProblems
 import OCProblems_fatrop
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_OED(
+OCprob = OCProblems.Lotka_Shared_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
+                    **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
                     )
-itMax = 100                                  #max number of steps
+itMax = 200                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
@@ -81,7 +81,9 @@ opts = blockSQP2.SQPoptions(
     max_filter_overrides = 2,
     
     qpsol = 'qpOASES',
-    qpsol_options = QPopts
+    qpsol_options = QPopts,
+    
+    # initial_hess_scale = 1e1
 )
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()

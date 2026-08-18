@@ -27,11 +27,9 @@ def export_hang_glider_model() -> AcadosModel:
     T = SX.sym('T')
     X = vertcat(x, vx, y, vy, T)
 
-    # Control: cL
     cL = SX.sym('cL')
     U = vertcat(cL)
 
-    # xdot symbols
     Xdot = SX.sym('Xdot', 5)
     
     r_val = (x / rC - 2.5)**2
@@ -43,7 +41,6 @@ def export_hang_glider_model() -> AcadosModel:
     L = 0.5 * cL * rho * S_area * v_rel**2
     D = 0.5 * (c0 + c1 * cL**2) * rho * S_area * v_rel**2
     
-    # Dynamics scaled by T
     f_expl = T * vertcat(
         vx,
         (1/m) * (-L * (w / v_rel) - D * (vx / v_rel)),
@@ -62,7 +59,6 @@ def export_hang_glider_model() -> AcadosModel:
     model.u = U
     model.name = model_name
     
-    # Objective: min -x(tF)
     model.cost_expr_ext_cost_e = -x
 
     model.x_labels = ['x', 'vx', 'y', 'vy', 'T']
@@ -71,7 +67,6 @@ def export_hang_glider_model() -> AcadosModel:
 
     return model
 
-# --- OCP Setup ---
 ocp = AcadosOcp()
 model = export_hang_glider_model()
 ocp.model = model
@@ -83,29 +78,23 @@ nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf_scaled
-ocp.solver_options.qp_solver_cond_N = 1
+ocp.solver_options.qp_solver_cond_N = 4
 
 ocp.cost.cost_type_e = 'EXTERNAL'
 
-# Constraints
-# Control: 0 <= cL <= cmax
+
 ocp.constraints.lbu = np.array([0.0])
 ocp.constraints.ubu = np.array([cmax])
 ocp.constraints.idxbu = np.array([0])
 
-# Initial state: [x=0, vx=13.23, y=1000, vy=-1.288, T=Tf_init]
 ocp.constraints.lbx_0 = np.array([0.0, 13.23, 1000.0, -1.288, 75])
 ocp.constraints.ubx_0 = np.array([0.0, 13.23, 1000.0, -1.288, 1500])
 ocp.constraints.idxbx_0 = np.arange(nx)
 
-# Final state constraints:
-# vx(tF) = 13.23, y(tF) = 900, vy(tF) = -1.288
-# Indices in X: x(0), vx(1), y(2), vy(3), T(4)
 ocp.constraints.lbx_e = np.array([13.23, 900.0, -1.288])
 ocp.constraints.ubx_e = np.array([13.23, 900.0, -1.288])
 ocp.constraints.idxbx_e = np.array([1, 2, 3])
 
-# Solver Options
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
 ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'ERK'
@@ -114,7 +103,7 @@ ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 
 ocp_solver = AcadosOcpSolver(ocp)
 
-# --- Automatic Initialization x = S(u) ---
+
 sim = AcadosSim()
 sim.model = model
 sim.solver_options.integrator_type = 'ERK'
@@ -137,13 +126,11 @@ for i in range(N):
     ocp_solver.set(i, "u", u_init_traj[i])
 ocp_solver.set(N, "x", sim_x[N, :])
 
-# Solve
 t0 = time.time()
 status = ocp_solver.solve()
 t1 = time.time()
 ocp_solver.print_statistics()
 
-# --- Extract and Plot ---
 simX = np.zeros((N+1, nx))
 simU = np.zeros((N, nu))
 for i in range(N):

@@ -41,3 +41,6 @@ gen.c
 tmp_casadi*
 jit_tmp*
 codegen_*
+
+*.png
+blockSQP2_it_*.txt
