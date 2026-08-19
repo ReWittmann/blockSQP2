@@ -4,7 +4,6 @@ import casadi as ca
 from casadi import SX, vertcat
 import time
 
-# Parameters
 Tf = 12.0
 p1 = p2 = p3 = p4 = 1.0
 c1 = 0.4
@@ -27,7 +26,6 @@ def export_lotka_oed_model() -> AcadosModel:
     z2 = SX.sym('z2')
     X = vertcat(x1, x2, G11, G12, G21, G22, F11, F12, F22, z1, z2)
 
-    # Controls: u (harvesting), w1, w2 (measurement weights)
     u = SX.sym('u')
     w1 = SX.sym('w1')
     w2 = SX.sym('w2')
@@ -35,13 +33,9 @@ def export_lotka_oed_model() -> AcadosModel:
 
     Xdot = SX.sym('Xdot', 11)
     
-    # Dynamics
-    # Population dynamics
     dx1 = p1*x1 - p2*x1*x2 - c1*u*x1
     dx2 = -p3*x2 + p4*x1*x2 - c2*u*x2
     
-    # Sensitivity dynamics (G)
-    # dG/dt = (df/dx)G
     dfdx11 = p1 - p2*x2 - c1*u
     dfdx12 = -p2*x1
     dfdx21 = p4*x2
@@ -57,12 +51,10 @@ def export_lotka_oed_model() -> AcadosModel:
     dG21 = dfdx21 * G11 + dfdx22 * G21 + dx2dp2
     dG22 = dfdx21 * G12 + dfdx22 * G22 + dx2dp4
     
-    # Fisher Information Matrix dynamics (F)
     dF11 = w1 * G11**2 + w2 * G21**2
     dF12 = w1 * G11 * G12 + w2 * G21 * G22
     dF22 = w1 * G12**2 + w2 * G22**2
     
-    # Measurement effort integration
     dz1 = w1
     dz2 = w2
 
@@ -77,12 +69,8 @@ def export_lotka_oed_model() -> AcadosModel:
     model.u = U
     model.name = model_name
     
-    # Objective: trace(F^-1)
-    # F = [[F11, F12], [F12, F22]]
-    # F^-1 = (1/det) * [[F22, -F12], [-F12, F11]]
-    # trace(F^-1) = (F11 + F22) / (F11*F22 - F12**2)
-    det_F = F11 * F22 - F12**2
-    model.cost_expr_ext_cost_e = (F11 + F22) / (det_F)
+    
+    model.cost_expr_ext_cost_e = (F11 + F22) / (F11 * F22 - F12**2)
 
     model.x_labels = ['x1', 'x2', 'G11', 'G12', 'G21', 'G22', 'F11', 'F12', 'F22', 'z1', 'z2']
     model.u_labels = ['u', 'w1', 'w2']
@@ -90,28 +78,27 @@ def export_lotka_oed_model() -> AcadosModel:
 
     return model
 
-# --- OCP Setup ---
 ocp = AcadosOcp()
 model = export_lotka_oed_model()
 ocp.model = model
 
-N = 75
+N = 60
 nx = model.x.rows()
 nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf
+ocp.solver_options.qp_solver_cond_N = 1
 
 ocp.cost.cost_type_e = 'EXTERNAL'
 
-# Constraints
-# 0 <= u <= 1, 0 <= w1 <= 1, 0 <= w2 <= 1
+
 ocp.constraints.lbu = np.array([0.0, 0.0, 0.0])
 ocp.constraints.ubu = np.array([1.0, 1.0, 1.0])
 ocp.constraints.idxbu = np.array([0, 1, 2])
 
-# Initial state: x=(0.5, 0.7), G=0, F=0, z=0
-x0 = np.array([0.5, 0.7, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+x0 = np.array([0.5, 0.7] +  [0.]*4 + [0.]*3 + [0.]*2)
 ocp.constraints.x0 = x0
 
 ocp.constraints.lbx = np.array([0.,0.])
@@ -122,17 +109,17 @@ ocp.constraints.lbx_e = np.array([0., 0.])
 ocp.constraints.ubx_e = np.array([M_max, M_max])
 ocp.constraints.idxbx_e = np.arange(nx-2, nx)
 
-# Solver Options
+
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
 ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'ERK'
 ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-ocp.solver_options.nlp_solver_max_iter = 300
+ocp.solver_options.nlp_solver_max_iter = 100
 
 ocp_solver = AcadosOcpSolver(ocp)
 
-# --- Automatic Initialization x = S(u) ---
+
 sim = AcadosSim()
 sim.model = model
 sim.solver_options.integrator_type = 'ERK'
@@ -157,13 +144,13 @@ for i in range(N):
     ocp_solver.set(i, "u", u_init_traj[i])
 ocp_solver.set(N, "x", sim_x[N, :])
 
-# Solve
+
 t0 = time.time()
 status = ocp_solver.solve()
 t1 = time.time()
 ocp_solver.print_statistics()
 
-# --- Extract and Plot ---
+
 simX = np.zeros((N+1, nx))
 simU = np.zeros((N, nu))
 for i in range(N):

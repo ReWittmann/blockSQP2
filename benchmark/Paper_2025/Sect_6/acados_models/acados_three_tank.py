@@ -1,4 +1,4 @@
-from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, AcadosOcpSolver, plot_trajectories
+from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, AcadosOcpSolver, ACADOS_INFTY, plot_trajectories
 import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
@@ -34,9 +34,9 @@ def export_three_tank_model() -> AcadosModel:
     
     # Dynamics
     # Note: we use ca.sqrt(x + 1e-6) to avoid gradients of sqrt(0)
-    dx1 = -ca.sqrt(x1 + 1e-6) + c1*w1 + c2*w2 - w3*ca.sqrt(c3*x1 + 1e-6)
-    dx2 = ca.sqrt(x1 + 1e-6) - ca.sqrt(x2 + 1e-6)
-    dx3 = ca.sqrt(x2 + 1e-6) - ca.sqrt(x3 + 1e-6) + w3*ca.sqrt(c3*x1 + 1e-6)
+    dx1 = -ca.sqrt(x1 + 1e-8) + c1*w1 + c2*w2 - w3*ca.sqrt(c3*x1 + 1e-8)
+    dx2 = ca.sqrt(x1 + 1e-8) - ca.sqrt(x2 + 1e-8)
+    dx3 = ca.sqrt(x2 + 1e-8) - ca.sqrt(x3 + 1e-8) + w3*ca.sqrt(c3*x1 + 1e-8)
 
     f_expl = vertcat(dx1, dx2, dx3)
     f_impl = Xdot - f_expl
@@ -63,14 +63,27 @@ ocp = AcadosOcp()
 model = export_three_tank_model()
 ocp.model = model
 
-N = 100
+N = 50
 nx = model.x.rows()
 nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = T
+ocp.solver_options.qp_solver_cond_N = 50
 
-ocp.cost.cost_type_e = 'EXTERNAL'
+
+ocp.cost.cost_type = 'LINEAR_LS'
+ocp.cost.yref = np.array([k2, k4])
+ocp.cost.Vx = np.array([[0.,1.,0.],[0.,0.,1.]])
+ocp.cost.Vu = np.array([[0.,0.,0.],[0.,0.,0.]])
+ocp.cost.W = np.diag([k1, k3])
+
+ocp.cost.cost_type_e = 'LINEAR_LS'
+ocp.cost.yref_e = np.array([k2, k4])
+ocp.cost.Vx_e = np.array([[0.,1.,0.],[0.,0.,1.]])
+ocp.cost.Vu_e = np.array([[0.],[0.]])
+ocp.cost.W_e = np.diag([k1, k3])
+
 
 # Constraints
 # Control bounds: 0 <= w_i <= 1
@@ -80,7 +93,7 @@ ocp.constraints.idxbu = np.array([0, 1, 2])
 
 # State bounds: 0 <= x_i
 ocp.constraints.lbx = np.array([0.0, 0.0, 0.0])
-ocp.constraints.ubx = np.array([100.0, 100.0, 100.0]) # Large upper bound
+ocp.constraints.ubx = np.array([ACADOS_INFTY, ACADOS_INFTY, ACADOS_INFTY]) # Large upper bound
 ocp.constraints.idxbx = np.arange(nx)
 
 # Initial state: x(0) = (2, 2, 2)
@@ -89,12 +102,11 @@ ocp.constraints.lbx_0 = x0
 ocp.constraints.ubx_0 = x0
 ocp.constraints.idxbx_0 = np.arange(nx)
 
-# Equality constraint: w1 + w2 + w3 = 1
-# We implement this as a nonlinear constraint on the controls
-# In acados, nl_expr can depend on x and u
-ocp.constraints.nl_expr = model.u[0] + model.u[1] + model.u[2]
-ocp.constraints.nl_lb = np.array([1.0])
-ocp.constraints.nl_ub = np.array([1.0])
+
+ocp.model.con_h_expr = ca.sum(ocp.model.u)
+ocp.constraints.lh = np.array([1.0])
+ocp.constraints.uh = np.array([1.0])
+
 
 # Solver Options
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
@@ -131,7 +143,9 @@ for i in range(N):
 ocp_solver.set(N, "x", sim_x[N, :])
 
 # Solve
+t0 = time.time()
 status = ocp_solver.solve()
+t1 = time.time()
 ocp_solver.print_statistics()
 
 # --- Extract and Plot ---

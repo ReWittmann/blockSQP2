@@ -24,10 +24,10 @@ x2_max = 300.0
 # x3_max = 2.0
 
 #Param set 2
-# x00 = 12000
-# x10 = 15000
-# u1_max = 2
-# x3_max = 10
+x00 = 12000
+x10 = 15000
+u1_max = 2
+x3_max = 10
 
 #Param set 3
 # x00 = 14000
@@ -36,10 +36,10 @@ x2_max = 300.0
 # x3_max = 2
 
 #Param set 4
-x00 = 14000
-x10 = 5000
-u1_max = 2
-x3_max = 10
+# x00 = 14000
+# x10 = 5000
+# u1_max = 2
+# x3_max = 10
 
 
 def export_chemotherapy_model() -> AcadosModel:
@@ -98,6 +98,7 @@ nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf
+ocp.solver_options.qp_solver_cond_N = 4
 
 # Cost: min x0(tF) + integral(alpha * u0^2)
 ocp.cost.cost_type_e = 'EXTERNAL' # For the integral part
@@ -139,8 +140,9 @@ ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 ocp.solver_options.nlp_solver_max_iter = 200
 
+tm2 = time.time()
 ocp_solver = AcadosOcpSolver(ocp)
-
+tm1 = time.time()
 
 u0_init_val = x2_max / Tf
 u1_init_val = x3_max / Tf

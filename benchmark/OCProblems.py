@@ -5350,8 +5350,8 @@ class Catalyst_Mixing_OED(OCProblem):
         
         
         f = cs.Function('f', [x,u,p], [f_expr])
-        f_x = cs.Function('f', [x,u,p], [f_x_expr])
-        f_p = cs.Function('f', [x,u,p], [f_p_expr])
+        f_x = cs.Function('f_x', [x,u,p], [f_x_expr])
+        f_p = cs.Function('f_p', [x,u,p], [f_p_expr])
         
         f_expr = f(x,u,cs.DM([p1,p2]))
         f_x_expr = f_x(x,u,cs.DM([p1,p2]))
@@ -5393,6 +5393,7 @@ class Catalyst_Mixing_OED(OCProblem):
                 F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf)))
+            
         self.add_constraint(self.q_tf - cs.DM([M1,M2]), -np.inf, 0.)
         self.build_NLP()
         for i in range(self.ntS):
@@ -5498,6 +5499,9 @@ class Dielectrophoretic_Particle_OED(OCProblem):
         self.start_point = np.zeros(self.nVar)
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [1.0, M1/T_l, M2/T_l])
+        
+        for i in range(self.ntS//2, self.ntS):
+            self.set_stage_control(self.start_point, i, [-1.0,  M1/T_l, M2/T_l])
         self.integrate_full(self.start_point)
         
     def perturbed_start_point(self, ind):

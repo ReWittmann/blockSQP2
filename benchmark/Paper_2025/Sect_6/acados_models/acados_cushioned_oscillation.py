@@ -53,13 +53,13 @@ model = export_cushioned_oscillation_model()
 ocp.model = model
 
 Tf = 1.0
-N = 100
+N = 40
 nx = model.x.rows()
 nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf
-ocp.solver_options.qp_solver_cond_N = 1
+# ocp.solver_options.qp_solver_cond_N = 10
 
 ocp.cost.cost_type_e = 'EXTERNAL'
 

@@ -98,6 +98,7 @@ ocp.solver_options.integrator_type = 'IRK'
 ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 ocp.solver_options.qp_solver_iter_max = 10000
+ocp.solver_options.sim_method_num_steps = 10
 
 ocp_solver = AcadosOcpSolver(ocp)
 

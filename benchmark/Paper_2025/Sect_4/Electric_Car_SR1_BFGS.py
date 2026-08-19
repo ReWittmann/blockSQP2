@@ -31,7 +31,6 @@ opts.hess_approx = 'SR1'
 opts.fallback_approx = 'BFGS'
 opts.BFGS_damping_factor = 0.2
 
-opts.max_filter_overrides = 0
 
 opts.qpsol = 'qpOASES'
 QPopts = blockSQP2.qpOASES_options()

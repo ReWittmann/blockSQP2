@@ -80,12 +80,14 @@ ocp = AcadosOcp()
 model = export_fermenter_model()
 ocp.model = model
 
-N = 60
+N = 80
 nx = model.x.rows()
 nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf
+# ocp.solver_options.qp_solver_cond_N = 10
+
 
 # Cost: Only final cost (Mayer term)
 ocp.cost.cost_type_e = 'EXTERNAL'
@@ -120,8 +122,10 @@ ocp.constraints.idxbx_0 = np.arange(nx)
 
 # Solver Options
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+# ocp.solver_options.qp_solver_iter_max = 80
 ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'IRK'
+# ocp.solver_options.sim_method_num_steps = 10
 ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 
@@ -131,7 +135,7 @@ ocp_solver = AcadosOcpSolver(ocp)
 # 1. Setup the Simulator
 sim = AcadosSim()
 sim.model = model
-sim.solver_options.integrator_type = 'ERK'
+sim.solver_options.integrator_type = 'IRK'
 sim.solver_options.T = Tf / N
 sim.solver_options.num_steps = 2
 sim_sol = AcadosSimSolver(sim)

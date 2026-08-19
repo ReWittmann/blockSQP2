@@ -80,6 +80,7 @@ nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf_scaled
+# ocp.solver_options.qp_solver_cond_N = 1
 
 # Cost
 ocp.cost.cost_type_e = 'EXTERNAL'
@@ -121,7 +122,7 @@ ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'ERK'
 ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-ocp.solver_options.nlp_solver_max_iter = 100
+ocp.solver_options.nlp_solver_max_iter = 10
 
 
 ocp_solver = AcadosOcpSolver(ocp)
@@ -164,6 +165,9 @@ for i in range(N):
     simX[i,:] = ocp_solver.get(i, "x")
     simU[i,:] = ocp_solver.get(i, "u")
 simX[N,:] = ocp_solver.get(N, "x")
+
+simU[:,0] = simU[:,0]*10
+simU[:,1] = (simU[:,1] - 4)*100 + 4
 
 
 plot_trajectories(

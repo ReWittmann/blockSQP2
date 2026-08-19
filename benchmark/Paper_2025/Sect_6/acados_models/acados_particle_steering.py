@@ -65,7 +65,7 @@ model = export_particle_steering_model()
 ocp.model = model
 
 Tf_scaled = 1.0 
-N = 100
+N = 40
 nx = model.x.rows()
 nu = model.u.rows()
 
@@ -125,7 +125,9 @@ for i in range(N):
 ocp_solver.set(N, "x", sim_x[N, :])
 
 # Solve
+t0 = time.time()
 status = ocp_solver.solve()
+t1 = time.time()
 ocp_solver.print_statistics()
 
 # --- Extract and Plot ---

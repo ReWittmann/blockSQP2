@@ -4,7 +4,6 @@ import casadi as ca
 from casadi import SX, vertcat
 import time
 
-# Parameters
 r0 = 1.0
 v0 = 0.0
 m0 = 1.0
@@ -18,7 +17,6 @@ C = 0.6
 def export_goddard_model() -> AcadosModel:
     model_name = 'goddard_rocket'
 
-    # States: r (altitude), v (velocity), m (mass), T (time scaling)
     r = SX.sym('r')
     v = SX.sym('v')
     m = SX.sym('m')
@@ -27,14 +25,14 @@ def export_goddard_model() -> AcadosModel:
 
     u = SX.sym('u')
 
-    # xdot symbols
+
     r_dot = SX.sym('r_dot')
     v_dot = SX.sym('v_dot')
     m_dot = SX.sym('m_dot')
     T_dot = SX.sym('T_dot')
     Xdot = vertcat(r_dot, v_dot, m_dot, T_dot)
     
-    # Atmospheric density and Drag
+
     rho = ca.exp(-k * (r - r0))
     drag = A * v**2 * rho
     
@@ -55,16 +53,17 @@ def export_goddard_model() -> AcadosModel:
     model.u = u
     model.name = model_name
     
-    # Objective: min -m(tF)
     model.cost_expr_ext_cost_e = -m
-
+    
+    
     model.x_labels = ['Altitude (r)', 'Velocity (v)', 'Mass (m)', 'Time (T)']
     model.u_labels = ['Thrust (u)']
     model.t_label = 'Normalized Time'
 
+
     return model
 
-# --- OCP Setup ---
+
 ocp = AcadosOcp()
 model = export_goddard_model()
 ocp.model = model
@@ -76,10 +75,12 @@ nu = model.u.rows()
 
 ocp.solver_options.N_horizon = N
 ocp.solver_options.tf = Tf_scaled
+# ocp.solver_options.qp_solver_cond_N = 1
 
 ocp.cost.cost_type_e = 'EXTERNAL'
 
-# Constraints
+
+
 ocp.constraints.lbu = np.array([0.0])
 ocp.constraints.ubu = np.array([1.0])
 ocp.constraints.idxbu = np.array([0])
@@ -91,22 +92,17 @@ ocp.constraints.lh = np.array([-ACADOS_INFTY])
 ocp.constraints.uh = np.array([0.6])
 
 
-# ocp.constraints.nl_expr = drag_expr
-# ocp.constraints.nl_lb = np.array([-ACADOS_INFTY])
-# ocp.constraints.nl_ub = np.array([C])
-
-# Initial state: [r0, v0, m0, Tf_init]
 Tf_init = (0.4 / b) * 2.5
 ocp.constraints.lbx_0 = np.array([r0, v0, m0, 1e-3])
 ocp.constraints.ubx_0 = np.array([r0, v0, m0, ACADOS_INFTY])
 ocp.constraints.idxbx_0 = np.arange(nx)
 
-# Final state: r(tF) = rT
+
 ocp.constraints.lbx_e = np.array([rT])
 ocp.constraints.ubx_e = np.array([rT])
 ocp.constraints.idxbx_e = np.array([0])
 
-# Solver Options
+
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
 ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'ERK'
@@ -114,7 +110,7 @@ ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 ocp_solver = AcadosOcpSolver(ocp)
 
-# --- Automatic Initialization x = S(u) ---
+
 sim = AcadosSim()
 sim.model = model
 sim.solver_options.integrator_type = 'ERK'
@@ -143,19 +139,20 @@ for i in range(N):
     ocp_solver.set(i, "u", u_init_traj[i])
 ocp_solver.set(N, "x", sim_x[N, :])
 
-# Solve
+
 t0 = time.time()
 status = ocp_solver.solve()
 t1 = time.time()
 ocp_solver.print_statistics()
 
-# --- Extract and Plot ---
+
 simX = np.zeros((N+1, nx))
 simU = np.zeros((N, nu))
 for i in range(N):
     simX[i,:] = ocp_solver.get(i, "x")
     simU[i,:] = ocp_solver.get(i, "u")
 simX[N,:] = ocp_solver.get(N, "x")
+
 
 plot_trajectories(
     x_traj_list=[simX[:,:-1]],

@@ -26,14 +26,14 @@ import OCProblems
 import OCProblems_fatrop
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Shared(
+OCprob = OCProblems.Hang_Glider(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    # **OCProblems.Lotka_Volterra_Competitive.param_set_2,
+                    # **OCProblems.Lotka_Shared_OED.param_set_1,
                     )
 itMax = 200                                  #max number of steps
 

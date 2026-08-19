@@ -11,32 +11,37 @@ def export_tubular_reactor_model() -> AcadosModel:
     model_name = 'tubular_reactor'
 
     # State: x (concentration)
-    x = SX.sym('x')
-    X = vertcat(x)
+    x1 = SX.sym('x1')
+    q = SX.sym('q')
+    x = vertcat(x1, q)
 
     # Control: w
     w = SX.sym('w')
     U = vertcat(w)
+    
 
     # xdot symbols
-    Xdot = SX.sym('Xdot', 1)
+    x1dot = SX.sym('x1dot', 1)
+    qdot = SX.sym('qdot', 1)
+    
+    xdot = ca.vertcat(x1dot, qdot)
     
     # Dynamics: dx/dt = -(w + 0.5*w^2) * x
-    f_expl = -(w + 0.5 * w**2) * x
-    f_impl = Xdot - f_expl
+    f_expl = ca.vertcat(-(w + 0.5 * w**2) * x1, w*x1)
+    f_impl = xdot - f_expl
 
     model = AcadosModel()
     model.f_impl_expr = f_impl
     model.f_expl_expr = f_expl
-    model.x = X
-    model.xdot = Xdot
+    model.x = x
+    model.xdot = xdot
     model.u = U
     model.name = model_name
     
     # Objective: min - integral(w * x) dt
-    model.cost_expr_ext_cost_e = -w * x
+    model.cost_expr_ext_cost_e = -q
 
-    model.x_labels = ['Concentration (x)']
+    model.x_labels = ['Concentration (x)', 'Quadrature']
     model.u_labels = ['Control (w)']
     model.t_label = 'Time'
 
@@ -63,9 +68,7 @@ ocp.constraints.ubu = np.array([5.0])
 ocp.constraints.idxbu = np.array([0])
 
 # Initial state: x(0) = 1
-ocp.constraints.lbx_0 = np.array([1.0])
-ocp.constraints.ubx_0 = np.array([1.0])
-ocp.constraints.idxbx_0 = np.arange(nx)
+ocp.constraints.x0 = np.array([1.0, 0.0])
 
 # Solver Options
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
@@ -76,32 +79,11 @@ ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
 
 ocp_solver = AcadosOcpSolver(ocp)
 
-# --- Automatic Initialization x = S(w) ---
-sim = AcadosSim()
-sim.model = model
-sim.solver_options.integrator_type = 'ERK'
-sim.solver_options.T = Tf / N
-sim.solver_options.num_steps = 2
-sim_sol = AcadosSimSolver(sim)
-
-# Start point: w = 5, x = 0 (Note: x(0)=1 is enforced by constraints, 
-# but the trajectory guess can start at 0 as per prompt)
-u_init_val = 5.0
-u_init_traj = np.full((N, nu), u_init_val)
-
-x_current = np.array([1.0]) # Using x(0)=1 for simulation consistency
-sim_x = np.zeros((N + 1, nx))
-sim_x[0, :] = x_current
 
 for i in range(N):
-    x_next = sim_sol.simulate(x=x_current, u=u_init_traj[i])
-    sim_x[i+1, :] = x_next
-    x_current = x_next
-
-for i in range(N):
-    ocp_solver.set(i, "x", sim_x[i, :])
-    ocp_solver.set(i, "u", u_init_traj[i])
-ocp_solver.set(N, "x", sim_x[N, :])
+    ocp_solver.set(i, "x", np.array([1.0, 0.0]))
+    ocp_solver.set(i, "u", 5.0)
+ocp_solver.set(N, "x", np.array([1.0,0.0]))
 
 # Solve
 status = ocp_solver.solve()

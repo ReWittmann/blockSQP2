@@ -72,6 +72,11 @@ def export_cart_pendulum_model(lambda_u = 0.5) -> AcadosModel:
 
 u_max = 30
 lambda_u = 0.5
+
+#Param set 2 leads to local optimum
+# u_max = 15
+# lambda_u = 0.05
+
 # --- OCP Setup ---
 ocp = AcadosOcp()
 model = export_cart_pendulum_model(lambda_u)
@@ -103,11 +108,12 @@ ocp.constraints.x0 = x0
 
 # --- Solver Options ---
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+ocp.solver_options.qp_solver_iter_max = 1000
 ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'IRK'
 ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-ocp.solver_options.nlp_solver_max_iter = 1000
+ocp.solver_options.nlp_solver_max_iter = 300
 
 ocp_solver = AcadosOcpSolver(ocp)
 

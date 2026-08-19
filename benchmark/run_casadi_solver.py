@@ -28,17 +28,17 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems.Batch_Reactor_OED(
+OCprob = OCProblems.Lotka_Shared_OED(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    # **OCProblems.Cart_Pendulum.param_set_1,
+                    # **OCProblems.Lotka_Shared_OED.param_set_2,
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'limited-memory'
+ipopts['hessian_approximation'] = 'exact'
 ipopts['tol'] = 1e-6
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax

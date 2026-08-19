@@ -7,34 +7,22 @@ import time
 # Parameters
 v_max = 33.0
 z_target = 300.0
-Tf_init = 10.0
+Tf_init = 25.0
 
 def export_time_optimal_car_model() -> AcadosModel:
     model_name = 'time_optimal_car'
 
-    # States: z (position), v (velocity), T (time scaling)
     z = SX.sym('z')
     v = SX.sym('v')
     T = SX.sym('T')
     X = vertcat(z, v, T)
 
-    # Control: u (acceleration)
     u = SX.sym('u')
     U = vertcat(u)
 
-    # xdot symbols
     Xdot = SX.sym('Xdot', 3)
     
-    # Dynamics scaled by T
-    # dz/dt = v
-    # dv/dt = u
-    # dT/dt = 0
-    f_expl = T * vertcat(
-        v,
-        u,
-        0.0
-    )
-    
+    f_expl = T*vertcat(v, u, 0.0)
     f_impl = Xdot - f_expl
 
     model = AcadosModel()
@@ -45,7 +33,6 @@ def export_time_optimal_car_model() -> AcadosModel:
     model.u = U
     model.name = model_name
     
-    # Objective: min Tf -> minimize final value of state T
     model.cost_expr_ext_cost_e = T
 
     model.x_labels = ['Position (z)', 'Velocity (v)', 'Time (T)']
@@ -60,7 +47,7 @@ model = export_time_optimal_car_model()
 ocp.model = model
 
 Tf_scaled = 1.0 
-N = 100
+N = 70
 nx = model.x.rows()
 nu = model.u.rows()
 
@@ -81,8 +68,8 @@ ocp.constraints.ubx = np.array([330.0, v_max])
 ocp.constraints.idxbx = np.array([0, 1])
 
 # Initial state: [0, 0, Tf_init]
-ocp.constraints.lbx_0 = np.array([0.0, 0.0, 1e-3])
-ocp.constraints.ubx_0 = np.array([0.0, 0.0, ACADOS_INFTY])
+ocp.constraints.lbx_0 = np.array([0.0, 0.0, 0.1])
+ocp.constraints.ubx_0 = np.array([0.0, 0.0, 50.0])
 ocp.constraints.idxbx_0 = np.arange(nx)
 
 # Final state constraints: z(tF) = 300, v(tF) = 0
@@ -96,31 +83,15 @@ ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'ERK'
 ocp.solver_options.nlp_solver_type = 'SQP'
 ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+ocp.solver_options.nlp_solver_max_iter = 400
 
 ocp_solver = AcadosOcpSolver(ocp)
 
-# --- Automatic Initialization x = S(u) ---
-sim = AcadosSim()
-sim.model = model
-sim.solver_options.integrator_type = 'ERK'
-sim.solver_options.T = Tf_scaled / N
-sim.solver_options.num_steps = 2
-sim_sol = AcadosSimSolver(sim)
-
-u_init_traj = np.zeros(N) # u_init = 0
-x_current = np.array([0.0, 0.0, Tf_init])
-sim_x = np.zeros((N + 1, nx))
-sim_x[0, :] = x_current
 
 for i in range(N):
-    x_next = sim_sol.simulate(x=x_current, u=u_init_traj[i])
-    sim_x[i+1, :] = x_next
-    x_current = x_next
-
-for i in range(N):
-    ocp_solver.set(i, "x", sim_x[i, :])
-    ocp_solver.set(i, "u", u_init_traj[i])
-ocp_solver.set(N, "x", sim_x[N, :])
+    ocp_solver.set(i, "x", np.array([0.,0.,Tf_init]))
+    ocp_solver.set(i, "u", 1.)
+ocp_solver.set(N, "x", np.array([0.,0.,Tf_init]))
 
 # Solve
 status = ocp_solver.solve()

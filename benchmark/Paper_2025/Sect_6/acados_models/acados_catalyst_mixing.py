@@ -67,6 +67,7 @@ ocp.constraints.x0 = np.array([1.0, 0.0])
 
 # --- Solver Options ---
 ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+# ocp.solver_options.qp_solver_iter_max = 50
 ocp.solver_options.hessian_approx = 'EXACT'
 ocp.solver_options.integrator_type = 'ERK'
 ocp.solver_options.nlp_solver_type = 'SQP'

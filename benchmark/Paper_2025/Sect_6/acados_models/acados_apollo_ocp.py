@@ -73,7 +73,7 @@ R = 209.0
 Tf = 1.0
 xf = np.array([0.27, 0.0, 2.5/R])
 
-N = 50
+N = 60
 nx = model.x.rows()
 nu = model.u.rows()
 
