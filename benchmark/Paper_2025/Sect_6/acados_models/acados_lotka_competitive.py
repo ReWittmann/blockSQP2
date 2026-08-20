@@ -9,19 +9,16 @@ from casadi import SX, vertcat
 def export_lotka_volterra_model() -> AcadosModel:
     model_name = 'lotka_volterra_competitive'
 
-    # Parameters
-    c1, c2 = 0.1, 0.4
+    c1 = 0.1 
+    c2 = 0.4
 
-    # States: x1 (prey), x2 (predator)
     x1 = SX.sym('x1')
     x2 = SX.sym('x2')
     x = vertcat(x1, x2)
 
-    # Control: u (fishing effort)
     u_sym = SX.sym('u')
     u = vertcat(u_sym)
 
-    # xdot symbols
     x1_dot = SX.sym('x1_dot')
     x2_dot = SX.sym('x2_dot')
     xdot = vertcat(x1_dot, x2_dot)
@@ -30,7 +27,6 @@ def export_lotka_volterra_model() -> AcadosModel:
             x1 * (1 - (x1 + 1.2 * x2)/1.8) - c1 * x1 * u,
             x2 * (1 - (x1 + x2)/1.8) - c2 * x2 * u)
 
-    # Implicit dynamics for acados
     f_impl = xdot - f_expl
     
     model = AcadosModel()
@@ -41,7 +37,6 @@ def export_lotka_volterra_model() -> AcadosModel:
     model.u = u
     model.name = model_name
 
-    # Meta information for plotting
     model.x_labels = ['Species $x_1$', 'Species $x_2$']
     model.u_labels = ['Effort $u$']
     model.t_label = 'Time [s]'
@@ -49,97 +44,94 @@ def export_lotka_volterra_model() -> AcadosModel:
     return model
 
 
-# Create OCP object
-ocp = AcadosOcp()
+def setup_lotka_competitive_ocp(x_init = np.array([0.5, 1.5])):
+    ocp = AcadosOcp()
+    
+    model = export_lotka_volterra_model()
+    ocp.model = model
+    
+    Tf = 40.0
+    nx = model.x.rows()
+    nu = model.u.rows()
+    N = 100
+    
+    
+    ocp.solver_options.N_horizon = N
+    ocp.solver_options.tf = Tf
+    # ocp.solver_options.qp_solver_cond_N = 3
+    
+    Q_mat = np.eye(2)
+    R_mat = np.diag([1e-4])
+    
+    ocp.cost.cost_type = 'LINEAR_LS'
+    ocp.cost.yref = np.array([1.0, 1.0, 0.0])
+    ocp.cost.W = ca.diagcat(Q_mat, R_mat).full()
+    ocp.cost.Vx = np.array([[1.,0.],[0.,1.],[0.,0.]])
+    ocp.cost.Vu = np.array([[0.],[0.],[1.0]])
+    
+    ocp.cost.cost_type_e = 'LINEAR_LS'
+    ocp.cost.W_e = Q_mat*(Tf/N)
+    ocp.cost.Vx_e = np.eye(2)
+    ocp.cost.yref_e = np.array([1.,1.])
+    
+    
+    ocp.constraints.lbu = np.array([0.0])
+    ocp.constraints.ubu = np.array([1.0])
+    ocp.constraints.idxbu = np.array([0])
+    
+    ocp.constraints.x0 = x_init
+    
+    ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+    ocp.solver_options.hessian_approx = 'EXACT'
+    ocp.solver_options.integrator_type = 'ERK'
+    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+    
+    ocp.solver_options.nlp_solver_max_iter = 100
+    ocp.solver_options.tol = 1e-6
+    
+    
+    ocp_solver = AcadosOcpSolver(ocp)
+    for i in range(ocp.solver_options.N_horizon + 1):
+        ocp_solver.set(i, "x", x_init)
+    
+    return ocp_solver
+    
 
-# Set model
-model = export_lotka_volterra_model()
-ocp.model = model
+def setup_lotka_competitive_ocp_2(x_init = np.array([1.5, 0.5])):
+    setup_lotka_competitive_ocp(x_init = x_init)        
+    
+def main():
+    ocp_solver = setup_lotka_competitive_ocp()
 
-Tf = 40.0
-nx = model.x.rows()
-nu = model.u.rows()
-N = 100
+    status = ocp_solver.solve()
+    ocp_solver.print_statistics()
+    
+    N = ocp_solver.ocp.solver_options.N_horizon
+    tf = ocp_solver.ocp.solver_options.tf
+    nx = ocp_solver.ocp.model.x.numel()
+    nu = ocp_solver.ocp.model.u.numel()
+    
+    simX = np.zeros((N+1, nx))
+    simU = np.zeros((N, nu))
+    for i in range(N):
+        simX[i,:] = ocp_solver.get(i, "x")
+        simU[i,:] = ocp_solver.get(i, "u")
+    simX[N,:] = ocp_solver.get(N, "x")
+    
+    plot_trajectories(
+        x_traj_list=[simX],
+        u_traj_list=[simU],
+        time_traj_list=[np.linspace(0, tf, N+1)],
+        time_label=ocp_solver.ocp.model.t_label,
+        labels_list=['OCP result'],
+        x_labels=ocp_solver.ocp.model.x_labels,
+        u_labels=ocp_solver.ocp.model.u_labels,
+        idxbu=ocp_solver.ocp.constraints.idxbu,
+        lbu=ocp_solver.ocp.constraints.lbu,
+        ubu=ocp_solver.ocp.constraints.ubu,
+        fig_filename='lotka_competitive.png',
+    )
 
-x_init = np.array([1.5, 0.5])
-
-# Set prediction horizon
-ocp.solver_options.N_horizon = N
-ocp.solver_options.tf = Tf
-# ocp.solver_options.qp_solver_cond_N = 3
-
-# Cost matrices
-Q_mat = np.eye(2)
-# We don't penalize u in the integral, but a tiny R prevents singularity
-R_mat = np.diag([1e-4])
-
-
-# Path cost
-ocp.cost.cost_type = 'LINEAR_LS'
-# ocp.model.cost_y_expr = ca.vertcat(model.x, model.u)
-ocp.cost.yref = np.array([1.0, 1.0, 0.0])
-ocp.cost.W = ca.diagcat(Q_mat, R_mat).full()
-ocp.cost.Vx = np.array([[1.,0.],[0.,1.],[0.,0.]])
-ocp.cost.Vu = np.array([[0.],[0.],[1.0]])
-
-ocp.cost.cost_type_e = 'LINEAR_LS'
-ocp.cost.W_e = Q_mat*(Tf/N)
-ocp.cost.Vx_e = np.eye(2)
-ocp.cost.yref_e = np.array([1.,1.])
-
-
-# Constraints
-ocp.constraints.lbu = np.array([0.0])
-ocp.constraints.ubu = np.array([1.0])
-ocp.constraints.idxbu = np.array([0])
-
-# Initial state x(0) = [0.5, 0.7]
-ocp.constraints.x0 = x_init
-
-# Solver options
-ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-ocp.solver_options.hessian_approx = 'EXACT'
-ocp.solver_options.integrator_type = 'ERK'
-ocp.solver_options.nlp_solver_type = 'SQP'
-ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-
-ocp.solver_options.nlp_solver_max_iter = 100
-ocp.solver_options.tol = 1e-6
-
-
-ocp_solver = AcadosOcpSolver(ocp)
-for i in range(ocp.solver_options.N_horizon + 1):
-    ocp_solver.set(i, "x", x_init)
-
-
-simX = np.zeros((N+1, nx))
-simU = np.zeros((N, nu))
-
-t0 = time.time()
-status = ocp_solver.solve()
-t1 = time.time()
-
-ocp_solver.print_statistics()
-
-# if status != 0:
-#     raise Exception(f'acados returned status {status}.')
-
-# Get solution
-for i in range(N):
-    simX[i,:] = ocp_solver.get(i, "x")
-    simU[i,:] = ocp_solver.get(i, "u")
-simX[N,:] = ocp_solver.get(N, "x")
-
-plot_trajectories(
-    x_traj_list=[simX],
-    u_traj_list=[simU],
-    time_traj_list=[np.linspace(0, Tf, N+1)],
-    time_label=model.t_label,
-    labels_list=['OCP result'],
-    x_labels=model.x_labels,
-    u_labels=model.u_labels,
-    idxbu=ocp.constraints.idxbu,
-    lbu=ocp.constraints.lbu,
-    ubu=ocp.constraints.ubu,
-    fig_filename='lotka_competitive.png',
-)
+if __name__ == '__main__':
+	main()

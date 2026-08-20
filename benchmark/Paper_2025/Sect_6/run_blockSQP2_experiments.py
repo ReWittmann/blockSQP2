@@ -150,12 +150,19 @@ for OCclass, OCargs, OCname in Examples:
         nPertF = nPert0 + 2
     
     for EXP_opts, EXP_name in Experiments:
+        #Hack 2: Increase accuracy for Catalyst Mixing OED
+        if (issubclass(OCclass, OCProblems.Catalyst_Mixing_OED)):
+            EXP_opts.tol *= 1e-1
+            
         ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, use_condensing = use_condensing)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)
         titles.append(EXP_name)
         n_EXP += 1
+        
+        if (issubclass(OCclass, OCProblems.Catalyst_Mixing_OED)):
+            EXP_opts.tol *= 1e1
     ###############################################################################
     if OCname is None:
         OCname = OCclass.__name__

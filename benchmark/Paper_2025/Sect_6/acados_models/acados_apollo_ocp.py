@@ -2,6 +2,7 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver, plot_trajec
 from casadi import SX, vertcat, sin, cos, sqrt, exp
 import numpy as np
 import casadi as ca
+from pathlib import Path
 
 def export_apollo_model() -> AcadosModel:
     model_name = 'apollo_reentry'
@@ -63,75 +64,88 @@ def export_apollo_model() -> AcadosModel:
     return model
 
 ###############################################################################
+def setup_apollo_ocp():
+    ocp = AcadosOcp()
+    model = export_apollo_model()
+    ocp.model = model
+    
+    ocp.solver_options.N_horizon = 60
+    ocp.solver_options.tf = 1.0
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+    
+    
+    R = 209.0
+    xf = np.array([0.27, 0.0, 2.5/R])
+    
+    ocp.cost.cost_type_e = 'EXTERNAL'
+    
+    ocp.constraints.lbu = np.array([-np.pi/2])
+    ocp.constraints.ubu = np.array([np.pi/2])
+    ocp.constraints.idxbu = np.array([0])
+    
+    ocp.constraints.lbx = np.array([0.2, -0.2, 0.006])
+    ocp.constraints.ubx = np.array([0.4, 0.1, 0.02])
+    ocp.constraints.idxbx = np.array([0, 1, 2])
+    
+    ocp.constraints.lbx_0 = np.array([0.36, -8.1 * np.pi / 180, 4.0 / R, 0., 220.0])
+    ocp.constraints.ubx_0 = np.array([0.36, -8.1 * np.pi / 180, 4.0 / R, 0., 240.0])
+    ocp.constraints.idxbx_0 = np.array([0,1,2,3,4])
+    
+    ocp.constraints.lbx_e = xf
+    ocp.constraints.ubx_e = xf
+    ocp.constraints.idxbx_e = np.array([0,1,2])
+    
+    ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+    ocp.solver_options.hessian_approx = 'EXACT'
+    ocp.solver_options.integrator_type = 'ERK'
+    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+    
+    ocp_solver = AcadosOcpSolver(ocp)
+    for i in range(ocp.solver_options.N_horizon):
+        ocp_solver.set(i, 'u', 0.5)
+    for i in range(ocp.solver_options.N_horizon+1):
+        ocp_solver.set(i, 'x', np.array([0.36, -8.1 * np.pi / 180, 4.0 / R, 0., 220.0]))
+    
+    return ocp_solver
 
-ocp = AcadosOcp()
-model = export_apollo_model()
-ocp.model = model
 
-# Problem constants
-R = 209.0
-Tf = 1.0
-xf = np.array([0.27, 0.0, 2.5/R])
-
-N = 60
-nx = model.x.rows()
-nu = model.u.rows()
-
-ocp.solver_options.N_horizon = N
-ocp.solver_options.tf = Tf
-
-
-ocp.cost.cost_type_e = 'EXTERNAL'
-
-
-ocp.constraints.lbu = np.array([-np.pi/2])
-ocp.constraints.ubu = np.array([np.pi/2])
-ocp.constraints.idxbu = np.array([0])
-
-ocp.constraints.lbx = np.array([0.2, -0.2, 0.006])
-ocp.constraints.ubx = np.array([0.4, 0.1, 0.02])
-ocp.constraints.idxbx = np.array([0, 1, 2])
-
-ocp.constraints.lbx_0 = np.array([0.36, -8.1 * np.pi / 180, 4.0 / R, 0., 220.0])
-ocp.constraints.ubx_0 = np.array([0.36, -8.1 * np.pi / 180, 4.0 / R, 0., 240.0])
-ocp.constraints.idxbx_0 = np.array([0,1,2,3,4])
-
-
-ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-ocp.solver_options.hessian_approx = 'EXACT'
-ocp.solver_options.integrator_type = 'ERK'
-ocp.solver_options.nlp_solver_type = 'SQP'
-ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-
-ocp_solver = AcadosOcpSolver(ocp)
-for i in range(ocp.solver_options.N_horizon):
-    ocp_solver.set(i, 'u', 0.5)
-for i in range(ocp.solver_options.N_horizon+1):
-    ocp_solver.set(i, 'x', np.array([0.36, -8.1 * np.pi / 180, 4.0 / R, 0., 220.0]))
-
-status = ocp_solver.solve()
-ocp_solver.print_statistics()
-
-if status != 0:
-    print(f"Solver returned status {status}. Try adjusting N or initial guess.")
-
-simX = np.zeros((N+1, nx))
-simU = np.zeros((N, nu))
-for i in range(N):
-    simX[i,:] = ocp_solver.get(i, "x")
-    simU[i,:] = ocp_solver.get(i, "u")
-simX[N,:] = ocp_solver.get(N, "x")
-
-plot_trajectories(
-    x_traj_list=[simX],
-    u_traj_list=[simU],
-    time_traj_list=[np.linspace(0, Tf, N+1)],
-    time_label=model.t_label,
-    labels_list=['Apollo Reentry'],
-    x_labels=model.x_labels,
-    u_labels=model.u_labels,
-    idxbu=ocp.constraints.idxbu,
-    lbu=ocp.constraints.lbu,
-    ubu=ocp.constraints.ubu,
-    fig_filename='apollo_reentry.png',
-)
+def main():
+    ocp_solver = setup_apollo_ocp()
+    status = ocp_solver.solve()
+    ocp_solver.print_statistics()
+    
+    N = ocp_solver.ocp.solver_options.N_horizon
+    tf = ocp_solver.ocp.solver_options.tf
+    nx = ocp_solver.ocp.model.x.numel()
+    nu = ocp_solver.ocp.model.u.numel()
+    
+    simX = np.zeros((N+1, nx))
+    simU = np.zeros((N, nu))
+    for i in range(N):
+        simX[i,:] = ocp_solver.get(i, "x")
+        simU[i,:] = ocp_solver.get(i, "u")
+    simX[N,:] = ocp_solver.get(N, "x")
+    
+    
+    plot_trajectories(
+        x_traj_list=[simX],
+        u_traj_list=[simU],
+        time_traj_list=[np.linspace(0, tf, N+1)],
+        time_label=ocp_solver.ocp.model.t_label,
+        labels_list=['Apollo Reentry'],
+        x_labels=ocp_solver.ocp.model.x_labels,
+        u_labels=ocp_solver.ocp.model.u_labels,
+        idxbu=ocp_solver.ocp.constraints.idxbu,
+        lbu=ocp_solver.ocp.constraints.lbu,
+        ubu=ocp_solver.ocp.constraints.ubu,
+        fig_filename='acados_plots/apollo_reentry.png',
+    )
+    
+if __name__ == '__main__':
+    main()

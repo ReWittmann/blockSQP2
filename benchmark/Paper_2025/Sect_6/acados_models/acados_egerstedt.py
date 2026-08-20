@@ -7,17 +7,14 @@ import time
 def export_egerstedt_model() -> AcadosModel:
     model_name = 'egerstedt_standard'
 
-    # States: x1 (Substance A), x2 (Substance B)
     x1 = SX.sym('x1')
     x2 = SX.sym('x2')
     x3 = SX.sym('x3')
     x = vertcat(x1, x2,x3)
 
-    # Control: u (Temperature)
     u1, u2, u3 = SX.sym('u1'), SX.sym('u2'), SX.sym('u3')
     u = vertcat(u1, u2, u3)
 
-    # xdot symbols
     x1_dot = SX.sym('x1_dot')
     x2_dot = SX.sym('x2_dot')
     x3_dot = SX.sym('x3_dot')
@@ -47,97 +44,89 @@ def export_egerstedt_model() -> AcadosModel:
 
     return model
 
-ocp = AcadosOcp()
-model = export_egerstedt_model()
-ocp.model = model
+def setup_egerstedt_ocp():
+    ocp = AcadosOcp()
+    model = export_egerstedt_model()
+    ocp.model = model
+    
+    ocp.solver_options.N_horizon = 100
+    ocp.solver_options.tf = 1.0
+    
+    # ocp.solver_options.qp_solver_cond_N = 50  #Doesnt work for this problem
+    
+    ocp.cost.cost_type_e = 'LINEAR_LS'
+    
+    ocp.cost.W = np.eye(2)
+    ocp.cost.yref = np.zeros(2)
+    ocp.cost.Vx = np.array([[1.0,0,0],[0,1.0,0]])
+    ocp.cost.Vu = np.array([[0.,0.,0.],[0.,0.,0.]])
+    
+    
+    ocp.constraints.lbu = np.array([0.0, 0.0, 0.0])
+    ocp.constraints.ubu = np.array([1.0, 1.0, 1.0])
+    ocp.constraints.idxbu = np.array([0, 1, 2])
+    
+    
+    ocp.constraints.x0 = np.array([0.5, 0.5, 0.])
+    ocp.constraints.lbx = np.array([0.4])
+    ocp.constraints.ubx = np.array([ACADOS_INFTY])
+    ocp.constraints.idxbx = np.array([1])
+    
+    
+    ocp.model.con_h_expr = ca.sum(ocp.model.u)
+    ocp.constraints.lh = np.array([1.0])
+    ocp.constraints.uh = np.array([1.0])
+    
 
-Tf = 1.0
-N = 100
-nx = model.x.rows()
-nu = model.u.rows()
+    ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+    ocp.solver_options.hessian_approx = 'EXACT'
+    ocp.solver_options.integrator_type = 'ERK'
+    # ocp.solver_options.sim_method_num_steps = 2
+    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+    ocp.solver_options.tol = 1e-6
+    ocp.solver_options.nlp_solver_max_iter = 300
+    
+    ocp_solver = AcadosOcpSolver(ocp)
+    
+    for i in range(ocp.solver_options.N_horizon):
+        ocp_solver.set(i, "u", np.array([1/3, 1/3, 1/3]))
+    for i in range(ocp.solver_options.N_horizon+1):
+        ocp_solver.set(i, "x", np.array([0.5, 0.5, 0.]))
+        
+    return ocp_solver
 
-ocp.solver_options.N_horizon = N
-ocp.solver_options.tf = Tf
+def main():
+    ocp_solver = setup_egerstedt_ocp()
 
-# Activating causes the optimization to fail for some reason ...
-# ocp.solver_options.qp_solver_cond_N = 50
+    status = ocp_solver.solve()
+    ocp_solver.print_statistics()
+    
+    N = ocp_solver.ocp.solver_options.N_horizon
+    tf = ocp_solver.ocp.solver_options.tf
+    nx = ocp_solver.ocp.model.x.numel()
+    nu = ocp_solver.ocp.model.u.numel()
+    
+    simX = np.zeros((N+1, nx))
+    simU = np.zeros((N, nu))
+    for i in range(N):
+        simX[i,:] = ocp_solver.get(i, "x")
+        simU[i,:] = ocp_solver.get(i, "u")
+    simX[N,:] = ocp_solver.get(N, "x")
+    
+    plot_trajectories(
+        x_traj_list=[simX],
+        u_traj_list=[simU],
+        time_traj_list=[np.linspace(0, tf, N+1)],
+        time_label=ocp_solver.ocp.model.t_label,
+        labels_list=['Egerstedt Standard'],
+        x_labels=ocp_solver.ocp.model.x_labels,
+        u_labels=ocp_solver.ocp.model.u_labels,
+        idxbu=ocp_solver.ocp.constraints.idxbu,
+        lbu=ocp_solver.ocp.constraints.lbu,
+        ubu=ocp_solver.ocp.constraints.ubu,
+        fig_filename='egerstedt_standard_ocp.png',
+    )
 
-ocp.cost.cost_type_e = 'LINEAR_LS'
-
-ocp.cost.W = np.eye(2)
-ocp.cost.yref = np.zeros(2)
-ocp.cost.Vx = np.array([[1.0,0,0],[0,1.0,0]])
-ocp.cost.Vu = np.array([[0.,0.,0.],[0.,0.,0.]])
-
-# ocp.cost.W_0 = np.zeros((3,3))
-# ocp.cost.V_x_0 = np.array([[1.0,0,0],[0,1.0,0]])
-# ocp.cost.V_u_0 = np.array([[0.,0.,0.],[0.,0.,0.]])
-
-# ocp.cost.V_x_0 = np.array([[1.0,0],[0,1.0]])
-# ocp.cost.V_u_0 = np.array([0])
-
-# --- Constraints ---
-ocp.constraints.lbu = np.array([0.0, 0.0, 0.0])
-ocp.constraints.ubu = np.array([1.0, 1.0, 1.0])
-ocp.constraints.idxbu = np.array([0, 1, 2])
-
-
-# Initial state: x(0) = [1, 0]
-ocp.constraints.x0 = np.array([0.5, 0.5, 0.])
-ocp.constraints.lbx = np.array([0.4])
-ocp.constraints.ubx = np.array([ACADOS_INFTY])
-ocp.constraints.idxbx = np.array([1])
-
-
-ocp.model.con_h_expr = ca.sum(ocp.model.u)
-ocp.constraints.lh = np.array([1.0])
-ocp.constraints.uh = np.array([1.0])
-
-# --- Solver Options ---
-ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-ocp.solver_options.hessian_approx = 'EXACT'
-ocp.solver_options.integrator_type = 'ERK'
-# ocp.solver_options.sim_method_num_steps = 2
-ocp.solver_options.nlp_solver_type = 'SQP'
-ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-ocp.solver_options.tol = 1e-6
-ocp.solver_options.nlp_solver_max_iter = 300
-
-ocp_solver = AcadosOcpSolver(ocp)
-
-# Initial guess
-for i in range(ocp.solver_options.N_horizon):
-    ocp_solver.set(i, "u", np.array([1/3, 1/3, 1/3]))
-for i in range(ocp.solver_options.N_horizon+1):
-    ocp_solver.set(i, "x", np.array([0.5, 0.5, 0.]))
-
-t0 = time.time()
-status = ocp_solver.solve()
-t1 = time.time()
-
-ocp_solver.print_statistics()
-
-if status != 0:
-    print(f"Warning: Solver returned status {status}")
-
-# Extract solution
-simX = np.zeros((N+1, nx))
-simU = np.zeros((N, nu))
-for i in range(N):
-    simX[i,:] = ocp_solver.get(i, "x")
-    simU[i,:] = ocp_solver.get(i, "u")
-simX[N,:] = ocp_solver.get(N, "x")
-
-plot_trajectories(
-    x_traj_list=[simX],
-    u_traj_list=[simU],
-    time_traj_list=[np.linspace(0, Tf, N+1)],
-    time_label=model.t_label,
-    labels_list=['Egerstedt Standard'],
-    x_labels=model.x_labels,
-    u_labels=model.u_labels,
-    idxbu=ocp.constraints.idxbu,
-    lbu=ocp.constraints.lbu,
-    ubu=ocp.constraints.ubu,
-    fig_filename='egerstedt_standard_ocp.png',
-)
+if __name__ == '__main__':
+	main()

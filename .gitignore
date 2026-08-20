@@ -44,3 +44,6 @@ codegen_*
 
 *.png
 blockSQP2_it_*.txt
+
+__codegen_OCProblems__*
+acados_codegen/

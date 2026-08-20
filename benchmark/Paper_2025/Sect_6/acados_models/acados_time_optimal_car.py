@@ -4,10 +4,6 @@ import casadi as ca
 from casadi import SX, vertcat
 import time
 
-# Parameters
-v_max = 33.0
-z_target = 300.0
-Tf_init = 25.0
 
 def export_time_optimal_car_model() -> AcadosModel:
     model_name = 'time_optimal_car'
@@ -41,80 +37,95 @@ def export_time_optimal_car_model() -> AcadosModel:
 
     return model
 
-# --- OCP Setup ---
-ocp = AcadosOcp()
-model = export_time_optimal_car_model()
-ocp.model = model
+def setup_time_optimal_car_ocp():
+    # --- OCP Setup ---
+    ocp = AcadosOcp()
+    model = export_time_optimal_car_model()
+    ocp.model = model
+    
+    Tf_scaled = 1.0 
+    N = 70
+    nx = model.x.rows()
+    nu = model.u.rows()
+    
+    v_max = 33.0
+    z_target = 300.0
+    Tf_init = 25.0
 
-Tf_scaled = 1.0 
-N = 70
-nx = model.x.rows()
-nu = model.u.rows()
+    ocp.solver_options.N_horizon = N
+    ocp.solver_options.tf = Tf_scaled
+    
+    ocp.cost.cost_type_e = 'EXTERNAL'
+    
+    # Constraints
+    # Control: -2 <= u <= 1
+    ocp.constraints.lbu = np.array([-2.0])
+    ocp.constraints.ubu = np.array([1.0])
+    ocp.constraints.idxbu = np.array([0])
+    
+    # State constraints: 0 <= z <= 330, 0 <= v <= v_max
+    ocp.constraints.lbx = np.array([0.0, 0.0])
+    ocp.constraints.ubx = np.array([330.0, v_max])
+    ocp.constraints.idxbx = np.array([0, 1])
+    
+    # Initial state: [0, 0, Tf_init]
+    ocp.constraints.lbx_0 = np.array([0.0, 0.0, 0.1])
+    ocp.constraints.ubx_0 = np.array([0.0, 0.0, 50.0])
+    ocp.constraints.idxbx_0 = np.arange(nx)
+    
+    # Final state constraints: z(tF) = 300, v(tF) = 0
+    ocp.constraints.lbx_e = np.array([z_target, 0.0])
+    ocp.constraints.ubx_e = np.array([z_target, 0.0])
+    ocp.constraints.idxbx_e = np.array([0, 1])
+    
+    # Solver Options
+    ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+    ocp.solver_options.hessian_approx = 'EXACT'
+    ocp.solver_options.integrator_type = 'ERK'
+    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+    ocp.solver_options.nlp_solver_max_iter = 400
+    
+    ocp_solver = AcadosOcpSolver(ocp)
+    
+    
+    for i in range(N):
+        ocp_solver.set(i, "x", np.array([0.,0.,Tf_init]))
+        ocp_solver.set(i, "u", 1.)
+    ocp_solver.set(N, "x", np.array([0.,0.,Tf_init]))
 
-ocp.solver_options.N_horizon = N
-ocp.solver_options.tf = Tf_scaled
+    return ocp_solver
 
-ocp.cost.cost_type_e = 'EXTERNAL'
-
-# Constraints
-# Control: -2 <= u <= 1
-ocp.constraints.lbu = np.array([-2.0])
-ocp.constraints.ubu = np.array([1.0])
-ocp.constraints.idxbu = np.array([0])
-
-# State constraints: 0 <= z <= 330, 0 <= v <= v_max
-ocp.constraints.lbx = np.array([0.0, 0.0])
-ocp.constraints.ubx = np.array([330.0, v_max])
-ocp.constraints.idxbx = np.array([0, 1])
-
-# Initial state: [0, 0, Tf_init]
-ocp.constraints.lbx_0 = np.array([0.0, 0.0, 0.1])
-ocp.constraints.ubx_0 = np.array([0.0, 0.0, 50.0])
-ocp.constraints.idxbx_0 = np.arange(nx)
-
-# Final state constraints: z(tF) = 300, v(tF) = 0
-ocp.constraints.lbx_e = np.array([z_target, 0.0])
-ocp.constraints.ubx_e = np.array([z_target, 0.0])
-ocp.constraints.idxbx_e = np.array([0, 1])
-
-# Solver Options
-ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-ocp.solver_options.hessian_approx = 'EXACT'
-ocp.solver_options.integrator_type = 'ERK'
-ocp.solver_options.nlp_solver_type = 'SQP'
-ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-ocp.solver_options.nlp_solver_max_iter = 400
-
-ocp_solver = AcadosOcpSolver(ocp)
-
-
-for i in range(N):
-    ocp_solver.set(i, "x", np.array([0.,0.,Tf_init]))
-    ocp_solver.set(i, "u", 1.)
-ocp_solver.set(N, "x", np.array([0.,0.,Tf_init]))
-
-# Solve
-status = ocp_solver.solve()
-ocp_solver.print_statistics()
-
-# --- Extract and Plot ---
-simX = np.zeros((N+1, nx))
-simU = np.zeros((N, nu))
-for i in range(N):
-    simX[i,:] = ocp_solver.get(i, "x")
-    simU[i,:] = ocp_solver.get(i, "u")
-simX[N,:] = ocp_solver.get(N, "x")
-
-plot_trajectories(
-    x_traj_list=[simX[:,:-1]],
-    u_traj_list=[simU],
-    time_traj_list=[np.linspace(0, Tf_scaled, N+1) * simX[0,-1]],
-    time_label='Time [s]',
-    labels_list=['Time Optimal Car'],
-    x_labels=model.x_labels,
-    u_labels=model.u_labels,
-    idxbu=ocp.constraints.idxbu,
-    lbu=ocp.constraints.lbu,
-    ubu=ocp.constraints.ubu,
-    fig_filename='time_optimal_car_ocp.png',
-)
+def main():
+    ocp_solver = setup_time_optimal_car_ocp()
+    status = ocp_solver.solve()
+    ocp_solver.print_statistics()
+    
+    N = ocp_solver.ocp.solver_options.N_horizon
+    tf = ocp_solver.ocp.solver_options.tf
+    nx = ocp_solver.ocp.model.x.numel()
+    nu = ocp_solver.ocp.model.u.numel()
+    
+    simX = np.zeros((N+1, nx))
+    simU = np.zeros((N, nu))
+    for i in range(N):
+        simX[i,:] = ocp_solver.get(i, "x")
+        simU[i,:] = ocp_solver.get(i, "u")
+    simX[N,:] = ocp_solver.get(N, "x")
+    
+    plot_trajectories(
+        x_traj_list=[simX[:,:-1]],
+        u_traj_list=[simU],
+        time_traj_list=[np.linspace(0, 1.0, N+1) * simX[0,-1]],
+        time_label='Time [s]',
+        labels_list=['Time Optimal Car'],
+        x_labels=ocp_solver.ocp.model.x_labels,
+        u_labels=ocp_solver.ocp.model.u_labels,
+        idxbu=ocp_solver.ocp.constraints.idxbu,
+        lbu=ocp_solver.ocp.constraints.lbu,
+        ubu=ocp_solver.ocp.constraints.ubu,
+        fig_filename='time_optimal_car_ocp.png',
+    )
+    
+if __name__ == '__main__':
+	main()

@@ -2,15 +2,8 @@ from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, 
 import numpy as np
 import casadi as ca
 import time
+from pathlib import Path
 
-# Parameters
-Tf = 1.0
-p1val = 1.0
-p2val = 10.0
-p3val = 1.0
-M1 = 0.2
-M2 = 0.2
-delta = 1e-2
 
 def export_catalyst_mixing_oed_model() -> AcadosModel:
     model_name = 'catalyst_mixing_oed'
@@ -21,6 +14,9 @@ def export_catalyst_mixing_oed_model() -> AcadosModel:
     theta = ca.MX.sym('theta', 2)
     p1_s, p2_s = ca.vertsplit(theta)
     
+    p1val = 1.0
+    p2val = 10.0
+    p3val = 1.0
     
     u = ca.MX.sym('u')
     w = ca.MX.sym('w', 2)
@@ -81,7 +77,7 @@ def export_catalyst_mixing_oed_model() -> AcadosModel:
             F_tf[j, i] = F[idx]
             idx += 1
     
-    F_reg = F_tf + delta * ca.diag(np.ones(2))
+    F_reg = F_tf + 1e-2 * ca.diag(np.ones(2))
     
     
     model.cost_expr_ext_cost_e = ca.trace(ca.inv(F_reg))
@@ -93,96 +89,112 @@ def export_catalyst_mixing_oed_model() -> AcadosModel:
     
     return model
 
-# --- OCP Setup ---
-ocp = AcadosOcp()
-model = export_catalyst_mixing_oed_model()
-ocp.model = model
 
-N = 40          #N = 40, qp_solver_cond_N = 10 seems to work
-nx = model.x.rows()
-nu = model.u.rows()
+def setup_catalyst_mixing_oed_ocp():
+    ocp = AcadosOcp()
+    model = export_catalyst_mixing_oed_model()
+    ocp.model = model
+    
+    ocp.solver_options.N_horizon = 40          #N = 40, qp_solver_cond_N = 10 seems to work
+    ocp.solver_options.tf = 1.0
+    ocp.solver_options.qp_solver_cond_N = 10
+    
+    N = ocp.solver_options.N_horizon
+    nx = model.x.rows()
+    Tf = ocp.solver_options.tf
 
-ocp.solver_options.N_horizon = N
-ocp.solver_options.tf = Tf
-ocp.solver_options.qp_solver_cond_N = 10
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
 
-ocp.cost.cost_type_e = 'EXTERNAL'
+    
+    M1 = 0.2
+    M2 = 0.2
+    
+    ocp.cost.cost_type_e = 'EXTERNAL'
+    
+    ocp.constraints.lbu = np.array([0.0, 0.0, 0.0])
+    ocp.constraints.ubu = np.array([1.0, 1.0, 1.0])
+    ocp.constraints.idxbu = np.array([0, 1, 2])
+    
+    ocp.constraints.x0 = np.array([1.0, 0.0] + [0.0]*4 + [0.0]*3 + [0.0]*2)
+    
+    ocp.constraints.lbx_e = np.array([0.0, 0.0])
+    ocp.constraints.ubx_e = np.array([M1, M2])
+    ocp.constraints.idxbx_e = np.array([nx-2, nx-1])
+    
+    ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+    # ocp.solver_options.qp_solver_iter_max = 200  #Usually hits the default limit of 50, but this does not seem to matter
+    ocp.solver_options.hessian_approx = 'EXACT'
+    ocp.solver_options.integrator_type = 'ERK'
+    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+    ocp.solver_options.nlp_solver_max_iter = 15 
+    
+    ocp_solver = AcadosOcpSolver(ocp)
+    
+    # --- Automatic Initialization ---
+    sim = AcadosSim()
+    sim.model = model
+    sim.solver_options.integrator_type = 'ERK'
+    sim.solver_options.T = Tf / N
+    sim.solver_options.num_steps = 2
+    sim_sol = AcadosSimSolver(sim)
+    
+    # Start point: u=0.5, w = M/Tf
+    u_init_val = np.array([0.5, M1/Tf, M2/Tf])
+    u_init_traj = np.tile(u_init_val, (N, 1))
+    
+    x_current = ocp.constraints.x0
+    sim_x = np.zeros((N + 1, nx))
+    sim_x[0, :] = x_current
+    
+    for i in range(N):
+        x_next = sim_sol.simulate(x=x_current, u=u_init_traj[i])
+        sim_x[i+1, :] = x_next
+        x_current = x_next
+    
+    for i in range(N):
+        ocp_solver.set(i, "x", sim_x[i, :])
+        ocp_solver.set(i, "u", u_init_traj[i])
+    ocp_solver.set(N, "x", sim_x[N, :])
+    return ocp_solver
 
-# Constraints
-# 0 <= u <= 1, 0 <= w1 <= 1, 0 <= w2 <= 1
-ocp.constraints.lbu = np.array([0.0, 0.0, 0.0])
-ocp.constraints.ubu = np.array([1.0, 1.0, 1.0])
-ocp.constraints.idxbu = np.array([0, 1, 2])
+def main():
+    
+    ocp_solver = setup_catalyst_mixing_oed_ocp()
 
-# Initial state: x=[1, 0], G=0, F=0, z=0
-ocp.constraints.x0 = np.array([1.0, 0.0] + [0.0]*4 + [0.0]*3 + [0.0]*2)
-
-# Final constraint: z1 <= M1, z2 <= M2
-ocp.constraints.lbx_e = np.array([0.0, 0.0])
-ocp.constraints.ubx_e = np.array([M1, M2])
-ocp.constraints.idxbx_e = np.array([nx-2, nx-1])
-
-# Solver Options
-ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-# ocp.solver_options.qp_solver_iter_max = 200  #Usually hits the default limit of 50, but this does not seem to matter
-ocp.solver_options.hessian_approx = 'EXACT'
-ocp.solver_options.integrator_type = 'ERK'
-ocp.solver_options.nlp_solver_type = 'SQP'
-ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-ocp.solver_options.nlp_solver_max_iter = 15 
-
-ocp_solver = AcadosOcpSolver(ocp)
-
-# --- Automatic Initialization ---
-sim = AcadosSim()
-sim.model = model
-sim.solver_options.integrator_type = 'ERK'
-sim.solver_options.T = Tf / N
-sim.solver_options.num_steps = 2
-sim_sol = AcadosSimSolver(sim)
-
-# Start point: u=0.5, w = M/Tf
-u_init_val = np.array([0.5, M1/Tf, M2/Tf])
-u_init_traj = np.tile(u_init_val, (N, 1))
-
-x_current = ocp.constraints.x0
-sim_x = np.zeros((N + 1, nx))
-sim_x[0, :] = x_current
-
-for i in range(N):
-    x_next = sim_sol.simulate(x=x_current, u=u_init_traj[i])
-    sim_x[i+1, :] = x_next
-    x_current = x_next
-
-for i in range(N):
-    ocp_solver.set(i, "x", sim_x[i, :])
-    ocp_solver.set(i, "u", u_init_traj[i])
-ocp_solver.set(N, "x", sim_x[N, :])
-
-# Solve
-t0 = time.time()
-status = ocp_solver.solve()
-t1 = time.time()
-ocp_solver.print_statistics()
-
-# --- Extract and Plot ---
-simX = np.zeros((N+1, nx))
-simU = np.zeros((N, nu))
-for i in range(N):
-    simX[i,:] = ocp_solver.get(i, "x")
-    simU[i,:] = ocp_solver.get(i, "u")
-simX[N,:] = ocp_solver.get(N, "x")
-
-plot_trajectories(
-    x_traj_list=[simX[:, :2]], # Plot only concentrations
-    u_traj_list=[simU],
-    time_traj_list=[np.linspace(0, Tf, N+1)],
-    time_label=model.t_label,
-    labels_list=['Catalyst Mixing OED'],
-    x_labels=['x1', 'x2'],
-    u_labels=model.u_labels,
-    idxbu=ocp.constraints.idxbu,
-    lbu=ocp.constraints.lbu,
-    ubu=ocp.constraints.ubu,
-    fig_filename='catalyst_mixing_oed_ocp.png',
-)
+    status = ocp_solver.solve()
+    ocp_solver.print_statistics()
+    
+    N = ocp_solver.ocp.solver_options.N_horizon
+    tf = ocp_solver.ocp.solver_options.tf
+    nx = ocp_solver.ocp.model.x.numel()
+    nu = ocp_solver.ocp.model.u.numel()
+    
+    # --- Extract and Plot ---
+    simX = np.zeros((N+1, nx))
+    simU = np.zeros((N, nu))
+    for i in range(N):
+        simX[i,:] = ocp_solver.get(i, "x")
+        simU[i,:] = ocp_solver.get(i, "u")
+    simX[N,:] = ocp_solver.get(N, "x")
+    
+    plot_trajectories(
+        x_traj_list=[simX[:, :2]], # Plot only concentrations
+        u_traj_list=[simU],
+        time_traj_list=[np.linspace(0, tf, N+1)],
+        time_label=ocp_solver.ocp.model.t_label,
+        labels_list=['Catalyst Mixing OED'],
+        x_labels=['x1', 'x2'],
+        u_labels=ocp_solver.ocp.model.u_labels,
+        idxbu=ocp_solver.ocp.constraints.idxbu,
+        lbu=ocp_solver.ocp.constraints.lbu,
+        ubu=ocp_solver.ocp.constraints.ubu,
+        fig_filename='acados_plots/catalyst_mixing_oed_ocp.png',
+    )
+    
+if __name__ == '__main__':
+	main()

@@ -1,8 +1,6 @@
 from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, AcadosOcpSolver, plot_trajectories
 import numpy as np
 import casadi as ca
-from casadi import SX, vertcat, exp
-import time
 
 def export_electric_car_model() -> AcadosModel:
     model_name = 'electric_car'
@@ -21,8 +19,6 @@ def export_electric_car_model() -> AcadosModel:
     Valim = 150
     Rbat = 0.05
 
-
-    # States: x1 (Substance A), x2 (Substance B)
     x0 = SX.sym('x0')
     x1 = SX.sym('x1')
     x2 = SX.sym('x2')
@@ -31,7 +27,6 @@ def export_electric_car_model() -> AcadosModel:
     
     u = SX.sym('u')
     
-    # xdot symbols
     x0_dot = SX.sym('x0_dot')
     x1_dot = SX.sym('x1_dot')
     x2_dot = SX.sym('x2_dot')
@@ -61,107 +56,109 @@ def export_electric_car_model() -> AcadosModel:
 
     return model
 
-ocp = AcadosOcp()
-model = export_electric_car_model()
-ocp.model = model
+def setup_electric_car_ocp():
+    ocp = AcadosOcp()
+    model = export_electric_car_model()
+    ocp.model = model
+    
+    Tf = 10.0
+    N = 100
+    nx = model.x.rows()
+    nu = model.u.rows()
+    
+    ocp.solver_options.N_horizon = N
+    ocp.solver_options.tf = Tf
+    
+    ocp.cost.cost_type_e = 'EXTERNAL'
+    
+    ocp.constraints.lbu = np.array([-1.0])
+    ocp.constraints.ubu = np.array([ 1.0])
+    ocp.constraints.idxbu = np.array([0.])
+    
+    ocp.constraints.x0 = np.array([0.,0.,0.,0.])
+    
+    ocp.constraints.lbx = np.array([-150.])
+    ocp.constraints.ubx = np.array([150.])
+    ocp.constraints.idxbx = np.array([0.])
+    
+    ocp.constraints.lbx_e = np.array([100.])
+    ocp.constraints.ubx_e = np.array([100.])
+    ocp.constraints.idxbx_e = np.array([2])
+    
+    
+    ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
+    ocp.solver_options.hessian_approx = 'EXACT'
+    ocp.solver_options.integrator_type = 'ERK'
+    ocp.solver_options.nlp_solver_type = 'SQP'
+    ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
+    
+    ocp_solver = AcadosOcpSolver(ocp)
+    
 
-Tf = 10.0
-N = 100
-nx = model.x.rows()
-nu = model.u.rows()
+    for i in range(ocp.solver_options.N_horizon):
+        ocp_solver.set(i, "u", 0.1 + 0.9*i/(ocp.solver_options.N_horizon))
+    
+    sim = AcadosSim()
+    sim.model = model
+    
+    sim.solver_options.integrator_type = 'ERK'
+    sim.solver_options.T = Tf/N
+    sim.solver_options.num_steps = 2
+    
+    x_current = np.array([0., 0., 0., 0.])
+    u_init = np.zeros((N, nu))
+    for i in range(N):
+        u_init[i, 0] = 0.1 + 0.9 * i / N
+    
+    
+    sim_x = np.zeros((N + 1, nx))
+    sim_x[0, :] = x_current
+    sim_sol = AcadosSimSolver(sim)
+    
+    for i in range(N):
+        x_next = sim_sol.simulate(x = x_current, u = u_init[i])
+        sim_x[i+1, :] = x_next
+        x_current = x_next
+    
+    for i in range(N):
+        if sim_x[i, 0] > 150:
+            sim_x[i, 0] = 150
+        ocp_solver.set(i, "x", sim_x[i, :])
+        ocp_solver.set(i, "u", u_init[i])
+    ocp_solver.set(N, "x", sim_x[N, :])
+    return ocp_solver
 
-ocp.solver_options.N_horizon = N
-ocp.solver_options.tf = Tf
+def main():
+    ocp_solver = setup_electric_car_ocp()
 
-ocp.cost.cost_type_e = 'EXTERNAL'
-
-# --- Constraints ---
-# Control constraints: 298 <= u <= 398
-ocp.constraints.lbu = np.array([-1.0])
-ocp.constraints.ubu = np.array([ 1.0])
-ocp.constraints.idxbu = np.array([0.])
-
-# Initial state: x(0) = [1, 0]
-ocp.constraints.x0 = np.array([0.,0.,0.,0.])
-
-ocp.constraints.lbx = np.array([-150.])
-ocp.constraints.ubx = np.array([150.])
-ocp.constraints.idxbx = np.array([0.])
-
-ocp.constraints.lbx_e = np.array([100.])
-ocp.constraints.ubx_e = np.array([100.])
-ocp.constraints.idxbx_e = np.array([2])
-
-
-# --- Solver Options ---
-ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
-ocp.solver_options.hessian_approx = 'EXACT'
-ocp.solver_options.integrator_type = 'ERK'
-ocp.solver_options.nlp_solver_type = 'SQP'
-ocp.solver_options.globalization = 'MERIT_BACKTRACKING'
-
-ocp_solver = AcadosOcpSolver(ocp)
-
-# Initial guess
-for i in range(ocp.solver_options.N_horizon):
-    ocp_solver.set(i, "u", 0.1 + 0.9*i/(ocp.solver_options.N_horizon))
-
-sim = AcadosSim()
-sim.model = model
-
-sim.solver_options.integrator_type = 'ERK'
-sim.solver_options.T = Tf/N
-sim.solver_options.num_steps = 2
-
-x_current = np.array([0., 0., 0., 0.])
-u_init = np.zeros((N, nu))
-for i in range(N):
-    u_init[i, 0] = 0.1 + 0.9 * i / N
-
-
-sim_x = np.zeros((N + 1, nx))
-sim_x[0, :] = x_current
-sim_sol = AcadosSimSolver(sim)
-
-for i in range(N):
-    x_next = sim_sol.simulate(x = x_current, u = u_init[i])
-    sim_x[i+1, :] = x_next
-    x_current = x_next
-
-for i in range(N):
-    if sim_x[i, 0] > 150:
-        sim_x[i, 0] = 150
-    ocp_solver.set(i, "x", sim_x[i, :])
-    ocp_solver.set(i, "u", u_init[i])
-ocp_solver.set(N, "x", sim_x[N, :])
-
-t0 = time.time()
-status = ocp_solver.solve()
-t1 = time.time()
-
-ocp_solver.print_statistics()
-
-if status != 0:
-    print(f"Warning: Solver returned status {status}")
-
-# Extract solution
-simX = np.zeros((N+1, nx))
-simU = np.zeros((N, nu))
-for i in range(N):
-    simX[i,:] = ocp_solver.get(i, "x")
-    simU[i,:] = ocp_solver.get(i, "u")
-simX[N,:] = ocp_solver.get(N, "x")
-
-plot_trajectories(
-    x_traj_list=[simX],
-    u_traj_list=[simU],
-    time_traj_list=[np.linspace(0, Tf, N+1)],
-    time_label=model.t_label,
-    labels_list=['Electric Car'],
-    x_labels=model.x_labels,
-    u_labels=model.u_labels,
-    idxbu=ocp.constraints.idxbu,
-    lbu=ocp.constraints.lbu,
-    ubu=ocp.constraints.ubu,
-    fig_filename='catalyst_mixing_ocp.png',
-)
+    status = ocp_solver.solve()
+    ocp_solver.print_statistics()
+    
+    N = ocp_solver.ocp.solver_options.N_horizon
+    tf = ocp_solver.ocp.solver_options.tf
+    nx = ocp_solver.ocp.model.x.numel()
+    nu = ocp_solver.ocp.model.u.numel()  
+    
+    simX = np.zeros((N+1, nx))
+    simU = np.zeros((N, nu))
+    for i in range(N):
+        simX[i,:] = ocp_solver.get(i, "x")
+        simU[i,:] = ocp_solver.get(i, "u")
+    simX[N,:] = ocp_solver.get(N, "x")
+    
+    plot_trajectories(
+        x_traj_list=[simX],
+        u_traj_list=[simU],
+        time_traj_list=[np.linspace(0, tf, N+1)],
+        time_label=ocp_solver.ocp.model.t_label,
+        labels_list=['Electric Car'],
+        x_labels=ocp_solver.ocp.model.x_labels,
+        u_labels=ocp_solver.ocp.model.u_labels,
+        idxbu=ocp_solver.ocp.constraints.idxbu,
+        lbu=ocp_solver.ocp.constraints.lbu,
+        ubu=ocp_solver.ocp.constraints.ubu,
+        fig_filename='catalyst_mixing_ocp.png',
+    )
+    
+if __name__ == '__main__':
+	main()

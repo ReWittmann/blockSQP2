@@ -24,6 +24,8 @@ import matplotlib.pyplot as plt
 import typing
 import math
 import copy
+from pathlib import Path
+
 # import shutil
 # if shutil.which("latex") is not None:
 #     plt.rcParams["text.usetex"] = True
@@ -606,7 +608,7 @@ class OCProblem:
         self.grad_lag = cs.Function('grad_lag', [xopt, lam], [self.grad_lag_expr])
         
         self.hess_lag_expr = cs.jacobian(self.grad_lag_expr, xopt)
-        self._hess_lag = cs.Function('hess_lag', [xopt, lam], [self.hess_lag_expr])
+        self._hess_lag = cs.Function('cs_hess_lag', [xopt, lam], [self.hess_lag_expr])
         self.hess_lag = lambda xi, lambd: self.to_blocks_LT(self._hess_lag(xi, lambd))
         
         #Inplace versions (for UNO solver)
@@ -630,7 +632,7 @@ class OCProblem:
         lag_objmult_expr = self.NLP['f']*objmult - lam.T @ g_expr
         grad_lag_objmult_expr = cs.jacobian(lag_objmult_expr, xopt)
         hess_lag_objmult_expr = cs.jacobian(grad_lag_objmult_expr, xopt)
-        self._hess_lag_objmult = cs.Function('hess_lag_objmult', [xopt, objmult, lam], [hess_lag_objmult_expr])
+        self._hess_lag_objmult = cs.Function('cs_hess_lag_objmult', [xopt, objmult, lam], [hess_lag_objmult_expr])
         def hess_lag_objmult_inplace(xi, arg_objmult, lambd, ret):
             hlBlocks = self.to_blocks_LT(self._hess_lag_objmult(xi, arg_objmult, lambd))
             ret[:] = np.concatenate(hlBlocks)
@@ -649,8 +651,72 @@ class OCProblem:
         self.hess_LT_row = np.concatenate(hess_LT_row_arr)
         self.hess_LT_col = np.concatenate(hess_LT_col_arr)
         
+    def jit(self, jit_hess : bool = False, jit_hess_objmult = False, **kwargs):
+        Cname = f'codegen_{type(self).__name__}.c'
+        Cgen = cs.CodeGenerator(Cname)
+        
+        try:
+            OCProblemsDir = Path(__file__).parent
+        except:
+            OCProblemsDir = Path.cwd()
+        Cpref = str(OCProblemsDir / Path("__codegen_OCProblems__")).rstrip("/") + "/"
         
         
+        Cgen.add(self._f)
+        Cgen.add(self._g)
+        Cgen.add(self._grad_f)
+        Cgen.add(self._jac_g)
+        if jit_hess:
+            Cgen.add(self._hess_lag)
+        if jit_hess_objmult:    
+            Cgen.add(self._hess_lag_objmult)
+        
+        Cgen.generate(Cpref)
+        jit_opts = {
+            "compiler_flags": "-O2",
+            "cleanup": True,
+            "directory": Cpref
+        }
+        Cimp = cs.Importer(Cpref + Cname, "shell", jit_opts)
+        
+        self._jit_f = cs.external('cs_f', Cimp)
+        self._jit_g = cs.external('cs_g', Cimp)
+        self._jit_grad_f = cs.external('cs_grad_f', Cimp)
+        self._jit_jac_g = cs.external('cs_jac_g', Cimp)
+        
+        self.f = lambda xi: float(self._jit_f(xi))
+        self.grad_f = lambda xi: np.array(self._jit_grad_f(xi), dtype = np.float64).reshape(-1)
+        self.g = lambda xi: np.array(self._jit_g(xi), dtype = np.float64).reshape(-1)
+        self.jac_g = lambda xi: np.array(self._jit_jac_g(xi), dtype = np.float64)
+        self.jac_g_nz = lambda xi: np.array(self._jit_jac_g(xi).nz[:], dtype = np.float64).reshape(-1)
+        
+        if jit_hess:
+            self._jit_hess_lag = cs.external('cs_hess_lag', Cimp)
+            self.hess_lag = lambda xi, lambd: self.to_blocks_LT(self._jit_hess_lag(xi, lambd))
+        
+        if jit_hess_objmult:
+            self._jit_hess_lag_objmult = cs.external('cs_hess_lag_objmult', Cimp)
+            def hess_lag_objmult_inplace(xi, arg_objmult, lambd, ret):
+                hlBlocks = self.to_blocks_LT(self._jit_hess_lag_objmult(xi, arg_objmult, lambd))
+                ret[:] = np.concatenate(hlBlocks)
+            self.hess_lag_objmult_inplace = hess_lag_objmult_inplace
+        
+        
+        #Inplace versions (for UNO solver)
+        def grad_f_inplace(xi, ret):
+            ret[:] = np.array(self._grad_f(xi), dtype = np.float64, copy = False)
+        self.grad_f_inplace = grad_f_inplace
+        def g_inplace(xi, ret):
+            ret[:] = np.array(self._g(xi), dtype = np.float64, copy = False).reshape(-1)
+        self.g_inplace = g_inplace
+        def jac_g_nz_inplace(xi, ret):
+            ret[:] = np.asarray(self._jac_g(xi).nz[:], dtype = np.float64).reshape(-1)
+        self.jac_g_nz_inplace = jac_g_nz_inplace
+        
+        
+    def unjit(self):
+        pass
+    
     
     def get_stage_state(self, xi, i:int):
         if i == 0:

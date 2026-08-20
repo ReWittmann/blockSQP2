@@ -23,10 +23,9 @@ sys.path += [str(cD.parent/Path("Python"))]
 sys.path += [str(cD/Path("experiments"))]
 import blockSQP2
 import OCProblems
-import OCProblems_fatrop
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Hang_Glider(
+OCprob = OCProblems.Catalyst_Mixing_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
@@ -42,6 +41,8 @@ step_delay_ms = 0
 plot_title = True                          #Put name of problem in plot?
 sol_plot = True
 
+# Just-in-time compile the problem functions
+# OCprob.jit() #jit_hess = True)
 
 # start = OCprob.perturbed_start_point(6)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
