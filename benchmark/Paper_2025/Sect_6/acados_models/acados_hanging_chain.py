@@ -3,7 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
-
+from pathlib import Path
 
 def export_hanging_chain_model() -> AcadosModel:
     model_name = 'hanging_chain'
@@ -35,9 +35,9 @@ def export_hanging_chain_model() -> AcadosModel:
 
     model.cost_expr_ext_cost_e = qstate1
 
-    model.x_labels = ['Height (x1)', 'Energy (x2)', 'Length (x3)']
-    model.u_labels = ['Slope (u)']
-    model.t_label = 'Horizontal Position (z)'
+    model.x_labels = ['x1', 'x2', 'x3']
+    model.u_labels = ['u']
+    model.t_label = 'z'
 
     return model
 
@@ -56,6 +56,13 @@ def setup_hanging_chain_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = zF - z0
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -131,7 +138,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='hanging_chain_ocp.png',
+        fig_filename='acados_plots/hanging_chain_ocp.png',
     )
     
 if __name__ == '__main__':

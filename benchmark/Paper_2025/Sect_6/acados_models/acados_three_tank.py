@@ -3,7 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
-
+from pathlib import Path
 
 def export_three_tank_model() -> AcadosModel:
     model_name = 'three_tank'
@@ -15,23 +15,19 @@ def export_three_tank_model() -> AcadosModel:
     k2 = 3.0
     k3 = 1.0
     k4 = 3.0
-    # States: x1, x2, x3 (fluid levels)
+
     x1 = SX.sym('x1')
     x2 = SX.sym('x2')
     x3 = SX.sym('x3')
     X = vertcat(x1, x2, x3)
 
-    # Controls: w1, w2, w3 (flow rates)
     w1 = SX.sym('w1')
     w2 = SX.sym('w2')
     w3 = SX.sym('w3')
     U = vertcat(w1, w2, w3)
 
-    # xdot symbols
     Xdot = SX.sym('Xdot', 3)
     
-    # Dynamics
-    # Note: we use ca.sqrt(x + 1e-6) to avoid gradients of sqrt(0)
     dx1 = -ca.sqrt(x1 + 1e-8) + c1*w1 + c2*w2 - w3*ca.sqrt(c3*x1 + 1e-8)
     dx2 = ca.sqrt(x1 + 1e-8) - ca.sqrt(x2 + 1e-8)
     dx3 = ca.sqrt(x2 + 1e-8) - ca.sqrt(x3 + 1e-8) + w3*ca.sqrt(c3*x1 + 1e-8)
@@ -47,17 +43,15 @@ def export_three_tank_model() -> AcadosModel:
     model.u = U
     model.name = model_name
     
-    # Stage Cost: k1*(x2 - k2)^2 + k3*(x3 - k4)^2
     model.cost_expr_ext_cost_e = k1 * (x2 - k2)**2 + k3 * (x3 - k4)**2
 
-    model.x_labels = ['Tank 1', 'Tank 2', 'Tank 3']
+    model.x_labels = ['x1', 'x2', 'x3']
     model.u_labels = ['w1', 'w2', 'w3']
-    model.t_label = 'Time [s]'
+    model.t_label = 't'
 
     return model
 
 def setup_three_tank_ocp():
-    # --- OCP Setup ---
     ocp = AcadosOcp()
     model = export_three_tank_model()
     ocp.model = model
@@ -76,6 +70,12 @@ def setup_three_tank_ocp():
     ocp.solver_options.tf = T
     ocp.solver_options.qp_solver_cond_N = 50
     
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type = 'LINEAR_LS'
     ocp.cost.yref = np.array([k2, k4])
@@ -170,7 +170,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='three_tank_ocp.png',
+        fig_filename='acados_plots/three_tank_ocp.png',
     )
     
 if __name__ == '__main__':

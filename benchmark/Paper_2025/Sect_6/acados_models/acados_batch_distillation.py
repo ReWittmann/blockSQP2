@@ -49,7 +49,7 @@ def export_batch_distillation_model() -> AcadosModel:
 
     model.x_labels = ['M0','x0','x1','x2','x3','x4','x5','xC','xD','MD','T']
     model.u_labels = ['Reflux ratio']
-    model.t_label = 'Time [s]'
+    model.t_label = 't'
     
     return model
 

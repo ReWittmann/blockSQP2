@@ -2,7 +2,7 @@ from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, 
 import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
-
+from pathlib import Path
 
 def export_tubular_reactor_model() -> AcadosModel:
     model_name = 'tubular_reactor'
@@ -32,9 +32,9 @@ def export_tubular_reactor_model() -> AcadosModel:
     
     model.cost_expr_ext_cost_e = -q
 
-    model.x_labels = ['Concentration (x)', 'Quadrature']
-    model.u_labels = ['Control (w)']
-    model.t_label = 'Time'
+    model.x_labels = ['x', 'q']
+    model.u_labels = ['w']
+    model.t_label = 't'
 
     return model
 
@@ -51,6 +51,13 @@ def setup_tubular_reactor_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -102,7 +109,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='tubular_reactor_ocp.png',
+        fig_filename='acados_plots/tubular_reactor_ocp.png',
     )
     
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
-
+from pathlib import Path
 
 def export_time_optimal_car_model() -> AcadosModel:
     model_name = 'time_optimal_car'
@@ -31,14 +31,13 @@ def export_time_optimal_car_model() -> AcadosModel:
     
     model.cost_expr_ext_cost_e = T
 
-    model.x_labels = ['Position (z)', 'Velocity (v)', 'Time (T)']
-    model.u_labels = ['Acceleration (u)']
-    model.t_label = 'Normalized Time'
+    model.x_labels = ['z', 'v', 't']
+    model.u_labels = ['u']
+    model.t_label = 't'
 
     return model
 
 def setup_time_optimal_car_ocp():
-    # --- OCP Setup ---
     ocp = AcadosOcp()
     model = export_time_optimal_car_model()
     ocp.model = model
@@ -55,30 +54,31 @@ def setup_time_optimal_car_ocp():
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf_scaled
     
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
+    
     ocp.cost.cost_type_e = 'EXTERNAL'
     
-    # Constraints
-    # Control: -2 <= u <= 1
     ocp.constraints.lbu = np.array([-2.0])
     ocp.constraints.ubu = np.array([1.0])
     ocp.constraints.idxbu = np.array([0])
     
-    # State constraints: 0 <= z <= 330, 0 <= v <= v_max
     ocp.constraints.lbx = np.array([0.0, 0.0])
     ocp.constraints.ubx = np.array([330.0, v_max])
     ocp.constraints.idxbx = np.array([0, 1])
     
-    # Initial state: [0, 0, Tf_init]
     ocp.constraints.lbx_0 = np.array([0.0, 0.0, 0.1])
     ocp.constraints.ubx_0 = np.array([0.0, 0.0, 50.0])
     ocp.constraints.idxbx_0 = np.arange(nx)
     
-    # Final state constraints: z(tF) = 300, v(tF) = 0
     ocp.constraints.lbx_e = np.array([z_target, 0.0])
     ocp.constraints.ubx_e = np.array([z_target, 0.0])
     ocp.constraints.idxbx_e = np.array([0, 1])
     
-    # Solver Options
     ocp.solver_options.qp_solver = 'PARTIAL_CONDENSING_HPIPM'
     ocp.solver_options.hessian_approx = 'EXACT'
     ocp.solver_options.integrator_type = 'ERK'
@@ -124,7 +124,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='time_optimal_car_ocp.png',
+        fig_filename='acados_plots/time_optimal_car_ocp.png',
     )
     
 if __name__ == '__main__':

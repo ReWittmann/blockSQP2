@@ -5,42 +5,6 @@ from casadi import SX, vertcat
 import time
 from pathlib import Path
 
-# Parameters
-# Tf = 6.0
-# # zeta = 0.192
-# # b = 5.85
-# # mu = 0.0
-# # d = 0.00873
-# # G = 0.15
-# # F = 1.0
-# # eta = 1.0
-# alpha = 0.0
-# u0_max = 75.0
-# x2_max = 300.0
-
-#Param set 1
-# x00 = 12000.0
-# x10 = 15000.0
-# u1_max = 1.0
-# x3_max = 2.0
-
-#Param set 2
-# x00 = 12000
-# x10 = 15000
-# u1_max = 2
-# x3_max = 10
-
-#Param set 3
-# x00 = 14000
-# x10 = 5000
-# u1_max = 1
-# x3_max = 2
-
-#Param set 4
-# x00 = 14000
-# x10 = 5000
-# u1_max = 2
-# x3_max = 10
 
 
 def export_chemotherapy_model() -> AcadosModel:
@@ -89,9 +53,9 @@ def export_chemotherapy_model() -> AcadosModel:
     
     model.cost_expr_ext_cost_e = x0
 
-    model.x_labels = ['Tumor Vol', 'Vessel Vol', 'Cumul u0', 'Cumul u1']
-    model.u_labels = ['Drug u0', 'Drug u1']
-    model.t_label = 'Time [days]'
+    model.x_labels = ['x0', 'x1', 'x2', 'x3']
+    model.u_labels = ['u0', 'u1']
+    model.t_label = 't'
 
     return model
 

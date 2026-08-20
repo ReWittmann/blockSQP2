@@ -59,7 +59,7 @@ def export_apollo_model() -> AcadosModel:
 
     model.x_labels = [r'$v$', r'$\gamma$', r'$\xi$', r'$q$', r'$T$']
     model.u_labels = [r'$u$']
-    model.t_label = r'$t$ [s]'
+    model.t_label = r'$t$'
 
     return model
 

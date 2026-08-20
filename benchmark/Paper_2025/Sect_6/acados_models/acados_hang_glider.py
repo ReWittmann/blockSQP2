@@ -3,7 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
-
+from pathlib import Path
 
 
 def export_hang_glider_model() -> AcadosModel:
@@ -19,8 +19,6 @@ def export_hang_glider_model() -> AcadosModel:
     m = 100.0
     g = 9.81
 
-
-    # States: x, vx, y, vy, T (following CasADi order: x, dx, y, dy)
     x = SX.sym('x')
     vx = SX.sym('vx')
     y = SX.sym('y')
@@ -64,7 +62,7 @@ def export_hang_glider_model() -> AcadosModel:
 
     model.x_labels = ['x', 'vx', 'y', 'vy', 'T']
     model.u_labels = ['cL']
-    model.t_label = 'Normalized Time'
+    model.t_label = 't'
 
     return model
 
@@ -83,6 +81,13 @@ def setup_hang_glider_ocp():
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = 1.0
     ocp.solver_options.qp_solver_cond_N = 4
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -161,7 +166,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='hang_glider_ocp.png',
+        fig_filename='acados_plots/hang_glider_ocp.png',
     )
     
 if __name__ == '__main__':

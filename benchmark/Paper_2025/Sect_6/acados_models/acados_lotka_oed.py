@@ -1,7 +1,7 @@
 from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, AcadosOcpSolver, plot_trajectories, ACADOS_INFTY
 import numpy as np
 from casadi import SX, vertcat
-
+from pathlib import Path
 
 def export_lotka_oed_model() -> AcadosModel:
     model_name = 'lotka_oed'
@@ -74,7 +74,7 @@ def export_lotka_oed_model() -> AcadosModel:
 
     model.x_labels = ['x1', 'x2', 'G11', 'G12', 'G21', 'G22', 'F11', 'F12', 'F22', 'z1', 'z2']
     model.u_labels = ['u', 'w1', 'w2']
-    model.t_label = 'Time'
+    model.t_label = 't'
 
     return model
 
@@ -94,6 +94,13 @@ def setup_lotka_oed_ocp():
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
     ocp.solver_options.qp_solver_cond_N = 1
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -180,7 +187,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='lotka_oed_ocp.png',
+        fig_filename='acados_plots/lotka_oed_ocp.png',
     )
     
 if __name__ == '__main__':

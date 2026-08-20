@@ -45,9 +45,9 @@ def export_cushioned_oscillation_model() -> AcadosModel:
     # model.cost_y_expr_e = x2
     model.cost_expr_ext_cost_e = T
 
-    model.x_labels = ['position', 'velocity', 'Time']
-    model.u_labels = ['Control']
-    model.t_label = 'Time [s]'
+    model.x_labels = ['x', 'v', 't']
+    model.u_labels = ['u']
+    model.t_label = 't'
 
     return model
 

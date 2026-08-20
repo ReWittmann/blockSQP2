@@ -3,16 +3,8 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
+from pathlib import Path
 
-# # Parameters
-# Tf = 1.0
-# mu_x = 2e5
-# mu_p = 5000
-# gamma_xg = 5e4
-# gamma_x1 = 1e5
-# gamma_p1 = 2e4
-# gamma_x2 = 1500
-# gamma_p2 = 5e4
 
 def export_fermenter_model() -> AcadosModel:
     model_name = 'fermenter'
@@ -73,7 +65,7 @@ def export_fermenter_model() -> AcadosModel:
 
     model.x_labels = ['P', 'S1', 'S2', 'E', 'V', 'G', 'P_acc', 'S1_acc', 'S2_acc']
     model.u_labels = ['uS1', 'uS2', 'uP']
-    model.t_label = 'Time [h]'
+    model.t_label = 't'
 
     return model
 
@@ -91,7 +83,13 @@ def setup_fermenter_ocp():
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
     # ocp.solver_options.qp_solver_cond_N = 10
-    
+
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -178,7 +176,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='fermenter_ocp.png',
+        fig_filename='acados_plots/fermenter_ocp.png',
     )
     
 if __name__ == '__main__':

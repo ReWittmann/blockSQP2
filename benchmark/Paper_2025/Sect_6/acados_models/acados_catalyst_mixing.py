@@ -32,9 +32,9 @@ def export_catalyst_mixing_model() -> AcadosModel:
     
     model.cost_expr_ext_cost_e = -1 + x1 + x2
 
-    model.x_labels = ['Substance A', 'Substance B']
-    model.u_labels = ['Control']
-    model.t_label = 'Time [s]'
+    model.x_labels = ['x1', 'x2']
+    model.u_labels = ['u']
+    model.t_label = 't'
 
     return model
 

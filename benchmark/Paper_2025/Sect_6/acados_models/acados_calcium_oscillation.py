@@ -49,7 +49,7 @@ def export_calcium_model() -> AcadosModel:
 
     model.x_labels = ['x0', 'x1', 'x2', 'x3', 'w_max']
     model.u_labels = ['w']
-    model.t_label = 'Time'
+    model.t_label = 't'
 
     return model
 

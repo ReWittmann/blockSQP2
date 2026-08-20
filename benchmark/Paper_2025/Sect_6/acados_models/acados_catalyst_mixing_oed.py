@@ -83,9 +83,9 @@ def export_catalyst_mixing_oed_model() -> AcadosModel:
     model.cost_expr_ext_cost_e = ca.trace(ca.inv(F_reg))
     
     
-    model.x_labels = ['x1', 'x2', 'G...', 'F...', 'z1', 'z2']
+    model.x_labels = ['x1', 'x2', 'G', 'F', 'z1', 'z2']
     model.u_labels = ['u', 'w1', 'w2']
-    model.t_label = 'Time'
+    model.t_label = 't'
     
     return model
 

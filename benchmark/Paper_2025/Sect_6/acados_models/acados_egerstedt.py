@@ -3,6 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat, exp
 import time
+from pathlib import Path
 
 def export_egerstedt_model() -> AcadosModel:
     model_name = 'egerstedt_standard'
@@ -38,8 +39,8 @@ def export_egerstedt_model() -> AcadosModel:
     # model.cost_y_expr_e = x2
     model.cost_expr_ext_cost_e = x3
 
-    model.x_labels = ['state 1', 'state 1', 'quadrature']
-    model.u_labels = ['Control 1', 'Control 2', 'Control 3']
+    model.x_labels = ['x1', 'x2', 'x3']
+    model.u_labels = ['w1', 'w2', 'w3']
     model.t_label = 'Time [s]'
 
     return model
@@ -52,7 +53,14 @@ def setup_egerstedt_ocp():
     ocp.solver_options.N_horizon = 100
     ocp.solver_options.tf = 1.0
     
-    # ocp.solver_options.qp_solver_cond_N = 50  #Doesnt work for this problem
+    # ocp.solver_options.qp_solver_cond_N = 10  #Doesnt work for this problem
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'LINEAR_LS'
     
@@ -125,7 +133,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='egerstedt_standard_ocp.png',
+        fig_filename='acados_plots/egerstedt_standard_ocp.png',
     )
 
 if __name__ == '__main__':

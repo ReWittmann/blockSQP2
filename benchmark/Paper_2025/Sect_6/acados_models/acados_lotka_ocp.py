@@ -4,6 +4,7 @@ import casadi as ca
 import time
 
 from casadi import SX, vertcat
+from pathlib import Path
 
 def export_lotka_volterra_model() -> AcadosModel:
     model_name = 'lotka_volterra_fishing'
@@ -37,9 +38,9 @@ def export_lotka_volterra_model() -> AcadosModel:
     model.u = u
     model.name = model_name
 
-    model.x_labels = ['Prey $x_1$', 'Predator $x_2$']
-    model.u_labels = ['Effort $u$']
-    model.t_label = 'Time [s]'
+    model.x_labels = ['x1', 'x2']
+    model.u_labels = ['u']
+    model.t_label = 't'
 
     return model
 
@@ -57,6 +58,13 @@ def setup_lotka_ocp():
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
     ocp.solver_options.qp_solver_cond_N = 3
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
 
     Q_mat = np.eye(2)
     R_mat = np.diag([0.])
@@ -121,7 +129,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='lotka_ocp.png',
+        fig_filename='acados_plots/lotka_ocp.png',
     )
     
 if __name__ == '__main__':

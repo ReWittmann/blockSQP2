@@ -51,9 +51,9 @@ def export_cart_pendulum_model(lambda_u = 0.5) -> AcadosModel:
 
     model.cost_expr_ext_cost_e = q
 
-    model.x_labels = [r'Position [m]', r'Angle [rad]', r'Velocity [m/s]', r'Ang. Vel [rad/s]', r'q']
-    model.u_labels = [r'$Acceleration [m/s^2]$']
-    model.t_label = r'Time [s]'
+    model.x_labels = [r'x', r'theta', r'v', r'w', r'q']
+    model.u_labels = [r'$u$']
+    model.t_label = r't'
 
     return model
 

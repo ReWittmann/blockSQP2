@@ -3,7 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
-
+from pathlib import Path
 
 def export_goddard_model() -> AcadosModel:
     model_name = 'goddard_rocket'
@@ -53,9 +53,9 @@ def export_goddard_model() -> AcadosModel:
     model.cost_expr_ext_cost_e = -m
     
     
-    model.x_labels = ['Altitude (r)', 'Velocity (v)', 'Mass (m)', 'Time (T)']
-    model.u_labels = ['Thrust (u)']
-    model.t_label = 'Normalized Time'
+    model.x_labels = ['r', 'v', 'm', 't']
+    model.u_labels = ['u']
+    model.t_label = 't'
 
 
     return model
@@ -82,6 +82,13 @@ def setup_goddard_ocp():
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf_scaled
     # ocp.solver_options.qp_solver_cond_N = 1
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -176,7 +183,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='goddard_rocket_ocp.png',
+        fig_filename='acados_plots/goddard_rocket_ocp.png',
     )
     
 if __name__ == '__main__':

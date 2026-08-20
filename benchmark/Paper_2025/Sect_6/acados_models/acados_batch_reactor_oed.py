@@ -94,9 +94,9 @@ def export_batch_reactor_oed_model() -> AcadosModel:
     F_reg = F_tf + 1e-3 * ca.diag(np.ones(4))
     model.cost_expr_ext_cost_e = 0.25 * ca.trace(ca.inv(F_reg))
     
-    model.x_labels = ['x1', 'x2', 'G...', 'F...', 'z1', 'z2']
+    model.x_labels = ['x1', 'x2', 'G', 'F', 'z1', 'z2']
     model.u_labels = ['T', 'w1', 'w2']
-    model.t_label = 'Time'
+    model.t_label = 't'
 
     return model
 

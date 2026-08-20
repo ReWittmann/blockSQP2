@@ -3,8 +3,8 @@ from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver, plot_trajec
 import numpy as np
 import casadi as ca
 import time
-
 from casadi import SX, vertcat
+from pathlib import Path
 
 def export_lotka_volterra_model() -> AcadosModel:
     model_name = 'lotka_volterra_competitive'
@@ -37,9 +37,9 @@ def export_lotka_volterra_model() -> AcadosModel:
     model.u = u
     model.name = model_name
 
-    model.x_labels = ['Species $x_1$', 'Species $x_2$']
-    model.u_labels = ['Effort $u$']
-    model.t_label = 'Time [s]'
+    model.x_labels = ['x1', 's2']
+    model.u_labels = ['u']
+    model.t_label = 't'
 
     return model
 
@@ -59,6 +59,12 @@ def setup_lotka_competitive_ocp(x_init = np.array([0.5, 1.5])):
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
     # ocp.solver_options.qp_solver_cond_N = 3
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
     
     Q_mat = np.eye(2)
     R_mat = np.diag([1e-4])
@@ -130,7 +136,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='lotka_competitive.png',
+        fig_filename='acados_plots/lotka_competitive.png',
     )
 
 if __name__ == '__main__':

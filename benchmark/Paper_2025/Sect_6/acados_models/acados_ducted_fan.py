@@ -3,13 +3,8 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
+from pathlib import Path
 
-# m = 2.2
-# J = 0.05
-# r = 0.2
-# mg = 4.0
-# mu = 4.0
-# Tf_init = 5.0
 
 def export_ducted_fan_model() -> AcadosModel:
     model_name = 'ducted_fan'
@@ -68,7 +63,7 @@ def export_ducted_fan_model() -> AcadosModel:
 
     model.x_labels = ['x1', 'x2', 'alpha', 'v1', 'v2', 'va', 'q', 'T']
     model.u_labels = ['u1', 'u2']
-    model.t_label = 'Normalized Time'
+    model.t_label = 't'
 
     return model
 
@@ -82,6 +77,13 @@ def setup_ducted_fan_ocp():
     ocp.solver_options.N_horizon = 100
     ocp.solver_options.tf = 1.0 
     ocp.solver_options.qp_solver_cond_N = 10
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     N = ocp.solver_options.N_horizon
     nx = model.x.rows()
@@ -178,7 +180,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='ducted_fan_ocp.png',
+        fig_filename='acados_plots/ducted_fan_ocp.png',
     )
     
 if __name__ == '__main__':

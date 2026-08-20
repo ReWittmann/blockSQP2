@@ -3,6 +3,7 @@ import numpy as np
 import casadi as ca
 from casadi import SX, vertcat
 import time
+from pathlib import Path
 
 def export_particle_steering_model() -> AcadosModel:
     model_name = 'particle_steering'
@@ -41,9 +42,9 @@ def export_particle_steering_model() -> AcadosModel:
     
     model.cost_expr_ext_cost_e = T
 
-    model.x_labels = ['x1', 'v1', 'x2', 'v2', 'T']
+    model.x_labels = ['x1', 'v1', 'x2', 'v2', 't']
     model.u_labels = ['u']
-    model.t_label = 'Normalized Time'
+    model.t_label = 't'
 
     return model
 
@@ -59,6 +60,13 @@ def setup_particle_steering_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf_scaled
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -137,7 +145,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='particle_steering_ocp.png',
+        fig_filename='acados_plots/particle_steering_ocp.png',
     )
 
 if __name__ == '__main__':

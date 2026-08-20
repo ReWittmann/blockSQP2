@@ -1,6 +1,8 @@
 from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, AcadosOcpSolver, plot_trajectories
 import numpy as np
 import casadi as ca
+from casadi import SX, vertcat
+from pathlib import Path
 
 def export_electric_car_model() -> AcadosModel:
     model_name = 'electric_car'
@@ -51,8 +53,8 @@ def export_electric_car_model() -> AcadosModel:
     model.cost_expr_ext_cost_e = x3
 
     model.x_labels = ['x0', 'x1', 'x2', 'x3']
-    model.u_labels = ['Control']
-    model.t_label = 'Time [s]'
+    model.u_labels = ['u']
+    model.t_label = 't'
 
     return model
 
@@ -68,6 +70,13 @@ def setup_electric_car_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
+    
+    try:
+        cD = Path(__file__).parent
+    except:
+        cD = Path.cwd()
+    ocp.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}"))
+
     
     ocp.cost.cost_type_e = 'EXTERNAL'
     
@@ -157,7 +166,7 @@ def main():
         idxbu=ocp_solver.ocp.constraints.idxbu,
         lbu=ocp_solver.ocp.constraints.lbu,
         ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='catalyst_mixing_ocp.png',
+        fig_filename='acados_plots/catalyst_mixing_ocp.png',
     )
     
 if __name__ == '__main__':
