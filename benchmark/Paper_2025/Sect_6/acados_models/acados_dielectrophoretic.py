@@ -95,6 +95,8 @@ def setup_dielectrophoretic_ocp():
     sim.solver_options.integrator_type = 'ERK'
     sim.solver_options.T = Tf_init / N      #This should be 1.0/N, but then nlp solver is somehow no longer successful
     sim.solver_options.num_steps = 2
+    sim.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}_sim"))
+    
     sim_sol = AcadosSimSolver(sim)
     
     x_current = np.array([x00, 0.0, Tf_init])
@@ -111,20 +113,6 @@ def setup_dielectrophoretic_ocp():
         ocp_solver.set(i, "x", sim_x[i, :])
         ocp_solver.set(i, "u", u_init_traj[i])
     ocp_solver.set(N, "x", sim_x[N, :])
-    
-    plot_trajectories(
-        x_traj_list=[sim_x[:,:-1]],
-        u_traj_list=[u_init_traj],
-        time_traj_list=[np.linspace(0, 1.0, N+1) * sim_x[0,-1]],
-        time_label='Time [s]',
-        labels_list=['Dielectrophoretic Particle'],
-        x_labels=ocp_solver.ocp.model.x_labels,
-        u_labels=ocp_solver.ocp.model.u_labels,
-        idxbu=ocp_solver.ocp.constraints.idxbu,
-        lbu=ocp_solver.ocp.constraints.lbu,
-        ubu=ocp_solver.ocp.constraints.ubu,
-        fig_filename='dielectrophoretic_ocp.png',
-    )
     
     return ocp_solver
 

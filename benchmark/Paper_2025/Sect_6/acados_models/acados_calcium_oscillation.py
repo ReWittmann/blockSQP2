@@ -98,6 +98,7 @@ def setup_calcium_oscillation_ocp():
     N = ocp.solver_options.N_horizon
     sim = AcadosSim()
     sim.model = model
+    sim.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}_sim"))
     sim.solver_options.integrator_type = 'IRK' # Must match OCP
     sim.solver_options.T = ocp.solver_options.tf / N
     sim.solver_options.num_steps = 100

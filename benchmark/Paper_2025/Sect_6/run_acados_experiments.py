@@ -6,10 +6,10 @@ import time
 
 
 benchmarks = [
-    acmo.setup_batch_reactor_ocp,
-    acmo.setup_cart_pendulum_ocp,
-    acmo.setup_catalyst_mixing_ocp,
-    acmo.setup_catalyst_mixing_oed_ocp,
+    # acmo.setup_batch_reactor_ocp,
+    # acmo.setup_cart_pendulum_ocp,
+    # acmo.setup_catalyst_mixing_ocp,
+    # acmo.setup_catalyst_mixing_oed_ocp,
     # acmo.setup_dielectrophoretic_ocp,
     # acmo.setup_D_Onofrio_ocp,
     # acmo.setup_D_Onofrio_ocp_2,

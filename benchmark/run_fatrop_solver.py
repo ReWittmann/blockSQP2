@@ -29,7 +29,7 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems_fatrop.Catalyst_Mixing_OED_noQuads(
+OCprob = OCProblems_fatrop.Batch_Reactor_OED_noQuads(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
@@ -41,7 +41,7 @@ OCprob = OCProblems_fatrop.Catalyst_Mixing_OED_noQuads(
 fatropts = {
     'jit': False,
     'expand': False,
-    'jit_options': {'flags': '-O3', 'verbose': False},
+    'jit_options': {'flags': '-Os', 'verbose': False},
     'fatrop':{'tol':1e-6, 'constr_viol_tol':1e-4, 'print_level': 10, 'max_iter': 300},
     'debug': False    
     }

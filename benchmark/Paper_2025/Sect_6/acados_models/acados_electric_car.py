@@ -109,6 +109,7 @@ def setup_electric_car_ocp():
     
     sim = AcadosSim()
     sim.model = model
+    sim.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}_sim"))
     
     sim.solver_options.integrator_type = 'ERK'
     sim.solver_options.T = Tf/N

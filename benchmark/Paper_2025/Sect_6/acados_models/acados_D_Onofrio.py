@@ -124,6 +124,8 @@ def setup_D_Onofrio_ocp(x00 = 12000.0, x10 = 15000.0, u1_max = 1.0, x3_max = 2.0
     
     sim = AcadosSim()
     sim.model = model
+    sim.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}_sim"))
+    
     sim.solver_options.integrator_type = 'ERK'
     sim.solver_options.T = ocp.solver_options.tf / N
     sim.solver_options.num_steps = 2

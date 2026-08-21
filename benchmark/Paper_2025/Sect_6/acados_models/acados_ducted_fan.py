@@ -126,6 +126,8 @@ def setup_ducted_fan_ocp():
     
     sim = AcadosSim()
     sim.model = model
+    sim.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}_sim"))
+    
     sim.solver_options.integrator_type = 'ERK'
     sim.solver_options.T = 1.0 / N
     sim.solver_options.num_steps = 2

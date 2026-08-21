@@ -25,14 +25,14 @@ import blockSQP2
 import OCProblems
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Competitive(
+OCprob = OCProblems.Catalyst_Mixing_OED(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    **OCProblems.Lotka_Volterra_Competitive.param_set_2,
+                    # **OCProblems.Lotka_Volterra_Competitive.param_set_2,
                     )
 itMax = 200                                  #max number of steps
 
@@ -42,7 +42,7 @@ plot_title = True                          #Put name of problem in plot?
 sol_plot = True
 
 # Just-in-time compile the problem functions
-# OCprob.jit() #jit_hess = True)
+# OCprob.jit(jit_hess = False)              
 
 # start = OCprob.perturbed_start_point(6)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point

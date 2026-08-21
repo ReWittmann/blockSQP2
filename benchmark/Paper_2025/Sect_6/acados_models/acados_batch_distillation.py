@@ -122,6 +122,7 @@ def setup_batch_distillation_ocp():
     
     sim = AcadosSim()
     sim.model = model
+    sim.code_gen_options.code_export_directory = str(cD/Path(f"acados_codegen/{model.name}_sim"))
     
     sim.solver_options.integrator_type = 'IRK'
     sim.solver_options.T = Tf/N
