@@ -516,14 +516,14 @@ void SQPmethod::calcBFGS(int dpos, int iBlock, SymMatrix *hess, bool damping){
     // Bdelta = B*delta (if sizing is enabled, B is the sized B!)
     // h1 = delta^T * B * delta
     // h2 = delta^T * gamma
-    double h2_ = 0.0;
+    // double h2_ = 0.0;
     Bdelta.Dimension(Bsize).Initialize(0.0);
     for (int i = 0; i < Bsize; i++){
         for (int k = 0; k < Bsize; k++){
             Bdelta(i) += (*B)(i,k) * delta(k);
         }
         h1 += delta(i) * Bdelta(i);
-        h2_ += delta( i ) * gamma2( i );
+        // h2_ += delta( i ) * gamma2( i );
     }
     h2 = vars->deltaGammaMat(iBlock, dpos);
 
