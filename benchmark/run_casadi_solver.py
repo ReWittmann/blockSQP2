@@ -28,7 +28,7 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems.Lotka_Shared_OED(
+OCprob = OCProblems.Catalyst_Mixing_OED(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',

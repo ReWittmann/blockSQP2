@@ -99,15 +99,18 @@ void SQPmethod::calc_free_variables_scaling(double *ret_SF){
     //     }
     // }
     S_u = -1.0;
-    if (rgamma > param->scaling_Theta_max){
-        S_u = rgamma/param->scaling_Theta_max;
+    // if (rgamma > param->scaling_Theta_max){
+    //     S_u = rgamma/param->scaling_Theta_max;
+    // }
+    if (rgamma > 1.0){            
+        S_u = (std::max)((std::min)(rgamma, 1.0/rdelta), rgamma/param->scaling_Theta_max);
     }
     else if (rgamma < 1.0){
         if (rdelta > 1.0){
-            if (rgamma < param->scaling_Theta_min) S_u = rgamma/param->scaling_Theta_min;
-            else                                   S_u = std::min(1.0, rdelta*rgamma);
+            if (rgamma < param->scaling_Theta_min) S_u = (std::max)(rgamma/param->scaling_Theta_min, 1e-2);
+            else                                   S_u = (std::min)(1.0, rdelta*rgamma);
         }
-        else S_u = rgamma;
+        else S_u = (std::max)(rgamma, 1e-2);
     }
     
     if (S_u > 0){
@@ -140,13 +143,13 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
     int ind = 0, fvbsize;
     
     for (; ind < prob->n_vblocks; ind++){
-        if (!prob->vblocks[ind].dependent){
+        if (prob->vblocks[ind].size > 0 && !prob->vblocks[ind].dependent){
             fvbsize = prob->vblocks[ind].size;
             break;
         }
     }
     for (; ind < prob->n_vblocks; ind++){
-        if (!prob->vblocks[ind].dependent && prob->vblocks[ind].size != fvbsize) throw std::logic_error("For now, the scaling heuristic requires all free variable blocks to have the same size");
+        if (!prob->vblocks[ind].dependent && prob->vblocks[ind].size > 0 && prob->vblocks[ind].size != fvbsize) throw std::logic_error("For now, the scaling heuristic requires all free variable blocks to have the same size");
     }
     
     auto set_to_zero = [lcount = fvbsize](auto* arr){for (int lind = 0; lind < lcount; lind++) arr[lind] = 0;};
@@ -241,11 +244,11 @@ void SQPmethod::calc_free_variables_scaling_separate(double *ret_SF){
                     if (rgamma[i] < param->scaling_Theta_min) S_u[i] = (std::max)(rgamma[i]/param->scaling_Theta_min, 1e-2);
                     else                                      S_u[i] = (std::min)(1.0, rdelta[i]*rgamma[i]);
                 }
-                else S_u[i] = std::max(rgamma[i], 1e-2);
+                else S_u[i] = (std::max)(rgamma[i], 1e-2);
             }
         }
         else{
-            if (rgamma[i] < 1.0 && rdelta[i] < 1.0) S_u[i] = std::max(rgamma[i], 1e-2);
+            if (rgamma[i] < 1.0 && rdelta[i] < 1.0) S_u[i] = (std::max)(rgamma[i], 1e-2);
         }
     }
     

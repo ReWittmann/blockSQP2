@@ -173,7 +173,7 @@ def main():
         x_traj_list=[simX[:,0:3]],
         u_traj_list=[simU],
         time_traj_list=[np.linspace(0, 1.0, N+1) * simX[0,-1]],
-        time_label='Time [s]',
+        time_label='t',
         labels_list=['Ducted Fan'],
         x_labels=ocp_solver.ocp.model.x_labels,
         u_labels=ocp_solver.ocp.model.u_labels,
