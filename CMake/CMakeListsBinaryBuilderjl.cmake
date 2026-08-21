@@ -126,7 +126,7 @@ elseif(WIN32)
 	target_compile_definitions(blockSQP2 PUBLIC WINDOWS)
 endif()
 target_compile_options(blockSQP2 PRIVATE 
-	-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized -fPIC -O3
+	-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized -fPIC
 	)
 
 set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
@@ -145,7 +145,6 @@ target_compile_options(blockSQP2_jl PRIVATE
 			-Wall -Wextra -Wno-unused-parameter
 			-fvisibility=hidden
 			-fPIC
-			-O3
 			)
 set_target_properties(blockSQP2_jl PROPERTIES 
 		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2.jl/bin

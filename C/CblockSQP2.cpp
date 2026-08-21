@@ -391,7 +391,6 @@ CDLEXP int SQPoptions_set_conv_strategy(void *ptr, char *val){
     }
     CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
     return 1;
-    
 }
 
 CDLEXP void SQPoptions_set_max_conv_QPs(void *ptr, int val){

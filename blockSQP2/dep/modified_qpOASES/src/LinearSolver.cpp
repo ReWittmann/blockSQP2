@@ -332,7 +332,7 @@ returnValue LapackDenseSolver::factorize()
 
     double work_query;
 	SYTRF("L", &n, A, &lda, ipiv, &work_query, &lwork, &info STRLENS1(1));
-	lapack_int newlwork = static_cast<lapack_int>(work_query);
+	// lapack_int newlwork = static_cast<lapack_int>(work_query);
 	
 	if (lapack_int newlwork = static_cast<lapack_int>(work_query) > lwork){
     	lwork = newlwork;
