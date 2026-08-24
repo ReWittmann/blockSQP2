@@ -101,8 +101,8 @@ titles = [EXP_name for _, EXP_name in ipopt_Experiments + blockSQP2_Experiments]
 # titles = [EXP_name for _, EXP_name in casadi_blockSQP2_Experiments]
 # titles = [EXP_name for _, EXP_name in worhp_Experiments]
 
-
-OCP_experiment.print_heading(out, titles)
+namejust = OCP_experiment.max_example_name_length(Examples) + 2
+OCP_experiment.print_heading(out, titles, namejust = namejust)
 #########
 for OCclass in Examples:
     OCprob = OCclass(nt=100, integrator=ODE_integrator, parallel = True)
@@ -118,8 +118,6 @@ for OCclass in Examples:
             ipopts['ipopt']['max_iter'] = itMax
         except KeyError:
             ipopts['ipopt'] = {'max_iter':itMax}
-        # ipopts = dict(ipopts_base)
-        # ipopts.update(EXP_opts)
         ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('ipopt', OCprob, ipopts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
@@ -154,5 +152,5 @@ for OCclass in Examples:
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCclass.__name__, dirPath = dirPath, savePrefix = file_prefix)
-    OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    OCP_experiment.print_iterations(out, OCclass.__name__, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
 out.close()

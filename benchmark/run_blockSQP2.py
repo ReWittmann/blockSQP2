@@ -25,18 +25,18 @@ import blockSQP2
 import OCProblems
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Catalyst_Mixing_OED(
+OCprob = OCProblems.Electric_Car(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    # **OCProblems.Lotka_Volterra_Competitive.param_set_2,
+                    # **OCProblems.Cart_Pendulum.param_set_2,
                     )
 itMax = 200                                  #max number of steps
 
-step_plots = False                           #Plot each iterate?
+step_plots = True                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                          #Put name of problem in plot?
 sol_plot = True
@@ -44,7 +44,7 @@ sol_plot = True
 # Just-in-time compile the problem functions
 # OCprob.jit(jit_hess = False)              
 
-# start = OCprob.perturbed_start_point(6)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
+# start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
 # OCprob.integrate_full(start)
 ###############################
@@ -55,23 +55,23 @@ opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
     
-    max_conv_QPs = 4,                          #max number of additional QPs per SQP iteration including fallback Hess QP
+    max_conv_QPs = 1,                          #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 'reduced_regularization',  #Convexification strategy, reduced_regularization requires passing vblocks
-    par_QPs = True,                            #Enable parallel solution of QPs
+    par_QPs = False,                            #Enable parallel solution of QPs
     enable_QP_cancellation = True,             #Enable cancellation of long running QP threads
     indef_delay = 3,                           #Only use fallback Hessian in first # iterations
     
     hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
-    fallback_approx = 'BFGS',               # ''   ''
+    fallback_approx = 'BFGS',               #
     fallback_sizing = 'COL',                # ''   ''
     BFGS_damping_factor = 1/3,
     
     lim_mem = True,
     mem_size = 20,
-    opt_tol = 1e-6,                             #Tolerances for termination
+    opt_tol = 1e-7,                             #Tolerances for termination
     feas_tol = 1e-6,
-    conv_kappa_max = np.inf,                    #Maximum Hess regularization factor for conv. strategy, default 8.0
+    conv_kappa_max = float('inf'),                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     
     automatic_scaling = True,
     scaling_Theta_min = 1e-1,

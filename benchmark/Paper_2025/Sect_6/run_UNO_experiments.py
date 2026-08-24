@@ -1,6 +1,6 @@
 # blockSQP2 -- A structure-exploiting nonlinear programming solver based
 #              on blockSQP by Dennis Janka.
-# Copyright (C) 2025 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
+# Copyright (C) 2025-2026 by Reinhold Wittmann <reinhold.wittmann@ovgu.de>
 
 # Licensed under the zlib license. See LICENSE for more details.
 
@@ -29,8 +29,8 @@ import OCP_experiment
 
 # Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
-            (OCProblems.Apollo_Reentry, dict(), None),
-            # (OCProblems.Batch_Distillation, dict(), None),
+            # (OCProblems.Apollo_Reentry, dict(), None),
+            (OCProblems.Batch_Distillation, dict(), None),
             # (OCProblems.Batch_Reactor, dict(), None),
             # (OCProblems.Batch_Reactor_OED, dict(), None),
             # (OCProblems.Calcium_Oscillation, dict(), None),
@@ -63,10 +63,12 @@ Examples = [
             # (OCProblems.Ocean, dict(), None),
             # (OCProblems.Particle_Steering, dict(), None),
             # (OCProblems.Quadrotor_Helicopter, dict(), None),
-            # (OCProblems.Satellite_Deorbiting, dict(), None),
+            
             # (OCProblems.Three_Tank_Multimode, dict(), None),
             # (OCProblems.Time_Optimal_Car, dict(), None),
             # (OCProblems.Tubular_Reactor, dict(), None),
+            
+            # (OCProblems.Satellite_Deorbiting, dict(), None), #Sometimes crashes for filtersqp preset
             ]
 
 #Select option sets to test for
@@ -89,8 +91,10 @@ opt_filtersqp_exact = {
     }
 
 Experiments = [
+                # (opt_ipopt_LBFGS, "UNO (ipopt preset, LBFGS)"),
                 # (opt_ipopt_exact, "UNO (ipopt preset, exact Hessian)"),
-                (opt_filtersqp_exact, "UNO (filtersqp preset, exact Hessian)")
+                # (opt_filtersqp_LBFGS, "UNO (filtersqp preset, LBFGS)"),
+                (opt_filtersqp_exact, "UNO (filtersqp preset, exact Hessian)"),
                 ]
 
 plot_folder = cD / Path("out_UNO_experiments")
@@ -166,7 +170,9 @@ else:
     out = OCP_experiment.out_dummy()
 
 titles = [EXP_name for _, EXP_name in Experiments]
-OCP_experiment.print_heading(out, titles)
+
+namejust = OCP_experiment.max_example_name_length(Examples) + 2
+OCP_experiment.print_heading(out, titles, namejust = namejust)
 for OCclass, OCargs, OCname in Examples:        
     OCprob = OCclass(nt = 100, parallel = True, **OCargs)
     itMax = 300
@@ -190,7 +196,6 @@ for OCclass, OCargs, OCname in Examples:
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "UNO")
-    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
 out.close()
-
 

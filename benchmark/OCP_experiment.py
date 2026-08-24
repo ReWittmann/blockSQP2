@@ -515,19 +515,29 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
 
 
 
-def print_heading(out, EXP_names : list[str]):
+def max_example_name_length(Examples : list[tuple[type[OCProblems.OCProblem], dict, typing.Optional[str]]]):
+    max_name_length = 1
+    for OCclass, _, OCname in Examples:
+        if OCname is not None:
+            name = OCname
+        else:
+            OCname = OCclass.__name__
+        max_name_length = max(max_name_length, len(OCname))
+    return max_name_length
+    
+def print_heading(out, EXP_names : list[str], namejust = 30, mujust = 10, sigmajust = 11, midjust = 5):
     """Prepare new file for later calling print_iterations on out"""
-    out.write(" "*27)
+    out.write(" "*namejust)
     for EXP_name in EXP_names:
-        out.write(EXP_name[0:40].ljust(21 + 5 + 21))
-    out.write("\n" + " "*27)
+        out.write(EXP_name[0:40].ljust(mujust+sigmajust+midjust+mujust+sigmajust))
+    out.write("\n" + " "*namejust)
     for i in range(len(EXP_names)):
-        out.write("mu_N".ljust(10) + "sigma_N".ljust(11) + "mu_t".ljust(10) + "sigma_t".ljust(11))
+        out.write("mu_N".ljust(mujust) + "sigma_N".ljust(sigmajust) + "mu_t".ljust(mujust) + "sigma_t".ljust(sigmajust))
         if i < len(EXP_names) - 1:
-            out.write("|".ljust(5))
+            out.write("|".ljust(midjust))
     out.write("\n")
     
-def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
+def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = 30, mujust = 10, sigmajust = 11, midjust = 5):
     """Print iteration count and solution time - averages and 
     standard deviations to file, EXP_... being vectors returned by
     the perburbed_starts functions.
@@ -538,11 +548,11 @@ def print_iterations(out, name, EXP_N_SQP, EXP_N_secs, EXP_type_sol):
     EXP_N_secs_mu = [sum(EXP_N_secs[i])/len(EXP_N_secs[i]) for i in range(n_EXP)]
     EXP_N_secs_sigma = [(sum((np.array(EXP_N_secs[i]) - EXP_N_secs_mu[i])**2)/len(EXP_N_secs[i]))**(0.5) for i in range(n_EXP)]
     
-    out.write(name[:25].ljust(27))
+    out.write(name[:namejust-2].ljust(namejust))
     for i in range(n_EXP):
-        out.write((f"{EXP_N_SQP_mu[i]:.2f}" + ",").ljust(10) + (f"{EXP_N_SQP_sigma[i]:.2f}" + ";").ljust(11) + (f"{EXP_N_secs_mu[i]:.2f}" + "s,").ljust(10) + (f"{EXP_N_secs_sigma[i]:.2f}" + "s").ljust(11))
+        out.write((f"{EXP_N_SQP_mu[i]:.2f}" + ",").ljust(mujust) + (f"{EXP_N_SQP_sigma[i]:.2f}" + ";").ljust(sigmajust) + (f"{EXP_N_secs_mu[i]:.2f}" + "s,").ljust(mujust) + (f"{EXP_N_secs_sigma[i]:.2f}" + "s").ljust(sigmajust))
         if i < n_EXP - 1:
-            out.write("|".ljust(5))
+            out.write("|".ljust(midjust))
     out.write("\n")
     
 
@@ -561,6 +571,9 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
         dirPath = Path(dirPath)
     dirPath.mkdir(parents = True, exist_ok = True)
     
+    if 'parallel' not in kwargs:
+        kwargs['parallel'] = True
+    
     if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
         pref = "ipopt"
@@ -570,7 +583,9 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
         out = out_dummy()
     
     titles = [EXP_name for _, EXP_name in Experiments]
-    print_heading(out, titles)
+    
+    namejust = max_example_name_length(Examples) + 2
+    print_heading(out, titles, namejust = namejust)
     #########
     for OCclass, OCargs, OCname in Examples:        
         OCprob = OCclass(**OCargs, **kwargs)
@@ -593,7 +608,7 @@ def run_ipopt_experiments(Examples : list[type[OCProblems.OCProblem]], Experimen
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
             suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
-        print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+        print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
     out.close()
 
 
@@ -601,6 +616,8 @@ def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], 
     if isinstance(dirPath, str):
         print("\n\nWARNING: Passing a pathstring to run_ipopt_experiments is not recommended, use pathlib.Path instead\n", flush = True)
         dirPath = Path(dirPath)
+    if 'parallel' not in kwargs:
+        kwargs['parallel'] = True
     dirPath.mkdir(parents = True, exist_ok = True)
     if file_output:
         date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
@@ -610,7 +627,9 @@ def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], 
     else:
         out = out_dummy()
     titles = [EXP_name for _, EXP_name in Experiments]
-    print_heading(out, titles)
+    
+    namejust = max_example_name_length(Examples) + 2
+    print_heading(out, titles, namejust = namejust)
     
     for OCclass, OCargs, OCname in Examples:        
         OCprob = OCclass(**OCargs, **kwargs)
@@ -634,5 +653,5 @@ def run_blockSQP2_experiments(Examples : list[tuple[type[OCProblems.OCProblem], 
         plot_successful(n_EXP, nPert0, nPertF,\
             titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
             suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP")
-        print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+        print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
     out.close()

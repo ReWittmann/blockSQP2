@@ -844,7 +844,7 @@ class Lotka_OED_noQuads(OCProblems.Lotka_OED):
     
     def build_problem(self):
         self.set_OCP_data(9 + 2, 0, 3, 2 - 2, [0.,0.]+[-np.inf]*7 + [-np.inf]*2, [np.inf]*9 + [np.inf]*2,[],[],[0.] + [0.]*2, [float(self.model_params['fishing'])] + [1.]*2)
-        tf,p1,p2,p3,p4,p5,p6,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6','x_init', 'M', 'epsilon', 'transform_obj'])
+        tf,p1,p2,p3,p4,c1,c2,x_init,M,epsilon, transform_obj= (self.model_params[key] for key in ['tf', 'p1', 'p2', 'p3', 'p4', 'c1', 'c2','x_init', 'M', 'epsilon', 'transform_obj'])
         self.fix_time_horizon(0.,tf)
         self.fix_initial_value(x_init + [0.]*4 + [epsilon, 0., epsilon] + [0.,0.])
         self.mark_state_bounds_implicit()
@@ -857,12 +857,12 @@ class Lotka_OED_noQuads(OCProblems.Lotka_OED):
         
         dt = cs.MX.sym('dt', 1)
         ode_rhs = cs.vertcat(
-                p1*x1 - p2*x1*x2 - p5*u*x1,
-                -p3*x2 + p4*x1*x2 - p6*u*x2,
-                (p1 - p2*x2 - p5*u)*G11 + (-p2*x1)*G21 - x1*x2,
-                (p1 - p2*x2 - p5*u)*G12 + (-p2*x1)*G22,
-                (p4*x2)*G11 + (-p3 + p4*x1 - p6*u)*G21,
-                (p4*x2)*G12 + (-p3 + p4*x1 - p6*u)*G22  + x1*x2,
+                p1*x1 - p2*x1*x2 - c1*u*x1,
+                -p3*x2 + p4*x1*x2 - c2*u*x2,
+                (p1 - p2*x2 - c1*u)*G11 + (-p2*x1)*G21 - x1*x2,
+                (p1 - p2*x2 - c1*u)*G12 + (-p2*x1)*G22,
+                (p4*x2)*G11 + (-p3 + p4*x1 - c2*u)*G21,
+                (p4*x2)*G12 + (-p3 + p4*x1 - c2*u)*G22  + x1*x2,
                 w1*(G11**2) + w2*(G21**2),
                 w1*G11*G12 + w2*G21*G22,
                 w1*(G12**2) + w2*(G22**2)
@@ -1045,6 +1045,125 @@ class Particle_Steering_noParams(OCProblems.Particle_Steering):
         self.finish_plot(ax, title, it, 'Particle steering problem')
 
 
+class Satellite_Deorbiting_noParams(OCProblems.Satellite_Deorbiting):
+    def build_problem(self):
+        mu, RE, rho0, H, CD, A, Isp, g0, umax, m0, mdry, omegaE, h0, hreentry, rscale, thetascale, mscale, vrscale, vthetascale, TSCALE = (self.model_params[key] for key in ['mu', 'RE', 'rho0', 'H', 'CD', 'A', 'Isp', 'g0', 'umax', 'm0', 'mdry', 'omegaE', 'h0', 'hreentry', 'rscale', 'thetascale', 'mscale', 'vrscale', 'vthetascale', 'TSCALE'])
+        
+        r0 = RE + h0
+        theta0 = 0.
+        vr0 = 0.
+        vorb = np.sqrt(mu/r0)
+        
+        rfinal = RE + hreentry
+        
+        self.set_OCP_data(5+1,0,2,0, [(RE+5000. - RE)*rscale, -2*np.pi*thetascale, -10000.*vrscale, 0.*vthetascale, (mdry - 0.1)*mscale, 300/self.ntS * TSCALE], [(r0 + 100000. - RE)*rscale, 2*np.pi*thetascale, 10000.*vrscale, 20000*vthetascale, (m0 + 0.1)*mscale, 21600/self.ntS * TSCALE], [], [], [-umax, -umax], [umax, umax])
+        self.fix_initial_value([(r0 - RE)*rscale, theta0*thetascale, vr0*vrscale, vorb*vthetascale, m0*mscale, None])
+        
+        self.fix_time_horizon(0., 1.)
+        
+        def safe_sqrt(x):
+            return cs.sqrt(cs.fmax(x, 1e-12))
+        
+        # Atmospheric model
+        def atmospheric_density(r_val):
+            h = r_val - RE
+            h_safe = cs.fmax(h, -100000)
+            return rho0 * cs.exp(-h_safe / H)
+        
+        X = cs.MX.sym('X', 5+1)
+        r_, theta_, vr_, vtheta_, m_,dt_ = cs.vertsplit(X)
+        r = r_/rscale + RE
+        theta = theta_/thetascale
+        vr = vr_/vrscale
+        vtheta = vtheta_/vthetascale
+        m = m_/mscale
+        dt = dt_/TSCALE
+        
+        U = cs.MX.sym('U', 2)
+        ur, utheta = cs.vertsplit(U)
+        dt_dummy = cs.MX.sym('dt_dummy', 1)
+        
+        rsafe = cs.fmax(r, RE + 10000)
+        msafe = cs.fmax(m, mdry)
+        
+        hsafe = cs.fmax(rsafe - RE, -100000)
+        rho = rho0 * cs.exp(-hsafe/H)
+
+        vrelr = vr
+        vreltheta = vtheta - omegaE*rsafe
+        vrel = safe_sqrt(vrelr**2 + vreltheta**2)
+        
+        centrifugal = vtheta**2/rsafe
+        gravity = mu/(rsafe**2)
+        drag = 0.5*CD*A/msafe*rho*vrel
+        rthrust = ur/msafe
+        thetathrust = utheta/msafe
+        
+        ode_rhs = cs.vertcat(
+            vr * rscale,
+            vtheta/rsafe * thetascale,
+            (centrifugal - gravity + rthrust - drag*vrelr) * vrscale,
+            (-vr*vtheta/rsafe + thetathrust - drag*vreltheta) * vthetascale,
+            (-cs.sqrt(ur**2 + utheta**2)/(Isp*g0)) * mscale,
+            0.
+        )
+        
+        self.ODE = {'x':X, 'p':cs.vertcat(dt_dummy,U), 'ode': dt*ode_rhs}
+        self.multiple_shooting()
+        self.set_objective(self.ntS*self.x_eval[5,-1]/TSCALE)
+        
+        rT = self.x_eval[0,-1]
+        urt, uthetat = cs.vertsplit(self.u_eval)
+        
+        self.add_constraint(safe_sqrt(urt**2 + uthetat**2), 0., umax)
+        self.add_constraint(rT/rscale, 0., rfinal - RE)
+        
+        self.build_NLP()
+        
+        for j in range(self.ntS):
+            # self.set_stage_param(self.start_point, j, 1800/self.ntS * TSCALE)
+            self.set_stage_control(self.start_point, j, [-5.0,-10.0])
+        
+        r_init = (np.linspace(r0, rfinal, self.ntS + 1) - RE) * rscale
+        theta_init = np.linspace(0, 2*np.pi, self.ntS + 1) * thetascale
+        vr_init = np.zeros(self.ntS + 1) * rscale
+        vtheta_init = np.ones(self.ntS + 1)*vorb*0.9 * rscale
+        m_init = np.linspace(m0, mdry + 10, self.ntS + 1) * mscale
+        for j in range(self.ntS + 1):
+            self.set_stage_state(self.start_point, j, [r_init[j], theta_init[j], vr_init[j], vtheta_init[j], m_init[j], 1800/self.ntS * TSCALE])
+    
+    def plot(self, xi, dpi = None, title = None, it = None):
+        RE, rscale, thetascale, mscale, TSCALE, vrscale, vthetascale, mu = [self.model_params[key] for key in ['RE', 'rscale', 'thetascale', 'mscale', 'TSCALE', 'vrscale', 'vthetascale', 'mu']]
+        
+        h0 = 450000
+        r0 = RE + h0
+        vorb = np.sqrt(mu/r0)
+        
+        r_, theta_, vr_, vtheta_, m_, dt_arr = self.get_state_arrays_expanded(xi)
+        r = r_/rscale + RE
+        theta = theta_/thetascale
+        vr = vr_/vrscale
+        vtheta = vtheta_/vthetascale
+        m = m_/mscale
+        
+        ur, utheta = self.get_control_plot_arrays(xi)
+        time_grid = np.cumsum(dt_arr).reshape(-1)/TSCALE
+        
+        fix, ax = plt.subplots(dpi=dpi)
+        ax.plot(time_grid, (r - RE)/1000, 'tab:cyan', linestyle = '--', label = r'(r - RE)/1000')
+        ax.plot(time_grid, theta*50, 'tab:green', linestyle = ':', label = r'$\theta\cdot 50$')
+        ax.plot(time_grid, vr, 'tab:blue', linestyle = '--', label = r'$v_r$')
+        ax.plot(time_grid, vtheta - vorb, 'tab:olive', linestyle = '-.', label = r'$v_\theta - v_\theta(0)$')
+        ax.plot(time_grid, (m - 100.)*4, 'tab:blue', linestyle = ':', label = r'(m - 100)$\cdot 4$')
+        
+        ax.step(time_grid, ur*20, 'tab:red', label = r'$u_r \cdot 20$')
+        ax.step(time_grid, utheta*20, 'tab:green', label = r'$u_\theta \cdot 20$')
+        
+        ax.legend(fontsize='large')
+        
+        self.finish_plot(ax, title, it, "Satellite Deorbiting problem")
+
+
 class Time_Optimal_Car_noParams(OCProblems.Time_Optimal_Car):    
     def build_problem(self):
         self.set_OCP_data(2+1,1-1,1,0,[0.,0.] + [0.1/self.ntS],[330.,self.model_params['vmax']] + [500/self.ntS],[], [], [-2.], [1.])
@@ -1106,7 +1225,7 @@ constr_data = {
             OCProblems.Ocean: (0, 0, False, True),
             Particle_Steering_noParams: (0, 3, False, True),
             OCProblems.Quadrotor_Helicopter: (1, 0, True, False),
-            OCProblems.Satellite_Deorbiting: (1, 1, True, False),
+            Satellite_Deorbiting_noParams: (1, 1, True, False),
             OCProblems.Three_Tank_Multimode: (1, 0, True, False),
             Time_Optimal_Car_noParams: (0, 2, True, False),
             OCProblems.Tubular_Reactor: (0, 0, False, True),

@@ -88,7 +88,7 @@ plot_folder = cD / Path("out_UNO_experiments")
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
 nPert0 = 0
-nPertF = 40
+nPertF = 10
 
 #Write results to a file?
 file_output = True
@@ -156,7 +156,9 @@ else:
     out = OCP_experiment.out_dummy()
 
 titles = [EXP_name for _, EXP_name in Experiments]
-OCP_experiment.print_heading(out, titles)
+
+namejust = OCP_experiment.max_example_name_length(Examples) + 2
+OCP_experiment.print_heading(out, titles, namejust = namejust)
 for OCclass, OCargs, OCname in Examples:        
     OCprob = OCclass(nt = 100, parallel = True, **OCargs)
     itMax = 300
@@ -180,7 +182,7 @@ for OCclass, OCargs, OCname in Examples:
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "UNO")
-    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
 out.close()
 
 

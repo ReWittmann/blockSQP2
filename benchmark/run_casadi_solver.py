@@ -28,7 +28,7 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems.Batch_Reactor_OED(
+OCprob = OCProblems.Calcium_Oscillation(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',

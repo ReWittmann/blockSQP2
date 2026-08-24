@@ -5,25 +5,23 @@
 # Licensed under the zlib license. See LICENSE for more details.
 
 
-# \file run_blockSQP_experiments.py
+# \file run_ipopt_experiments.py
 # \author Reinhold Wittmann
 # \date 2025
 #
-# Script to benchmark blockSQP2 on several problems 
-# for perturbed start points for different options
+# Script to benchmark the NLP solver ipopt several problems 
+# for perturbed start points for different options.
 
-import datetime
 import sys
 from pathlib import Path
 try:
     cD = Path(__file__).parent
 except:
     cD = Path.cwd()
-sys.path += [str(cD.parents[0]), str(cD.parents[1]/Path("Python"))]
-
-import blockSQP2
+sys.path += [str(cD.parents[1])]
 import OCP_experiment
 import OCProblems
+import datetime
 
 # Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
@@ -31,7 +29,7 @@ Examples = [
             # (OCProblems.Batch_Distillation, dict(), None),
             # (OCProblems.Batch_Reactor, dict(), None),
             # (OCProblems.Batch_Reactor_OED, dict(), None),
-            # (OCProblems.Calcium_Oscillation, dict(), None),
+            (OCProblems.Calcium_Oscillation, dict(), None),
             # (OCProblems.Cart_Pendulum, dict(), None),
             # (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2"),
             # (OCProblems.Catalyst_Mixing, dict(), None),
@@ -54,7 +52,7 @@ Examples = [
             # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_3, "Lotka_Volterra_Fishing_3"),
             # (OCProblems.Lotka_OED, dict(), None),
             # (OCProblems.Lotka_Volterra_Competitive, dict(), None),
-            (OCProblems.Lotka_Volterra_Competitive, OCProblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
+            # (OCProblems.Lotka_Volterra_Competitive, OCProblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
             # (OCProblems.Lotka_Volterra_Shared, dict(), None),
             # (OCProblems.Lotka_Volterra_Shared, OCProblems.Lotka_Volterra_Shared.param_set_2, "Lotka_Volterra_Shared_2"),
             # (OCProblems.Lotka_Shared_OED, dict(), None),
@@ -66,54 +64,13 @@ Examples = [
             # (OCProblems.Time_Optimal_Car, dict(), None),
             # (OCProblems.Tubular_Reactor, dict(), None),
             ]
-
-
-#SR1_BFGS
-opt_SR1_BFGS = blockSQP2.SQPoptions(
-    max_conv_QPs = 1,
-    max_filter_overrides = 0,
-    BFGS_damping_factor = 0.2
-)
-
-#Convexification strategy 0
-opt_cc = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'convex_combinations',
-)
-
-#Convexification strategy 1
-opt_fr = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'full_regularization',
-)
-
-#Convexification strategy 2
-opt_fr_scaling = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'reduced_regularization',
-    automatic_scaling = True
-)
-
-opt_full = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'reduced_regularization',
-    par_QPs = True,
-    max_filter_overrides = 0,
-    automatic_scaling = True,
-    
-    )
-
-
-use_condensing = True
-
-#Select option sets to test for
 Experiments = [
-                (opt_full, "blockSQP2 (full)"),
-                (opt_fr, "asdf")
-               ]
+                # ({'ipopt': {'hessian_approximation': 'limited-memory', 'tol': 1e-6, 'max_iter': 300}}, "Ipopt, limited-memory"),
+                ({'ipopt': {'hessian_approximation': "exact", 'tol': 1e-6, 'max_iter': 300}}, "Ipopt, exact Hessian"),
+                ]
 
 
-plot_folder = cD / Path("out_blockSQP2_experiments")
+plot_folder = cD / Path("out_ipopt_experiments")
 
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
@@ -123,21 +80,21 @@ nPertF = 10
 #Write results to a file?
 file_output = True
 
+
 #Run all example problems for all option sets for perturbed start points
 dirPath = plot_folder
 dirPath.mkdir(parents = True, exist_ok = True)
 if file_output:
     date_app = str(datetime.datetime.now()).replace(" ", "_").replace(":", "_").replace(".", "_").replace("'", "")
-    pref = "blockSQP2"
+    pref = "ipopt"
     filePath = dirPath / Path(pref + "_it_" + date_app + ".txt")
     out = open(filePath, 'w')
 else:
     out = OCP_experiment.out_dummy()
 
+    
 titles = [EXP_name for _, EXP_name in Experiments]
-
-namejust = OCP_experiment.max_example_name_length(Examples) + 2
-OCP_experiment.print_heading(out, titles, namejust = namejust)
+OCP_experiment.print_heading(out, titles)
 for OCclass, OCargs, OCname in Examples:        
     OCprob = OCclass(nt = 100, parallel = True, **OCargs)
     itMax = 300
@@ -147,36 +104,21 @@ for OCclass, OCargs, OCname in Examples:
     EXP_type_sol = []
     n_EXP = 0
     
-    #Hack: Test for less points for Batch_Distillation due to very long runtime
-    if issubclass(OCclass, OCProblems.Batch_Distillation):
-        nPertFsave = nPertF
-        nPertF = nPert0 + 2
-    
     for EXP_opts, EXP_name in Experiments:
-        #Hack 2: Increase accuracy for Catalyst Mixing OED
-        if (issubclass(OCclass, OCProblems.Catalyst_Mixing_OED)):
-            EXP_opts.tol *= 1e-1
-            
-        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.perturbed_starts(OCprob, EXP_opts, nPert0, nPertF, itMax = itMax, use_condensing = use_condensing)
+        ret_N_SQP, ret_N_secs, ret_type_sol = OCP_experiment.casadi_solver_perturbed_starts('ipopt', OCprob, EXP_opts, nPert0, nPertF, itMax = itMax)
         EXP_N_SQP.append(ret_N_SQP)
         EXP_N_secs.append(ret_N_secs)
         EXP_type_sol.append(ret_type_sol)
         titles.append(EXP_name)
         n_EXP += 1
-        
-        if (issubclass(OCclass, OCProblems.Catalyst_Mixing_OED)):
-            EXP_opts.tol *= 1e1
     ###############################################################################
     if OCname is None:
         OCname = OCclass.__name__
     
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
-        suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP2")
-    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
-    
-    #Hack
-    if issubclass(OCclass, OCProblems.Batch_Distillation):
-        nPertF = nPertFsave
-        
+        suptitle = OCname, dirPath = dirPath, savePrefix = "ipopt")
+    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
 out.close()
+
+

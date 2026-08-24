@@ -82,7 +82,7 @@ file_output = True
 Experiments = [
                 ({'fatrop': {'tol': 1e-6, 'constr_viol_tol':1e-4, 'max_iter': 300}, 
                   'jit': False, 'convexify_strategy': None}, #Doesnt seem to work with convexification strategies other than "None"
-                 'Fatrop (exact Hessian, tol=1e-6)'),
+                 'fatrop, exact Hessian'),
                 ]
 
 #Run all example problems for all option sets for perturbed start points
@@ -97,7 +97,9 @@ else:
     out = OCP_experiment.out_dummy()
 
 titles = [EXP_name for _, EXP_name in Experiments]
-OCP_experiment.print_heading(out, titles)
+
+namejust = OCP_experiment.max_example_name_length(Examples) + 2
+OCP_experiment.print_heading(out, titles, namejust = namejust)
 for OCclass, OCargs, OCname in Examples:        
     OCprob = OCclass(nt = 100, parallel = True, **OCargs)
     itMax = 300
@@ -121,7 +123,7 @@ for OCclass, OCargs, OCname in Examples:
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "fatrop")
-    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
 out.close()
 
 

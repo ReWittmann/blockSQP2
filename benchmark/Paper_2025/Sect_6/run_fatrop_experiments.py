@@ -26,41 +26,41 @@ import OCProblems_fatrop
 
 #Fatrop as of writing this does not support formulations involving parameters or quadratures-in-constraints, so use reformulated versions
 Examples = [
-            (OCProblems_fatrop.Apollo_Reentry_noParams, dict(), "Apollo_Reentry"),
+            # (OCProblems_fatrop.Apollo_Reentry_noParams, dict(), "Apollo_Reentry"),
             # (OCProblems_fatrop.Batch_Distillation_noParams, dict(), "Batch_Distillation"),
-            (OCProblems.Batch_Reactor, dict(), None),
-            (OCProblems_fatrop.Batch_Reactor_OED_noQuads, dict(), "Batch_Reactor_OED"),
-            (OCProblems_fatrop.Calcium_Oscillation_noParams, dict(), "Calcium_Oscillation"),
-            (OCProblems.Cart_Pendulum, dict(), None),
-            (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2"),
-            (OCProblems.Catalyst_Mixing, dict(), None),
-            (OCProblems_fatrop.Catalyst_Mixing_OED_noQuads, dict(), "Catalyst_Mixing_OED"),
-            (OCProblems_fatrop.Cushioned_Oscillation_noParams, dict(), "Cushioned_Oscillation"),
-            (OCProblems_fatrop.Dielectrophoretic_Particle_noParams, dict(), "Dielectrophoretic_Particle"),
-            (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, dict(), "D_Onofrio_Chemotherapy"),
-            (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, OCProblems.D_Onofrio_Chemotherapy.param_set_2, "D_Onofrio_Chemotherapy_2"),
-            (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, OCProblems.D_Onofrio_Chemotherapy.param_set_3, "D_Onofrio_Chemotherapy_3"),
-            (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, OCProblems.D_Onofrio_Chemotherapy.param_set_4, "D_Onofrio_Chemotherapy_4"),
-            (OCProblems_fatrop.Ducted_Fan_noParams, dict(), "Ducted_Fan"),
-            (OCProblems.Egerstedt_Standard, dict(), None),
-            (OCProblems.Electric_Car, dict(), None),
-            (OCProblems_fatrop.Fermenter_noQuads, dict(), "Fermenter"),
-            (OCProblems_fatrop.Goddard_Rocket_noParams, dict(), 'Goddard\'s Rocket'),
-            (OCProblems_fatrop.Hang_Glider_noParams, dict(), "Hang_Glider"),
-            (OCProblems_fatrop.Hanging_Chain_noQuads, dict(), "Hanging_Chain"),
-            (OCProblems.Lotka_Volterra_Fishing, dict(), None),
-            (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_2, "Lotka_Volterra_Fishing_2"),
-            (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_3, "Lotka_Volterra_Fishing_3"),
-            (OCProblems_fatrop.Lotka_OED_noQuads, dict(), "Lotka_OED"),
-            (OCProblems.Lotka_Volterra_Competitive, dict(), None),
-            (OCProblems.Lotka_Volterra_Competitive, OCProblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
-            (OCProblems.Lotka_Volterra_Shared, dict(), None),
-            (OCProblems.Lotka_Volterra_Shared, OCProblems.Lotka_Volterra_Shared.param_set_2, "Lotka_Volterra_Shared_2"),
-            (OCProblems_fatrop.Lotka_Shared_OED_noQuads, dict(), "Lotka_Shared_OED"),
-            (OCProblems.Ocean, dict(), None),
-            (OCProblems_fatrop.Particle_Steering_noParams, dict(), "Particle_Steering"),
-            (OCProblems.Quadrotor_Helicopter, dict(), None),
-            (OCProblems.Satellite_Deorbiting, dict(), None),
+            # (OCProblems.Batch_Reactor, dict(), None),
+            # (OCProblems_fatrop.Batch_Reactor_OED_noQuads, dict(), "Batch_Reactor_OED"),
+            # (OCProblems_fatrop.Calcium_Oscillation_noParams, dict(), "Calcium_Oscillation"),
+            # (OCProblems.Cart_Pendulum, dict(), None),
+            # (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2"),
+            # (OCProblems.Catalyst_Mixing, dict(), None),
+            # (OCProblems_fatrop.Catalyst_Mixing_OED_noQuads, dict(), "Catalyst_Mixing_OED"),
+            # (OCProblems_fatrop.Cushioned_Oscillation_noParams, dict(), "Cushioned_Oscillation"),
+            # (OCProblems_fatrop.Dielectrophoretic_Particle_noParams, dict(), "Dielectrophoretic_Particle"),
+            # (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, dict(), "D_Onofrio_Chemotherapy"),
+            # (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, OCProblems.D_Onofrio_Chemotherapy.param_set_2, "D_Onofrio_Chemotherapy_2"),
+            # (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, OCProblems.D_Onofrio_Chemotherapy.param_set_3, "D_Onofrio_Chemotherapy_3"),
+            # (OCProblems_fatrop.D_Onofrio_Chemotherapy_noQuads, OCProblems.D_Onofrio_Chemotherapy.param_set_4, "D_Onofrio_Chemotherapy_4"),
+            # (OCProblems_fatrop.Ducted_Fan_noParams, dict(), "Ducted_Fan"),
+            # (OCProblems.Egerstedt_Standard, dict(), None),
+            # (OCProblems.Electric_Car, dict(), None),
+            # (OCProblems.Fermenter, dict(), "Fermenter"),
+            # (OCProblems_fatrop.Goddard_Rocket_noParams, dict(), 'Goddard\'s Rocket'),
+            # (OCProblems_fatrop.Hang_Glider_noParams, dict(), "Hang_Glider"),
+            # (OCProblems_fatrop.Hanging_Chain_noQuads, dict(), "Hanging_Chain"),
+            # (OCProblems.Lotka_Volterra_Fishing, dict(), None),
+            # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_2, "Lotka_Volterra_Fishing_2"),
+            # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_3, "Lotka_Volterra_Fishing_3"),
+            # (OCProblems_fatrop.Lotka_OED_noQuads, dict(), "Lotka_OED"),
+            # (OCProblems.Lotka_Volterra_Competitive, dict(), None),
+            # (OCProblems.Lotka_Volterra_Competitive, OCProblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
+            # (OCProblems.Lotka_Volterra_Shared, dict(), None),
+            # (OCProblems.Lotka_Volterra_Shared, OCProblems.Lotka_Volterra_Shared.param_set_2, "Lotka_Volterra_Shared_2"),
+            # (OCProblems_fatrop.Lotka_Shared_OED_noQuads, dict(), "Lotka_Shared_OED"),
+            # (OCProblems.Ocean, dict(), None),
+            # (OCProblems_fatrop.Particle_Steering_noParams, dict(), "Particle_Steering"),
+            # (OCProblems.Quadrotor_Helicopter, dict(), None),
+            (OCProblems_fatrop.Satellite_Deorbiting_noParams, dict(), None),
             (OCProblems.Three_Tank_Multimode, dict(), None),
             (OCProblems_fatrop.Time_Optimal_Car_noParams, dict(), "Time_Optimal_Car"),
             (OCProblems.Tubular_Reactor, dict(), None),
@@ -82,7 +82,7 @@ file_output = True
 Experiments = [
                 ({'fatrop': {'tol': 1e-6, 'constr_viol_tol':1e-4, 'max_iter': 300}, 
                   'jit': False, 'convexify_strategy': None}, #Doesnt seem to work with convexification strategies other than "None"
-                 'Fatrop (exact Hessian, tol=1e-6)'),
+                'standard fatrop'),
                 ]
 
 #Run all example problems for all option sets for perturbed start points
@@ -97,7 +97,9 @@ else:
     out = OCP_experiment.out_dummy()
 
 titles = [EXP_name for _, EXP_name in Experiments]
-OCP_experiment.print_heading(out, titles)
+
+namejust = OCP_experiment.max_example_name_length(Examples) + 2
+OCP_experiment.print_heading(out, titles, namejust = namejust)
 for OCclass, OCargs, OCname in Examples:        
     OCprob = OCclass(nt = 100, parallel = True, **OCargs)
     itMax = 300
@@ -121,5 +123,5 @@ for OCclass, OCargs, OCname in Examples:
     OCP_experiment.plot_successful(n_EXP, nPert0, nPertF,\
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "fatrop")
-    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol)
+    OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
 out.close()

@@ -223,7 +223,7 @@ void SQPmethod::sizeInitialHessian(Sizings sizingType, int dpos, int iBlock, Sym
         case Sizings::OL: //Oren-Luenberger
             scale = vars->deltaGammaMat(iBlock, dpos) / fmax(vars->deltaNormSqMat(iBlock, dpos)*param->initial_hess_scale, myEps);
             if (scale < 0){scale *= -1;}
-            //if (scale < 0){scale = 1.0;}
+            // if (scale < 0){scale = 1.0;}
             scale = fmin(scale, 1.0);
             break;
         case Sizings::GM_SP_OL: //Geometric mean of 1 and 2
@@ -233,7 +233,7 @@ void SQPmethod::sizeInitialHessian(Sizings sizingType, int dpos, int iBlock, Sym
         case Sizings::COL: //First COL sizing, = OL sizing with different bounds
             scale = vars->deltaGammaMat(iBlock, dpos) / fmax(vars->deltaNormSqMat(iBlock, dpos)*param->initial_hess_scale, myEps);
             if (scale < 0){scale *= -1;}
-            //if (scale < 0){scale = 1.0;}
+            // if (scale < 0){scale = 1.0;}
             scale = fmax(fmin(scale, 1.0), param->OL_eps);
             break;
         default:
