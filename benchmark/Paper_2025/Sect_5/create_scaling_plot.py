@@ -11,4 +11,4 @@ import dolan_more_plots
 if __name__ == '__main__':
     benchmark_outfile = 'blockSQP2_it_2026-08-24_21_38_43_575833.txt'
     benchmark_data = dolan_more_plots.parse_benchmark_file(str(cD / Path(f'out_scaling_comparison/{benchmark_outfile}')))
-    dolan_more_plots.plot(benchmark_data, xlim = 1.6)
+    dolan_more_plots.plot(benchmark_data, xlim = 1.6, linestyles = ['-', (0,(1,0.5))], colors = ['tab:cyan', 'tab:red'], dpi = 250)

@@ -2,7 +2,7 @@ import re
 import collections
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.ticker import ScalarFormatter
+from matplotlib.ticker import ScalarFormatter, FormatStrFormatter
 
 def parse_benchmark_file(file_path):
     with open(file_path, 'r') as f:
@@ -76,37 +76,56 @@ def calculate_performance_profile(benchmark_data, metric):
 
     return tau, profiles, categories
 
-def plot(benchmark_data, xlim = 10):
+def plot(benchmark_data, xlim = 10, 
+         colors = ['tab:red', 'tab:green', 'tab:blue', 'tab:orange', 'tab:purple'],
+         linestyles = ['-', '-', '-', '-', '-'],
+         linewidths = [2.0]*5,
+         dpi = 200,
+         xticks = None,
+         xlabel = None
+         ):
     metrics = {
         'mu_N': r'Step Count ($\mu_N$)', 
         'mu_t': r'Computation Time ($\mu_t$)'
     }
 
-    tab_colors = ['tab:blue', 'tab:green', 'tab:red', 'tab:orange', 'tab:purple']
+    # tab_colors = ['tab:red', 'tab:green', 'tab:blue', 'tab:orange', 'tab:purple']
+    # # linestyles = ['-', '-', '-', '-', '-']
     
-    for metric in metrics.keys():
+    for j,metric in enumerate(metrics.keys()):
         tau, profiles, categories = calculate_performance_profile(benchmark_data, metric)
         
-        fig, ax = plt.subplots(dpi = 200)
+        fig, ax = plt.subplots(dpi = dpi)
         for i, category in enumerate(categories):
-            ax.plot(tau, profiles[i], label=category, color = tab_colors[i], linewidth=2)
+            ax.plot(tau, profiles[i], label=category, linestyle = linestyles[i], color = colors[i], linewidth=linewidths[i])
         
-        # ax.set_title(f'Performance Profile: {metric_label}')
-        # ax.set_xlabel(r'Performance Ratio $\tau$')
-        # ax.set_ylabel(r'$P(\tau)$')
+        if metric == 'mu_N':
+            ax.set_xlabel('relative iterations w.r.t. best', fontsize = 'x-large')
+        elif metric == 'mu_t':
+            ax.set_xlabel('relative solution time w.r.t. best', fontsize = 'x-large')
+        else:
+            raise Exception('Unknown metric')
+        
+        # if j == 0:
+        ax.set_ylabel(r'Fraction of problems solved', fontsize = 'x-large')
+        
+        
         ax.tick_params(axis='x', labelsize='large')
         ax.tick_params(axis='y', labelsize='large')
         ax.set_xscale('log')
+        if xticks is not None:
+            ax.set_xticks(xticks)
+        
         
         ax.set_xlim(1, xlim)
         ax.set_ylim(0, 1.05)
         ax.grid(True, which="both", ls="-", alpha=0.5)
         ax.legend(fontsize = 'x-large')
 
-
-        formatter = ScalarFormatter()
-        formatter.set_scientific(False)
-        ax.xaxis.set_major_formatter(formatter)
+        
+        # formatter = ScalarFormatter()
+        # formatter.set_scientific(True)
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         
         plt.tight_layout()
         plt.show()

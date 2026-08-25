@@ -21,6 +21,8 @@ if __name__ == '__main__':
     UNO_data = dolan_more_plots.parse_benchmark_file(str(cD/Path('out_UNO_experiments/UNO_it_2026-08-24_22_41_44_519543.txt')))
     UNO_data = UNO_data['UNO (filtersqp preset), exact Hessian']
     
+    blockSQP_data = dolan_more_plots.parse_benchmark_file(str(cD/Path('out_UNO_experiments/UNO_it_2026-08-24_22_41_44_519543.txt')))
+    
     benchmark_data = {
         'blockSQP2': blockSQP2_data,
         'fatrop': fatrop_data,
@@ -29,6 +31,19 @@ if __name__ == '__main__':
         # 'blockSQP': blockSQP_data
         }
     
-    dolan_more_plots.plot(benchmark_data, xlim = 100)
+    dolan_more_plots.plot(benchmark_data, 
+                          colors = ['tab:red', 'tab:blue','tab:olive','tab:green','tab:cyan'],
+                          linestyles = [
+                                        (0, (1, 0.5)),
+                                        (0, (3, 1, 1, 1, 1, 1)),
+                                        (0, (3, 2, 1, 2)),
+                                        (0, (1, 2)), 
+                                        # '--',
+                                        (0, (2,1)),
+                                        '-'],
+                          linewidths = [2.0, 2.0, 2.0, 2.0, 2.0],
+                          dpi = 250
+                          )
+    # dolan_more_plots.plot(benchmark_data, xlim = 100)
 
 
