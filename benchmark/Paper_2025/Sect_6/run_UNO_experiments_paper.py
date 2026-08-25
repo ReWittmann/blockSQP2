@@ -30,7 +30,7 @@ import OCP_experiment
 # Specify problem (class), non-default parameters and plot suptitle (None for default)
 Examples = [
             # (OCProblems.Apollo_Reentry, dict(), None),
-            (OCProblems.Batch_Distillation, dict(), None),
+            # (OCProblems.Batch_Distillation, dict(), None),
             # (OCProblems.Batch_Reactor, dict(), None),
             # (OCProblems.Batch_Reactor_OED, dict(), None),
             # (OCProblems.Calcium_Oscillation, dict(), None),
@@ -48,12 +48,10 @@ Examples = [
             # (OCProblems.Egerstedt_Standard, dict(), None),
             # (OCProblems.Electric_Car, dict(), None),
             # (OCProblems.Fermenter, dict(), None),
-            # (OCProblems.Goddard_Rocket, dict(), 'Goddard\'s Rocket'),
+            # (OCProblems.Goddard_Rocket, dict(), None),
             # (OCProblems.Hang_Glider, dict(), None),
             # (OCProblems.Hanging_Chain, dict(), None),
             # (OCProblems.Lotka_Volterra_Fishing, dict(), None),
-            # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_2, "Lotka_Volterra_Fishing_2"),
-            # (OCProblems.Lotka_Volterra_Fishing, OCProblems.Lotka_Volterra_Fishing.param_set_3, "Lotka_Volterra_Fishing_3"),
             # (OCProblems.Lotka_OED, dict(), None),
             # (OCProblems.Lotka_Volterra_Competitive, dict(), None),
             # (OCProblems.Lotka_Volterra_Competitive, OCProblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
@@ -68,7 +66,7 @@ Examples = [
             # (OCProblems.Time_Optimal_Car, dict(), None),
             # (OCProblems.Tubular_Reactor, dict(), None),
             
-            # (OCProblems.Satellite_Deorbiting, dict(), None), #Sometimes crashes for filtersqp preset
+            (OCProblems.Satellite_Deorbiting, dict(), None), #Sometimes crashes for filtersqp preset (unopy 0.4.13)
             ]
 
 #Select option sets to test for
@@ -94,7 +92,7 @@ Experiments = [
                 # (opt_ipopt_LBFGS, "UNO (ipopt preset, LBFGS)"),
                 # (opt_ipopt_exact, "UNO (ipopt preset, exact Hessian)"),
                 # (opt_filtersqp_LBFGS, "UNO (filtersqp preset, LBFGS)"),
-                (opt_filtersqp_exact, "UNO (filtersqp preset, exact Hessian)"),
+                (opt_filtersqp_exact, "UNO (filtersqp preset), exact Hessian"),
                 ]
 
 plot_folder = cD / Path("out_UNO_experiments")
@@ -102,7 +100,7 @@ plot_folder = cD / Path("out_UNO_experiments")
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
 nPert0 = 0
-nPertF = 10
+nPertF = 5
 
 #Write results to a file?
 file_output = True

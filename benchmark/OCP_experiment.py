@@ -205,7 +205,11 @@ def fatrop_perturbed_starts(OCprob : OCProblems.OCProblem, n_path_constr, n_term
         out = S(x0=start_it, lbx=OCprob.lb_var, ubx=OCprob.ub_var, lbg=lb_con_ft, ubg=ub_con_ft)
         t1 = time.monotonic()
         stats = S.stats()
-        N_SQP.append(stats['fatrop']['iterations_count'])
+        
+        if (stats['fatrop']['return_flag']):  #Fatrop report iterations_count as zero for unsuccessful termination (WTF?), so use eval_hess_count instead in that case
+            N_SQP.append(stats['fatrop']['eval_hess_count'])
+        else:
+            N_SQP.append(stats['fatrop']['iterations_count'])
         type_sol.append(int(stats['success']))
         N_secs.append(t1 - t0)
     return N_SQP, N_secs, type_sol
@@ -518,9 +522,7 @@ def plot_successful_small(n_EXP, nPert0, nPertF, titles, EXP_N_SQP, EXP_N_secs, 
 def max_example_name_length(Examples : list[tuple[type[OCProblems.OCProblem], dict, typing.Optional[str]]]):
     max_name_length = 1
     for OCclass, _, OCname in Examples:
-        if OCname is not None:
-            name = OCname
-        else:
+        if OCname is None:
             OCname = OCclass.__name__
         max_name_length = max(max_name_length, len(OCname))
     return max_name_length

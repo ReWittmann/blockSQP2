@@ -29,7 +29,7 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems_fatrop.Batch_Reactor_OED_noQuads(
+OCprob = OCProblems.Fermenter(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
