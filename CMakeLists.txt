@@ -48,7 +48,7 @@ include(FetchContent)
 FetchContent_Declare(
 	SCIV_MUMPS_SUPERBUILD
 	GIT_REPOSITORY https://github.com/scivision/mumps-superbuild.git
-	GIT_TAG 3b79a655b7abc62ee5bef56782925580e68bf284  # v5.8.2.1
+	GIT_TAG 3b79a655b7abc62ee5bef56782925580e68bf284
 )
 
 # set(gemmt OFF)

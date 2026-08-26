@@ -1,0 +1,4 @@
+.build
+*.so
+__pycache__
+out_old_blockSQP_experiments_RK4

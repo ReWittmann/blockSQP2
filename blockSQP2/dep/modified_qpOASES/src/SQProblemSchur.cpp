@@ -3602,14 +3602,14 @@ returnValue SQProblemSchur::repairSingularWorkingSet( )
 	int_t nFR = getNFR( );
 	int_t defect = nFR + getNAC( ) - rank;
 	
-	//Hacky workaround: Variables with equal lower and upper bound may lead to segmentation fault when getZeroPivots is called.
-	int_t nVar_ = bounds.getNV();
-	for (int_t i_ = 0; i_ < nVar_; i_++){
-		if (lb[i_] == ub[i_]){
-			MyPrintf("SQProblemSchur.cpp - SQProblemSchur::repairSingularWorkingSet: Invoked with some lower and upper variable bounds being equal. Return RET_KKT_MATRIX_SINGULAR as a workaround to prevent weird segmentation fault");
-			return RET_KKT_MATRIX_SINGULAR;
-		}
-	}
+	//Hacky workaround: Hopefully no longer needed
+	// int_t nVar_ = bounds.getNV();
+	// for (int_t i_ = 0; i_ < nVar_; i_++){
+	// 	if (lb[i_] == ub[i_]){
+	// 		MyPrintf("SQProblemSchur.cpp - SQProblemSchur::repairSingularWorkingSet: Invoked with some lower and upper variable bounds being equal. Return RET_KKT_MATRIX_SINGULAR as a workaround to prevent weird segmentation fault");
+	// 		return RET_KKT_MATRIX_SINGULAR;
+	// 	}
+	// }
 	
 	/* Rank detection not supported by linear solver */
 	if ( rank < 0 )

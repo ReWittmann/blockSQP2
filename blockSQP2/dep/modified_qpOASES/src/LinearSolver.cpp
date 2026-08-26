@@ -45,7 +45,7 @@
 // #include <chrono>
 // using namespace std::chrono;
 #include <stdexcept>
-// #include <algorithm>
+#include <algorithm>
 
 #ifndef __MATLAB__
 	# include <cstdarg>
@@ -1783,6 +1783,7 @@ returnValue MumpsSparseSolver::getZeroPivots( int_t *&zeroPivots ){
 	for (int i = 0; i < mumps_data->infog[28-1]; i++){
 		zeroPivots[i] = mumps_data->pivnul_list[i] - 1;
 	}
+	std::sort(zeroPivots, zeroPivots + mumps_data->infog[28-1]);
 	return SUCCESSFUL_RETURN;
 }
 
@@ -2255,6 +2256,7 @@ returnValue MumpsSparseSolver_2::getZeroPivots( int_t *&zeroPivots ){
 	for (int i = 0; i < mumps_data->infog[28-1]; i++){
 		zeroPivots[i] = mumps_data->pivnul_list[i] - 1;
 	}
+	std::sort(zeroPivots, zeroPivots + mumps_data->infog[28-1]);
 	return SUCCESSFUL_RETURN;
 }
 

@@ -1,0 +1,56 @@
+diff --git a/src/blocksqp_glob.cpp b/src/blocksqp_glob.cpp
+index b2eb7a7..eb16c24 100644
+--- a/src/blocksqp_glob.cpp
++++ b/src/blocksqp_glob.cpp
+@@ -14,6 +14,10 @@
+  *  Implementation of methods of SQPmethod class associated with the
+  *  globalization strategy.
+  *
++ *  \modifications
++ *   \author Reinhold Wittmann
++ *   \date 2023-2025
++ *   Fixed out of bound read when copying Lagrange multipliers in feasiblity restoration phase
+  */
+ 
+ #include "blocksqp_iterate.hpp"
+@@ -472,10 +476,10 @@ int SQPmethod::feasibilityRestorationPhase()
+         for( k=prob->nVar; k<prob->nVar+prob->nCon; k++ )
+         {
+             // skip the dual variables for the slack variables in the restoration problem
+-            if( (lStpNorm = fabs( restMethod->vars->lambda( 2*prob->nCon + k ) - vars->lambda( k ) )) > vars->lambdaStepNorm )
++            if( (lStpNorm = fabs( restMethod->vars->lambda( prob->nCon + k ) - vars->lambda( k ) )) > vars->lambdaStepNorm )
+                 vars->lambdaStepNorm = lStpNorm;
+-            vars->lambda( k ) = restMethod->vars->lambda( 2*prob->nCon + k );
+-            vars->lambdaQP( k ) = restMethod->vars->lambdaQP( 2*prob->nCon + k );
++            vars->lambda( k ) = restMethod->vars->lambda( prob->nCon + k );
++            vars->lambdaQP( k ) = restMethod->vars->lambdaQP( prob->nCon + k );
+         }
+         vars->alpha = 1.0;
+         vars->nSOCS = 0;
+diff --git a/src/blocksqp_matrix.cpp b/src/blocksqp_matrix.cpp
+index 7fb2766..dcd4782 100644
+--- a/src/blocksqp_matrix.cpp
++++ b/src/blocksqp_matrix.cpp
+@@ -13,6 +13,11 @@
+  *
+  *  Implementation of Matrix and SymMatrix classes for easy access of
+  *  matrix elements.
++ * 
++  *  \modifications
++ *   \author Reinhold Wittmann
++ *   \date 2023-2025
++ *   Fix double free in SymMatrix-Matrix destructor. 
+  */
+ 
+ #include "blocksqp_matrix.hpp"
+@@ -587,10 +592,6 @@ SymMatrix::SymMatrix( const SymMatrix &A )
+ 
+ SymMatrix::~SymMatrix( void )
+ {
+-    Dcount++;
+-
+-    if( !tflag )
+-        free();
+ }
+ 
+ 
