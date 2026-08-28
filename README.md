@@ -11,7 +11,6 @@ This project includes a modified version of qpOASES <https://github.com/coin-or/
 When building this project with CMake, the following dependencies are downloaded.  
 1. MUMPS <https://mumps-solver.org/index.php?page=home> (CeCILL-C license)  
 2. MUMPS-CMake build system <https://github.com/scivision/mumps> (MIT license)  
-3. pybind11 <https://github.com/pybind/pybind11> (custom license)  
   
 Each license applies to the respective package, and any statement in it regarding compiled code applies to binary files produced by this projects build system that include that compiled code. In addition, BLAS and LAPACK libraries will be linked to or included, e.g. OpenBLAS (BSD-3-Clause license) <https://github.com/OpenMathLib/OpenBLAS>.
 

@@ -26,9 +26,9 @@ except:
 sys.path += [str(cD/Path("experiments"))]
 import OCProblems_fatrop
 
-itMax = 100
+itMax = 500
 
-OCprob = OCProblems.Lotka_Volterra_Fishing(
+OCprob = OCProblems.Satellite_Deorbiting_2(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
@@ -38,7 +38,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     )
 
 ipopts = dict()
-ipopts['hessian_approximation'] = 'limited-memory'
+ipopts['hessian_approximation'] = 'exact'
 ipopts['tol'] = 1e-6
 ipopts['constr_viol_tol'] = 1e-6
 ipopts['max_iter'] = itMax
@@ -46,7 +46,7 @@ ipopts['max_iter'] = itMax
 sp = OCprob.start_point
 
 
-S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
+S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts, 'jit': False})
 
 #For fatrop, see "run_fatrop_solver.py"
 

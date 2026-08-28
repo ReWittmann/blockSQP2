@@ -105,7 +105,7 @@ def setup_lotka_competitive_ocp(x_init = np.array([0.5, 1.5])):
     
 
 def setup_lotka_competitive_ocp_2(x_init = np.array([1.5, 0.5])):
-    setup_lotka_competitive_ocp(x_init = x_init)        
+    return setup_lotka_competitive_ocp(x_init = x_init)        
     
 def main():
     ocp_solver = setup_lotka_competitive_ocp()

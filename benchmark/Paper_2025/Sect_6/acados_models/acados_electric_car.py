@@ -70,6 +70,7 @@ def setup_electric_car_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
+    # ocp.solver_options.qp_solver_cond_N = 10      #seems to cause error for this problem
     
     try:
         cD = Path(__file__).parent

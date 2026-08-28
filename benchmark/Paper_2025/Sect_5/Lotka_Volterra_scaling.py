@@ -27,7 +27,7 @@ opts = blockSQP2.SQPoptions()
 opts.max_QP_it = 10000
 opts.max_QP_secs = 5.0
 
-opts.max_conv_QPs = 1
+opts.max_conv_QPs = 1           #We use SR1-BFGS for this showcase, but reduced regularization with 4 additional QPs produces similar results
 opts.conv_strategy = 'reduced_regularization'
 opts.par_QPs = False
 opts.enable_QP_cancellation = True

@@ -25,7 +25,7 @@ import blockSQP2
 import OCProblems
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Electric_Car(
+OCprob = OCProblems.Satellite_Deorbiting(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
@@ -36,13 +36,13 @@ OCprob = OCProblems.Electric_Car(
                     )
 itMax = 200                                  #max number of steps
 
-step_plots = True                           #Plot each iterate?
+step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
 plot_title = True                          #Put name of problem in plot?
 sol_plot = True
 
-# Just-in-time compile the problem functions
-# OCprob.jit(jit_hess = False)              
+# Just-in-time compile the problem functions, (Hessian must be additionally enabled)
+OCprob.jit(jit_hess = False)
 
 # start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
@@ -55,9 +55,9 @@ opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
     
-    max_conv_QPs = 1,                          #max number of additional QPs per SQP iteration including fallback Hess QP
+    max_conv_QPs = 4,                          #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 'reduced_regularization',  #Convexification strategy, reduced_regularization requires passing vblocks
-    par_QPs = False,                            #Enable parallel solution of QPs
+    par_QPs = True,                            #Enable parallel solution of QPs
     enable_QP_cancellation = True,             #Enable cancellation of long running QP threads
     indef_delay = 3,                           #Only use fallback Hessian in first # iterations
     
@@ -69,7 +69,7 @@ opts = blockSQP2.SQPoptions(
     
     lim_mem = True,
     mem_size = 20,
-    opt_tol = 1e-7,                             #Tolerances for termination
+    opt_tol = 1e-6,                             #Tolerances for termination
     feas_tol = 1e-6,
     conv_kappa_max = float('inf'),                    #Maximum Hess regularization factor for conv. strategy, default 8.0
     

@@ -66,39 +66,11 @@ Examples = [
             ]
 
 
-#SR1_BFGS
-opt_SR1_BFGS = blockSQP2.SQPoptions(
-    max_conv_QPs = 1,
-    max_filter_overrides = 0,
-    BFGS_damping_factor = 0.2
-)
-
-#Convexification strategy 0
-opt_cc = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'convex_combinations',
-)
-
-#Convexification strategy 1
-opt_fr = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'full_regularization',
-)
-
-#Convexification strategy 2
-opt_fr_scaling = blockSQP2.SQPoptions(
-    max_conv_QPs = 4,
-    conv_strategy = 'reduced_regularization',
-    automatic_scaling = True
-)
-
 opt_full = blockSQP2.SQPoptions(
     max_conv_QPs = 4,
     conv_strategy = 'reduced_regularization',
     par_QPs = True,
-    max_filter_overrides = 0,
     automatic_scaling = True,
-    
     )
 
 
@@ -147,7 +119,7 @@ for OCclass, OCargs, OCname in Examples:
     #Hack: Test for less points for Batch_Distillation due to very long runtime
     if issubclass(OCclass, OCProblems.Batch_Distillation):
         nPertFsave = nPertF
-        nPertF = nPert0 + 2
+        nPertF = nPert0 + 3
     
     for EXP_opts, EXP_name in Experiments:
         #Hack 2: Increase accuracy for Catalyst Mixing OED

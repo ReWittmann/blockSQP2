@@ -43,7 +43,8 @@ if __name__ == '__main__':
                                         (0, (2,1)),
                                         '-'],
                           linewidths = [2.0, 2.0, 2.0, 2.0, 2.0],
-                          dpi = 250
+                          dpi = 250,
+                          xticks = [1.0, 2.0, 3.0, 4.0, 6.0, 10.0]
                           )
     # dolan_more_plots.plot(benchmark_data, xlim = 100)
 

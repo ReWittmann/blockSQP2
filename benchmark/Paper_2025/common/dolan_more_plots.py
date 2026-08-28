@@ -12,7 +12,6 @@ def parse_benchmark_file(file_path):
         return {}
 
     categories = re.split(r'\s{2,}', lines[0])
-    print(categories)
     
     sub_cat_groups = lines[1].split('|')
     sub_categories = []
@@ -39,41 +38,34 @@ def parse_benchmark_file(file_path):
                     result[cat_name][row_name][sub_label] = val
     return result
 
-def calculate_performance_profile(benchmark_data, metric):
+def calculate_performance_profile(benchmark_data, metric, xlim = 10.):
     categories = list(benchmark_data.keys())
     problems = list(benchmark_data[categories[0]].keys())
     
     for catg in categories[1:]:
         assert(benchmark_data[catg].keys() == benchmark_data[categories[0]].keys())
     
-    print(problems)
-    print(categories)
-    
     data_matrix = np.zeros((len(problems), len(categories)))
     
     for i, prob in enumerate(problems):
         for j, cat in enumerate(categories):
             val_str = benchmark_data[cat][prob][metric]
-            try:
-                val = float(val_str.replace('s', ''))
-                data_matrix[i, j] = val
-            except ValueError:
-                data_matrix[i, j] = np.inf
-
-    print(data_matrix)
+            val = float(val_str.replace('s', ''))
+            data_matrix[i, j] = val
     
     best_values = np.min(data_matrix, axis = 1)
     best_values[best_values == 0] = 1e-10 
     ratios = data_matrix / best_values[:, np.newaxis]
-
-    tau = np.geomspace(1, 100, 100)
+    
+    
+    tau = np.geomspace(1, xlim, 100)
     profiles = []
 
     for j in range(len(categories)):
         solver_ratios = ratios[:, j]
         prob_success = [np.mean(solver_ratios <= t) for t in tau]
         profiles.append(prob_success)
-
+    
     return tau, profiles, categories
 
 def plot(benchmark_data, xlim = 10, 
@@ -85,8 +77,8 @@ def plot(benchmark_data, xlim = 10,
          xlabel = None
          ):
     metrics = {
-        'mu_N': r'Step Count ($\mu_N$)', 
-        'mu_t': r'Computation Time ($\mu_t$)'
+        'mu_N': r'iteration count', 
+        'mu_t': r'solution time'
     }
 
     # tab_colors = ['tab:red', 'tab:green', 'tab:blue', 'tab:orange', 'tab:purple']
@@ -107,7 +99,7 @@ def plot(benchmark_data, xlim = 10,
             raise Exception('Unknown metric')
         
         # if j == 0:
-        ax.set_ylabel(r'Fraction of problems solved', fontsize = 'x-large')
+        ax.set_ylabel(r'fraction of problems solved', fontsize = 'x-large')
         
         
         ax.tick_params(axis='x', labelsize='large')

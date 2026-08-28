@@ -20,6 +20,7 @@ from .acados_lotka_ocp import setup_lotka_ocp
 from .acados_lotka_oed import setup_lotka_oed_ocp
 from .acados_lotka_shared import setup_lotka_shared_ocp
 from .acados_particle_steering import setup_particle_steering_ocp
+from .acados_satellite import setup_satellite_ocp
 from .acados_three_tank import setup_three_tank_ocp
 from .acados_time_optimal_car import setup_time_optimal_car_ocp
 from .acados_tubular_reactor import setup_tubular_reactor_ocp
