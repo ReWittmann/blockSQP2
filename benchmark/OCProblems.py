@@ -1592,7 +1592,20 @@ class Hanging_Chain(OCProblem):
         ax.plot(self.time_grid, x, 'k-', label = 'chain')
         ax.legend(fontsize='x-large')
         
-        self.finish_plot(ax, title, it, 'Hanging chain problem')
+        ttl = None
+        if isinstance(title,str):
+            ttl = title
+        elif title == True:
+            ttl = 'Hanging chain problem'
+        if ttl is not None:
+            if isinstance(it, int):
+                ttl = ttl + f', iteration {it}'
+            plt.title(ttl)
+        else:
+            plt.title('')
+            
+        plt.show()
+        plt.close()
 
 
 class Hanging_Chain_MAYER(Hanging_Chain):
