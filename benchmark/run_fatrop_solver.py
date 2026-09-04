@@ -29,19 +29,20 @@ import OCProblems_fatrop
 
 itMax = 1000
 
-OCprob = OCProblems_fatrop.Lotka_OED_noQuads(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,
                     refine = 1,
                     # integrator = 'RK4',
                     parallel = True,
                     N_threads = 4, 
-                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
+                    # **OCProblems.Lotka_Shared_OED.param_set_2,
+                    # tf = 20
                     )
 
 fatropts = {
     'jit': True,
     'expand': False,
-    'jit_options': {'flags': '-Os', 'verbose': False},
+    'jit_options': {'flags': '-O3', 'verbose': False},
     'fatrop':{'tol':1e-6, 'constr_viol_tol':1e-4, 'print_level': 10, 'max_iter': 300},
     'debug': False    
     }
@@ -114,7 +115,7 @@ NLP = copy.deepcopy(OCprob.NLP)
 NLP['g'] = g_expr_new
 
 
-# S = cs.nlpsol('S', 'ipopt', OCprob.NLP, {'ipopt':ipopts})
+tm1 = time.monotonic()
 S = cs.nlpsol('S', 'fatrop', NLP, 
                   {'structure_detection' : 'manual', 
                    'nx':[len([x for x in OCprob.x_init if x is None])] + [OCprob.nx]*OCprob.ntS, 

@@ -55,8 +55,11 @@ def calculate_performance_profile(benchmark_data, metric, xlim = 10.):
     
     best_values = np.min(data_matrix, axis = 1)
     best_values[best_values == 0] = 1e-10 
-    ratios = data_matrix / best_values[:, np.newaxis]
     
+    print(best_values)
+    ratios = data_matrix / best_values[:, np.newaxis]
+    print(data_matrix)
+    print(ratios)
     
     tau = np.geomspace(1, xlim, 100)
     profiles = []
@@ -98,7 +101,6 @@ def plot(benchmark_data, xlim = 10,
         else:
             raise Exception('Unknown metric')
         
-        # if j == 0:
         ax.set_ylabel(r'fraction of problems solved', fontsize = 'x-large')
         
         

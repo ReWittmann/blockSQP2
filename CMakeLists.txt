@@ -124,54 +124,8 @@ target_include_directories(qpOASES
 )
 
 
-#Unmodded qpOASES with MUMPS_SPARSE_SOLVER fix
-#[[
-FetchContent_Declare(
-	qpos
-	GIT_REPOSITORY	https://github.com/coin-or/qpOASES.git
-	GIT_TAG		680f18c8ef0018a120e1604b769f056e8368df97
-	SOURCE_SUBDIR 	DIR/THAT/DOESNT/EXIST
-)
-FetchContent_MakeAvailable(qpos)
 
-add_library(qpOASES STATIC
-	${qpos_SOURCE_DIR}/src/Matrices.cpp          
-	${qpos_SOURCE_DIR}/src/SparseSolver.cpp
-	${qpos_SOURCE_DIR}/src/Bounds.cpp             
-	${qpos_SOURCE_DIR}/src/MessageHandling.cpp   
-	${qpos_SOURCE_DIR}/src/SQProblem.cpp
-	${qpos_SOURCE_DIR}/src/Constraints.cpp        
-	${qpos_SOURCE_DIR}/src/Options.cpp           
-	${qpos_SOURCE_DIR}/src/SQProblemSchur.cpp
-	${qpos_SOURCE_DIR}/src/Flipper.cpp            
-	${qpos_SOURCE_DIR}/src/OQPinterface.cpp      
-	${qpos_SOURCE_DIR}/src/SubjectTo.cpp
-	${qpos_SOURCE_DIR}/src/Indexlist.cpp          
-	${qpos_SOURCE_DIR}/src/QProblemB.cpp      
-	${qpos_SOURCE_DIR}/src/QProblemB.cpp         
-	${qpos_SOURCE_DIR}/src/Utils.cpp
-	${qpos_SOURCE_DIR}/src/QProblem.cpp     
-	${qpos_SOURCE_DIR}/src/QProblem.cpp           
-	${qpos_SOURCE_DIR}/src/SolutionAnalysis.cpp
-)
-target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE MUMPS_SEQ __NO_COPYRIGHT__)
-target_compile_options(qpOASES PRIVATE -O3 INTERFACE -Wno-overloaded-virtual PUBLIC -fPIC)
-target_link_libraries(qpOASES PUBLIC MUMPS::MUMPS)
-IF(UNIX AND NOT APPLE)
-   target_compile_definitions(qpOASES PRIVATE LINUX)
-		target_link_libraries(qpOASES PUBLIC -lgfortran)
-ELSEIF(WIN32)
-    target_compile_options(qpOASES PRIVATE -nologo -EHsc -DWIN32)
-ENDIF()
-
-target_include_directories(qpOASES
-	PUBLIC	${qpos_SOURCE_DIR}/include
-			${qpos_SOURCE_DIR}/include/qpOASES
-)
-]]
-
-
-#MA57 LINEAR SOLVER
+#MA57 LINEAR SOLVER from HARWELL SUBROUTINE LIBRARY (HSL)
 ## Build qpOASES with MA57, requires passing preprocessor flag -DSOLVER_MA57
 ## Dependencies are -> METIS -> GKLIB, LAPACK, BLAS, dl
 #[[
@@ -188,7 +142,7 @@ ENDIF()
 target_include_directories(qpOASES
 	PUBLIC	${qpOASES_MODDED_DIR}/include
 )
-# target_link_libraries(qpOASES PUBLIC /path/to/libcoinhsl.so /path/to/libmetis.a /path/to/libGKlib.a LAPACK::LAPACK BLAS::BLAS dl)
+# target_link_libraries(qpOASES PUBLIC /path/to/libcoinhsl.* /path/to/libmetis.* /path/to/libGKlib.* LAPACK::LAPACK BLAS::BLAS dl)
 ]]
 
 

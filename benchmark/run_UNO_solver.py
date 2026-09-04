@@ -25,7 +25,7 @@ import unopy
 import OCProblems
 
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Catalyst_Mixing_OED(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator
@@ -59,7 +59,7 @@ def create_UNO_model(OCprob:OCProblems.OCProblem, start_pert = None):
 UNOmodel = create_UNO_model(OCprob)
 UNOsol = unopy.UnoSolver()
 UNOsol.set_preset("filtersqp")
-UNOsol.set_option("max_iterations", 300)
+UNOsol.set_option("max_iterations", itMax)
 UNOsol.set_option("QP_solver", "BQPD")
 UNOsol.set_option("hessian_model", "exact")
 UNOsol.set_option("linear_solver", "MUMPS")

@@ -304,10 +304,10 @@ class Batch_Reactor_OED_noQuads(OCProblems.Batch_Reactor_OED):
         F_tf = cs.MX.zeros(4,4)
         for j in range(4):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*4 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*4 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*5 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 4):
-                F_tf[i,j] = F_rhs_tf[j + i*4 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*4 - (j*(j+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf))/4)
         # self.set_objective(self.q_tf[3,-1])
@@ -451,10 +451,10 @@ class Catalyst_Mixing_OED_noQuads(OCProblems.Catalyst_Mixing_OED):
         F_tf = cs.MX.zeros(2,2)
         for j in range(2):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 2):
-                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf)))
         self.add_constraint(self.x_eval[-2:,-1] - cs.DM([M1,M2]), -np.inf, 0.)
@@ -930,10 +930,9 @@ class Lotka_Shared_OED_noQuads(OCProblems.Lotka_Shared_OED):
         f_x_expr = cs.jacobian(f_expr, x)
         f_theta_expr = cs.jacobian(f_expr, theta)
         
-        #Fix theta in the expressions
         f = cs.Function('f', [x, u, theta], [f_expr])
         f_x = cs.Function('f_x', [x, u, theta], [f_x_expr])
-        f_theta = cs.Function('f_p', [x,u,theta], [f_x_expr])
+        f_theta = cs.Function('f_p', [x,u,theta], [f_theta_expr])
         
         f_expr = f(x, u, cs.DM([alpha0, alpha1, alpha2]))
         f_x_expr = f_x(x, u, cs.DM([alpha0, alpha1, alpha2]))
@@ -965,10 +964,10 @@ class Lotka_Shared_OED_noQuads(OCProblems.Lotka_Shared_OED):
         F_tf = cs.MX.zeros(3,3)
         for j in range(3):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 3):
-                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf))/theta.numel())
         
@@ -980,6 +979,10 @@ class Lotka_Shared_OED_noQuads(OCProblems.Lotka_Shared_OED):
         for i in range(self.ntS):
             self.set_stage_control(self.start_point, i, [0, M1/L_t, M2/L_t, M3/L_t])
         self.integrate_full(self.start_point)
+        
+        #Hack: Prevent bad local optimum
+        for i in range(self.ntS // 40):
+            self.set_stage_control(self.ub_var, i, [0.] + [1.]*3)
     
     def plot(self, xi, dpi = None, title = None, it = None):
         x0, x1, x2 = self.get_state_arrays_expanded(xi)[0:3]

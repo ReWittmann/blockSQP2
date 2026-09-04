@@ -19,9 +19,9 @@ import numpy as np
 import time
 
 Examples = [
-            (OCProblems.Apollo_Reentry, dict(), None),            #Doesnt work
+            # (OCProblems.Apollo_Reentry, dict(), None),            #Doesnt work
             
-            (OCProblems.Batch_Distillation, dict(), None),
+            # (OCProblems.Batch_Distillation, dict(), None),
             # (OCProblems.Batch_Reactor, dict(), None),
             # (OCProblems.Batch_Reactor_OED, dict(), None),
             # (OCProblems.Calcium_Oscillation, dict(), None),
@@ -43,7 +43,7 @@ Examples = [
             # (OCProblems.Hang_Glider, dict(), None),
             # (OCProblems.Hanging_Chain, dict(), None),
             # (OCProblems.Lotka_Volterra_Fishing, dict(), None),
-            # (OCProblems.Lotka_OED, dict(), None),
+            (OCProblems.Lotka_OED, dict(), None),
             # (OCProblems.Lotka_Volterra_Competitive, dict(), None),
             # (OCProblems.Lotka_Volterra_Competitive, OCProblems.Lotka_Volterra_Competitive.param_set_2, "Lotka_Volterra_Competitive_2"),
             # (OCProblems.Lotka_Volterra_Shared, dict(), None),
@@ -78,7 +78,7 @@ file_output = True
 plot_folder = cD / Path("out_old_blockSQP_experiments")
 
 nPert0 = 0
-nPertF = 3
+nPertF = 10
 dirPath = plot_folder
 dirPath.mkdir(parents = True, exist_ok = True)
 if file_output:

@@ -116,13 +116,8 @@ for OCclass, OCargs, OCname in Examples:
     EXP_type_sol = []
     n_EXP = 0
     
-    #Hack: Test for less points for Batch_Distillation due to very long runtime
-    if issubclass(OCclass, OCProblems.Batch_Distillation):
-        nPertFsave = nPertF
-        nPertF = nPert0 + 3
-    
     for EXP_opts, EXP_name in Experiments:
-        #Hack 2: Increase accuracy for Catalyst Mixing OED
+        #Hack Increase accuracy for Catalyst Mixing OED
         if (issubclass(OCclass, OCProblems.Catalyst_Mixing_OED)):
             EXP_opts.tol *= 1e-1
             
@@ -143,9 +138,5 @@ for OCclass, OCargs, OCname in Examples:
         titles, EXP_N_SQP, EXP_N_secs, EXP_type_sol,\
         suptitle = OCname, dirPath = dirPath, savePrefix = "blockSQP2")
     OCP_experiment.print_iterations(out, OCname, EXP_N_SQP, EXP_N_secs, EXP_type_sol, namejust = namejust)
-    
-    #Hack
-    if issubclass(OCclass, OCProblems.Batch_Distillation):
-        nPertF = nPertFsave
         
 out.close()

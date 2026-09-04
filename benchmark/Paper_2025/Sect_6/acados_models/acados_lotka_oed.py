@@ -39,7 +39,7 @@ def export_lotka_oed_model() -> AcadosModel:
     dfdx11 = p1 - p2*x2 - c1*u
     dfdx12 = -p2*x1
     dfdx21 = p4*x2
-    dfdx22 = -p3 + p4*x1
+    dfdx22 = -p3 + p4*x1 - c2*u
     
     dx1dp2 = -x1*x2
     dx1dp4 = 0
@@ -87,13 +87,13 @@ def setup_lotka_oed_ocp():
     Tf = 12.0
     M_max = 4.0
     
-    N = 60
+    N = 100
     nx = model.x.rows()
     nu = model.u.rows()
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
-    ocp.solver_options.qp_solver_cond_N = 1
+    ocp.solver_options.qp_solver_cond_N = 1             #Only works for 1
     
     try:
         cD = Path(__file__).parent

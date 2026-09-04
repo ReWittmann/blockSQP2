@@ -1247,7 +1247,7 @@ class Goddard_Rocket(OCProblem):
         
         
         ax.step(time_grid, u, 'tab:red', label = '$u$')
-        ax.legend(fontsize = 'large')
+        ax.legend(fontsize = 'x-large')
         
         self.finish_plot(ax, title, it, 'Goddard\'s rocket problem')
 
@@ -1411,7 +1411,7 @@ class Calcium_Oscillation(OCProblem):
 class Batch_Reactor(OCProblem):
     default_params = {}
     def build_problem(self):
-        self.set_OCP_data(2, 0, 1, 0, [-np.inf,-np.inf], [np.inf,np.inf], [], [], [298],[398])
+        self.set_OCP_data(2, 0, 1, 0, [0.,0.], [np.inf,np.inf], [], [], [298],[398])
         self.mark_state_bounds_implicit()
         
         x = cs.MX.sym('x', 2)
@@ -1448,28 +1448,15 @@ class Batch_Reactor(OCProblem):
         x1,x2 = self.get_state_arrays(xi)
         T = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi = dpi)
-        plt.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
-        plt.plot(self.time_grid, x2, 'tab:blue', linestyle = '-.', label = r'$x_2$')
-        plt.step(self.time_grid_ref, (T-298)*0.05, 'tab:red', label = r'$(u-298)\cdot 0.05$')
+        fig, ax = plt.subplots(dpi = dpi)
+        ax.plot(self.time_grid, x1, 'tab:green', linestyle = '--', label = r'$x_1$')
+        ax.plot(self.time_grid, x2, 'tab:blue', linestyle = '-.', label = r'$x_2$')
+        ax.step(self.time_grid_ref, (T-298)*0.05, 'tab:red', label = r'$(u-298)\cdot 0.05$')
         
-        plt.legend(fontsize='large')
+        ax.legend(fontsize='x-large')
         
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Batch reactor'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-            
-        plt.show()
-        plt.close()
-        
+        self.finish_plot(ax, title, it, 'Batch reactor')
+
     
 class Bioreactor(OCProblem):
     default_params = {
@@ -1603,7 +1590,7 @@ class Hanging_Chain(OCProblem):
         
         fig, ax = plt.subplots(dpi=dpi)
         ax.plot(self.time_grid, x, 'k-', label = 'chain')
-        ax.legend(fontsize='large')
+        ax.legend(fontsize='x-large')
         
         self.finish_plot(ax, title, it, 'Hanging chain problem')
 
@@ -1735,25 +1722,10 @@ class Catalyst_Mixing(OCProblem):
         ax.plot(self.time_grid_ref, x1, 'tab:green', linestyle='-.', label = r'$x_1$')
         ax.plot(self.time_grid_ref, x2, 'tab:blue', linestyle='--', label = r'$x_2$')
         ax.step(self.time_grid_ref, u, 'tab:red', linestyle='-', label = r'$u$')
-        ax.legend(fontsize = 'large')
+        ax.legend(fontsize = 'x-large')
         
-        ax.set_xlabel('t', fontsize = 17.5)
-        ax.xaxis.set_label_coords(1.015,-0.006)
-        
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Catalyst mixing'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(copy.deepcopy(ttl))
-        else:
-            plt.title('')
-        
-        plt.show()
-        plt.close()
+        self.finish_plot(ax, title, it, 'Catalyst mixing')
+
         
 
 class Cushioned_Oscillation(OCProblem):
@@ -1804,7 +1776,7 @@ class Cushioned_Oscillation(OCProblem):
         ax.plot(time_grid, x, 'tab:blue', linestyle = '--', label = r'$x$')
         ax.plot(time_grid, v, 'tab:green', linestyle = '-.', label = r'$v$')
         ax.step(time_grid, u, 'tab:red', label = r'$u$')
-        ax.legend(loc='upper right', fontsize = 'large')
+        ax.legend(loc='upper right', fontsize = 'x-large')
         
         ax.set_xlabel('t', fontsize = 17.5)
         ax.xaxis.set_label_coords(1.015,-0.006)
@@ -1845,7 +1817,7 @@ class Cushioned_Oscillation_TSCALE(Cushioned_Oscillation):
         self.set_stage_control(s, ind, 0.1)
         return s
         
-#Cvodes recommended
+
 class D_Onofrio_Chemotherapy(OCProblem):
     default_params = {
         'zeta':0.192, 
@@ -1937,7 +1909,7 @@ class D_Onofrio_Chemotherapy(OCProblem):
         ax.plot(time_grid, x1/100., 'tab:blue', linestyle = ':', label = r'$x_1/100$')
         ax.step(time_grid, u0, 'tab:red', label = r'$u_0$')
         ax.step(time_grid, u1*75, 'tab:blue', linestyle = '-.', label = r'$u_1\cdot75$')
-        ax.legend(fontsize='large', loc = 'upper right')
+        ax.legend(fontsize='x-large', loc = 'upper right')
         
         self.finish_plot(ax, title, it, 'D\'Onofrio chemotherapy problem')
     
@@ -2097,7 +2069,7 @@ class Egerstedt_Standard(OCProblem):
         ax.step(self.time_grid, w1, 'tab:red', label = r'$w_1$')
         ax.step(self.time_grid, w2, 'tab:olive', linestyle = '-.', label = r'$w_2$')
         ax.step(self.time_grid, w3, 'tab:cyan', linestyle = ':', label = r'$w_3$')
-        ax.legend(loc = 'center left', fontsize = 'large')
+        ax.legend(loc = 'center left', fontsize = 'x-large')
         
         self.finish_plot(ax, title, it, 'Egerstedt standard problem')
 
@@ -3268,10 +3240,10 @@ class Ocean(OCProblem):
         S0, R0 = (self.model_params[key] for key in ('S0', 'R0'))
         
         fig, ax = plt.subplots(dpi = dpi)
-        ax.plot(self.time_grid, S-S0, 'tab:green', linestyle = ':', label = 'S-2000')
-        ax.plot(self.time_grid, (R-R0)/100, 'tab:blue', linestyle = '-.', label = 'R/1000')
-        ax.step(self.time_grid_ref, u1*5, 'tab:red', label = r'$u_1\cdot 10$')
-        ax.step(self.time_grid_ref, u2*5, 'tab:grey', linestyle = '-.', label = r'$u_2\cdot 10$')
+        ax.plot(self.time_grid, S-S0, 'tab:green', linestyle = ':', label = 'S - S_0')
+        ax.plot(self.time_grid, (R-R0)/100, 'tab:blue', linestyle = '-.', label = '(R - R_0)/100')
+        ax.step(self.time_grid_ref, u1*5, 'tab:red', label = r'$u_1\cdot 5$')
+        ax.step(self.time_grid_ref, u2*5, 'tab:grey', linestyle = '-.', label = r'$u_2\cdot 5$')
         ax.legend(fontsize='large')
         
         self.finish_plot(ax, title, it, "Ocean problem")
@@ -3307,6 +3279,8 @@ class Lotka_OED(OCProblem):
         u, w1, w2 = cs.vertsplit(C)
         
         dt = cs.MX.sym('dt', 1)
+        
+        
         ode_rhs = cs.vertcat(
                 p1*x1 - p2*x1*x2 - c1*u*x1,
                 -p3*x2 + p4*x1*x2 - c2*u*x2,
@@ -3318,6 +3292,7 @@ class Lotka_OED(OCProblem):
                 w1*G11*G12 + w2*G21*G22,
                 w1*(G12**2) + w2*(G22**2)
         )
+        
         quad_expr = cs.vertcat(w1, w2)
         self.ODE = {'x': S, 'p':cs.vertcat(dt, C),'ode': dt*ode_rhs, 'quad': dt*quad_expr}
         self.multiple_shooting()
@@ -3352,7 +3327,7 @@ class Lotka_OED(OCProblem):
         ax.step(self.time_grid_ref, w2, 'tab:green', linestyle='--', label = r'$w_2$')
         
         ax.set_ylim(0.,4.)
-        ax.legend(fontsize = 'large', loc = 'upper left')
+        ax.legend(fontsize = 'x-large', loc = 'upper left')
         
         self.finish_plot(ax, title, it, 'Lotka OED problem')
         
@@ -3761,14 +3736,14 @@ class Hang_Glider(OCProblem):
         ax.plot(time_grid, (y-900)/100, 'tab:blue', linestyle = '-', label = r'$(y-900)/100$')
         ax.plot(time_grid, dx/10, 'tab:green', linestyle = ':', label = r'$v_x/10$')
         ax.plot(time_grid, dy/10, 'tab:blue', linestyle = ':', label = r'$v_y/10$')
-        ax.legend(fontsize='large', loc = 'upper right')
+        ax.legend(fontsize='x-large', loc = 'upper right')
         
         self.finish_plot(ax, title, it, 'Hang glider problem')
 
 
 class Tubular_Reactor(OCProblem):
     def build_problem(self):
-        self.set_OCP_data(1,0,1,1, [-np.inf], [np.inf], [], [], [0.], [5.])
+        self.set_OCP_data(1,0,1,1, [0], [np.inf], [], [], [0.], [5.])
         self.fix_time_horizon(0.,1.)
         self.fix_initial_value([1.0])
         self.mark_state_bounds_implicit()
@@ -4050,24 +4025,12 @@ class Cart_Pendulum(OCProblem):
         x,xdot,theta,thetadot = self.get_state_arrays(xi)
         u = self.get_control_plot_arrays(xi)
         
-        plt.figure(dpi=dpi)
-        plt.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'tab:red', label = r'$4\cdot u$/$u_{max}$')
-        plt.plot(self.time_grid, x, 'tab:green', linestyle = '--', label = r'$x$')
-        plt.plot(self.time_grid, theta, 'tab:blue', linestyle = '-.', label = r'$\theta$')
-        plt.legend(fontsize='large')
-        ttl = None
-        if isinstance(title,str):
-            ttl = title
-        elif title == True:
-            ttl = 'Cart pendulum problem'
-        if ttl is not None:
-            if isinstance(it, int):
-                ttl = ttl + f', iteration {it}'
-            plt.title(ttl)
-        else:
-            plt.title('')
-        plt.show()
-        plt.close()
+        fig, ax = plt.subplots(dpi=dpi)
+        ax.step(self.time_grid_ref, 4*u/self.model_params['u_max'], 'tab:red', label = r'$4\cdot u$/$u_{max}$')
+        ax.plot(self.time_grid, x, 'tab:green', linestyle = '--', label = r'$x$')
+        ax.plot(self.time_grid, theta, 'tab:blue', linestyle = '-.', label = r'$\theta$')
+        ax.legend(fontsize='x-large')
+        self.finish_plot(ax, title, it, 'Cart pendulum')
 
 
 
@@ -5158,7 +5121,8 @@ class Lotka_Shared_OED(OCProblem):
                       'c2':0.4, 
                       't0':0., 
                       'tf':20.0, 
-                      'x_init':[1.5,0.5,1.0],
+                      # 'x_init':[1.5,0.5,1.0],
+                      'x_init':[1.5,1.0,0.5], #Use param set two, doesnt seems to have less/no local optima
                       'M1': 4.0,
                       'M2': 4.0,
                       'M3': 4.0,
@@ -5192,7 +5156,7 @@ class Lotka_Shared_OED(OCProblem):
         #Fix theta in the expressions
         f = cs.Function('f', [x, u, theta], [f_expr])
         f_x = cs.Function('f_x', [x, u, theta], [f_x_expr])
-        f_theta = cs.Function('f_p', [x,u,theta], [f_x_expr])
+        f_theta = cs.Function('f_p', [x,u,theta], [f_theta_expr])
         
         f_expr = f(x, u, cs.DM([alpha0, alpha1, alpha2]))
         f_x_expr = f_x(x, u, cs.DM([alpha0, alpha1, alpha2]))
@@ -5210,7 +5174,6 @@ class Lotka_Shared_OED(OCProblem):
         dh1, dh2, dh3 = cs.DM([1,0,0]), cs.DM([0,1,0]), cs.DM([0,0,1])
         dF = w1*(dh1.T@G).T @ (dh1.T@G) + w2*(dh2.T@G).T @ (dh2.T@G) + w3*(dh3.T@G).T @ (dh3.T@G)
         
-        
         F_rhs = cs.vertcat(dF[0,0], dF[1,0], dF[2,0], dF[1,1], dF[2,1], dF[2,2])
         ode_rhs = cs.vertcat(f_expr, G_rhs, F_rhs)
         
@@ -5223,10 +5186,11 @@ class Lotka_Shared_OED(OCProblem):
         F_tf = cs.MX.zeros(3,3)
         for j in range(3):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 3):
-                F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+        
         
         self.set_objective(cs.trace(cs.inv(F_tf))/theta.numel())
         self.add_constraint(self.q_tf, [0.,0.,0.], [M1,M2,M3])
@@ -5328,10 +5292,10 @@ class Lotka_OED_new(OCProblem):
         F_tf = cs.MX.zeros(2,2)
         for j in range(2):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2]
             for i in range(j + 1, 2):
-                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf)))
         self.add_constraint(self.q_tf, -np.inf, M)
@@ -5453,10 +5417,11 @@ class Catalyst_Mixing_OED(OCProblem):
         F_tf = cs.MX.zeros(2,2)
         for j in range(2):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 2):
-                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+        
         
         self.set_objective(cs.trace(cs.inv(F_tf)))
             
@@ -5481,7 +5446,7 @@ class Catalyst_Mixing_OED(OCProblem):
         ax.step(self.time_grid_ref, w1, 'tab:green', linestyle='--', label = r'$w_1$')
         ax.step(self.time_grid_ref, w2, 'tab:blue', linestyle='-.', label = r'$w_2$')
         
-        ax.legend(fontsize = 'large')
+        ax.legend(fontsize = 'x-large', loc = 'center right')
         
         self.finish_plot(ax, title, it, "Catalyst mixing OED")
         
@@ -5551,10 +5516,10 @@ class Dielectrophoretic_Particle_OED(OCProblem):
         F_tf = cs.MX.zeros(2,2)
         for j in range(2):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*3 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 2):
-                F_tf[i,j] = F_rhs_tf[j + i*2 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*2 - (j*(j+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf)))
         self.add_constraint(self.q_tf, [0., 0.], [M1,M2])
@@ -5682,10 +5647,10 @@ class Dielectrophoretic_Particle_OED(OCProblem):
 #         F_tf = cs.MX.zeros(3,3)
 #         for j in range(3):
 #             for i in range(0, j):
-#                 F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
+#                 F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
 #             F_tf[j,j] = F_rhs_tf[j*4 - (j*(j+1))//2] + reg_init
 #             for i in range(j + 1, 3):
-#                 F_tf[i,j] = F_rhs_tf[j + i*3 - (i*(i+1))//2]
+#                 F_tf[i,j] = F_rhs_tf[i + j*3 - (j*(j+1))//2]
         
 #         self.set_objective(cs.trace(cs.inv(F_tf)))
 #         # self.set_objective(self.q_tf[3,-1])
@@ -5761,7 +5726,7 @@ class Batch_Reactor_OED(OCProblem):
         # 'p4scale': 1.0,
         }
     def build_problem(self):                                                                                                 # Increase lower control bound to force good? local optimum
-        self.set_OCP_data(2 + 4*2 + 10, 0, 1 + 2, 2, [-np.inf,-np.inf] + [-np.inf]*18, [np.inf,np.inf] + [np.inf]*18, [], [], [298 + 60] + [0.]*2, [398] + [1.]*2)
+        self.set_OCP_data(2 + 4*2 + 10, 0, 1 + 2, 2, [0.,0.] + [-np.inf]*18, [np.inf,np.inf] + [np.inf]*18, [], [], [298 + 60] + [0.]*2, [398] + [1.]*2)
         self.mark_state_bounds_implicit()
         
         p1, p2, p3, p4, M1, M2, reg_init, p1scale, p2scale, p3scale, p4scale = (self.model_params[key] for key in ['p1', 'p2', 'p3', 'p4', 'M1', 'M2', 'reg_init', 'p1scale', 'p2scale', 'p3scale', 'p4scale'])
@@ -5824,13 +5789,12 @@ class Batch_Reactor_OED(OCProblem):
         F_tf = cs.MX.zeros(4,4)
         for j in range(4):
             for i in range(0, j):
-                F_tf[i,j] = F_rhs_tf[i + j*4 - (j*(j+1))//2]
+                F_tf[i,j] = F_rhs_tf[j + i*4 - (i*(i+1))//2]
             F_tf[j,j] = F_rhs_tf[j*5 - (j*(j+1))//2] + reg_init
             for i in range(j + 1, 4):
-                F_tf[i,j] = F_rhs_tf[j + i*4 - (i*(i+1))//2]
+                F_tf[i,j] = F_rhs_tf[i + j*4 - (j*(j+1))//2]
         
         self.set_objective(cs.trace(cs.inv(F_tf))/4)
-        # self.set_objective(self.q_tf[3,-1])
         self.add_constraint(self.q_tf, [0., 0.], [M1, M2])
         
         self.build_NLP()
@@ -5859,7 +5823,7 @@ class Batch_Reactor_OED(OCProblem):
         ax.step(self.time_grid_ref, w1, 'tab:green', linestyle = '-.', label = r'$w_1$')
         ax.step(self.time_grid_ref, w2, 'tab:orange', linestyle = ':', label = r'$w_2$')
         
-        ax.legend(fontsize='large')
+        ax.legend(fontsize='x-large')
         self.finish_plot(ax, title, it, "Batch reactor OED")
         
         

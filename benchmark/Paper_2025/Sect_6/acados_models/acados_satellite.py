@@ -129,7 +129,7 @@ def setup_satellite_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = 1.0
-    # ocp.solver_options.qp_solver_cond_N = 10    #doesnt work for this problem
+    # ocp.solver_options.qp_solver_cond_N = 4    #doesnt work for this problem
     try:
         cD = Path(__file__).parent
     except:

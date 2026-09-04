@@ -10,6 +10,8 @@ import blockSQP2
 import OCP_experiment
 import OCProblems
 
+#On linux, it is recommended to set the performance governor to 'performance' during benchmarking
+
 Examples = [
             (OCProblems.Apollo_Reentry, dict(), None),
             # (OCProblems.Batch_Distillation, dict(), None),

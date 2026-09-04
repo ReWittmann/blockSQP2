@@ -58,7 +58,7 @@ def setup_lotka_competitive_ocp(x_init = np.array([0.5, 1.5])):
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
-    # ocp.solver_options.qp_solver_cond_N = 3
+    ocp.solver_options.qp_solver_cond_N = 4
     
     try:
         cD = Path(__file__).parent

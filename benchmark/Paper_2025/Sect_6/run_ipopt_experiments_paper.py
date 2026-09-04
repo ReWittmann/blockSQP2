@@ -29,7 +29,7 @@ Examples = [
             # (OCProblems.Batch_Distillation, dict(), None),
             (OCProblems.Batch_Reactor, dict(), None),
             (OCProblems.Batch_Reactor_OED, dict(), None),
-            # (OCProblems.Calcium_Oscillation, dict(), None),
+            (OCProblems.Calcium_Oscillation, dict(), None),
             (OCProblems.Cart_Pendulum, dict(), None),
             (OCProblems.Cart_Pendulum, OCProblems.Cart_Pendulum.param_set_2, "Cart_Pendulum_2"),
             (OCProblems.Catalyst_Mixing, dict(), None),

@@ -49,7 +49,7 @@ def export_lotka_volterra_model() -> AcadosModel:
     return model
 
 
-def setup_lotka_shared_ocp(x_init = np.array([1.5,0.5,1.0])):
+def setup_lotka_shared_ocp(x_init = np.array([1.5,0.5,1.0]), N = 100):
     ocp = AcadosOcp()
     
     model = export_lotka_volterra_model()
@@ -58,11 +58,10 @@ def setup_lotka_shared_ocp(x_init = np.array([1.5,0.5,1.0])):
     Tf = 40.0
     nx = model.x.rows()
     nu = model.u.rows()
-    N = 100
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
-    ocp.solver_options.qp_solver_cond_N = 1
+    # ocp.solver_options.qp_solver_cond_N = 10   #Seems to work only for off or 1
     
     try:
         cD = Path(__file__).parent
@@ -108,8 +107,8 @@ def setup_lotka_shared_ocp(x_init = np.array([1.5,0.5,1.0])):
     
     return ocp_solver
     
-# def setup_lotka_shared_ocp_2(x_init = np.array([1.5,1.0,0.5])):
-#     return setup_lotka_shared_ocp(x_init = x_init)
+def setup_lotka_shared_ocp_2(x_init = np.array([1.5,1.0,0.5]), N = 50):
+    return setup_lotka_shared_ocp(x_init = x_init, N = N)
 
 def main():
     ocp_solver = setup_lotka_shared_ocp()

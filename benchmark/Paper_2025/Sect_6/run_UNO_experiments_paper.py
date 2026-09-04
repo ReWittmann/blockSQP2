@@ -66,7 +66,7 @@ Examples = [
             (OCProblems.Time_Optimal_Car, dict(), None),
             (OCProblems.Tubular_Reactor, dict(), None),
             
-            (OCProblems.Satellite_Deorbiting, dict(), None), #Sometimes crashes for filtersqp preset (unopy 0.4.13)
+            # (OCProblems.Satellite_Deorbiting, dict(), None), #Sometimes crashes for filtersqp preset (unopy 0.4.13)
             ]
 
 #Select option sets to test for
@@ -100,7 +100,7 @@ plot_folder = cD / Path("out_UNO_experiments")
 #Choose perturbed start points to test for,
 #modify discretized initial controls u_k in turn for nPert0 <= k < nPertF
 nPert0 = 0
-nPertF = 5
+nPertF = 10
 
 #Write results to a file?
 file_output = True

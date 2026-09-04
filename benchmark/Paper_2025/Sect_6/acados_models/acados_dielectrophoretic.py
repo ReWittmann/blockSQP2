@@ -56,6 +56,7 @@ def setup_dielectrophoretic_ocp():
     
     ocp.solver_options.N_horizon = 100
     ocp.solver_options.tf = 1.0
+    ocp.solver_options.qp_solver_cond_N = 4
     
     try:
         cD = Path(__file__).parent

@@ -22,7 +22,7 @@ if __name__ == '__main__':
     UNO_data = UNO_data['UNO (filtersqp preset), exact Hessian']
     
     blockSQP_data = dolan_more_plots.parse_benchmark_file(str(cD/Path('old_blockSQP/out_old_blockSQP_experiments/blockSQP_it_2026-08-26_00_42_43_226804.txt')))
-    blockSQP_data = blockSQP_data['blockSQP (convex combinations)'] #No great overall performance difference between SR1-BFGS and convex combinations
+    blockSQP_data = blockSQP_data['blockSQP (convex combinations)'] #No large overall performance difference between SR1-BFGS and convex combinations
     
     benchmark_data = {
         'blockSQP2': blockSQP2_data,

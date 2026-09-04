@@ -10,9 +10,8 @@
 # \date 2025
 #
 # Script to invoke blockSQP2 for an example problem.
-
-import numpy as np
 import time
+import numpy as np
 import sys
 from pathlib import Path
 try:
@@ -23,26 +22,30 @@ sys.path += [str(cD.parent/Path("Python"))]
 sys.path += [str(cD/Path("experiments"))]
 import blockSQP2
 import OCProblems
+import OCProblems_fatrop
 
+tm1 = time.monotonic()
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Satellite_Deorbiting(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
-                    # integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
+                    integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    # **OCProblems.Cart_Pendulum.param_set_2,
+                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
                     )
 itMax = 200                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
-plot_title = True                          #Put name of problem in plot?
+plot_title = False                          #Put name of problem in plot?
 sol_plot = True
 
 # Just-in-time compile the problem functions, (Hessian must be additionally enabled)
-OCprob.jit(jit_hess = False)
+T0 = time.time()
+# OCprob.jit(jit_hess = False)
+T1 = time.time()
 
 # start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point

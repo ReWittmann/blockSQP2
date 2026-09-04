@@ -51,6 +51,7 @@ def setup_tubular_reactor_ocp():
     
     ocp.solver_options.N_horizon = N
     ocp.solver_options.tf = Tf
+    ocp.qp_solver_cond_N = 4
     
     try:
         cD = Path(__file__).parent

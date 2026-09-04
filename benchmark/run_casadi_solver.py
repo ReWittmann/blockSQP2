@@ -28,13 +28,13 @@ import OCProblems_fatrop
 
 itMax = 500
 
-OCprob = OCProblems.Satellite_Deorbiting_2(
+OCprob = OCProblems.Lotka_Volterra_Fishing(
                     nt = 100,
                     refine = 1,
-                    # integrator = 'RK4',
+                    # integrator = 'collocation',
                     parallel = True,
                     N_threads = 4, 
-                    # **OCProblems.Cart_Pendulum.param_set_2,
+                    **OCProblems.Lotka_Shared_OED.param_set_2
                     )
 
 ipopts = dict()

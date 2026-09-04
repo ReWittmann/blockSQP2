@@ -1,7 +1,6 @@
 from acados_template import AcadosModel, AcadosOcp, AcadosSim, AcadosSimSolver, AcadosOcpSolver, plot_trajectories
 import numpy as np
 import casadi as ca
-import time
 from pathlib import Path
 
 
@@ -95,9 +94,9 @@ def setup_catalyst_mixing_oed_ocp():
     model = export_catalyst_mixing_oed_model()
     ocp.model = model
     
-    ocp.solver_options.N_horizon = 40          #N = 40, qp_solver_cond_N = 10 seems to work
+    ocp.solver_options.N_horizon = 40          #N = 40 seems to work
     ocp.solver_options.tf = 1.0
-    ocp.solver_options.qp_solver_cond_N = 10
+    ocp.solver_options.qp_solver_cond_N = 10     #10 seems to work
     
     N = ocp.solver_options.N_horizon
     nx = model.x.rows()

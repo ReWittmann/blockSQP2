@@ -58,10 +58,7 @@ def export_cart_pendulum_model(lambda_u = 0.5) -> AcadosModel:
     return model
 
 
-def setup_cart_pendulum_ocp():
-    u_max = 30
-    lambda_u = 0.5
-    
+def setup_cart_pendulum_ocp(u_max = 30, lambda_u = 0.5):
     
     ocp = AcadosOcp()
     model = export_cart_pendulum_model(lambda_u)
@@ -108,6 +105,9 @@ def setup_cart_pendulum_ocp():
         ocp_solver.set(i, "x", np.array([0.,0.,0.,0.,0.]))
     
     return ocp_solver
+
+def setup_cart_pendulum_ocp_2(u_max = 15, lambda_u = 0.05):
+    return setup_cart_pendulum_ocp(u_max = u_max, lambda_u = lambda_u)
 
 def main():
     ocp_solver = setup_cart_pendulum_ocp()

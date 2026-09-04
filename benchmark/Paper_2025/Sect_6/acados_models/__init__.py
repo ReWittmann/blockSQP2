@@ -3,7 +3,7 @@ from .acados_batch_distillation import setup_batch_distillation_ocp
 from .acados_batch_reactor import setup_batch_reactor_ocp
 from .acados_batch_reactor_oed import setup_batch_reactor_oed_ocp
 from .acados_calcium_oscillation import setup_calcium_oscillation_ocp
-from .acados_cart_pendulum_ocp import setup_cart_pendulum_ocp
+from .acados_cart_pendulum_ocp import setup_cart_pendulum_ocp, setup_cart_pendulum_ocp_2
 from .acados_catalyst_mixing import setup_catalyst_mixing_ocp
 from .acados_catalyst_mixing_oed import setup_catalyst_mixing_oed_ocp
 from .acados_cushioned_oscillation import setup_cushioned_oscillation_ocp
@@ -12,14 +12,18 @@ from .acados_D_Onofrio import setup_D_Onofrio_ocp, setup_D_Onofrio_ocp_2, setup_
 from .acados_ducted_fan import setup_ducted_fan_ocp
 from .acados_egerstedt import setup_egerstedt_ocp
 from .acados_electric_car import setup_electric_car_ocp 
+from .acados_fermenter import setup_fermenter_ocp
 from .acados_goddard import setup_goddard_ocp
 from .acados_hang_glider import setup_hang_glider_ocp
 from .acados_hanging_chain import setup_hanging_chain_ocp
 from .acados_lotka_competitive import setup_lotka_competitive_ocp, setup_lotka_competitive_ocp_2
 from .acados_lotka_ocp import setup_lotka_ocp
 from .acados_lotka_oed import setup_lotka_oed_ocp
-from .acados_lotka_shared import setup_lotka_shared_ocp
+from .acados_lotka_shared import setup_lotka_shared_ocp, setup_lotka_shared_ocp_2
+from .acados_lotka_shared_oed import setup_lotka_shared_oed_ocp
+from .acados_ocean import setup_ocean_ocp
 from .acados_particle_steering import setup_particle_steering_ocp
+from .acados_quadrotor import setup_quadrotor_ocp
 from .acados_satellite import setup_satellite_ocp
 from .acados_three_tank import setup_three_tank_ocp
 from .acados_time_optimal_car import setup_time_optimal_car_ocp
