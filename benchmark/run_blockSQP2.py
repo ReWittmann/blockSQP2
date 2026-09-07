@@ -26,8 +26,8 @@ import OCProblems_fatrop
 
 tm1 = time.monotonic()
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Catalyst_Mixing_OED(
-                    nt = 40,               #number of shooting intervals
+OCprob = OCProblems.Lotka_Volterra_Fishing(
+                    nt = 100,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
@@ -44,7 +44,7 @@ sol_plot = True
 
 # Just-in-time compile the problem functions, (Hessian must be additionally enabled)
 T0 = time.time()
-OCprob.jit(jit_hess = False)
+# OCprob.jit(jit_hess = False)
 T1 = time.time()
 
 # start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)

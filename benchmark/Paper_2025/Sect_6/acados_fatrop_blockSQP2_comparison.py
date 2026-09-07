@@ -1,28 +1,9 @@
 #See https://github.com/acados/acados on how to install acados and 
 #the python package acados_template
 
-import acados_models as acmo
+
 import time
 
-
-print("\n###\nSetting up catalyst mixing oed for acados, this should take ~80s\n###\n")
-
-
-#ACADOS
-tm1_acados_catalyst = time.monotonic()
-acados_solver = acmo.setup_catalyst_mixing_oed_ocp()
-t0_acados_catalyst = time.monotonic()
-acados_solver.solve()
-t1_acados_catalyst = time.monotonic()
-it_acados_catalyst = acados_solver.get_stats("nlp_iter")
-
-
-tm1_acados_D_Onofrio = time.monotonic()
-catalyst_oed_solver = acmo.setup_D_Onofrio_ocp()
-t0_acados_D_Onofrio = time.monotonic()
-catalyst_oed_solver.solve()
-t1_acados_D_Onofrio = time.monotonic()
-it_acados_D_Onofrio = acados_solver.get_stats("nlp_iter")
 
 #FATROP
 import casadi as cs
@@ -172,8 +153,6 @@ ret = optimizer.run(200)
 optimizer.finish()
 t1_blockSQP2_catalyst = time.monotonic()
 it_blockSQP2_catalyst = stats.itCount
-
-optimizer, prob, opts, stats = (None, None, None, None)
 #########################
 
 OCprob = OCProblems.Catalyst_Mixing_OED(
@@ -227,8 +206,6 @@ optimizer.init()
 ret = optimizer.run(200)
 optimizer.finish()
 t1_blockSQP2_catalyst_noJIT = time.monotonic()
-
-optimizer, prob, opts, stats = (None, None, None, None)
 #########################
 
 OCprob = OCProblems.D_Onofrio_Chemotherapy(
@@ -285,8 +262,6 @@ ret = optimizer.run(200)
 optimizer.finish()
 t1_blockSQP2_D_Onofrio = time.monotonic()
 it_blockSQP2_D_Onofrio = stats.itCount
-
-optimizer, prob, opts, stats = (None, None, None, None)
 #########################
 
 OCprob = OCProblems.D_Onofrio_Chemotherapy(
@@ -341,18 +316,31 @@ optimizer.init()
 ret = optimizer.run(200)
 optimizer.finish()
 t1_blockSQP2_D_Onofrio_noJIT = time.monotonic()
-
-optimizer, prob, opts, stats = (None, None, None, None)
 #########################
+
+#ACADOS
+import acados_models as acmo
+
+print("\n###\nSetting up catalyst mixing oed for acados, this should take ~80s\n###\n")
+
+tm1_acados_catalyst = time.monotonic()
+acados_solver = acmo.setup_catalyst_mixing_oed_ocp()
+t0_acados_catalyst = time.monotonic()
+acados_solver.solve()
+t1_acados_catalyst = time.monotonic()
+it_acados_catalyst = acados_solver.get_stats("nlp_iter")
+
+
+tm1_acados_D_Onofrio = time.monotonic()
+catalyst_oed_solver = acmo.setup_D_Onofrio_ocp()
+t0_acados_D_Onofrio = time.monotonic()
+catalyst_oed_solver.solve()
+t1_acados_D_Onofrio = time.monotonic()
+it_acados_D_Onofrio = acados_solver.get_stats("nlp_iter")
 
 time.sleep(2)
 
 print("\n")
-print("acados - setting up catalyst mixing oed took", t0_acados_catalyst - tm1_acados_catalyst, "s")
-print("acados - solving catalyst mixing oed took", t1_acados_catalyst - t0_acados_catalyst, "s and", it_acados_catalyst, "it")
-print("acados - setting up D\'Onofrio took", t0_acados_D_Onofrio - tm1_acados_D_Onofrio, "s")
-print("acados - solving D\'Onofrio took", t1_acados_D_Onofrio - t0_acados_D_Onofrio, "s and", it_acados_D_Onofrio, "it")
-print("")
 print("fatrop - setting up catalyst mixing oed took", t0_fatrop_catalyst - tm1_fatrop_catalyst, "s")
 print("fatrop - solving catalyst mixing oed took", t1_fatrop_catalyst - t0_fatrop_catalyst, "s and", it_fatrop_catalyst, "it")
 print("fatrop - setting up D\'Onofrio took", t0_fatrop_D_Onofrio - tm1_fatrop_D_Onofrio, "s")
@@ -367,4 +355,9 @@ print("blockSQP2 - setting up D\'Onofrio took", t0_blockSQP2_D_Onofrio - tm1_blo
 print("blockSQP2 - solving D\'Onofrio took", t1_blockSQP2_D_Onofrio - t0_blockSQP2_D_Onofrio, "s and", it_blockSQP2_D_Onofrio, "it")
 print("blockSQP2 - setting up D\'Onofrio (no JIT) took", t0_blockSQP2_D_Onofrio_noJIT - tm1_blockSQP2_D_Onofrio_noJIT, "s")
 print("blockSQP2 - solving up D\'Onofrio (no JIT) took", t1_blockSQP2_D_Onofrio_noJIT - t0_blockSQP2_D_Onofrio_noJIT, "s")
+print("")
+print("acados - setting up catalyst mixing oed took", t0_acados_catalyst - tm1_acados_catalyst, "s")
+print("acados - solving catalyst mixing oed took", t1_acados_catalyst - t0_acados_catalyst, "s and", it_acados_catalyst, "it")
+print("acados - setting up D\'Onofrio took", t0_acados_D_Onofrio - tm1_acados_D_Onofrio, "s")
+print("acados - solving D\'Onofrio took", t1_acados_D_Onofrio - t0_acados_D_Onofrio, "s and", it_acados_D_Onofrio, "it")
 

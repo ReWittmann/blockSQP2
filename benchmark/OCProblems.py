@@ -5717,7 +5717,7 @@ class Dielectrophoretic_Particle_OED(OCProblem):
 #         plt.close()
 
 
-#Lots of local minima.
+#Lots of local minima, but can enforce good one.
 class Batch_Reactor_OED(OCProblem):
     default_params = {
         'p1': 4000,

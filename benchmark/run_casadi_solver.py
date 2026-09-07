@@ -33,7 +33,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     # integrator = 'collocation',
                     parallel = True,
                     N_threads = 4, 
-                    **OCProblems.Lotka_Shared_OED.param_set_2
+                    # **OCProblems.Cart_Pendulum.param_set_2
                     )
 
 ipopts = dict()

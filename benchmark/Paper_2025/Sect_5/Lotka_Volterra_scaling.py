@@ -76,7 +76,6 @@ prob.vblocks = vblocks
 
 prob.x_start = OCprob.start_point
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)
-prob.complete()
 
 stats = blockSQP2.SQPstats("./solver_outputs")
 #No condensing
