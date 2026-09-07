@@ -24,7 +24,6 @@ try:
 except:
     cD = Path.cwd()
 sys.path += [str(cD/Path("experiments"))]
-import OCProblems_fatrop
 
 itMax = 500
 

@@ -673,7 +673,7 @@ class OCProblem:
         
         Cgen.generate(Cpref)
         jit_opts = {
-            "compiler_flags": "-O2",
+            "compiler_flags": "-O3",
             "cleanup": True,
             "directory": Cpref
         }

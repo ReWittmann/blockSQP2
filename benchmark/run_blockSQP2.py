@@ -26,8 +26,8 @@ import OCProblems_fatrop
 
 tm1 = time.monotonic()
 #Check OCProblems.py for available examples
-OCprob = OCProblems.Lotka_Volterra_Fishing(
-                    nt = 100,               #number of shooting intervals
+OCprob = OCProblems.Catalyst_Mixing_OED(
+                    nt = 40,               #number of shooting intervals
                     refine = 1,             #number of control intervals per shooting interval
                     integrator = 'RK4',     #ODE integrator, problems requiring it use cvodes, else they use RK4
                     parallel = True,        #run ODE integration in parallel
@@ -44,16 +44,13 @@ sol_plot = True
 
 # Just-in-time compile the problem functions, (Hessian must be additionally enabled)
 T0 = time.time()
-# OCprob.jit(jit_hess = False)
+OCprob.jit(jit_hess = False)
 T1 = time.time()
 
 # start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
 start = OCprob.start_point
 # OCprob.integrate_full(start)
 ###############################
-QPopts = blockSQP2.qpOASES_options(
-    matrixSparsity = -1
-    )
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
@@ -83,11 +80,6 @@ opts = blockSQP2.SQPoptions(
     max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
     max_filter_overrides = 2,
-    
-    qpsol = 'qpOASES',
-    qpsol_options = QPopts,
-    
-    # initial_hess_scale = 1e1
 )
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()
@@ -97,15 +89,13 @@ opts = blockSQP2.SQPoptions(
 ################################
 
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
-#Currently not recommended due to qpOASES only supporting sparse matrices when allowing indefinite Hessians
 vblocks = [blockSQP2.vblock(size, dep, impl) for size, dep, impl in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies, OCprob.vBlock_bounds_implicit)]
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
 hblocks = [size for size in OCprob.hessBlock_sizes]
-
 targets = [blockSQP2.condensing_target(*OCprob.ctarget_data)]
 
 condenser = blockSQP2.PartialCondenser(vblocks, cblocks, hblocks, targets, 4, 1)
-# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 1)
+# condenser = blockSQP2.Condenser(vblocks, cblocks, hblocks, targets, 1) #Not recommended
 # condenser = None
 
 #Define blockSQP Problemspec
@@ -127,8 +117,7 @@ prob.hess = OCprob.hess_lag
 prob.blockIdx = OCprob.hessBlock_index
 prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 
-#Recommended: Dont pass condenser to activate condensing, 
-#but pass vblocks to enable convexification strategy 2 and automatic scaling
+#Pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
 prob.condenser = condenser
 
