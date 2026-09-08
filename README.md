@@ -24,7 +24,7 @@ else run e.g. &nbsp; `sudo apt install libblas-dev liblapack-dev liblapacke-dev`
 
 ## Building
 In the command line, navigate to this folder and invoke  
-&nbsp;&nbsp; `cmake -B .build ${OPTIONS}` -DCMAKE_BUILD_TYPE=Release  
+&nbsp;&nbsp; `cmake -B .build ${OPTIONS} -DCMAKE_BUILD_TYPE=Release`  
 &nbsp;&nbsp; `cmake --build .build`  
 For multi config generators (Xcode, Visual Studio), the build type is instead specified in the build step by adding --config Release
 **Note**: Ensure that paths contains no whitespaces or parentheses, as these may cause problems.
