@@ -44,7 +44,7 @@ sol_plot = True
 
 # Just-in-time compile the problem functions, (Hessian must be additionally enabled)
 T0 = time.time()
-# OCprob.jit(jit_hess = False)
+OCprob.jit(jit_hess = False)
 T1 = time.time()
 
 # start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
@@ -134,7 +134,6 @@ stats = blockSQP2.SQPstats("./solver_outputs")
 
 t0 = time.monotonic()
 optimizer = blockSQP2.SQPmethod(prob, opts, stats)
-# optimizer = blockSQP2.SQPmethod(scaledProb, opts, stats)
 optimizer.init()
 
 if (step_plots):

@@ -89,7 +89,7 @@ def export_catalyst_mixing_oed_model() -> AcadosModel:
     return model
 
 
-def setup_catalyst_mixing_oed_ocp():
+def setup_catalyst_mixing_oed_ocp(pert_start_point = None):
     ocp = AcadosOcp()
     model = export_catalyst_mixing_oed_model()
     ocp.model = model
@@ -161,6 +161,9 @@ def setup_catalyst_mixing_oed_ocp():
         ocp_solver.set(i, "x", sim_x[i, :])
         ocp_solver.set(i, "u", u_init_traj[i])
     ocp_solver.set(N, "x", sim_x[N, :])
+    
+    if (isinstance(pert_start_point, int)):
+        ocp_solver.set(int(pert_start_point), "u", u_init_traj[i] + 0.1)
     return ocp_solver
 
 def main():

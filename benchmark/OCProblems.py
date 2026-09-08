@@ -1052,9 +1052,13 @@ class Lotka_Volterra_Fishing_MAYER(OCProblem):
     
     def build_problem(self):
         self.set_OCP_data(3,0,1,0,[0,0,-np.inf],[np.inf, np.inf, np.inf],[],[],[0],[1])
+        
+        # Causes infeasibility of the first QP if implicit bound on state q are added to the QP
+        # self.set_OCP_data(3,0,1,0,[0,0,0.],[np.inf, np.inf, np.inf],[],[],[0],[1])
+
         self.fix_time_horizon(self.model_params['t0'],self.model_params['tf'])
         self.fix_initial_value(self.model_params['x_init']+[0])
-        self.mark_state_bounds_implicit()
+        self.mark_state_bounds_implicit(0,1,2)
         
         x = cs.MX.sym('x', 3)
         w = cs.MX.sym('w', 1)
