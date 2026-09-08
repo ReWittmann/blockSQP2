@@ -24,9 +24,10 @@ else run e.g. &nbsp; `sudo apt install libblas-dev liblapack-dev liblapacke-dev`
 
 ## Building
 In the command line, navigate to this folder and invoke  
-&nbsp;&nbsp; `cmake -B .build ${OPTIONS}`  
+&nbsp;&nbsp; `cmake -B .build ${OPTIONS}` -DCMAKE_BUILD_TYPE=Release  
 &nbsp;&nbsp; `cmake --build .build`  
-**Note**: Ensure the path contains no whitespaces or parentheses, as these may cause problems.
+For multi config generators (Xcode, Visual Studio), the build type is instead specified in the build step by adding --config Release
+**Note**: Ensure that paths contains no whitespaces or parentheses, as these may cause problems.
 
 ### General build options
 These are general CMake options, it is usually not necessary to set them manually.
@@ -38,8 +39,7 @@ These are general CMake options, it is usually not necessary to set them manuall
 
 ### blockSQP2 build options
 1. `-DPYTHON_INTERFACE= (ON/OFF)` - build Python interface, default ON
-2. `-DPYTHON_INTERPRETER= (/PATH/TO/PYTHON_EXECUTABLE)` - optional, choose python interpreter to build for
-3. `-DJULIA_INTERFACE= (ON/OFF)` - build blocksqp.jl from the C interface, default ON
+2. `-DJULIA_INTERFACE= (ON/OFF)` - build blocksqp.jl from the C interface, default ON
 
 See README_WINDOWS.md for details on how to build for Windows with mingW.
 
