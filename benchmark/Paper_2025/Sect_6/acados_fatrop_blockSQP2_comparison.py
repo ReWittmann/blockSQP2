@@ -45,7 +45,7 @@ t1_acados_catalyst = time.monotonic()
 it_acados_catalyst = acados_solver.get_stats("nlp_iter")
 
 # Somehow acados takes over two times the runtime if acados solve was called before ...
-# Still, I see nothing wrong with this setup and will take this value
+# Will take the measured runtime anyway...
 tm1_acados_D_Onofrio = time.monotonic()
 acados_solver = acmo.setup_D_Onofrio_ocp()
 t0_acados_D_Onofrio = time.monotonic()
