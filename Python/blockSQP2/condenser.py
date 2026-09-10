@@ -71,11 +71,13 @@ def as_array(ptr, length, dtype):
 
 
 class Condenser(CXXobjWrapper):
-    # Condenser constructor data
+    # Condenser constructor data, to be populated by the create_array_objects method
     vblock_array_obj: c_void_p
     cblock_array_obj: c_void_p
     hsize_array_obj: c_void_p
     target_array_obj: c_void_p
+    
+    # Flag set if Condenser constructor failed
     init_failed: bool
     
     # Condensing input
@@ -106,21 +108,22 @@ class Condenser(CXXobjWrapper):
     
     def __init__(self, vblocks : typing.List['vblock'], cblocks : typing.List['cblock'], hsizes : typing.List['int'], targets : typing.List['condensing_target'], dep_bounds : int = 1):
         BSQP = self.BSQP
-        self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
-        for i, vb in enumerate(vblocks):
-            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
+        self.create_array_objects(vblocks, cblocks, hsizes, targets)
+        # self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
+        # for i, vb in enumerate(vblocks):
+        #     BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
         
-        self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
-        for i, cb in enumerate(cblocks):
-            BSQP.cblock_array_set(self.cblock_array_obj, i, cb.size)
+        # self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
+        # for i, cb in enumerate(cblocks):
+        #     BSQP.cblock_array_set(self.cblock_array_obj, i, cb.size)
         
-        self.hsize_array_obj = BSQP.create_hsize_array(len(hsizes))
-        for i, hs in enumerate(hsizes):
-            BSQP.hsize_array_set(self.hsize_array_obj, i, hs)
+        # self.hsize_array_obj = BSQP.create_hsize_array(len(hsizes))
+        # for i, hs in enumerate(hsizes):
+        #     BSQP.hsize_array_set(self.hsize_array_obj, i, hs)
         
-        self.target_array_obj = BSQP.create_target_array(len(targets))
-        for i, t in enumerate(targets):
-            BSQP.target_array_set(self.target_array_obj, i, t.n_stages, t.vblock_start, t.vblock_end, t.cblock_start, t.cblock_end)
+        # self.target_array_obj = BSQP.create_target_array(len(targets))
+        # for i, t in enumerate(targets):
+        #     BSQP.target_array_set(self.target_array_obj, i, t.n_stages, t.vblock_start, t.vblock_end, t.cblock_start, t.cblock_end)
         
         self.cxx_obj = BSQP.create_Condenser(self.vblock_array_obj, len(vblocks), self.cblock_array_obj, len(cblocks), self.hsize_array_obj, len(hsizes), self.target_array_obj, len(targets), dep_bounds)
         if not self.cxx_obj:
@@ -129,46 +132,43 @@ class Condenser(CXXobjWrapper):
             raise RuntimeError(cast(err, c_char_p).value.decode())
         self.init_failed = False
         
-        nVar = BSQP.Condenser_nVar(self.cxx_obj)
-        nCon = BSQP.Condenser_nCon(self.cxx_obj)
-        nBlocks = BSQP.Condenser_nBlocks(self.cxx_obj)
+        self.create_interface_matrices()
+        # nVar = BSQP.Condenser_nVar(self.cxx_obj)
+        # nCon = BSQP.Condenser_nCon(self.cxx_obj)
+        # nBlocks = BSQP.Condenser_nBlocks(self.cxx_obj)
         
-        self.Matrix_grad_obj = BSQP.create_Matrix(nVar, 1)
-        self.Sparse_Matrix_constr_jac = BSQP.create_Sparse_Matrix_default()
-        self.SymMatrix_array_hess = BSQP.create_SymMatrix_array(nBlocks)
+        # self.Matrix_grad_obj = BSQP.create_Matrix(nVar, 1)
+        # self.Sparse_Matrix_constr_jac = BSQP.create_Sparse_Matrix_default()
+        # self.SymMatrix_array_hess = BSQP.create_SymMatrix_array(nBlocks)
         
-        for i in range(nBlocks):
-            BSQP.SymMatrix_array_index_resize(self.SymMatrix_array_hess, i, hsizes[i])
+        # for i in range(nBlocks):
+        #     BSQP.SymMatrix_array_index_resize(self.SymMatrix_array_hess, i, hsizes[i])
         
-        self.Matrix_lb_var = BSQP.create_Matrix(nVar, 1)
-        self.Matrix_ub_var = BSQP.create_Matrix(nVar, 1)
-        self.Matrix_lb_con = BSQP.create_Matrix(nCon, 1)
-        self.Matrix_ub_con = BSQP.create_Matrix(nCon, 1)
+        # self.Matrix_lb_var = BSQP.create_Matrix(nVar, 1)
+        # self.Matrix_ub_var = BSQP.create_Matrix(nVar, 1)
+        # self.Matrix_lb_con = BSQP.create_Matrix(nCon, 1)
+        # self.Matrix_ub_con = BSQP.create_Matrix(nCon, 1)
         
         
-        condensed_nVar = BSQP.Condenser_condensed_nVar(self.cxx_obj)
-        condensed_nCon = BSQP.Condenser_condensed_nCon(self.cxx_obj)
-        condensed_nBlocks = BSQP.Condenser_condensed_nBlocks(self.cxx_obj)
+        # condensed_nVar = BSQP.Condenser_condensed_nVar(self.cxx_obj)
+        # condensed_nCon = BSQP.Condenser_condensed_nCon(self.cxx_obj)
+        # condensed_nBlocks = BSQP.Condenser_condensed_nBlocks(self.cxx_obj)
         
-        self.Matrix_condensed_grad_obj = BSQP.create_Matrix(condensed_nVar, 1)
-        self.Sparse_Matrix_condensed_constr_jac = BSQP.create_Sparse_Matrix_default()
-        self.SymMatrix_array_condensed_hess = BSQP.create_SymMatrix_array(condensed_nBlocks)
+        # self.Matrix_condensed_grad_obj = BSQP.create_Matrix(condensed_nVar, 1)
+        # self.Sparse_Matrix_condensed_constr_jac = BSQP.create_Sparse_Matrix_default()
+        # self.SymMatrix_array_condensed_hess = BSQP.create_SymMatrix_array(condensed_nBlocks)
         
-        self.Matrix_condensed_lb_var = BSQP.create_Matrix_default()
-        self.Matrix_condensed_ub_var = BSQP.create_Matrix_default()
-        self.Matrix_condensed_lb_con = BSQP.create_Matrix_default()
-        self.Matrix_condensed_ub_con = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_lb_var = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_ub_var = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_lb_con = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_ub_con = BSQP.create_Matrix_default()
         
-        # self.Matrix_condensed_lb_var = BSQP.create_Matrix(condensed_nVar, 1)
-        # self.Matrix_condensed_ub_var = BSQP.create_Matrix(condensed_nVar, 1)
-        # self.Matrix_condensed_lb_con = BSQP.create_Matrix(condensed_nCon, 1)
-        # self.Matrix_condensed_ub_con = BSQP.create_Matrix(condensed_nCon, 1)
         
-        self.Matrix_xi_cond = BSQP.create_Matrix(condensed_nVar, 1)
-        self.Matrix_lambda_cond = BSQP.create_Matrix(condensed_nVar + condensed_nCon, 1)
+        # self.Matrix_xi_cond = BSQP.create_Matrix(condensed_nVar, 1)
+        # self.Matrix_lambda_cond = BSQP.create_Matrix(condensed_nVar + condensed_nCon, 1)
         
-        self.Matrix_xi_rest = BSQP.create_Matrix(nVar, 1)
-        self.Matrix_lambda_rest = BSQP.create_Matrix(nVar + nCon, 1)
+        # self.Matrix_xi_rest = BSQP.create_Matrix(nVar, 1)
+        # self.Matrix_lambda_rest = BSQP.create_Matrix(nVar + nCon, 1)
 
     def __del__(self):
         BSQP = self.BSQP
@@ -201,6 +201,64 @@ class Condenser(CXXobjWrapper):
         BSQP.delete_hsize_array(self.hsize_array_obj)
         BSQP.delete_cblock_array(self.cblock_array_obj)
         BSQP.delete_vblock_array(self.vblock_array_obj)
+    
+    def create_array_objects(self, vblocks : typing.List['vblock'], cblocks : typing.List['cblock'], hsizes : typing.List['int'], targets : typing.List['condensing_target']):
+        BSQP = self.BSQP
+        self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
+        for i, vb in enumerate(vblocks):
+            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
+        
+        self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
+        for i, cb in enumerate(cblocks):
+            BSQP.cblock_array_set(self.cblock_array_obj, i, cb.size)
+        
+        self.hsize_array_obj = BSQP.create_hsize_array(len(hsizes))
+        for i, hs in enumerate(hsizes):
+            BSQP.hsize_array_set(self.hsize_array_obj, i, hs)
+        
+        self.target_array_obj = BSQP.create_target_array(len(targets))
+        for i, t in enumerate(targets):
+            BSQP.target_array_set(self.target_array_obj, i, t.n_stages, t.vblock_start, t.vblock_end, t.cblock_start, t.cblock_end)
+    
+    # After the cxx_obj has been created, this creates input and return argument matrices
+    def create_interface_matrices(self):
+        BSQP = self.BSQP
+        nVar = BSQP.Condenser_nVar(self.cxx_obj)
+        nCon = BSQP.Condenser_nCon(self.cxx_obj)
+        nBlocks = BSQP.Condenser_nBlocks(self.cxx_obj)
+        
+        self.Matrix_grad_obj = BSQP.create_Matrix(nVar, 1)
+        self.Sparse_Matrix_constr_jac = BSQP.create_Sparse_Matrix_default()
+        self.SymMatrix_array_hess = BSQP.create_SymMatrix_array(nBlocks)
+        
+        for i in range(nBlocks):
+            BSQP.SymMatrix_array_index_resize(self.SymMatrix_array_hess, i, BSQP.hsize_array_get(self.hsize_array_obj, i))#hsizes[i])
+        
+        self.Matrix_lb_var = BSQP.create_Matrix(nVar, 1)
+        self.Matrix_ub_var = BSQP.create_Matrix(nVar, 1)
+        self.Matrix_lb_con = BSQP.create_Matrix(nCon, 1)
+        self.Matrix_ub_con = BSQP.create_Matrix(nCon, 1)
+        
+        
+        condensed_nVar = BSQP.Condenser_condensed_nVar(self.cxx_obj)
+        condensed_nCon = BSQP.Condenser_condensed_nCon(self.cxx_obj)
+        condensed_nBlocks = BSQP.Condenser_condensed_nBlocks(self.cxx_obj)
+        
+        self.Matrix_condensed_grad_obj = BSQP.create_Matrix(condensed_nVar, 1)
+        self.Sparse_Matrix_condensed_constr_jac = BSQP.create_Sparse_Matrix_default()
+        self.SymMatrix_array_condensed_hess = BSQP.create_SymMatrix_array(condensed_nBlocks)
+        
+        self.Matrix_condensed_lb_var = BSQP.create_Matrix_default()
+        self.Matrix_condensed_ub_var = BSQP.create_Matrix_default()
+        self.Matrix_condensed_lb_con = BSQP.create_Matrix_default()
+        self.Matrix_condensed_ub_con = BSQP.create_Matrix_default()
+        
+        
+        self.Matrix_xi_cond = BSQP.create_Matrix(condensed_nVar, 1)
+        self.Matrix_lambda_cond = BSQP.create_Matrix(condensed_nVar + condensed_nCon, 1)
+        
+        self.Matrix_xi_rest = BSQP.create_Matrix(nVar, 1)
+        self.Matrix_lambda_rest = BSQP.create_Matrix(nVar + nCon, 1)
     
     def print_info(self):
         self.BSQP.Condenser_print_info(self.cxx_obj)
@@ -308,21 +366,23 @@ class Condenser(CXXobjWrapper):
 class PartialCondenser(Condenser): #TODO: Reduce code duplication
     def __init__(self, vblocks : typing.List['vblock'], cblocks : typing.List['cblock'], hsizes : typing.List['int'], targets : typing.List['condensing_target'], n_split : int, dep_bounds : int = 1):
         BSQP = self.BSQP
-        self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
-        for i, vb in enumerate(vblocks):
-            BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
+        self.create_array_objects(vblocks, cblocks, hsizes, targets)
         
-        self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
-        for i, cb in enumerate(cblocks):
-            BSQP.cblock_array_set(self.cblock_array_obj, i, cb.size)
+        # self.vblock_array_obj = BSQP.create_vblock_array((len(vblocks)))
+        # for i, vb in enumerate(vblocks):
+        #     BSQP.vblock_array_set(self.vblock_array_obj, i, vb.size, c_char(vb.dependent), c_char(vb.bounds_implicit))
         
-        self.hsize_array_obj = BSQP.create_hsize_array(len(hsizes))
-        for i, hs in enumerate(hsizes):
-            BSQP.hsize_array_set(self.hsize_array_obj, i, hs)
+        # self.cblock_array_obj = BSQP.create_cblock_array(len(cblocks))
+        # for i, cb in enumerate(cblocks):
+        #     BSQP.cblock_array_set(self.cblock_array_obj, i, cb.size)
         
-        self.target_array_obj = BSQP.create_target_array(len(targets))
-        for i, t in enumerate(targets):
-            BSQP.target_array_set(self.target_array_obj, i, t.n_stages, t.vblock_start, t.vblock_end, t.cblock_start, t.cblock_end)
+        # self.hsize_array_obj = BSQP.create_hsize_array(len(hsizes))
+        # for i, hs in enumerate(hsizes):
+        #     BSQP.hsize_array_set(self.hsize_array_obj, i, hs)
+        
+        # self.target_array_obj = BSQP.create_target_array(len(targets))
+        # for i, t in enumerate(targets):
+        #     BSQP.target_array_set(self.target_array_obj, i, t.n_stages, t.vblock_start, t.vblock_end, t.cblock_start, t.cblock_end)
         
         self.cxx_obj = BSQP.create_PartialCondenser(self.vblock_array_obj, len(vblocks), self.cblock_array_obj, len(cblocks), self.hsize_array_obj, len(hsizes), self.target_array_obj, len(targets), n_split, dep_bounds)
         if not self.cxx_obj:
@@ -330,43 +390,41 @@ class PartialCondenser(Condenser): #TODO: Reduce code duplication
             err = BSQP.get_error_message()
             raise RuntimeError(cast(err, c_char_p).value.decode())
         self.init_failed = False
-        nVar = BSQP.Condenser_nVar(self.cxx_obj)
-        nCon = BSQP.Condenser_nCon(self.cxx_obj)
-        nBlocks = BSQP.Condenser_nBlocks(self.cxx_obj)
         
-        self.Matrix_grad_obj = BSQP.create_Matrix(nVar, 1)
-        self.Sparse_Matrix_constr_jac = BSQP.create_Sparse_Matrix_default()
-        self.SymMatrix_array_hess = BSQP.create_SymMatrix_array(nBlocks)
+        self.create_interface_matrices()
+        # nVar = BSQP.Condenser_nVar(self.cxx_obj)
+        # nCon = BSQP.Condenser_nCon(self.cxx_obj)
+        # nBlocks = BSQP.Condenser_nBlocks(self.cxx_obj)
         
-        for i in range(nBlocks):
-            BSQP.SymMatrix_array_index_resize(self.SymMatrix_array_hess, i, hsizes[i])
+        # self.Matrix_grad_obj = BSQP.create_Matrix(nVar, 1)
+        # self.Sparse_Matrix_constr_jac = BSQP.create_Sparse_Matrix_default()
+        # self.SymMatrix_array_hess = BSQP.create_SymMatrix_array(nBlocks)
         
-        self.Matrix_lb_var = BSQP.create_Matrix(nVar, 1)
-        self.Matrix_ub_var = BSQP.create_Matrix(nVar, 1)
-        self.Matrix_lb_con = BSQP.create_Matrix(nCon, 1)
-        self.Matrix_ub_con = BSQP.create_Matrix(nCon, 1)
+        # for i in range(nBlocks):
+        #     BSQP.SymMatrix_array_index_resize(self.SymMatrix_array_hess, i, hsizes[i])
+        
+        # self.Matrix_lb_var = BSQP.create_Matrix(nVar, 1)
+        # self.Matrix_ub_var = BSQP.create_Matrix(nVar, 1)
+        # self.Matrix_lb_con = BSQP.create_Matrix(nCon, 1)
+        # self.Matrix_ub_con = BSQP.create_Matrix(nCon, 1)
         
         
-        condensed_nVar = BSQP.Condenser_condensed_nVar(self.cxx_obj)
-        condensed_nCon = BSQP.Condenser_condensed_nCon(self.cxx_obj)
-        condensed_nBlocks = BSQP.Condenser_condensed_nBlocks(self.cxx_obj)
+        # condensed_nVar = BSQP.Condenser_condensed_nVar(self.cxx_obj)
+        # condensed_nCon = BSQP.Condenser_condensed_nCon(self.cxx_obj)
+        # condensed_nBlocks = BSQP.Condenser_condensed_nBlocks(self.cxx_obj)
         
-        self.Matrix_condensed_grad_obj = BSQP.create_Matrix(condensed_nVar, 1)
-        self.Sparse_Matrix_condensed_constr_jac = BSQP.create_Sparse_Matrix_default()
-        self.SymMatrix_array_condensed_hess = BSQP.create_SymMatrix_array(condensed_nBlocks)
+        # self.Matrix_condensed_grad_obj = BSQP.create_Matrix(condensed_nVar, 1)
+        # self.Sparse_Matrix_condensed_constr_jac = BSQP.create_Sparse_Matrix_default()
+        # self.SymMatrix_array_condensed_hess = BSQP.create_SymMatrix_array(condensed_nBlocks)
         
-        self.Matrix_condensed_lb_var = BSQP.create_Matrix_default()
-        self.Matrix_condensed_ub_var = BSQP.create_Matrix_default()
-        self.Matrix_condensed_lb_con = BSQP.create_Matrix_default()
-        self.Matrix_condensed_ub_con = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_lb_var = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_ub_var = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_lb_con = BSQP.create_Matrix_default()
+        # self.Matrix_condensed_ub_con = BSQP.create_Matrix_default()
         
-        # self.Matrix_condensed_lb_var = BSQP.create_Matrix(condensed_nVar, 1)
-        # self.Matrix_condensed_ub_var = BSQP.create_Matrix(condensed_nVar, 1)
-        # self.Matrix_condensed_lb_con = BSQP.create_Matrix(condensed_nCon, 1)
-        # self.Matrix_condensed_ub_con = BSQP.create_Matrix(condensed_nCon, 1)
         
-        self.Matrix_xi_cond = BSQP.create_Matrix(condensed_nVar, 1)
-        self.Matrix_lambda_cond = BSQP.create_Matrix(condensed_nVar + condensed_nCon, 1)
+        # self.Matrix_xi_cond = BSQP.create_Matrix(condensed_nVar, 1)
+        # self.Matrix_lambda_cond = BSQP.create_Matrix(condensed_nVar + condensed_nCon, 1)
         
-        self.Matrix_xi_rest = BSQP.create_Matrix(nVar, 1)
-        self.Matrix_lambda_rest = BSQP.create_Matrix(nVar + nCon, 1)
+        # self.Matrix_xi_rest = BSQP.create_Matrix(nVar, 1)
+        # self.Matrix_lambda_rest = BSQP.create_Matrix(nVar + nCon, 1)

@@ -144,6 +144,7 @@ BSQP_function_signatures = {
     "create_hsize_array": (c_void_p, (c_int,)),
     "delete_hsize_array": (None, (c_void_p,)),
     "hsize_array_set": (None, (c_void_p, c_int, c_int)),
+    "hsize_array_get": (c_int, (c_void_p, c_int)),
     
     "create_target_array": (c_void_p, (c_int,)),
     "delete_target_array": (None, (c_void_p,)),

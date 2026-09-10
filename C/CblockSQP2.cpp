@@ -692,6 +692,10 @@ CDLEXP void hsize_array_set(void *ptr, int index, int size){
     static_cast<int *>(ptr)[index] = size;
 }
 
+CDLEXP int hsize_array_get(void *ptr, int index){
+    return static_cast<int *>(ptr)[index];
+}
+
 // condensing_target[]
 CDLEXP void *create_target_array(int size){
     return static_cast<void *>(new condensing_target[size]);
