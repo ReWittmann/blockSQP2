@@ -3127,35 +3127,34 @@ returnValue SQProblemSchur::resetSchurComplement( BooleanType allowInertiaCorrec
 	}
 
 	// For now, we regularize every time
-	// if (options.epsRegularisation > 0.0)
-	// {
-	// 	for (j = 0; j<nFR; j++)
-	// 	{
-	// 		irn[numNonzeros] = j+1;
-	// 		jcn[numNonzeros] = j+1;
-	// 		avals[numNonzeros++] = options.epsRegularisation;
-	// 	}
-	// }
+	if (options.epsRegularisation > 0.0)
+	{
+		for (j = 0; j<nFR; j++)
+		{
+			irn[numNonzeros] = j+1;
+			jcn[numNonzeros] = j+1;
+			avals[numNonzeros++] = options.epsRegularisation;
+		}
+	}
 	
 	// TODO: Consider disabling duplicate entries from regularization, seems to influence MUMPS null pivot detection.
-	
-	if (options.epsRegularisation > 0.0){
-		bool *diagReg = new bool[nFR]();
-		for (j = 0; j < numNonzeros; j++){
-			if (irn[j] == jcn[j] && irn[j] <= nFR){
-				avals[j] += options.epsRegularisation;
-				diagReg[irn[j] - 1] = true;
-			}
-		}
-		for (j = 0; j<nFR; j++){
-			if (!diagReg[j]){
-				irn[numNonzeros] = j+1;
-				jcn[numNonzeros] = j+1;
-				avals[numNonzeros++] = options.epsRegularisation;
-			}
-		}
-		delete[] diagReg;
-	}
+	// if (options.epsRegularisation > 0.0){
+	// 	bool *diagReg = new bool[nFR]();
+	// 	for (j = 0; j < numNonzeros; j++){
+	// 		if (irn[j] == jcn[j] && irn[j] <= nFR){
+	// 			avals[j] += options.epsRegularisation;
+	// 			diagReg[irn[j] - 1] = true;
+	// 		}
+	// 	}
+	// 	for (j = 0; j<nFR; j++){
+	// 		if (!diagReg[j]){
+	// 			irn[numNonzeros] = j+1;
+	// 			jcn[numNonzeros] = j+1;
+	// 			avals[numNonzeros++] = options.epsRegularisation;
+	// 		}
+	// 	}
+	// 	delete[] diagReg;
+	// }
 
 	A->getSparseSubmatrix( constraints.getActive(), bounds.getFree(), nFR+1, 1, numNonzerosA, irn+numNonzeros, jcn+numNonzeros, avals+numNonzeros, BT_FALSE);
 	numNonzeros += numNonzerosA;

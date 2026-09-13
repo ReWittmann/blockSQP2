@@ -699,8 +699,8 @@ class MumpsSparseSolver_2: public LinearSolver{
         /** Flag indicating if symbolic factorization has already been called */
         bool have_symbolic_factorization_;
 		
-		int rank;
-		int *pivNul;
+		//int rank;
+		//int *pivNul;
 };
 
 

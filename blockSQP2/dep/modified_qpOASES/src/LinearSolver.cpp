@@ -1402,7 +1402,6 @@ MumpsSparseSolver::MumpsSparseSolver( ) : LinearSolver()
 	a_mumps = 0;
 	irn_mumps = 0;
 	jcn_mumps = 0;
-	pivNul = 0;
 	clear( );
 
     //initialize mumps
@@ -1670,16 +1669,11 @@ returnValue MumpsSparseSolver::factorize( )
         return RET_MATRIX_FACTORISATION_FAILED;
     }
 	*/
-
-	std::cout << "mumps_data->infog[28-1] = " << mumps_data->infog[28-1] << "\n" << std::flush;
-	rank = dim - mumps_data->infog[28-1];
-	pivNul = new int[mumps_data->infog[28-1]];
-	for (int i = 0; i < mumps_data->infog[28-1]; i++){
-		pivNul[i] = mumps_data->pivnul_list[i] - 1;
+	if (mumps_data->infog[28-1]){
+		return RET_KKT_MATRIX_SINGULAR;
 	}
-	std::sort(pivNul, pivNul + mumps_data->infog[28-1]);
-	if (mumps_data->infog[28-1]) return RET_KKT_MATRIX_SINGULAR;
-	
+
+
     negevals_ = mumps_data->infog[11];
 
     if( error == -13 )
@@ -1778,8 +1772,7 @@ int_t MumpsSparseSolver::getNegativeEigenvalues( )
  *	g e t R a n k
  */
 int_t MumpsSparseSolver::getRank(){
-	// return dim - static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1];
-	return rank;
+	return dim - static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1];
 }
 
 /*
@@ -1787,10 +1780,10 @@ int_t MumpsSparseSolver::getRank(){
  */
 returnValue MumpsSparseSolver::getZeroPivots( int_t *&zeroPivots ){
 	MUMPS_STRUC_C* mumps_data = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
-	int nDefect = dim - rank;
-	for (int i = 0; i < nDefect; i++){
-		zeroPivots[i] = pivNul[i];
+	for (int i = 0; i < mumps_data->infog[28-1]; i++){
+		zeroPivots[i] = mumps_data->pivnul_list[i] - 1;
 	}
+	std::sort(zeroPivots, zeroPivots + mumps_data->infog[28-1]);
 	return SUCCESSFUL_RETURN;
 }
 
@@ -1807,18 +1800,15 @@ returnValue MumpsSparseSolver::clear( )
 	delete [] a_mumps;
 	delete [] irn_mumps;
 	delete [] jcn_mumps;
-	delete [] pivNul;
 
 	dim = -1;
 	numNonzeros = -1;
-	rank = -1;
 	negevals_ = -1;
 	mumps_pivot_order_ = 0;
 
 	a_mumps = 0;
 	irn_mumps = 0;
 	jcn_mumps = 0;
-	pivNul = 0;
 
 	have_factorization = false;
 	return SUCCESSFUL_RETURN;
@@ -1897,7 +1887,6 @@ MumpsSparseSolver_2::MumpsSparseSolver_2(void *arg_fptr_dmumps_c) : LinearSolver
 	a_mumps = 0;
 	irn_mumps = 0;
 	jcn_mumps = 0;
-	pivNul = 0;
 	clear( );
 		
     //initialize mumps
@@ -2153,13 +2142,9 @@ returnValue MumpsSparseSolver_2::factorize( )
         return RET_MATRIX_FACTORISATION_FAILED;
     }
 	*/
-	rank = dim - mumps_data->infog[28-1];
-	pivNul = new int[mumps_data->infog[28-1]];
-	for (int i = 0; i < mumps_data->infog[28-1]; i++){
-		pivNul[i] = mumps_data->pivnul_list[i] - 1;
+	if (mumps_data->infog[28-1]){
+		return RET_KKT_MATRIX_SINGULAR;
 	}
-	std::sort(pivNul, pivNul + mumps_data->infog[28-1]);
-	if (mumps_data->infog[28-1]) return RET_KKT_MATRIX_SINGULAR;
 
 
     negevals_ = mumps_data->infog[11];
@@ -2260,8 +2245,7 @@ int_t MumpsSparseSolver_2::getNegativeEigenvalues( )
  *	g e t R a n k
  */
 int_t MumpsSparseSolver_2::getRank(){
-	// return dim - static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1];
-	return rank;
+	return dim - static_cast<MUMPS_STRUC_C*>(mumps_ptr_)->infog[28-1];
 }
 
 /*
@@ -2269,10 +2253,10 @@ int_t MumpsSparseSolver_2::getRank(){
  */
 returnValue MumpsSparseSolver_2::getZeroPivots( int_t *&zeroPivots ){
 	MUMPS_STRUC_C* mumps_data = static_cast<MUMPS_STRUC_C*>(mumps_ptr_);
-	int nDefect = dim - rank;
-	for (int i = 0; i < nDefect; i++){
-		zeroPivots[i] = pivNul[i];
+	for (int i = 0; i < mumps_data->infog[28-1]; i++){
+		zeroPivots[i] = mumps_data->pivnul_list[i] - 1;
 	}
+	std::sort(zeroPivots, zeroPivots + mumps_data->infog[28-1]);
 	return SUCCESSFUL_RETURN;
 }
 
@@ -2289,18 +2273,15 @@ returnValue MumpsSparseSolver_2::clear( )
 	delete [] a_mumps;
 	delete [] irn_mumps;
 	delete [] jcn_mumps;
-	delete [] pivNul;
 
 	dim = -1;
 	numNonzeros = -1;
-	rank = -1;
 	negevals_ = -1;
 	mumps_pivot_order_ = 0;
 
 	a_mumps = 0;
 	irn_mumps = 0;
 	jcn_mumps = 0;
-	pivNul = 0;
 
 	have_factorization = false;
 	return SUCCESSFUL_RETURN;
