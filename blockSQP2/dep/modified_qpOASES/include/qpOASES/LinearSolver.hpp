@@ -110,7 +110,7 @@ class LinearSolver
 		virtual int_t getRank( );
 
 		/** Returns the zero pivots in case the matrix is rank deficient */
-		virtual returnValue getZeroPivots( int_t *&zeroPivots );
+		virtual returnValue getZeroPivots( int_t *&zeroPivots ); //NOTE: These MUST be sorted in ascending order!
 
 	/*
 	 *	PROTECTED MEMBER FUNCTIONS
@@ -557,6 +557,9 @@ class MumpsSparseSolver: public LinearSolver
 
         /** Flag indicating if symbolic factorization has already been called */
         bool have_symbolic_factorization_;
+		
+		int rank;
+		int *pivNul;
 };
 
 
@@ -695,6 +698,9 @@ class MumpsSparseSolver_2: public LinearSolver{
 
         /** Flag indicating if symbolic factorization has already been called */
         bool have_symbolic_factorization_;
+		
+		int rank;
+		int *pivNul;
 };
 
 
