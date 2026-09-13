@@ -1670,6 +1670,8 @@ returnValue MumpsSparseSolver::factorize( )
         return RET_MATRIX_FACTORISATION_FAILED;
     }
 	*/
+
+	std::cout << "mumps_data->infog[28-1] = " << mumps_data->infog[28-1] << "\n" << std::flush;
 	rank = dim - mumps_data->infog[28-1];
 	pivNul = new int[mumps_data->infog[28-1]];
 	for (int i = 0; i < mumps_data->infog[28-1]; i++){
