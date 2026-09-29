@@ -75,7 +75,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
         //return -1;
-        return print_SQPresult(SQPresults::misc_error, param->result_print_color);
+        return print_SQPresult(SQPresults::misc_error, param->print_level, param->print_colored);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
@@ -90,12 +90,12 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresults::sensitivity_eval_failure, param->result_print_color);
+        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresults::sensitivity_eval_failure, param->print_level, param->print_colored);
         
         /// Check if converged
         hasConverged = calcOptTol();
         stats->printProgress( prob, vars.get(), param, hasConverged );
-        if (hasConverged) return print_SQPresult(SQPresults::success, param->result_print_color);
+        if (hasConverged) return print_SQPresult(SQPresults::success, param->print_level, param->print_colored);
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
@@ -145,7 +145,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 
                 if (qpError){
                     std::cout << "QP error, stop\n";
-                    return print_SQPresult(SQPresults::qp_failure, param->result_print_color);
+                    return print_SQPresult(SQPresults::qp_failure, param->print_level, param->print_colored);
                 }
             }
             else vars->steptype = StepTypes::ID_hess;
@@ -156,7 +156,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             if (infoQP != QPresults::success){
                 // If there is still an error, terminate.
                 printf( "***QP error. Stop.***\n" );
-                return print_SQPresult(SQPresults::qp_failure, param->result_print_color);
+                return print_SQPresult(SQPresults::qp_failure, param->print_level, param->print_colored);
             }
             else vars->steptype = StepTypes::ID_hess;
         }
@@ -186,8 +186,8 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             }
             
             // If everything failed, abort.
-            if (restRet == RestorationResults::max_rest_it_reached || restRet == RestorationResults::rest_infeasibility || restRet == RestorationResults::other_error) return print_SQPresult(SQPresults::restoration_failure, param->result_print_color);
-            else if (restRet == RestorationResults::converged) return print_SQPresult(SQPresults::local_infeasibility, param->result_print_color);
+            if (restRet == RestorationResults::max_rest_it_reached || restRet == RestorationResults::rest_infeasibility || restRet == RestorationResults::other_error) return print_SQPresult(SQPresults::restoration_failure, param->print_level, param->print_colored);
+            else if (restRet == RestorationResults::converged) return print_SQPresult(SQPresults::local_infeasibility, param->print_level, param->print_colored);
         }
 
         /////////////////////////////////////////////////////////////
@@ -199,7 +199,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             // No enable_linesearch strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
                 printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
-                return print_SQPresult(SQPresults::eval_failure, param->result_print_color);
+                return print_SQPresult(SQPresults::eval_failure, param->print_level, param->print_colored);
             }
             vars->steptype = StepTypes::linesearch;
         }
@@ -214,8 +214,8 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->solution_found){
                     vars->restore_iterate();
-                    if (vars->tol <= 1e-2*param->opt_tol && vars->cNormS <= 1e-2*param->feas_tol) return print_SQPresult(SQPresults::super_success, param->result_print_color);
-                    else return print_SQPresult(SQPresults::success, param->result_print_color);
+                    if (vars->tol <= 1e-2*param->opt_tol && vars->cNormS <= 1e-2*param->feas_tol) return print_SQPresult(SQPresults::super_success, param->print_level, param->print_colored);
+                    else return print_SQPresult(SQPresults::success, param->print_level, param->print_colored);
                 }
                 
                 if (vars->KKT_heuristic_enabled){
@@ -247,12 +247,12 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 ///If filter line search and first set of heuristics failed, check for feasibility and low KKT error. Declare partial success and terminate if true.
                 /*
                 if (lsError && param->enable_premature_termination && vars->cNormS <= param->feas_tol && vars->tol <= std::pow(param->opt_tol, 0.75))
-                    return print_SQPresult(SQPresults::partial_success, param->result_print_color);
+                    return print_SQPresult(SQPresults::partial_success, param->print_level, param->print_colored);
                 */
                 if (lsError && param->enable_premature_termination && vars->it_saved){
                     //A feasible iterate with higher optimality error was saved, restore it and declare partial success
                     vars->restore_iterate();
-                    return print_SQPresult(SQPresults::partial_success, param->result_print_color);
+                    return print_SQPresult(SQPresults::partial_success, param->print_level, param->print_colored);
                 }
                     
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
@@ -286,7 +286,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 // If everything failed, abort.
                 if (lsError){
                     printf( "***Line search error. Stop.***\n" );
-                    return print_SQPresult(SQPresults::linesearch_failure, param->result_print_color);
+                    return print_SQPresult(SQPresults::linesearch_failure, param->print_level, param->print_colored);
                 }
             }
             else{
@@ -313,7 +313,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
                             vars->constrJac, vars->hess1.get(), 1+whichDerv, &infoEval);
         stats->nDerCalls++;
-        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresults::sensitivity_eval_failure, param->result_print_color);
+        if (infoEval > 0) [[unlikely]] return print_SQPresult(SQPresults::sensitivity_eval_failure, param->print_level, param->print_colored);
         
         /// Check if converged
         hasConverged = calcOptTol();
@@ -334,15 +334,15 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                     std::cout << "***Convergence achieved, now performing extra steps for improved accuracy...\n";
                 }
             }
-            else return print_SQPresult(SQPresults::success, param->result_print_color);
+            else return print_SQPresult(SQPresults::success, param->print_level, param->print_colored);
         }
 
         //Handle extra steps for improved accuracy if requested
         if (vars->solution_found && param->max_extra_steps > 0){
             if (vars->n_extra >= param->max_extra_steps){
                 vars->restore_iterate();
-                if (vars->tol < 1e-2*param->opt_tol && vars->cNormS < 1e-2*param->feas_tol) return print_SQPresult(SQPresults::super_success, param->result_print_color);
-                else return print_SQPresult(SQPresults::success, param->result_print_color);
+                if (vars->tol < 1e-2*param->opt_tol && vars->cNormS < 1e-2*param->feas_tol) return print_SQPresult(SQPresults::super_success, param->print_level, param->print_colored);
+                else return print_SQPresult(SQPresults::success, param->print_level, param->print_colored);
             }
             //Save current point if it is better in terms of constraint violation and KKT error
             if (std::max(vars->tol/param->opt_tol, vars->cNormS/param->feas_tol) < std::max(vars->tolOpt_save/param->opt_tol, vars->cNormSOpt_save/param->feas_tol))

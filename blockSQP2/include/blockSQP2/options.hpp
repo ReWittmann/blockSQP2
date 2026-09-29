@@ -35,12 +35,6 @@
 
 namespace blockSQP2{
 
-/**
- * \brief Contains algorithmic options and parameters for SQPmethod.
- * \author Dennis Janka
- * \date 2012-2015
- */
-
 enum class QPsolvers{
     unset = 0,
     qpOASES,
@@ -57,8 +51,8 @@ class SQPoptions{
     double inf = std::numeric_limits<double>::infinity(); ///< values larger than this are regarded as numerically infinity
 
     //Output
-    int print_level = 2;                     // information about the current iteration
-    int result_print_color = 2;              // Output of the SQP result; 0: None, 1: No color, 2: color
+    int print_level = 1;                     // information about the current iteration
+    bool print_colored = true;               // Enable colored print outputs
     int debug_level = 0;                     // amount of debug information that is output to a file in each iteration
     
     //Termination criteria
@@ -172,7 +166,7 @@ class SQPoptions{
     //For experimental purposes
     bool test_opt_enable_conv_downscaling = true;
     
-    // bool test_opt_2 = false;
+    bool test_opt_scaling = false;
     // bool test_opt_3 = false;
     // double test_val_1 = 2.0;
     // double test_val_2 = 0.5;

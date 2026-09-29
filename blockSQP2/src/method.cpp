@@ -55,7 +55,7 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->max_filter_overrides = 0;
     rest_param->skip_first_linesearch = true;
     
-    rest_param->result_print_color = false;
+    rest_param->print_colored = false;
     rest_param->par_QPs = false;
     //Do not print to any file
     rest_param->debug_level = 0;

@@ -22,8 +22,8 @@ class Options(CXXobjCreator):
     def __init__(self,
                  eps: float = 1.0e-16,
                  inf: float = float('inf'),
-                 print_level: int = 2,
-                 result_print_color: int = 2,
+                 print_level: int = 1,
+                 print_colored: bool = True,
                  debug_level: int = 0,
                  opt_tol: float = 1.0e-6,
                  feas_tol: float = 1.0e-6,
@@ -68,7 +68,7 @@ class Options(CXXobjCreator):
                  enable_premature_termination: bool = False,
                  indef_delay: int = 3,
                  test_opt_enable_conv_downscaling: bool = True,
-                #  test_opt_2: bool = False,
+                 test_opt_scaling: bool = False,
                 #  test_opt_3: bool = False,
                 #  test_val_1: float = 0.,
                 #  test_val_2: float = 0.
@@ -76,7 +76,7 @@ class Options(CXXobjCreator):
         self.eps = eps
         self.inf = inf
         self.print_level = print_level
-        self.result_print_color = result_print_color
+        self.print_colored = print_colored
         self.debug_level = debug_level
         self.opt_tol = opt_tol
         self.feas_tol = feas_tol
@@ -121,7 +121,7 @@ class Options(CXXobjCreator):
         self.enable_premature_termination = enable_premature_termination
         self.indef_delay = indef_delay
         self.test_opt_enable_conv_downscaling = test_opt_enable_conv_downscaling
-        # self.test_opt_2 = test_opt_2
+        self.test_opt_scaling = test_opt_scaling
         # self.test_opt_3 = test_opt_3
         # self.test_val_1 = test_val_1
         # self.test_val_2 = test_val_2
@@ -134,7 +134,7 @@ class Options(CXXobjCreator):
         BSQP.SQPoptions_set_eps(cxx_obj, c_double(self.eps))
         BSQP.SQPoptions_set_inf(cxx_obj, c_double(self.inf))
         BSQP.SQPoptions_set_print_level(cxx_obj, c_int(self.print_level))
-        BSQP.SQPoptions_set_result_print_color(cxx_obj, c_int(self.result_print_color))
+        BSQP.SQPoptions_set_print_colored(cxx_obj, c_char(self.print_colored))
         BSQP.SQPoptions_set_debug_level(cxx_obj, c_int(self.debug_level))
 
         # Termination criteria
@@ -229,7 +229,7 @@ class Options(CXXobjCreator):
             BSQP.SQPoptions_set_qpsol_options(cxx_obj, QPsolver_options_hld.cxx_obj)
         
         BSQP.SQPoptions_set_test_opt_enable_conv_downscaling(cxx_obj, c_char(self.test_opt_enable_conv_downscaling))
-        # BSQP.SQPoptions_set_test_opt_2(cxx_obj, c_char(self.test_opt_2))
+        BSQP.SQPoptions_set_test_opt_scaling(cxx_obj, c_char(self.test_opt_scaling))
         # BSQP.SQPoptions_set_test_opt_3(cxx_obj, c_char(self.test_opt_3))
         # BSQP.SQPoptions_set_test_val_1(cxx_obj, c_double(self.test_val_1))
         # BSQP.SQPoptions_set_test_val_2(cxx_obj, c_double(self.test_val_2))

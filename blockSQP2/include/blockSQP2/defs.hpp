@@ -71,7 +71,7 @@ enum class SQPresults{
     sensitivity_eval_failure = -100
 };
 //Colored print output when exiting with  return print_RES(RES::__)
-SQPresults print_SQPresult(SQPresults rs, int print_level = 2);
+SQPresults print_SQPresult(SQPresults rs, int print_level = 2, bool colored = true);
 
 enum class Hessians : int{
     scaled_ID = 0,

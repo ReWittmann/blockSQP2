@@ -320,9 +320,8 @@ bool SQPmethod::filterLineSearch(){
 bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double dfTdeltaXi, bool swCond){
 
     // If constraint violation of the trialstep is lower than the current one skip SOC
-    if(cNormTrial < cNorm || cNormTrial < 1e-2*param->feas_tol)// && stats->itCount != 4)
-    {
-        std::cout << "Constraint violation is low, skip SOC\n";
+    if(cNormTrial < cNorm || cNormTrial < 1e-2*param->feas_tol){
+        // std::cout << "Constraint violation is low, skip SOC\n";
         return false;
     }
 
@@ -386,7 +385,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
         // Check acceptability to the filter (in SOC)
         if (pairInFilter(cNormTrialSOC, objTrialSOC)){
-            std::cout << "Trial point is in the filter\n";
+            // std::cout << "Trial point is in the filter\n";
             return false; // Trial point is in the prohibited region defined by the filter, abort SOC
         }
 
@@ -400,7 +399,7 @@ bool SQPmethod::secondOrderCorrection(double cNorm, double cNormTrial, double df
 
                 // If constraint violation gets worse by SOC, abort
                 if( cNormTrialSOC > param->kappaSOC * cNormOld ){
-                    std::cout << "Constraint violation got worse by SOC, abort\n";
+                    // std::cout << "Constraint violation got worse by SOC, abort\n";
                     return false;
                 }
                 else
@@ -477,7 +476,7 @@ RestorationResults SQPmethod::feasibilityRestorationPhase(){
     RestorationResults restRet = innerRestorationPhase(warmStart);
     
     if (restRet == RestorationResults::rest_infeasibility && prob->condenser != nullptr && !vars->restUseCRP){
-        std::cout << "TC_restoration_Problem failed, switch to CRP\n";
+        // std::cout << "TC_restoration_Problem failed, switch to CRP\n";
         vars->restUseCRP = true;
         vars->steptype = StepTypes::rest_heuristic; //Setting this to something other than rest_phase to force warmStart to be false in recursive call
         return feasibilityRestorationPhase();
@@ -524,7 +523,7 @@ RestorationResults SQPmethod::innerRestorationPhase(bool RwarmStart, double min_
         // Is this iterate acceptable for the filter?
         if (!pairInFilter(cNormTrial, objTrial)){
             // success
-            std::cout << "Found a point acceptable for the filter.\n";
+            // std::cout << "Found a point acceptable for the filter.\n";
             restResult = RestorationResults::success;
             break;
         }
@@ -577,7 +576,7 @@ RestorationResults SQPmethod::innerRestorationPhase(bool RwarmStart, double min_
     
     if (restResult == RestorationResults::converged){
         stats->printProgress( prob, vars.get(), param, 0 );
-        std::cout << "The problem seems to be locally infeasible. Infeasibilities minimized.\n";
+        // std::cout << "The problem seems to be locally infeasible. Infeasibilities minimized.\n";
     }
     
     return restResult;
@@ -618,7 +617,7 @@ int SQPmethod::feasibilityRestorationHeuristic(){
     
     // Is the new point acceptable for the filter?
     if (pairInFilter(cNormTrial, obj_trial)){
-        std::cout << "New point is in the filter\n";
+        // std::cout << "New point is in the filter\n";
         // point is in the taboo region, restoration heuristic not successful!
         return 1;
     }
@@ -861,7 +860,7 @@ bool bound_correction_method::filterLineSearch(){
         // Check acceptability to the filter
         if (pairInFilter(cNormTrial, objTrial)){
             // Trial point is in the prohibited region defined by the filter, try second order correction
-            if (k == 0) std::cout << "Point is in the filter, try SOC\n";
+            // if (k == 0) std::cout << "Point is in the filter, try SOC\n";
 
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                 break;
@@ -906,7 +905,7 @@ bool bound_correction_method::filterLineSearch(){
             break;
         }
         else{
-            std::cout << "Filter condition violated, try SOC\n";
+            // std::cout << "Filter condition violated, try SOC\n";
             // Trial point is dominated by current point, try second order correction
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, false))
                 break; // SOC yielded suitable alpha, stop
@@ -930,18 +929,15 @@ bool bound_correction_method::filterLineSearch(){
     //     augmentFilter( cNormTrial, objTrial );
     
     if (dfTdeltaXi >= 0){
-        std::cout << "Step is not a descent direction, augment filter\n";
-        // augmentFilter(cNormTrial, objTrial);
+        // std::cout << "Step is not a descent direction, augment filter\n";
         augmentFilter(cNorm, vars->obj);
     }
     else if (alpha * pow((-dfTdeltaXi), param->sF) <= param->delta*pow(cNorm, param->sTheta)){// careful with neg. exponents!
-        std::cout << "Switching condition violated, augment filter\n";
-        // augmentFilter(cNormTrial, objTrial);
+        // std::cout << "Switching condition violated, augment filter\n";
         augmentFilter(cNorm, vars->obj);
     }
     else if (objTrial > vars->obj + param->eta*alpha*dfTdeltaXi){
-        std::cout << "Armijo condition violated, augment filter\n";
-        // augmentFilter(cNormTrial, objTrial);
+        // std::cout << "Armijo condition violated, augment filter\n";
         augmentFilter(cNorm, vars->obj);
     }
 

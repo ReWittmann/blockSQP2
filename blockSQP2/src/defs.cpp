@@ -20,11 +20,11 @@
 
 namespace blockSQP2{
 
-SQPresults print_SQPresult(SQPresults rs, int print_level){
+SQPresults print_SQPresult(SQPresults rs, int print_level, bool colored){
     if (print_level > 0){
         std::string colPrefix;
         std::string colSuffix;
-        if (print_level == 2){
+        if (colored){
             //#ifdef LINUX
                 if (int(rs) < 0) colPrefix = "\033[1;31m";
                 else colPrefix = "\033[1;32m";

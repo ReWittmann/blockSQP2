@@ -26,8 +26,8 @@
  *  \author Reinhold Wittmann
  *  \date 2023-2025
  */
- 
- 
+
+
 #include <blockSQP2/matrix.hpp>
 #include <stdexcept>
 #include <vector>

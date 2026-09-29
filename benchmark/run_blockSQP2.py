@@ -44,7 +44,7 @@ sol_plot = True
 
 # Just-in-time compile the problem functions, (Hessian must be additionally enabled)
 T0 = time.time()
-OCprob.jit(jit_hess = False)
+# OCprob.jit(jit_hess = False)
 T1 = time.time()
 
 # start = OCprob.perturbed_start_point(1)                  #Start point for problem, can use, e.g. OCprob.perturbed_start_point(k)
@@ -54,6 +54,8 @@ start = OCprob.start_point
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
+    print_level = 2,
+    print_colored = True,
     
     max_conv_QPs = 4,                          #max number of additional QPs per SQP iteration including fallback Hess QP
     conv_strategy = 'reduced_regularization',  #Convexification strategy, reduced_regularization requires passing vblocks
@@ -80,6 +82,8 @@ opts = blockSQP2.SQPoptions(
     max_extra_steps = 0,                    #Extra steps for improved accuracy
     enable_premature_termination = False,   #Enable early termination at acceptable tolerance
     max_filter_overrides = 2,
+    
+    test_opt_scaling = False
 )
 # opts.qpsol = 'qpOASES'
 # QPopts = blockSQP2.qpOASES_options()

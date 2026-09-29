@@ -233,8 +233,8 @@ CDLEXP void SQPoptions_set_print_level(void *ptr_SQPoptions, int val){
     castOPT(ptr_SQPoptions)->print_level = val;
 }
 
-CDLEXP void SQPoptions_set_result_print_color(void *ptr, int val){
-    castOPT(ptr)->result_print_color = val;
+CDLEXP void SQPoptions_set_print_colored(void *ptr, char val){
+    castOPT(ptr)->print_colored = bool(val);
 }
 CDLEXP void SQPoptions_set_debug_level(void *ptr, int val){
     castOPT(ptr)->debug_level = val;
@@ -453,9 +453,9 @@ CDLEXP void SQPoptions_set_test_opt_enable_conv_downscaling(void *ptr, char val)
     castOPT(ptr)->test_opt_enable_conv_downscaling = bool(val);
 }
 
-// CDLEXP void SQPoptions_set_test_opt_2(void *ptr, char val){
-//     castOPT(ptr)->test_opt_2 = bool(val);
-// }
+CDLEXP void SQPoptions_set_test_opt_scaling(void *ptr, char val){
+    castOPT(ptr)->test_opt_scaling = bool(val);
+}
 
 // CDLEXP void SQPoptions_set_test_opt_3(void *ptr, char val){
 //     castOPT(ptr)->test_opt_3 = bool(val);

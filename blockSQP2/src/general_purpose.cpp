@@ -483,8 +483,6 @@ void convertHessian(double eps, SymMatrix const* hess_, int nBlocks, int nVar,//
     }
 
     if (count != nnz) throw std::runtime_error("Error in convertHessian: " + std::to_string(count) + " elements processed, should be " + std::to_string(nnz) + " elements!\n");
-    //      std::cout << "Error in convertHessian: " << count << " elements processed, should be " << nnz << " elements!\n";
-    // }
 }
 
 

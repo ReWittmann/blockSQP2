@@ -118,7 +118,7 @@ void SQPmethod::computeNextHessian(int idx, int maxQP){
 
 void SQPmethod::computeLowerRegularizedHessian(int idx, int maxQP){
     if (!is_regularization(param->conv_strategy))
-        throw ParameterError("computeLowerRegularizedHessian should only be called for conv_strategy == *_regularization");
+        throw ParameterError("computeLowerRegularizedHessian should only be called for SQPoptions::conv_strategy == *_regularization");
     
     double delta_regF = computeLowerRegularizationFactor(idx, maxQP) - vars->hess_conv_regF;
     vars->hess_conv_regF += delta_regF;
@@ -160,14 +160,6 @@ void SQPmethod::computeConvexHessian(){
         for (int i = 0; i < vars->hess[vars->nBlocks - 1].m; i++)
             for (int j = i; j < vars->hess[vars->nBlocks - 1].m; j++)
                 vars->hess2[vars->nBlocks - 1](i,j) = vars->hess1[vars->nBlocks - 1](i,j);
-
-    // if (!vars->hess2_updated){
-    //     // Limited memory: compute fallback update only when needed
-    //     if (param->lim_mem){
-    //         calcHessianUpdateLimitedMemory(param->fallback_approx, param->fallback_sizing, vars->hess2.get());
-    //     }
-    //     vars->hess2_updated = true;
-    // }
     
     if (param->lim_mem && !vars->hess2_updated){
         if (is_update(param->fallback_approx)){

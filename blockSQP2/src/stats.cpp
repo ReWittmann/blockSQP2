@@ -55,155 +55,120 @@ SQPstats::SQPstats(PATHSTR myOutpath){
 }
 
 
-void SQPstats::printProgress( Problemspec *prob, SQPiterate *vars, SQPoptions *param, bool hasConverged )
-{
-    if( itCount == 0 )
-    {
-        if( param->print_level > 0 )
-        {
+inline void printHeading(SQPiterate *vars, SQPoptions *param){
+    // printf("%-6s", "   it");
+    // printf("%-17s", " qpIt");
+    // printf("%-9s", "obj");
+    // printf("%-11s", "feas");
+    // printf("%-6s", "opt");
+    
+    printf("%5s", "it");
+    printf("%6s", "QPit");
+    printf("%15s", "obj");
+    
+    printf("%10s", "feas");
+    printf("%10s", "opt");
+    
+    if (param->print_level > 1){
+        // printf("%-11s", "|Lgrad|");
+        // printf("%-9s", "|step|");
+        // printf("%-11s", "|lstep|");
+        
+        printf("%10s", "|Lgrad|");
+        printf("%10s", "|step|");
+        printf("%10s", "|lstep|");
+    }
+    // printf("%-8s", "alpha");
+    printf("%9s", "alpha");
+    
+    
+    // if (param->print_level > 1){
+    //     printf("%-6s","nSOCS");
+    //     printf("%-18s","sk, da, sca");
+    //     printf("%-6s","QPr,mu");
+    // }
+    
+    // printf("%-6s", "QPk");
+    printf("%5s", "QPk");
+    
+    printf("\n");
+}
+
+void SQPstats::printProgress(Problemspec *prob, SQPiterate *vars, SQPoptions *param, bool hasConverged){
+    if (itCount == 0){
+        if (param->print_level > 0){
             prob->printInfo();
-
-            // Headline
-            printf("%-8s", "   it" );
-            printf("%-21s", " qpIt" );
-            printf("%-9s","obj" );
-            printf("%-11s","feas" );
-            printf("%-7s","opt" );
-            if( param->print_level > 1 )
-            {
-                printf("%-11s","|lgrd|" );
-                printf("%-9s","|stp|" );
-                printf("%-10s","|lstp|" );
-            }
-            printf("%-8s","alpha" );
-            if( param->print_level > 1 )
-            {
-                printf("%-6s","nSOCS" );
-                printf("%-18s","sk, da, sca" );
-                printf("%-6s","QPr,mu" );
-            }
-            printf("\n");
-
-            // Values for first iteration
-            printf("%5i  ", itCount );
-            printf("%11i ", 0 );
-            printf("% 10e  ", vars->obj );
-            printf("%-10.2e", vars->cNorm );//cNorm instead of cNormS
-            printf("%-10.2e", vars->tol );
+            printHeading(vars, param);
+            
+            // // Values for first iteration
+            printf("%5i  ", itCount);
+            printf("%5s ", "");
+            printf("% 10e  ", vars->obj);
+            printf("%-10.2e", vars->cNorm);//cNorm instead of cNormS
+            printf("%-10.2e", vars->tol);
             printf("\n");
         }
-
-        if( param->debug_level > 0 )
-        {
+        
+        if (param->debug_level > 0){
             // Print everything in a CSV file as well
             fprintf( progressFile, "%23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %i, %i, %23.16e, %i, %23.16e\n",
                     vars->obj, vars->cNormS, vars->tol, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0.0, 0, 0.0 );
         }
     }
-    else
-    {
+    else{
         // Every twenty iterations print headline
-        if( itCount % 20 == 0 && param->print_level > 0 )
-        {
-            printf("%-8s", "   it" );
-            printf("%-21s", " qpIt" );
-            printf("%-9s","obj" );
-            printf("%-11s","feas" );
-            printf("%-7s","opt" );
-            if( param->print_level > 1 )
-            {
-                printf("%-11s","|lgrd|" );
-                printf("%-9s","|stp|" );
-                printf("%-10s","|lstp|" );
-            }
-            printf("%-8s","alpha" );
-            if( param->print_level > 1 )
-            {
-                printf("%-6s","nSOCS" );
-                printf("%-18s","sk, da, sca" );
-                printf("%-6s","QPr,mu" );
-            }
-            printf("\n");
+        if (itCount % 20 == 0 && param->print_level > 0){
+            printHeading(vars, param);
         }
 
         // All values
-        if( param->print_level > 0 )
-        {
-            printf("%5i  ", itCount );
-            printf("%5i+%5i ", qpIterations, qpIterations2 );
-            printf("% 10e  ", vars->obj );
-            printf("%-10.2e", vars->cNorm );
-            printf("%-10.2e", vars->tol );
-            if( param->print_level > 1 )
-            {
-                printf("%-10.2e", vars->gradNorm );
-                printf("%-10.2e", lInfVectorNorm( vars->deltaXi ) );
-                printf("%-10.2e", vars->lambdaStepNorm );
+        if( param->print_level > 0){
+            printf("%5i ", itCount);
+            printf("%5i %0s ", qpIterations, "");
+            printf("% 10e  ", vars->obj);
+            printf("%-10.2e", vars->cNorm);
+            printf("%-10.2e", vars->tol);
+            if (param->print_level > 1){
+                printf("%-10.2e", vars->gradNorm);
+                printf("%-10.2e", lInfVectorNorm(vars->deltaXi));
+                printf("%-10.2e", vars->lambdaStepNorm);
             }
-
-            if( (vars->alpha == 1.0 && vars->steptype != StepTypes::KKT_heuristic) || !param->result_print_color )
-                printf("%-9.1e", vars->alpha );
+            
+            if ((vars->alpha == 1.0 && vars->steptype != StepTypes::KKT_heuristic) || !param->print_colored)
+                printf("%-9.1e", vars->alpha);
             else
-                printf("\033[0;36m%-9.1e\033[0m", vars->alpha );
+                printf("\033[0;36m%-9.1e\033[0m", vars->alpha);
 
-            if( param->print_level > 1 )
-            {
-                if( vars->nSOCS == 0 || !param->result_print_color )
-                    printf("%5i", vars->nSOCS );
-                else
-                    printf("\033[0;36m%5i\033[0m", vars->nSOCS );
-                printf("%3i, %3i, %-9.1e", hessSkipped, hessDamped, averageSizingFactor );
-                // printf("%i", qpResolve);
-                printf("%i", vars->QP_num_accepted);
-            }
+            // if (param->print_level > 1){
+            //     if (vars->nSOCS == 0 || !param->print_colored)
+            //         printf("%5i", vars->nSOCS);
+            //     else
+            //         printf("\033[0;36m%5i\033[0m", vars->nSOCS);
+            //     printf("%3i, %3i, %-9.1e", hessSkipped, hessDamped, averageSizingFactor);
+            //     printf("%i", vars->QP_num_accepted);
+            // }
+            printf("%i", vars->QP_num_accepted);
             printf("\n");
         }
 
-        if( param->debug_level > 0 )
-        {
-            // Print everything in a CSV file as well
-            /*fprintf( progressFile, "%23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %i, %i, %i, %23.16e, %i, %23.16e\n",
-                     vars->obj, vars->cNormS, vars->tol, vars->gradNorm, lInfVectorNorm( vars->deltaXi ),
-                     vars->lambdaStepNorm, vars->alpha, vars->nSOCS, hessSkipped, hessDamped, averageSizingFactor,
-                     qpResolve, l1VectorNorm( vars->deltaH )/vars->nBlocks );*/
-            fprintf( progressFile, "%23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %i, %i, %i, %23.16e, %i\n",
-                     vars->obj, vars->cNormS, vars->tol, vars->gradNorm, lInfVectorNorm( vars->deltaXi ),
-                     vars->lambdaStepNorm, vars->alpha, vars->nSOCS, hessSkipped, hessDamped, averageSizingFactor,
-                     qpResolve );
-
-            // Print update sequence
+        if (param->debug_level > 0){
+            fprintf(progressFile, "%23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %23.16e, %i, %i, %i, %23.16e, %i\n",
+                    vars->obj, vars->cNormS, vars->tol, vars->gradNorm, lInfVectorNorm( vars->deltaXi ),
+                    vars->lambdaStepNorm, vars->alpha, vars->nSOCS, hessSkipped, hessDamped, averageSizingFactor,
+                    qpResolve);
             fprintf( updateFile, "%i\t", qpResolve );
         }
     }
-
-    // Print Debug information
+    
     printDebug( vars, param );
-
-    // Do not accidentally print hessSkipped in the next iteration
+    
     hessSkipped = 0;
     hessDamped = 0;
-
-    // qpIterations = number of iterations for the QP that determines the step, can be a resolve (+SOC)
-    // qpIterations2 = number of iterations for a QP which solution was discarded
     qpItTotal += qpIterations;
     qpItTotal += qpIterations2;
     qpIterations = 0;
     qpIterations2 = 0;
     qpResolve = 0;
-
-    /*
-    if( param->print_level > 0 )
-    {   
-        if( hasConverged && vars->steptype < 2 )
-        {
-            if( param->result_print_color )
-                printf("\n\033[1;32m***CONVERGENCE ACHIEVED!***\n\033[0m");
-            else
-                printf("\n***CONVERGENCE ACHIEVED!***\n");
-        }
-                
-    }
-    */
 }
 
 
@@ -420,173 +385,6 @@ void SQPstats::printVectorCpp( FILE *outfile, int *vec, int len, char* varname )
     fprintf( outfile, " };\n\n" );
 }
 
-/*
-void SQPstats::dumpQPCpp( Problemspec *prob, SQPiterate *vars, qpOASES::SQProblem *qp, int sparse_mode )
-{
-    int i, j;
-    PATHSTR filename;
-    FILE *outfile;
-    int n = prob->nVar;
-    int m = prob->nCon;
-
-    // Print dimensions
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_dim.dat" );
-    outfile = fopen( filename, "w" );
-    fprintf( outfile, "%i %i\n", n, m );
-    fclose( outfile );
-
-    // Print Hessian
-    if( sparse_mode )
-    {
-        strcpy( filename, outpath );
-        strcat( filename, "qpoases_H_sparse.dat" );
-        outfile = fopen( filename, "w" );
-        for( i=0; i<prob->nVar+1; i++ )
-            fprintf( outfile, "%i ", vars->hessIndCol[i] );
-        fprintf( outfile, "\n" );
-
-        for( i=0; i<vars->hessIndCol[prob->nVar]; i++ )
-            fprintf( outfile, "%i ", vars->hessIndRow[i] );
-        fprintf( outfile, "\n" );
-
-        for( i=0; i<vars->hessIndCol[prob->nVar]; i++ )
-            fprintf( outfile, "%23.16e ", vars->hessNz[i] );
-        fprintf( outfile, "\n" );
-        fclose( outfile );
-    }
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_H.dat" );
-    outfile = fopen( filename, "w" );
-    int blockCnt = 0;
-    for( i=0; i<n; i++ )
-    {
-        for( j=0; j<n; j++ )
-        {
-            if( i == vars->blockIdx[blockCnt+1] )
-                blockCnt++;
-            if( j >= vars->blockIdx[blockCnt] && j < vars->blockIdx[blockCnt+1] )
-                fprintf( outfile, "%23.16e ", vars->hess[blockCnt]( i - vars->blockIdx[blockCnt], j - vars->blockIdx[blockCnt] ) );
-            else
-                fprintf( outfile, "0.0 " );
-        }
-        fprintf( outfile, "\n" );
-    }
-    fclose( outfile );
-
-    // Print gradient
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_g.dat" );
-    outfile = fopen( filename, "w" );
-    for( i=0; i<n; i++ )
-        fprintf( outfile, "%23.16e ", vars->gradObj( i ) );
-    fprintf( outfile, "\n" );
-    fclose( outfile );
-
-    // Print Jacobian
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_A.dat" );
-    outfile = fopen( filename, "w" );
-    if( sparse_mode )
-    {
-        // Always print dense Jacobian
-        Matrix constrJacTemp;
-        constrJacTemp.Dimension( prob->nCon, prob->nVar ).Initialize( 0.0 );
-        for( i=0; i<prob->nVar; i++ )
-            for( j=vars->jacIndCol[i]; j<vars->jacIndCol[i+1]; j++ )
-                constrJacTemp( vars->jacIndRow[j], i ) = vars->jacNz[j];
-        for( i=0; i<m; i++ )
-        {
-            for( j=0; j<n; j++ )
-                fprintf( outfile, "%23.16e ", constrJacTemp( i, j ) );
-            fprintf( outfile, "\n" );
-        }
-        fclose( outfile );
-    }
-    else
-    {
-        for( i=0; i<m; i++ )
-        {
-            for( j=0; j<n; j++ )
-                fprintf( outfile, "%23.16e ", vars->constrJac( i, j ) );
-            fprintf( outfile, "\n" );
-        }
-        fclose( outfile );
-    }
-
-    if( sparse_mode )
-    {
-        strcpy( filename, outpath );
-        strcat( filename, "qpoases_A_sparse.dat" );
-        outfile = fopen( filename, "w" );
-        for( i=0; i<prob->nVar+1; i++ )
-            fprintf( outfile, "%i ", vars->jacIndCol[i] );
-        fprintf( outfile, "\n" );
-
-        for( i=0; i<vars->jacIndCol[prob->nVar]; i++ )
-            fprintf( outfile, "%i ", vars->jacIndRow[i] );
-        fprintf( outfile, "\n" );
-
-        for( i=0; i<vars->jacIndCol[prob->nVar]; i++ )
-            fprintf( outfile, "%23.16e ", vars->jacNz[i] );
-        fprintf( outfile, "\n" );
-        fclose( outfile );
-    }
-
-    // Print variable lower bounds
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_lb.dat" );
-    outfile = fopen( filename, "w" );
-    for( i=0; i<n; i++ )
-        fprintf( outfile, "%23.16e ", vars->delta_lb_var( i ) );
-    fprintf( outfile, "\n" );
-    fclose( outfile );
-
-    // Print variable upper bounds
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_ub.dat" );
-    outfile = fopen( filename, "w" );
-    for( i=0; i<n; i++ )
-        fprintf( outfile, "%23.16e ", vars->delta_ub_var( i ) );
-    fprintf( outfile, "\n" );
-    fclose( outfile );
-
-    // Print constraint lower bounds
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_lbA.dat" );
-    outfile = fopen( filename, "w" );
-    for( i=0; i<m; i++ )
-        fprintf( outfile, "%23.16e ", vars->delta_lb_con( i ) );
-    fprintf( outfile, "\n" );
-    fclose( outfile );
-
-    // Print constraint upper bounds
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_ubA.dat" );
-    outfile = fopen( filename, "w" );
-    for( i=0; i<m; i++ )
-        fprintf( outfile, "%23.16e ", vars->delta_ub_con( i ) );
-    fprintf( outfile, "\n" );
-    fclose( outfile );
-
-    // Print active set
-    qpOASES::Bounds b;
-    qpOASES::Constraints c;
-    qp->getBounds( b );
-    qp->getConstraints( c );
-
-    strcpy( filename, outpath );
-    strcat( filename, "qpoases_as.dat" );
-    outfile = fopen( filename, "w" );
-    for( i=0; i<n; i++ )
-        fprintf( outfile, "%i ", b.getStatus( i ) );
-    fprintf( outfile, "\n" );
-    for( i=0; i<m; i++ )
-        fprintf( outfile, "%i ", c.getStatus( i ) );
-    fprintf( outfile, "\n" );
-    fclose( outfile );
-}
-*/
 
 void SQPstats::dumpQPMatlab( Problemspec *prob, SQPiterate *vars, int sparse_mode )
 {
