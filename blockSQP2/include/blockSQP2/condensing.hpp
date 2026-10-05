@@ -158,41 +158,17 @@ struct condensing_data{
     //Indices of dependent variables whose bounds are marked implicit
     std::unique_ptr<int[]> impl_bounds_indices;
     int impl_bounds_indices_l;
-    
-    // //Convexification coefficient of the hessian, H = H_1 * (1 - t_h) + H_2 * t_h
-    // double t_H;
-    
-	// //Copy of the blocks of the original hessian, to calculate convex combinations with fallback hessian
-	// std::vector<Matrix> R_k_1;
-	// std::vector<Matrix> Q_k_1;
-	// std::vector<Matrix> S_k_1;
-	// std::vector<Matrix> h_k_1;
-    
-    // Matrix h_1;
-    // SymMatrix H_dense_1;
-    
-    // //Blocks of an alternative/fallback - hessian, on which the linear term of the condensed QP also depends
-    // std::vector<Matrix> R_k_2;
-    // std::vector<Matrix> Q_k_2;
-    // std::vector<Matrix> S_k_2;
-    
-    // std::vector<Matrix> h_k_2;
-    // LT_Block_Matrix H_2;
-    
-    // Matrix h_2;
-    // SymMatrix H_dense_2;
 };
 
 
 class Condenser{
-
     public:
     ///Constructor arguments///
 	int num_cblocks;
 	int num_vblocks;
 	int num_hessblocks;
 	int num_targets;
-
+    
 	cblock* cblocks;
 	vblock* vblocks;
 	int* hess_block_sizes;
@@ -212,12 +188,12 @@ class Condenser{
     int condensed_num_vars;
     //Number of constraints in condensed QPs that are not dependent variable bounds = number of constraints in uncondensed QP that are not conditions used for condensing
     int num_true_cons;
-
+    
     int condensed_num_hessblocks;
-
+    
 	std::unique_ptr<int[]> cranges;
 	std::unique_ptr<int[]> vranges;
-
+    
 	std::unique_ptr<int[]> c_starts;
 	std::unique_ptr<int[]> c_ends;
 	std::unique_ptr<int[]> v_starts;
@@ -226,31 +202,23 @@ class Condenser{
 	std::unique_ptr<int[]> h_ends;
     std::unique_ptr<int[]> condensed_v_starts;
     std::unique_ptr<int[]> condensed_v_ends;
-
+    
 	std::unique_ptr<int[]> hess_block_ranges;
-
+    
     std::unique_ptr<int[]> condensed_hess_block_sizes;
     std::unique_ptr<int[]> condensed_blockIdx;
-
+    
 	//Number of constraints and conditions of original QP, if dependent variable bounds are kept, else number of "true" constraints
 	int condensed_num_cons;
-
-    ///QP specific data
+    
 	//QP-specific data for each condensable variable-condition-structure
 	std::unique_ptr<condensing_data[]> targets_data;
-
-    // //Slices of the gradient of the objective
-    // std::vector<Matrix> T_grad_obj;
-    // std::vector<Matrix> O_grad_obj;
-
-	// //Horizontal slices of linear constraints matrix (Jacobian) for T-target variables and O-other variables
-	// std::vector<Sparse_Matrix> T_Slices;
-    // std::vector<Sparse_Matrix> O_Slices;
     
     //Slices of the gradient of the objective
     std::unique_ptr<Matrix[]> T_grad_obj;
     std::unique_ptr<Matrix[]> O_grad_obj;
     
+    //Horizontal slices of linear constraints matrix (Jacobian) for T-target variables and O-other variables
     std::unique_ptr<Sparse_Matrix[]> T_Slices;
     std::unique_ptr<Sparse_Matrix[]> O_Slices;
     std::unique_ptr<Matrix[]> T_lb_var;

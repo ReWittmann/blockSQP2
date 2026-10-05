@@ -149,26 +149,29 @@ target_include_directories(qpOASES
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
+
+option(blockSQP2_UNITY_BUILD "Enable unity build for blockSQP2" OFF)
 add_library(blockSQP2 STATIC
 	blockSQP2/src/condensing.cpp
 	blockSQP2/src/matrix.cpp
 	blockSQP2/src/problemspec.cpp
 	blockSQP2/src/general_purpose.cpp
 	blockSQP2/src/glob.cpp
-   	blockSQP2/src/hess.cpp
-   	blockSQP2/src/iter.cpp
-   	blockSQP2/src/method.cpp
-   	blockSQP2/src/mainloop.cpp
-   	blockSQP2/src/options.cpp
-   	blockSQP2/src/qp.cpp
-   	blockSQP2/src/restoration.cpp
-   	blockSQP2/src/stats.cpp
-   	blockSQP2/src/qpsolver.cpp
-   	blockSQP2/src/defs.cpp
-   	blockSQP2/src/scaling.cpp
-   	blockSQP2/src/sqputils.cpp
+	blockSQP2/src/hess.cpp
+	blockSQP2/src/iter.cpp
+	blockSQP2/src/method.cpp
+	blockSQP2/src/mainloop.cpp
+	blockSQP2/src/options.cpp
+	blockSQP2/src/qp.cpp
+	blockSQP2/src/restoration.cpp
+	blockSQP2/src/stats.cpp
+	blockSQP2/src/qpsolver.cpp
+	blockSQP2/src/defs.cpp
+	blockSQP2/src/scaling.cpp
+	blockSQP2/src/sqputils.cpp
 	blockSQP2/src/load_mumps.cpp
-   	)
+	)
+set_target_properties(blockSQP2 PROPERTIES UNITY_BUILD ${blockSQP2_UNITY_BUILD} UNITY_BUILD_BATCH_SIZE 20)
 target_compile_definitions(blockSQP2 PUBLIC QPSOLVER_QPOASES)
 
 

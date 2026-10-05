@@ -94,7 +94,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         
         /// Check if converged
         hasConverged = calcOptTol();
-        stats->printProgress( prob, vars.get(), param, hasConverged );
+        stats->printProgress(prob, vars.get(), param, hasConverged);
         if (hasConverged) return print_SQPresult(SQPresults::success, param->print_level, param->print_colored);
 
         /// Set initial Hessian approximation
@@ -121,41 +121,40 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         if (infoQP == QPresults::time_it_limit_reached){
             bool qpError = true;
             
-            std::cout << "QP solution is taking too long, solve again with identity matrix.\n";
+            prnt3("QP solution is taking too long, solve again with identity matrix.\n");
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
             if (infoQP != QPresults::success){
-                std::cout << "QP solution failed again, try to reduce constraint violation\n";
+                prnt3("QP solution failed again, try to reduce constraint violation\n");
                 skipLineSearch = true;
                 
                 if (!is_rest(vars->steptype)){
                     qpError = bool(feasibilityRestorationHeuristic());
                     if (!qpError){
                         vars->steptype = StepTypes::rest_heuristic;
-                        std::cout << "Success\n";
+                        prnt3("Success\n");
                     }
-                    else
-                        std::cout << "Failed\n";
+                    else prnt3("Failed\n");
                 }
                 
                 if (qpError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
-                    std::cout << "Start feasibility restoration phase\n";
+                    prnt3("Start feasibility restoration phase\n");
                     qpError = bool(static_cast<int>(feasibilityRestorationPhase()));
                     vars->steptype = StepTypes::rest_phase;
                 }
                 
                 if (qpError){
-                    std::cout << "QP error, stop\n";
+                    prnt3("QP error, stop\n");
                     return print_SQPresult(SQPresults::qp_failure, param->print_level, param->print_colored);
                 }
             }
             else vars->steptype = StepTypes::ID_hess;
         }
         else if (infoQP == QPresults::indef_unbounded || infoQP == QPresults::other_error){
-            std::cout << "***QP error " << infoQP << ". Solve again with identity matrix.***\n";
+            prnt3("***QP error \"" + to_string(infoQP) + "\". Solve again with identity matrix.***\n");
             infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
             if (infoQP != QPresults::success){
                 // If there is still an error, terminate.
-                printf( "***QP error. Stop.***\n" );
+                prnt3("***QP error. Stop.***\n" );
                 return print_SQPresult(SQPresults::qp_failure, param->print_level, param->print_colored);
             }
             else vars->steptype = StepTypes::ID_hess;
@@ -166,21 +165,21 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
             skipLineSearch = true; // don't do line search with restoration step
             
             // Try to reduce constraint violation by heuristic
-            std::cout << "QP infeasible. ";
+            prnt3("QP infeasible. ");
             if (!is_rest(vars->steptype)){
-                std::cout << "Trying to reduce constraint violation... ";
+                prnt3("Trying to reduce constraint violation... ");
                 feasError = feasibilityRestorationHeuristic();
                 if (!feasError){
                     vars->steptype = StepTypes::rest_heuristic;
-                    std::cout << "Success.\n";
+                    prnt3("Success.\n");
                 }
-                else std::cout << "Failed.\n";
+                else prnt3("Failed.\n");
             }
             
             RestorationResults restRet = RestorationResults::other_error;
             // Invoke feasibility restoration phase
             if (feasError && param->enable_rest && vars->cNorm > 0.01 * param->feas_tol){
-                std::cout << "Start feasibility restoration phase.\n";
+                prnt3("Start feasibility restoration phase.\n");
                 restRet = feasibilityRestorationPhase();
                 vars->steptype = StepTypes::rest_phase;
             }
@@ -198,7 +197,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         if (!param->enable_linesearch || (param->skip_first_linesearch && stats->itCount == 1)){
             // No enable_linesearch strategy, but reduce step if function cannot be evaluated
             if (fullstep()){
-                printf( "***Constraint or objective could not be evaluated at new point. Stop.***\n" );
+                prnt3("***Constraint or objective could not be evaluated at new point. Stop.***\n");
                 return print_SQPresult(SQPresults::eval_failure, param->print_level, param->print_colored);
             }
             vars->steptype = StepTypes::linesearch;
@@ -209,7 +208,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 // Filter line search did not produce a step. Now there are a few things we can try ...
                 bool lsError = true;
                 
-                std::cout << "Filter line search failed, begin handling\n";
+                prnt3("Filter line search failed, begin handling\n");
                 
                 //If we already found a solution and steps are only for improving accuracy, terminate.
                 if (vars->solution_found){
@@ -219,7 +218,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 }
                 
                 if (vars->KKT_heuristic_enabled){
-                    std::cout << "filterLineSearch failed, try to reduce kktError\n";
+                    prnt3("filterLineSearch failed, try to reduce kktError\n");
                     vars->KKTerror_save = vars->tol;
                     lsError = kktErrorReduction();
                     if (!lsError)
@@ -228,7 +227,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 
                 //Heuristic 2: If possibly indefinite Hessian was used, retry with step from fallback Hessian
                 if (lsError && !vars->conv_qp_solved){
-                    std::cout << "filterLineSearch failed, try again with fallback Hessian\n";
+                    prnt3("filterLineSearch failed, try again with fallback Hessian\n");
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 1);
                     if (infoQP == QPresults::success) lsError = filterLineSearch();
                     if (!lsError) vars->steptype = StepTypes::linesearch;
@@ -240,7 +239,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                     force_accept(1.0);
                     vars->remaining_filter_overrides--;
                     lsError = false;
-                    std::cout << "Filter line search failed close to a local solution, ignore filter. We can only do this " << vars->remaining_filter_overrides << " more times\n";
+                    prnt3("Filter line search failed close to a local solution, ignore filter. We can only do this " + std::to_string(vars->remaining_filter_overrides) + " more times\n");
                     vars->steptype = StepTypes::filter_overwriting;
                 }
                 
@@ -258,18 +257,18 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 // Heuristic 4: Try to reduce constraint violation by closing continuity gaps to produce an admissable iterate
                 if (lsError && vars->cNorm > 0.01 * param->feas_tol && !is_rest(vars->steptype)){
                     // Don't do this twice in a row!
-                    printf("***Warning! Steplength too short. Trying to reduce constraint violation...");
+                    prnt3("***Warning! Steplength too short. Trying to reduce constraint violation...");
                     // Integration over whole time interval
                     lsError = bool(feasibilityRestorationHeuristic());
                     if (!lsError){
                         vars->steptype = StepTypes::rest_heuristic;
-                        printf("Success.***\n");
+                        prnt3("Success.***\n");
                     }
-                    else printf("Failed.***\n");
+                    else prnt3("Failed.***\n");
                 }
 
                 if (lsError && vars->steptype != StepTypes::ID_hess){
-                    std::cout << "***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n";
+                    prnt3("***Warning! Steplength too short. Trying to find a new step with identity Hessian.***\n");
                     infoQP = solveQP(vars->deltaXi, vars->lambdaQP, 2);
                     if (infoQP == QPresults::success) lsError = filterLineSearch();
                     if (!lsError) vars->steptype = StepTypes::ID_hess;
@@ -277,7 +276,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
 
                 // If this does not yield a successful step, start restoration phase
                 if (lsError && vars->cNorm > 0.01 * param->feas_tol && param->enable_rest){
-                    printf("***Warning! Steplength too short. Start feasibility restoration phase.***\n");
+                    prnt3("***Warning! Steplength too short. Start feasibility restoration phase.***\n");
                     // Solve NLP with minimum norm objective
                     lsError = bool(feasibilityRestorationPhase());
                     vars->steptype = StepTypes::rest_phase;
@@ -285,7 +284,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
 
                 // If everything failed, abort.
                 if (lsError){
-                    printf( "***Line search error. Stop.***\n" );
+                    prnt3("***Line search error. Stop.***\n");
                     return print_SQPresult(SQPresults::linesearch_failure, param->print_level, param->print_colored);
                 }
             }
@@ -331,7 +330,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
                 if (!vars->solution_found){
                     vars->save_iterate();
                     vars->solution_found = true;
-                    std::cout << "***Convergence achieved, now performing extra steps for improved accuracy...\n";
+                    prnt3("***Convergence achieved, now performing extra steps for improved accuracy...\n");
                 }
             }
             else return print_SQPresult(SQPresults::success, param->print_level, param->print_colored);
@@ -354,10 +353,10 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         // Check if KKT error was indeed reduced, if not, disable KKT heuristic until next successful linesearch
         if (vars->steptype == StepTypes::KKT_heuristic){
             if (!(vars->tol < param->kappaF*vars->KKTerror_save)){
-                std::cout << "KKT error was not sufficiently reduced, disable KKT heuristic\n";
+                prnt3("KKT error was not sufficiently reduced, disable KKT heuristic\n");
                 vars->KKT_heuristic_enabled = false;
             }
-            else std::cout << "KKT heuristic successful\n";
+            else prnt3("KKT heuristic successful\n");
         }
         
         //If identity hessian was used three consecutive times, reset Hessian
@@ -464,17 +463,13 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
 }
 
 
-void SQPmethod::finish()
-{
-    if( initCalled )
-        initCalled = false;
-    else
-    {
-        printf("init() must be called before finish().\n");
+void SQPmethod::finish(){
+    if (initCalled) initCalled = false;
+    else{
+        prnt3("init() must be called before finish().\n");
         return;
     }
-
-    stats->finish( param );
+    stats->finish(param);
 }
 
 

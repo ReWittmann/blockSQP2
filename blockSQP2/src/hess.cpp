@@ -375,7 +375,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory_seq(Hessians updateType, Sizings 
                 vars->nquasi[iBlock] -= (i+1);
                 //If Hessian was reset after the final update, proceed to next block. Sizing of the initial Hessian is still applied in this case
                 iBlock -= 1;
-                std::cout << "Too many updates skipped, resetting limited memory Hessian block\n";
+                prnt3("Too many updates skipped, resetting limited memory Hessian block\n");
                 break;
             }
             vars->deltaNormSqOld(iBlock) = vars->deltaNormSqMat(iBlock, pos);
@@ -428,7 +428,7 @@ void SQPmethod::par_inner_update_loop(Hessians updateType, Sizings sizingType, S
                 vars->nquasi[iBlock] -= (i+1);
                 //If Hessian was reset after the final update, proceed to next block. Sizing of the initial Hessian is still applied in this case
                 iBlock -= 1;
-                std::cout << "Too many updates skipped, resetting limited memory Hessian block\n";
+                prnt3("Too many updates skipped, resetting limited memory Hessian block\n");
                 break;
             }
             vars->deltaNormSqOld(iBlock) = vars->deltaNormSqMat(iBlock, pos);

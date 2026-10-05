@@ -21,42 +21,40 @@
 namespace blockSQP2{
 
 SQPresults print_SQPresult(SQPresults rs, int print_level, bool colored){
-    if (print_level > 0){
-        std::string colPrefix;
-        std::string colSuffix;
-        if (colored){
-            //#ifdef LINUX
-                if (int(rs) < 0) colPrefix = "\033[1;31m";
-                else colPrefix = "\033[1;32m";
-                colSuffix = "\033[0m";
-            //#endif
-        }
-        
-        switch (rs){
-            case SQPresults::partial_success: 
-                std::cout << colPrefix + "\n***CONVERGENCE PARTIALLY ACHIEVED***" + colSuffix + "\n"; 
-                break;
-            case SQPresults::success:
-                std::cout << colPrefix + "\n***CONVERGENCE ACHIEVED***" + colSuffix + "\n";
-                break;
-            case SQPresults::super_success:
-                std::cout << colPrefix + "\n***STRONG CONVERGENCE ACHIEVED***" + colSuffix + "\n";
-                break;
-            case SQPresults::local_infeasibility:
-                std::cout << colPrefix + "\nLOCAL INFEASIBILITY" + colSuffix + "\n";
-                break;
-            case SQPresults::restoration_failure:
-                std::cout << colPrefix + "\nRESTORATION ERROR" + colSuffix + "\n";
-                break;
-            case SQPresults::linesearch_failure:
-                std::cout << colPrefix + "\nLINESEARCH ERROR" + colSuffix + "\n";
-                break;
-            case SQPresults::sensitivity_eval_failure:
-                std::cout << colPrefix + "\nSENSITIVITY EVALUATION ERROR" + colSuffix + "\n";
-                break;
-            default:
-                std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL" + colSuffix + "\n";
-        }
+    if (print_level == 0) return rs;
+    
+    std::string colPrefix;
+    std::string colSuffix;
+    if (colored){
+        if (int(rs) < 0) colPrefix = "\033[1;31m";
+        else colPrefix = "\033[1;32m";
+        colSuffix = "\033[0m";
+    }
+    
+    switch (rs){
+        case SQPresults::partial_success: 
+            std::cout << colPrefix + "\n***CONVERGENCE PARTIALLY ACHIEVED***" + colSuffix + "\n"; 
+            break;
+        case SQPresults::success:
+            std::cout << colPrefix + "\n***CONVERGENCE ACHIEVED***" + colSuffix + "\n";
+            break;
+        case SQPresults::super_success:
+            std::cout << colPrefix + "\n***STRONG CONVERGENCE ACHIEVED***" + colSuffix + "\n";
+            break;
+        case SQPresults::local_infeasibility:
+            std::cout << colPrefix + "\nLOCAL INFEASIBILITY" + colSuffix + "\n";
+            break;
+        case SQPresults::restoration_failure:
+            std::cout << colPrefix + "\nRESTORATION ERROR" + colSuffix + "\n";
+            break;
+        case SQPresults::linesearch_failure:
+            std::cout << colPrefix + "\nLINESEARCH ERROR" + colSuffix + "\n";
+            break;
+        case SQPresults::sensitivity_eval_failure:
+            std::cout << colPrefix + "\nSENSITIVITY EVALUATION ERROR" + colSuffix + "\n";
+            break;
+        default:
+            std::cout << colPrefix + "\nNLP SOLUTION UNSUCCESSFUL" + colSuffix + "\n";
     }
     return rs;
 }

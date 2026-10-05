@@ -359,24 +359,6 @@ void Condenser::setup(){
             }
             impl_ind += vblocks[i].size;
         }
-        
-        // std::cout << "impl_bounds_indices:\n";
-        // for (int i = 0; i < targets_data[tnum].impl_bounds_indices_l; i++){
-        //     std::cout << targets_data[tnum].impl_bounds_indices[i] << ", ";
-        // }
-        // std::cout << "\n";
-        
-        //Allocate additional matrices and vectors in case an additional QP with fallback hessian needs to be condensed
-        // int *h_sizes_2 = new int[n_stages + 1];
-        // for (int i = 0; i <= n_stages; i++){
-        //     h_sizes_2[i] = targets_data[tnum].free_sizes[i];
-        // }
-
-        // targets_data[tnum].R_k_2.resize(n_stages + 1);
-        // targets_data[tnum].Q_k_2.resize(n_stages);
-        // targets_data[tnum].S_k_2.resize(n_stages);
-        // targets_data[tnum].h_k_2.resize(n_stages + 1);
-        // targets_data[tnum].H_2.Dimension(n_stages + 1, n_stages + 1, h_sizes_2, h_sizes_2);
     }
     
     num_true_cons = num_cons;
@@ -511,43 +493,7 @@ Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
 }
 
 
-Condenser::~Condenser(){
-	// delete[] cranges;
-	// delete[] vranges;
-
-	// delete[] c_starts;
-	// delete[] c_ends;
-	// delete[] v_starts;
-	// delete[] v_ends;
-	// delete[] h_starts;
-	// delete[] h_ends;
-    // delete[] condensed_hess_block_sizes;
-    // delete[] condensed_blockIdx;
-	// delete[] condensed_v_starts;
-	// delete[] condensed_v_ends;
-    // delete[] hess_block_ranges;
-    // delete[] targets_data;
-
-}
-/*
-void Condenser::calc_ranges(){
-	vranges[0] = 0;
-	for (int i = 1; i<= num_vblocks; i++){
-		vranges[i] = vranges[i-1] + vblocks[i].size;
-	}
-
-	cranges[0] = 0;
-	for (int i = 1; i<= num_cblocks; i++){
-		cranges[i] = cranges[i-1] + cblocks[i].size;
-	}
-
-	hess_block_ranges[0] = 0;
-	for (int i = 1; i<= num_hessblocks; i++){
-		hess_block_ranges[i] = hess_block_ranges[i-1] + hess_block_sizes[i];
-	}
-	return;
-}
-*/
+Condenser::~Condenser(){}
 
 
 Condenser *Condenser::layout_copy() const {

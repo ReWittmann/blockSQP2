@@ -34,8 +34,8 @@
 namespace blockSQP2{
 
 SQPstats::SQPstats(PATHSTR myOutpath){
-    strcpy( outpath, myOutpath );
-
+    strcpy(outpath, myOutpath);
+    
     itCount = 0;
     qpItTotal = 0;
     qpIterations = 0;
@@ -49,7 +49,7 @@ SQPstats::SQPstats(PATHSTR myOutpath){
     nDerCalls = 0;
     nRestHeurCalls = 0;
     nRestPhaseCalls = 0;
-
+    
     nTotalUpdates = 0;
     nTotalSkippedUpdates = 0;
 }
@@ -120,11 +120,11 @@ void SQPstats::printProgress(Problemspec *prob, SQPiterate *vars, SQPoptions *pa
         if (itCount % 20 == 0 && param->print_level > 0){
             printHeading(vars, param);
         }
-
+        
         // All values
         if( param->print_level > 0){
             printf("%5i ", itCount);
-            printf("%5i %0s ", qpIterations, "");
+            printf("%5i  ", qpIterations);
             printf("% 10e  ", vars->obj);
             printf("%-10.2e", vars->cNorm);
             printf("%-10.2e", vars->tol);
@@ -134,11 +134,11 @@ void SQPstats::printProgress(Problemspec *prob, SQPiterate *vars, SQPoptions *pa
                 printf("%-10.2e", vars->lambdaStepNorm);
             }
             
-            if ((vars->alpha == 1.0 && vars->steptype != StepTypes::KKT_heuristic) || !param->print_colored)
+            if (vars->steptype == StepTypes::rest_phase) printf("%-9s", "1.0 (r)");
+            else if ((vars->alpha == 1.0 && vars->steptype != StepTypes::KKT_heuristic) || !param->print_colored)
                 printf("%-9.1e", vars->alpha);
-            else
-                printf("\033[0;36m%-9.1e\033[0m", vars->alpha);
-
+            else printf("\033[0;36m%-9.1e\033[0m", vars->alpha);
+            
             // if (param->print_level > 1){
             //     if (vars->nSOCS == 0 || !param->print_colored)
             //         printf("%5i", vars->nSOCS);

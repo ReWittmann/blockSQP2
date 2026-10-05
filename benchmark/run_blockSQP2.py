@@ -54,7 +54,7 @@ start = OCprob.start_point
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
-    print_level = 2,
+    print_level = 1,
     print_colored = True,
     
     max_conv_QPs = 4,                          #max number of additional QPs per SQP iteration including fallback Hess QP

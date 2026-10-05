@@ -45,7 +45,6 @@ namespace blockSQP2{
 
     
 double SQPmethod::computeRegularizationFactor(int idx, int maxQP){
-    // std::cout << "idx = " << idx << ", maxQP = " << maxQP << ", convKappa = " << vars->convKappa << ", regF = " << vars->convKappa * std::pow(2, idx - (maxQP - 2)) << "\n";
     return vars->convKappa * std::pow(2, idx - (maxQP - 2));
 }
 
@@ -698,18 +697,14 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
         sub_QPs_par[j]->set_use_hotstart(vars->use_homotopy);
     }
     
-    // steady_clock::time_point TT0 = steady_clock::now();
     QP_threads[0] = std::jthread(
         [](BasicCQPsolver *arg_CQPS){
             arg_CQPS->invoke_condensing();
         },
         static_cast<BasicCQPsolver*>(sub_QPs_par[0].get())
         );
-    // QP_threads[0].join();
     static_cast<BasicCQPsolver*>(sub_QPs_par[maxQP - 1].get())->invoke_condensing();
     QP_threads[0].join();
-    // steady_clock::time_point TT1 = steady_clock::now();
-    // std::cout << "Condensing took " << duration_cast<microseconds>(TT1 - TT0) << "\n";
     
     for (int j = 0; j < maxQP - 1; j++){
         if (j > 0){
@@ -723,8 +718,6 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
             },
             sub_QPs_par[j].get(), std::move(QP_results_p[j]), std::ref(vars->par_QP_sols_prim[j]), std::ref(vars->par_QP_sols_dual[j])
         );
-        
-        // QP_threads[j].join();
     }
 
     T0 = steady_clock::now();
@@ -739,7 +732,7 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     
     bool QP_cancelled = false;
     if (param->enable_QP_cancellation){
-        //SR1 QP almost always succeeds/fails fast, so join it. Wait + stop/join QPs until one successfully solved
+        //SR1 QP almost always succeeds/fails fast, so join it. Wait + stop/join QPs until one is successfully solved
         QP_threads[0].join();
         QP_results[0] = QP_results_f[0].get();
         if (QP_results[0] == QPresults::success){
@@ -836,14 +829,6 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     stats->rejectedSR1 += vars->hess_num_accepted;
     return QPresults::success;
 }
-        
-
-
-
-
-
-
-
 
 
 QPresults SQPmethod::solve_SOC_QP(Matrix &deltaXi, Matrix &lambdaQP){

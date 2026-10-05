@@ -1215,7 +1215,7 @@ QPresults qpOASES_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
              ret == qpOASES::RET_HOTSTART_STOPPED_INFEASIBILITY){
         return QPresults::infeasible;}
     else if (ret == qpOASES::RET_INIT_FAILED){
-        //Hacky workaround for qpOASES sometimes failing of a variable has equal upper and lower bounds with equalities enabled
+        //[Likely fixed inside qpOASES] Hacky workaround for qpOASES sometimes failing of a variable has equal upper and lower bounds with equalities enabled
         int eq_count = 0;
         for (int i = 0; i < nVar; i++){
             if (opts.enableEqualities && std::abs(ub[i] - lb[i]) < opts.boundTolerance){
@@ -1560,7 +1560,7 @@ QPresults qpalm_solver::solve(Matrix &deltaXi, Matrix &lambdaQP){
 
     qpalm::SolutionView sol = solver.get_solution();
     info = solver.get_info();
-    std::cout << "qpalm returned, info is " << info.status << "\n";
+    // std::cout << "qpalm returned, info is " << info.status << "\n";
     
     if (!strcmp(info.status, "solved")){ //strcmp is zero if strings are equal
         for (int i = 0; i < nCon; i++){

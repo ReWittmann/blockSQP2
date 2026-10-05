@@ -42,7 +42,7 @@ namespace blockSQP2{
 
 //Constructor helper methods
 
-SQPoptions* create_restoration_options(SQPoptions *parent_options){
+SQPoptions* create_restoration_options(SQPoptions *param){
     SQPoptions *rest_param = new SQPoptions();
     
     //General restoration options
@@ -51,20 +51,21 @@ SQPoptions* create_restoration_options(SQPoptions *parent_options){
     rest_param->hess_approx = Hessians::BFGS;
     rest_param->sizing = Sizings::OL;
     rest_param->BFGS_damping_factor = 0.2;
-    rest_param->sparse = parent_options->sparse;
+    rest_param->sparse = param->sparse;
     rest_param->max_filter_overrides = 0;
     rest_param->skip_first_linesearch = true;
     
+    rest_param->print_level = param->print_level == 3 ? param->print_level : 0;
     rest_param->print_colored = false;
     rest_param->par_QPs = false;
     //Do not print to any file
     rest_param->debug_level = 0;
     
     //Derived from parent method options
-    rest_param->opt_tol = parent_options->opt_tol;
-    rest_param->feas_tol = parent_options->feas_tol;
-    rest_param->qpsol = parent_options->qpsol;
-    rest_param->qpsol_options = parent_options->qpsol_options;
+    rest_param->opt_tol = param->opt_tol;
+    rest_param->feas_tol = param->feas_tol;
+    rest_param->qpsol = param->qpsol;
+    rest_param->qpsol_options = param->qpsol_options;
     
     return rest_param;
 }
@@ -117,7 +118,7 @@ bound_correction_method::bound_correction_method(Problemspec *problem, SQPoption
     }
 
 
-    
+
 
 bool SQPmethod::modify_step(){
     int info = 0;
@@ -136,7 +137,7 @@ bool SQPmethod::modify_step(){
         return true;
     
     if (pairInFilter(cNormTrial, objTrial)){
-        std::cout << "New point is in the filter\n";
+        prnt3("New point is in the filter\n");
         return true;
     }
     

@@ -126,7 +126,7 @@ void SQPoptions::optionsConsistency(){
     
     if (lim_mem && mem_size > 200){
         std::cout << "WARNING: Large value of mem_size (> 200). Performance may be impeded\n";
-    }   
+    }
 }
 
 void SQPoptions::complete_QP_options(Problemspec *problem){

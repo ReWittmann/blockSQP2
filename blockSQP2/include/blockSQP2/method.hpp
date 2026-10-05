@@ -40,6 +40,8 @@
 #include <blockSQP2/restoration.hpp>
 #include <memory>
 #include <thread>
+#include <string>
+#include <iostream>
 
 namespace blockSQP2{
 
@@ -236,7 +238,12 @@ class SQPmethod{
         
         //Experimental
         bool modify_step();     //Callback that allows modifying a newly computed iterate
-                                    //The modifications will be added to the step that led to this iterate.
+                                //The modifications will be added to the step that led to this iterate.
+        
+        inline void prnt(std::string msg, int plbarr = 3){if (param->print_level >= plbarr) std::cout << msg;}
+        inline void prnt1(std::string msg){prnt(msg, 1);}
+        inline void prnt2(std::string msg){prnt(msg, 2);}
+        inline void prnt3(std::string msg){prnt(msg, 3);}
 };
 
 
