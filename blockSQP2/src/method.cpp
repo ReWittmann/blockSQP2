@@ -31,6 +31,7 @@
  #include <blockSQP2/general_purpose.hpp>
  #include <blockSQP2/restoration.hpp>
  #include <blockSQP2/qpsolver.hpp>
+ #include <blockSQP2/task.hpp>
  #include <cmath>
  #include <chrono>
  #include <memory>
@@ -79,10 +80,35 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     
     //Create scalable problem wrapper if automatic scaling is enabled.
     if (param->automatic_scaling){
-        scaled_prob = std::make_unique<scaled_Problemspec>(prob);
+        scaled_prob = std::make_unique<ScaledProblemspec>(prob);
         prob = scaled_prob.get();
     }    
     vars = std::make_unique<SQPiterate>(prob, param);
+    
+    
+    if (prob->threadHandler == nullptr){
+        autoThreads = std::make_unique<ThreadHandler>(param->max_auto_threads);
+        threads = autoThreads.get();
+    }
+    else threads = prob->threadHandler;
+    
+    int N_threads = threads->get_N_threads();
+    int N_sub_0 = (N_threads - 1)/2;
+    if (N_threads > 0){
+        std::unique_ptr<int[]> thread_ind = std::make_unique<int[]>(1);
+        thread_ind[0] = N_sub_0;
+        condensing_main_2 = std::make_unique<ThreadSubHandler>(threads, std::move(thread_ind), 1);
+    }
+    else condensing_main_2 = std::make_unique<ThisThreadHandle>();
+    
+    std::unique_ptr<int[]> cond_thread_ind_0 = std::make_unique<int[]>(N_sub_0);
+    for (int i = 0; i < N_sub_0; i++) cond_thread_ind_0[i] = i;
+    condensing_subthreads[0] = std::make_unique<ThreadSubHandler>(threads, std::move(cond_thread_ind_0), N_sub_0);
+    
+    int N_sub_1 = N_threads - N_sub_0 - (N_threads > 0);
+    std::unique_ptr<int[]> cond_thread_ind_1 = std::make_unique<int[]>(N_sub_1);
+    for (int i = 0; i < N_sub_1; i++) cond_thread_ind_1[i] = N_sub_0 + i + 1;
+    condensing_subthreads[1] = std::make_unique<ThreadSubHandler>(threads, std::move(cond_thread_ind_1), N_sub_1);
     
     // Create a solver object for quadratic subproblems.
     sub_QP = std::unique_ptr<BasicQPsolver>(create_QPsolver(prob, vars.get(), param->qpsol_options));
@@ -90,7 +116,7 @@ SQPmethod::SQPmethod(Problemspec *problem, SQPoptions *parameters, SQPstats *sta
     // If parallel solution of QPs is enabled, use dedicated QPsolver instances instead
     if (param->par_QPs){
         sub_QPs_par = create_QPsolvers_par(prob, vars.get(), param);
-        QP_threads = std::make_unique<std::jthread[]>(param->max_conv_QPs); //One QP can run on main thread
+        // QP_threads = std::make_unique<std::jthread[]>(param->max_conv_QPs); //One QP can run on main thread
     }
     
     

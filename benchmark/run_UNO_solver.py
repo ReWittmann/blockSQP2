@@ -34,7 +34,7 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     # **OCProblems.Cart_Pendulum.param_set_1,                        #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
                     )
 itMax = 200                                  #max number of steps
-
+OCprob.jit(jit_hess_objmult = False)
 
 def create_UNO_model(OCprob:OCProblems.OCProblem, start_pert = None):
     model = unopy.Model(unopy.PROBLEM_NONLINEAR,

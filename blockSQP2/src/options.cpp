@@ -50,12 +50,16 @@ SQPoptions::SQPoptions(){
 SQPoptions::~SQPoptions(){}
 
 void SQPoptions::pass_qpsol_options(std::unique_ptr<QPsolver_options> arg_qpsol_opts){
-    held_qpsol_options = std::move(arg_qpsol_opts);
+    auto_qpsol_options = std::move(arg_qpsol_opts);
 }
 
 void SQPoptions::optionsConsistency(Problemspec *problem){
-    if ((automatic_scaling || (conv_strategy == ConvexificationStrategies::reduced_regularization && max_conv_QPs > 1)) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
-        throw ParameterError("automatic_scaling or reduced convexification strategy activated, but no structure information (vblocks) provided to problem specification");
+    if ((conv_strategy == ConvexificationStrategies::reduced_regularization && max_conv_QPs > 1) && (problem->vblocks == nullptr || problem->n_vblocks < 1))
+        throw ParameterError("reduced regularization activated, but required structure information (vblocks) not provided to problem specification");
+    
+    if (automatic_scaling && problem->vsystem == nullptr)
+        throw ParameterError("scaling heuristic activated, but required structure information (VariableSystem/vgroups) not provided to problem specification");
+    
     if (sparse && problem->nnz < 0)
         throw ParameterError("Sparse mode enabled, but number of jacobian non-zero elements not set");
     
@@ -132,12 +136,12 @@ void SQPoptions::optionsConsistency(){
 void SQPoptions::complete_QP_options(Problemspec *problem){
     //Create default options if no options have been passed
     if (qpsol_options == nullptr){
-        if (qpsol == QPsolvers::qpOASES) held_qpsol_options = std::make_unique<qpOASES_options>();
-        else if (qpsol == QPsolvers::gurobi) held_qpsol_options = std::make_unique<gurobi_options>();
-        else if (qpsol == QPsolvers::qpalm) held_qpsol_options = std::make_unique<qpalm_options>();
+        if (qpsol == QPsolvers::qpOASES) auto_qpsol_options = std::make_unique<qpOASES_options>();
+        else if (qpsol == QPsolvers::gurobi) auto_qpsol_options = std::make_unique<gurobi_options>();
+        else if (qpsol == QPsolvers::qpalm) auto_qpsol_options = std::make_unique<qpalm_options>();
         else throw ParameterError("No valid option for QP solver");
 
-        qpsol_options = held_qpsol_options.get();
+        qpsol_options = auto_qpsol_options.get();
     }
     //Some values can also be set directly in the options, copy them over default QP solver options.
     if (qpsol_options->eps == 1e-16) qpsol_options->eps = eps;

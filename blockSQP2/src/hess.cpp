@@ -285,8 +285,7 @@ void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
         if (scale < 0) scale = 1.0;
         scale = fmax(param->COL_eps, scale);
     }
-    else
-        scale = 1.0;
+    else scale = 1.0;
 
     if (scale < 1.0){
         for (int i = 0; i < Bsize; i++){
@@ -297,8 +296,7 @@ void SQPmethod::sizeHessianCOL(int dpos, int iBlock, SymMatrix *hess){
         // statistics: average sizing factor
         stats->averageSizingFactor += scale;
     }
-    else
-        stats->averageSizingFactor += 1.0;
+    else stats->averageSizingFactor += 1.0;
 }
 
 
@@ -385,22 +383,41 @@ void SQPmethod::calcHessianUpdateLimitedMemory_seq(Hessians updateType, Sizings 
     return;
 }
 
-#define LIM_MEM_N_THREADS 4
+// #define LIM_MEM_N_THREADS 4
+
+// void SQPmethod::calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess){
+//     int nBlocks = vars->nBlocks - int(skip_last_block(hess));
+//     if (nBlocks < LIM_MEM_N_THREADS){
+//         calcHessianUpdateLimitedMemory_seq(updateType, sizingType, hess);
+//         return;
+//     }
+      
+//     int blockIdxIdx[LIM_MEM_N_THREADS + 1]{0, int(nBlocks/4), int(nBlocks/2), int((3*nBlocks)/4), nBlocks};
+//     std::jthread upThreads[LIM_MEM_N_THREADS];
+    
+//     for (int j = 0; j < LIM_MEM_N_THREADS; j++){
+//         upThreads[j] = std::jthread(&SQPmethod::par_inner_update_loop, this, updateType, sizingType, hess, blockIdxIdx[j], blockIdxIdx[j+1]);
+//     }
+//     return;
+// }
 
 void SQPmethod::calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings sizingType, SymMatrix *hess){
     int nBlocks = vars->nBlocks - int(skip_last_block(hess));
-    if (nBlocks < LIM_MEM_N_THREADS){
-        calcHessianUpdateLimitedMemory_seq(updateType, sizingType, hess);
-        return;
-    }
-      
-    int blockIdxIdx[LIM_MEM_N_THREADS + 1]{0, int(nBlocks/4), int(nBlocks/2), int((3*nBlocks)/4), nBlocks};
-    std::jthread upThreads[LIM_MEM_N_THREADS];
+    if (nBlocks == 1) return calcHessianUpdateLimitedMemory_seq(updateType, sizingType, hess);
     
-    for (int j = 0; j < LIM_MEM_N_THREADS; j++){
-        upThreads[j] = std::jthread(&SQPmethod::par_inner_update_loop, this, updateType, sizingType, hess, blockIdxIdx[j], blockIdxIdx[j+1]);
+    int N_portions = (std::min)(threads->get_N_threads() + 1, nBlocks);
+    for (int j = 0; j < N_portions - 1; j++){
+        threads->place(std::move_only_function<void()>(
+                [this, updateType, sizingType, hess, j, nBlocks, N_portions](){
+                    this->par_inner_update_loop(updateType, sizingType, hess, (nBlocks*j)/N_portions, (nBlocks*(j+1))/N_portions);
+                }
+            ),
+            j
+        );
     }
-    return;
+    try {par_inner_update_loop(updateType, sizingType, hess, (nBlocks*(N_portions - 1))/N_portions, nBlocks);}
+    catch (...){threads->combine_except(std::current_exception());}
+    threads->assert_noexcept();
 }
 
 

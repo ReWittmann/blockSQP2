@@ -62,6 +62,7 @@ class Options(CXXobjCreator):
                  max_filter_overrides: int = 2,
                  par_QPs: bool = False,
                  enable_QP_cancellation: bool = True,
+                 max_auto_threads: int = 7,
                  automatic_scaling: bool = False,
                  scaling_Theta_min: float = 0.1,
                  scaling_Theta_max: float = 2.0,
@@ -115,6 +116,7 @@ class Options(CXXobjCreator):
         self.max_filter_overrides = max_filter_overrides
         self.par_QPs = par_QPs
         self.enable_QP_cancellation = enable_QP_cancellation
+        self.max_auto_threads = max_auto_threads
         self.automatic_scaling = automatic_scaling
         self.scaling_Theta_min = scaling_Theta_min
         self.scaling_Theta_max = scaling_Theta_max
@@ -204,6 +206,7 @@ class Options(CXXobjCreator):
         BSQP.SQPoptions_set_conv_kappa_max(cxx_obj, c_double(self.conv_kappa_max))
         BSQP.SQPoptions_set_par_QPs(cxx_obj, c_char(self.par_QPs))
         BSQP.SQPoptions_set_enable_QP_cancellation(cxx_obj, c_char(self.enable_QP_cancellation))
+        BSQP.SQPoptions_set_max_auto_threads(cxx_obj, c_int(self.max_auto_threads))
         
         # Scaling
         BSQP.SQPoptions_set_automatic_scaling(cxx_obj, c_char(self.automatic_scaling))

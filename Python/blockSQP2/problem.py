@@ -13,13 +13,14 @@
 
 import numpy as np
 import typing
-from ctypes import c_double, c_int, c_char, POINTER, c_void_p
+from ctypes import c_double, c_int, c_char, c_char_p, cast, POINTER, c_void_p
 from .function_signatures import BSQP_callback_signatures as CB_sigs
 from .cxxwrappers import CXXobjCreator, CXXobjHolder
 from .condenser import vblock, Condenser
 
 c_double_p = POINTER(c_double)
 c_int_p = POINTER(c_int)
+
 
 class Problem(CXXobjCreator):
     nVar: int  # Number of variables
@@ -30,6 +31,9 @@ class Problem(CXXobjCreator):
     _blockIdx: typing.Optional[np.ndarray[c_int]]
     vblocks: typing.Optional[typing.List[vblock]]
     condenser: typing.Optional[Condenser]
+    
+    vgroup_types: typing.List[str]
+    vgroup_ind: typing.List[typing.List[int]]
     
     lb_var: np.ndarray  # Lower bounds for variables
     ub_var: np.ndarray  # Upper bounds for variables
@@ -66,6 +70,9 @@ class Problem(CXXobjCreator):
         self.blockIdx = None
         self.vblocks = []
         self.condenser = None
+        
+        self.vgroup_types = []
+        self.vgroup_ind = []
         
         self.C_initialize_dense = lambda scope, xi, lam, constrJac: self.initialize_dense(scope, xi, lam, constrJac)
         self.C_initialize_sparse = lambda scope, xi, lam, jac_nz, jac_row, jac_colind: self.initialize_sparse(scope, xi, lam, jac_nz, jac_row, jac_colind)
@@ -289,6 +296,19 @@ class Problem(CXXobjCreator):
         if self.condenser is not None:
             BSQP.Problemspec_set_condenser(cxx_obj, self.condenser.get_cxx_obj())
         
+        if len(self.vgroup_types) > 0:
+            assert(len(self.vgroup_types) == len(self.vgroup_ind))
+            vgroup_typenames = cast((c_char_p*len(self.vgroup_types))(*(s.encode("utf-8") for s in self.vgroup_types)), POINTER(c_char_p))
+            vgroup_n_ind = np.array([len(arr) for arr in self.vgroup_ind], dtype = c_int).ctypes.data_as(c_int_p)
+            
+            vgroup_ind_c_int = ((c_int*len(vgi))(*vgi) for vgi in self.vgroup_ind)
+            vgroup_ind = (c_int_p*len(self.vgroup_ind))(*(cast(vgi, c_int_p) for vgi in vgroup_ind_c_int))
+            vsystem = BSQP.create_VariableSystem(vgroup_typenames, vgroup_ind, vgroup_n_ind, c_int(len(self.vgroup_types)))
+            if not vsystem:
+                error_message = BSQP.get_error_message()
+                raise RuntimeError(cast(error_message, c_char_p).value.decode())
+            BSQP.Problemspec_pass_vsystem(cxx_obj, vsystem)
+        
         deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
         return CXXobjHolder(cxx_obj, deleter)
     
@@ -314,8 +334,8 @@ class ScaledProblem(Problem):
     
     def create_cxx_obj(self):
         parent_hld = self.parent.create_cxx_obj()
-        cxx_obj = self.BSQP.create_scaled_Problemspec(parent_hld.cxx_obj)
-        self.BSQP.scaled_Problemspec_set_scale(cxx_obj, self.scaling_factors.ctypes.data_as(c_double_p))
+        cxx_obj = self.BSQP.create_ScaledProblemspec(parent_hld.cxx_obj)
+        self.BSQP.ScaledProblemspec_set_scale(cxx_obj, self.scaling_factors.ctypes.data_as(c_double_p))
         deleter = lambda ptr: self.BSQP.delete_Problemspec(ptr)
         return CXXobjHolder(cxx_obj, deleter, parent_hld)
     

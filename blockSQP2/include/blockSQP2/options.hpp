@@ -121,6 +121,8 @@ class SQPoptions{
     bool par_QPs = false;                  //Only possible for threadsafe linear solvers (not MUMPS), but possible with workarounds on windows and linux
     bool enable_QP_cancellation = true;
     
+    int max_auto_threads = 7;
+    
     //Scaling
     int automatic_scaling = 0;                  //Select scaling heuristic, 0: Off, 1: free-dep balance
     double scaling_Theta_min = 0.1;
@@ -173,7 +175,7 @@ class SQPoptions{
     
     private:
     //Holder if no qpsol_options were provided
-    std::unique_ptr<QPsolver_options> held_qpsol_options;
+    std::unique_ptr<QPsolver_options> auto_qpsol_options;
 
     public:
     SQPoptions();

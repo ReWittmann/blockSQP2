@@ -1174,9 +1174,9 @@ py::class_<blockSQP2::TC_feasibility_Problem, blockSQP2::Problemspec, std::share
 	.def_property("jac_orig_colind", [](blockSQP2::TC_feasibility_Problem &P)->int_pointer_interface{int_pointer_interface colind; colind.size = P.nVar + 1; colind.ptr = P.jac_orig_colind; return colind;}, nullptr)
 	;
 
-py::class_<blockSQP2::scaled_Problemspec, blockSQP2::Problemspec, std::shared_ptr<blockSQP2::scaled_Problemspec>>(m, "scaled_Problemspec")
+py::class_<blockSQP2::ScaledProblemspec, blockSQP2::Problemspec, std::shared_ptr<blockSQP2::ScaledProblemspec>>(m, "ScaledProblemspec")
     .def(py::init<blockSQP2::Problemspec*>())
-    .def("arr_set_scale", [](blockSQP2::scaled_Problemspec &P, double_array &arr){P.set_scale(arr.ptr);});
+    .def("arr_set_scale", [](blockSQP2::ScaledProblemspec &P, double_array &arr){P.set_scale(arr.ptr);});
 }
 
 

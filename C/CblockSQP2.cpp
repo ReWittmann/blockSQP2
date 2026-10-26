@@ -35,7 +35,7 @@ using namespace blockSQP2;
     #define CDLEXP extern "C" __attribute__((visibility("default")))
 #endif
 
-#define MAXLEN_CBLOCKSQP_ERROR_MESSAGE 1000
+#define MAXLEN_CBLOCKSQP_ERROR_MESSAGE 2000
 char CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE + 1];
 
 CDLEXP char *get_error_message(){
@@ -43,8 +43,15 @@ CDLEXP char *get_error_message(){
     return CblockSQP_error_message;
 }
 
+CDLEXP void Problemspec_set_closure(void *ptr, void *arg_closure);
+
 class CProblemspec : public Problemspec{
-public:
+    private:
+    // Pass-through pointer to a closure of the caller, passed to callbacks.
+    void *closure = nullptr;
+    friend void Problemspec_set_closure(void *ptr, void *arg_closure);
+    
+    public:
     CProblemspec(int NVARS, int NCONS){
         nVar = NVARS;
         nCon = NCONS;
@@ -53,6 +60,8 @@ public:
     virtual ~CProblemspec(){
         delete[] blockIdx;
         delete[] vblocks;
+        // delete[] vsystems;
+        delete vsystem;
     };
     
     // Allocate callbacks (function pointers to global julia functions)
@@ -65,9 +74,6 @@ public:
     
     void (*reduce_constr_vio)(void *closure_pass, double *xi, int *info) = nullptr;
     void (*modify_step)(void *closure_pass, double *xi, double *lambda, int *info) = nullptr;
-    
-    // Pass-through pointer to a closure of the caller, passed to callbacks.
-    void *closure = nullptr;
     
     // Invoke callbacks in overridden methods
     virtual void initialize(Matrix &xi, Matrix &lambda, Matrix &constrJac){
@@ -186,9 +192,7 @@ CDLEXP void vblock_array_set(void *ptr, int index, int size, char dependent, cha
     static_cast<vblock *>(ptr)[index].bounds_implicit = bool(bounds_implicit);
 }
 
-// QPsolver
-// No Constructor, only subclass constructors
-// Virtual destructor
+
 CDLEXP void delete_QPsolver_options(void *ptr_QPsolver_options){
     delete static_cast<QPsolver_options *>(ptr_QPsolver_options);
 }
@@ -432,6 +436,9 @@ CDLEXP void SQPoptions_set_par_QPs(void *ptr, char val){
 CDLEXP void SQPoptions_set_enable_QP_cancellation(void *ptr, char val){
     castOPT(ptr)->enable_QP_cancellation = bool(val);
 }
+CDLEXP void SQPoptions_set_max_auto_threads(void *ptr, int val){
+    castOPT(ptr)->max_auto_threads = val;
+}
 CDLEXP void SQPoptions_set_enable_premature_termination(void *ptr, char val){
     castOPT(ptr)->enable_premature_termination = bool(val);
 }
@@ -486,6 +493,50 @@ CDLEXP int SQPstats_get_itCount(void *ptr){
 inline CProblemspec *castCP(void *ptr){
     return static_cast<CProblemspec *>(ptr);
 }
+
+
+CDLEXP void *create_VariableSystem(char **arg_vTypeNames, int **arg_vgroup_ind, int *arg_vgroup_n_ind, int n_vgroups){
+    try{
+        std::unique_ptr<VariableGroupTypes[]> vtypes = std::make_unique<VariableGroupTypes[]>(n_vgroups);
+        for (int i = 0; i < n_vgroups; i++) vtypes[i] = VariableGroupTypes_from_string(std::string_view(arg_vTypeNames[i]));
+        
+        std::unique_ptr<std::unique_ptr<int[]>[]> vgroup_ind = std::make_unique<std::unique_ptr<int[]>[]>(n_vgroups);
+        for (int i = 0; i < n_vgroups; i++){
+            vgroup_ind[i] = std::make_unique<int[]>(arg_vgroup_n_ind[i]);
+            std::copy(arg_vgroup_ind[i], arg_vgroup_ind[i] + arg_vgroup_n_ind[i], vgroup_ind[i].get());
+        }
+        
+        std::unique_ptr<int[]> vgroup_n_ind = std::make_unique<int[]>(n_vgroups);
+        std::copy(arg_vgroup_n_ind, arg_vgroup_n_ind + n_vgroups, vgroup_n_ind.get());
+        
+        return static_cast<void *>(new VariableSystem(std::move(vtypes), std::move(vgroup_ind), std::move(vgroup_n_ind), n_vgroups));
+    }
+    catch (std::exception &E){
+        strncpy(CblockSQP_error_message, E.what(), MAXLEN_CBLOCKSQP_ERROR_MESSAGE);
+    }
+    CblockSQP_error_message[MAXLEN_CBLOCKSQP_ERROR_MESSAGE] = '\0';
+    return nullptr;
+}
+
+CDLEXP void *create_VariableSystem_default(int const *arg_vgroup_n_ind, int n_vgroups){
+    return static_cast<void *>(new VariableSystem(arg_vgroup_n_ind, n_vgroups));
+}
+
+CDLEXP void VariableSystem_set_vtype_i(void *ptr, int index, char *arg_vTypeName){
+    static_cast<VariableSystem*>(ptr)->vtypes[index] = VariableGroupTypes_from_string(std::string_view(arg_vTypeName));
+}
+
+CDLEXP void VariableSystem_set_vtypes(void *ptr, char **arg_vTypeNames){
+    for (int i = 0; i < static_cast<VariableSystem*>(ptr)->n_vgroups; i++)
+        static_cast<VariableSystem*>(ptr)->vtypes[i] = VariableGroupTypes_from_string(std::string_view(arg_vTypeNames[i]));
+}
+
+CDLEXP void VariableSystem_set_vgroup_ind_i(void *ptr, int index, int *arg_vgroup_ind_i){
+    std::copy(arg_vgroup_ind_i, arg_vgroup_ind_i + static_cast<VariableSystem*>(ptr)->n_vgroups, static_cast<VariableSystem*>(ptr)->vgroup_ind[index].get());
+}
+
+
+
 
 CDLEXP void *create_Problemspec(int nVar, int nCon){
     return static_cast<void *>(new CProblemspec(nVar, nCon));
@@ -557,6 +608,30 @@ CDLEXP void Problemspec_set_vblocks(void *ptr, void *arg_vblocks, int arg_n_vblo
     std::copy(static_cast<vblock *>(arg_vblocks), static_cast<vblock *>(arg_vblocks) + arg_n_vblocks, castCP(ptr)->vblocks);
 }
 
+
+// CDLEXP void Problemspec_pass_vsystems(void *ptr, void *arg_vsystems, int arg_n_vsystems){
+//     castCP(ptr)->vsystem = static_cast<VariableSystem*>(arg_vsystems);
+//     castCP(ptr)->n_vsystems = arg_n_vsystems;
+// }
+
+CDLEXP void Problemspec_pass_vsystem(void *ptr, void *arg_vsystem){
+    castCP(ptr)->vsystem = static_cast<VariableSystem*>(arg_vsystem);
+    
+    // int n_vgroups = castCP(ptr)->vsystem->n_vgroups;
+    // std::cout << "vsystem: n_vgroups = " << n_vgroups << "\nvtypes = ";
+    // for (int i = 0; i < n_vgroups; i++){
+    //     std::cout << to_string(castCP(ptr)->vsystem->vtypes[i]) << " ";
+    // }
+    // std::cout << "\n";
+    // for (int i = 0; i < n_vgroups; i++){
+    //     for (int j = 0; j < castCP(ptr)->vsystem->vgroup_n_ind[i]; j++){
+    //         std::cout << castCP(ptr)->vsystem->vgroup_ind[i][j] << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
+}
+
+
 CDLEXP void Problemspec_pass_vblocks(void *ptr, void *arg_vblocks, int arg_n_vblocks){
     delete[] castCP(ptr)->vblocks;
     castCP(ptr)->n_vblocks = arg_n_vblocks;
@@ -600,17 +675,13 @@ CDLEXP void Problemspec_set_modify_step(void *ptr, void (*fp_mod_step)(void *clo
 }
 
 
-CDLEXP void *create_scaled_Problemspec(void *parent){
-    return static_cast<void *>(new scaled_Problemspec(castCP(parent)));
+CDLEXP void *create_ScaledProblemspec(void *parent){
+    return static_cast<void *>(new ScaledProblemspec(castCP(parent)));
 }
 
-CDLEXP void scaled_Problemspec_set_scale(void *ptr, double *scaleFactors){
-    static_cast<scaled_Problemspec*>(ptr)->set_scale(scaleFactors);
+CDLEXP void ScaledProblemspec_set_scale(void *ptr, double *scaleFactors){
+    static_cast<ScaledProblemspec*>(ptr)->set_scale(scaleFactors);
 }
-
-// CDLEXP void delete_Scaled_Problemspec(void *ptr){
-//     delete_Problemspec(ptr);
-// }
 
 
 // SQPmethod

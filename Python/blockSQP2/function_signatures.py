@@ -86,6 +86,7 @@ BSQP_function_signatures = {
     "SQPoptions_set_max_extra_steps": (None, (c_void_p, c_int)),
     "SQPoptions_set_par_QPs": (None, (c_void_p, c_char)),
     "SQPoptions_set_enable_QP_cancellation": (None, (c_void_p, c_char)),
+    "SQPoptions_set_max_auto_threads": (None, (c_void_p, c_int)),
     "SQPoptions_set_enable_premature_termination": (None, (c_void_p, c_char)),
     "SQPoptions_set_qpsol": (None, (c_void_p, c_int)),
     "SQPoptions_set_indef_delay": (None, (c_void_p, c_int)),
@@ -98,6 +99,14 @@ BSQP_function_signatures = {
     "create_SQPstats": (c_void_p, (c_char_p,)),
     "delete_SQPstats": (None, (c_void_p,)),
     "SQPstats_get_itCount": (c_int, (c_void_p,)),
+    
+    
+    "create_VariableSystem": (c_void_p, (POINTER(c_char_p), POINTER(POINTER(c_int)), POINTER(c_int), c_int)),
+    "create_VariableSystem_default": (c_void_p, (POINTER(c_int), c_int)),
+    "VariableSystem_set_vtype_i": (None, (c_void_p, c_int, c_char_p)),
+    "VariableSystem_set_vtypes": (None, (c_void_p, POINTER(c_char_p))),
+    "VariableSystem_set_vgroup_ind_i": (None, (c_void_p, c_int, POINTER(c_int))),
+    
     
     "create_Problemspec": (c_void_p, (c_int, c_int)),
     "delete_Problemspec": (None, (c_void_p,)),
@@ -116,6 +125,9 @@ BSQP_function_signatures = {
     "Problemspec_set_condenser": (None, (c_void_p, c_void_p)),
     "Problemspec_set_closure": (None, (c_void_p, c_void_p)),
     
+    # "Problemspec_pass_vsystems": (None, (c_void_p, c_void_p, c_int)),
+    "Problemspec_pass_vsystem": (None, (c_void_p, c_void_p)),
+    
     "Problemspec_set_dense_init": (None, (c_void_p, BSQP_callback_signatures['initialize_dense'])),
     "Problemspec_set_sparse_init": (None, (c_void_p, BSQP_callback_signatures['initialize_sparse'])),
     "Problemspec_set_dense_eval": (None, (c_void_p, BSQP_callback_signatures['evaluate_dense'])),
@@ -124,8 +136,8 @@ BSQP_function_signatures = {
     "Problemspec_set_reduce_constr_vio": (None, (c_void_p, BSQP_callback_signatures['reduce_constr_vio'])),
     "Problemspec_set_modify_step": (None, (c_void_p, BSQP_callback_signatures['modify_step'])),
     
-    "create_scaled_Problemspec": (c_void_p, (c_void_p,)),
-    "scaled_Problemspec_set_scale": (None, (c_void_p, POINTER(c_double))),
+    "create_ScaledProblemspec": (c_void_p, (c_void_p,)),
+    "ScaledProblemspec_set_scale": (None, (c_void_p, POINTER(c_double))),
     
     "create_SQPmethod": (c_void_p, (c_void_p, c_void_p, c_void_p)),
     "delete_SQPmethod": (None, (c_void_p,)),

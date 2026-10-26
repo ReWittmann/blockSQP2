@@ -237,6 +237,7 @@ bool SQPmethod::filterLineSearch(){
         
         // Check acceptability to the filter
         if (pairInFilter(cNormTrial, objTrial)){
+            if (k == 0) prnt3("Point is in the filter, try SOC\n");
             // Trial point is in the prohibited region defined by the filter, try second order correction
             if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                 break;
@@ -263,6 +264,7 @@ bool SQPmethod::filterLineSearch(){
                     }
                     else{
                         //Armijo condition violated, try second order correction
+                        if (k == 0) prnt3("Armijo condition violated, try SOC\n");
                         if (k == 0 && secondOrderCorrection(cNorm, cNormTrial, dfTdeltaXi, true))
                             break;
                         else{

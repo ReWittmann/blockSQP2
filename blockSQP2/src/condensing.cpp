@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <cassert>
 #include <limits>
+#include <functional>
 
 #ifdef __cpp_lib_format
     #include <format>
@@ -441,56 +442,59 @@ void Condenser::setup(){
     O_lb_var = std::make_unique<Matrix[]>(num_targets + 1);
     O_ub_var = std::make_unique<Matrix[]>(num_targets + 1);
     
-    target_threads = std::make_unique<std::jthread[]>(num_targets - 1);
+    // target_threads = std::make_unique<std::jthread[]>(num_targets - 1);
+    
+    set_N_threads((std::min)(num_targets, 7));
+    threadHandler_single_use = nullptr;
 }
 
 
-Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
-    num_cblocks = C.num_cblocks;
-    num_vblocks = C.num_vblocks;
-    num_hessblocks = C.num_hessblocks;
-    num_targets = C.num_targets;
+// Condenser::Condenser(Condenser &&C): add_dep_bounds(C.add_dep_bounds){
+//     num_cblocks = C.num_cblocks;
+//     num_vblocks = C.num_vblocks;
+//     num_hessblocks = C.num_hessblocks;
+//     num_targets = C.num_targets;
 
-    cblocks = C.cblocks;
-    vblocks = C.vblocks;
-    hess_block_sizes = C.hess_block_sizes;
-    targets = C.targets;
+//     cblocks = C.cblocks;
+//     vblocks = C.vblocks;
+//     hess_block_sizes = C.hess_block_sizes;
+//     targets = C.targets;
 
-    num_vars = C.num_vars;
-    num_cons = C.num_cons;
-    condensed_num_vars = C.condensed_num_vars;
-    num_true_cons = C.num_true_cons;
-    condensed_num_hessblocks = C.condensed_num_hessblocks;
-    condensed_hess_block_sizes = std::move(C.condensed_hess_block_sizes);
-    condensed_blockIdx = std::move(C.condensed_blockIdx);
+//     num_vars = C.num_vars;
+//     num_cons = C.num_cons;
+//     condensed_num_vars = C.condensed_num_vars;
+//     num_true_cons = C.num_true_cons;
+//     condensed_num_hessblocks = C.condensed_num_hessblocks;
+//     condensed_hess_block_sizes = std::move(C.condensed_hess_block_sizes);
+//     condensed_blockIdx = std::move(C.condensed_blockIdx);
 
-    cranges = std::move(C.cranges);
-    vranges = std::move(C.vranges);
-	c_starts = std::move(C.c_starts);
-	c_ends = std::move(C.c_ends);
-	v_starts = std::move(C.v_starts);
-	v_ends = std::move(C.v_ends);
-	h_starts = std::move(C.h_starts);
-	h_ends = std::move(C.h_ends);
-    condensed_v_starts = std::move(C.condensed_v_starts);
-    condensed_v_ends = std::move(C.condensed_v_ends);
-	hess_block_ranges = std::move(C.hess_block_ranges);
+//     cranges = std::move(C.cranges);
+//     vranges = std::move(C.vranges);
+// 	c_starts = std::move(C.c_starts);
+// 	c_ends = std::move(C.c_ends);
+// 	v_starts = std::move(C.v_starts);
+// 	v_ends = std::move(C.v_ends);
+// 	h_starts = std::move(C.h_starts);
+// 	h_ends = std::move(C.h_ends);
+//     condensed_v_starts = std::move(C.condensed_v_starts);
+//     condensed_v_ends = std::move(C.condensed_v_ends);
+// 	hess_block_ranges = std::move(C.hess_block_ranges);
 
-    // add_dep_bounds = C.add_dep_bounds;
-    condensed_num_cons = C.condensed_num_cons;
+//     // add_dep_bounds = C.add_dep_bounds;
+//     condensed_num_cons = C.condensed_num_cons;
 
-    targets_data = std::move(C.targets_data);
-    // C.targets_data = nullptr;
+//     targets_data = std::move(C.targets_data);
+//     // C.targets_data = nullptr;
 
-    T_grad_obj = std::move(C.T_grad_obj);
-    O_grad_obj = std::move(C.O_grad_obj);
+//     T_grad_obj = std::move(C.T_grad_obj);
+//     O_grad_obj = std::move(C.O_grad_obj);
 
-    T_Slices = std::move(C.T_Slices);
-    O_Slices = std::move(C.O_Slices);
+//     T_Slices = std::move(C.T_Slices);
+//     O_Slices = std::move(C.O_Slices);
 
-    // lb_dep_var = C.lb_dep_var;
-    // ub_dep_var = C.ub_dep_var;
-}
+//     // lb_dep_var = C.lb_dep_var;
+//     // ub_dep_var = C.ub_dep_var;
+// }
 
 
 Condenser::~Condenser(){}
@@ -501,81 +505,81 @@ Condenser *Condenser::layout_copy() const {
 }
 
 void Condenser::print_info(){
-    std::cout<< "num_targets: " << num_targets << "\n";
-    std::cout<< "num_vars: " << num_vars << "\n";
-    std::cout<< "num_cons: " << num_cons << "\n";
-    std::cout<< "num_hessblocks: " << num_hessblocks << "\n";
-    std::cout<< "condensed_num_vars: " << condensed_num_vars << "\n";
-    std::cout<< "num_true_cons: " << num_true_cons << "\n";
-    std::cout<< "condensed_num_hessblocks: " << condensed_num_hessblocks << "\n";
-    std::cout<< "add_dep_bounds: " << add_dep_bounds << "\n";
-    std::cout<< "condensed_num_cons: " << condensed_num_cons << "\n";
+    std::cout << "num_targets: " << num_targets << "\n";
+    std::cout << "num_vars: " << num_vars << "\n";
+    std::cout << "num_cons: " << num_cons << "\n";
+    std::cout << "num_hessblocks: " << num_hessblocks << "\n";
+    std::cout << "condensed_num_vars: " << condensed_num_vars << "\n";
+    std::cout << "num_true_cons: " << num_true_cons << "\n";
+    std::cout << "condensed_num_hessblocks: " << condensed_num_hessblocks << "\n";
+    std::cout << "add_dep_bounds: " << add_dep_bounds << "\n";
+    std::cout << "condensed_num_cons: " << condensed_num_cons << "\n";
 
-    std::cout<< "vranges: ";
+    std::cout << "vranges: ";
     for (int i = 0; i<num_vblocks+1; i++){
-        std::cout<< vranges[i] << " ";
+        std::cout << vranges[i] << " ";
     }
-    std::cout<< "\n";
+    std::cout << "\n";
 
-    std::cout<< "cranges: ";
+    std::cout << "cranges: ";
     for (int i = 0; i<num_cblocks+1; i++){
-        std::cout<< cranges[i] << " ";
+        std::cout << cranges[i] << " ";
     }
-    std::cout<< "\n";
+    std::cout << "\n";
 
-    std::cout<< "hess_block_ranges: ";
+    std::cout << "hess_block_ranges: ";
     for (int i = 0; i<=num_hessblocks; i++){
-        std::cout<< hess_block_ranges[i] << " ";
+        std::cout << hess_block_ranges[i] << " ";
     }
-    std::cout<< "\n";
+    std::cout << "\n";
 
-    std::cout<< "v_starts = ";
+    std::cout << "v_starts = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << v_starts[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "v_ends = ";
+    std::cout << "v_ends = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << v_ends[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "h_starts = ";
+    std::cout << "h_starts = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << h_starts[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "h_ends = ";
+    std::cout << "h_ends = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << h_ends[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "condensed_v_starts = ";
+    std::cout << "condensed_v_starts = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << condensed_v_starts[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "condensed_v_ends = ";
+    std::cout << "condensed_v_ends = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << condensed_v_ends[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "c_starts = ";
+    std::cout << "c_starts = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << c_starts[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
-    std::cout<< "c_ends = ";
+    std::cout << "c_ends = ";
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << c_ends[tnum] << " ";
     }
-    std::cout<<"\n";
+    std::cout << "\n";
 
     std::cout << "condensed_hess_block_sizes = ";
     for (int i = 0; i < condensed_num_hessblocks; i++){
@@ -595,38 +599,38 @@ void Condenser::print_info(){
     }
     std::cout << "\n";
     
-    std::cout<< "cblock presence status = \n";
+    std::cout << "cblock presence status = \n";
     for (int i = 0; i< num_cblocks; i++){
         std::cout << cblocks[i].removed << ", ";
     }
-    std::cout<< "\n";
+    std::cout << "\n";
 
     for (int tnum = 0; tnum < num_targets; tnum++){
         std::cout << "target " << tnum << " n_stages: " << targets[tnum].n_stages << "\n"; 
 
-        std::cout<< "target " << tnum << " alt_vranges: ";
+        std::cout << "target " << tnum << " alt_vranges: ";
         for (int i = 0; i < 2*targets[tnum].n_stages + 2; i++){
-            std::cout<<targets_data[tnum].alt_vranges[i] << " ";
+            std::cout <<targets_data[tnum].alt_vranges[i] << " ";
         }
-        std::cout<< "\n";
+        std::cout << "\n";
 
-        std::cout<< "target " << tnum << " free_sizes: ";
+        std::cout << "target " << tnum << " free_sizes: ";
         for (int i = 0; i <= targets[tnum].n_stages; i++){
-            std::cout<< targets_data[tnum].free_sizes[i] << " ";
+            std::cout << targets_data[tnum].free_sizes[i] << " ";
         }
-        std::cout<< "\n";
+        std::cout << "\n";
 
-        std::cout<< "target " << tnum << " cond_sizes: ";
+        std::cout << "target " << tnum << " cond_sizes: ";
         for (int i = 0; i < targets[tnum].n_stages; i++){
-            std::cout<< targets_data[tnum].cond_sizes[i] << " ";
+            std::cout << targets_data[tnum].cond_sizes[i] << " ";
         }
-        std::cout<< "\n";
+        std::cout << "\n";
 
-        std::cout<< "target " << tnum << " cond_ranges: ";
+        std::cout << "target " << tnum << " cond_ranges: ";
         for (int i = 0; i <= targets[tnum].n_stages; i++){
-            std::cout<< targets_data[tnum].cond_ranges[i] << " ";
+            std::cout << targets_data[tnum].cond_ranges[i] << " ";
         }
-        std::cout<< "\n";
+        std::cout << "\n";
     }
     return;
 }
@@ -649,6 +653,20 @@ void Condenser::print_info(){
     
 //     return;
 // }
+
+
+
+void Condenser::set_threadHandler_single_use(BasicThreadHandler *arg_threads){
+    threadHandler_single_use = arg_threads;}
+void Condenser::set_threadHandler(BasicThreadHandler *arg_threads, bool own){
+    if (own) autoThreadHandler = std::unique_ptr<BasicThreadHandler>(arg_threads);
+    threadHandler = arg_threads;
+}
+void Condenser::set_N_threads(int arg_N_threads){
+    autoThreadHandler = std::make_unique<ThreadHandler>(arg_N_threads);
+    threadHandler = autoThreadHandler.get();
+}
+
 
 
 int Condenser::get_hessblock_index(int v_ind){
@@ -690,7 +708,7 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
     ub_var.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_ub_var[num_targets]);
     grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_grad_obj[num_targets]);
     
-
+    
     //Assert that lower and upper bounds of condensing conditions are equal
     for (int tnum = 0; tnum < num_targets; tnum++){
         for (int i = c_starts[tnum]; i < c_ends[tnum]; i++){
@@ -700,25 +718,37 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
         }
     }
     
-    // for (int i = 0; i < num_targets; i++){
-    //     single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
-    //     O_Slices[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-    // }
-    // O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
     
-    
-    for (int tnum = 0; tnum < num_targets - 1; tnum++){
-        target_threads[tnum] = std::jthread(&Condenser::single_condense, this, tnum, T_grad_obj[tnum], T_Slices[tnum],
-                                            &(hess[h_starts[tnum]]), T_lb_var[tnum], T_ub_var[tnum], lb_con);
-        O_Slices[tnum].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+    if (threadHandler_single_use == nullptr) threadHandler_single_use = threadHandler;
+    if (threadHandler_single_use == nullptr || threadHandler_single_use->get_N_threads() == 0){
+        for (int i = 0; i < num_targets; i++){
+            single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
+            O_Slices[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+        }
+        O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
     }
-    int ntm1 = num_targets - 1;
-    single_condense(ntm1, T_grad_obj[ntm1], T_Slices[ntm1], &(hess[h_starts[ntm1]]), T_lb_var[ntm1], T_ub_var[ntm1], lb_con);
-    O_Slices[ntm1].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-    O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-    
-    for (int tnum = 0; tnum < num_targets - 1; tnum++) target_threads[tnum].join();
-
+    else{
+        int N_portions = (std::min)(threadHandler_single_use->get_N_threads() + 1, num_targets);
+        for (int j = 0; j < N_portions - 1; j++){
+            std::move_only_function<void()> task = std::move_only_function<void()>([this, j, N_portions, hess, &lb_con](){
+                for (int i = (this->num_targets*j)/N_portions; i < (this->num_targets*(j+1))/N_portions; i++){
+                    this->single_condense(i, this->T_grad_obj[i], this->T_Slices[i], &(hess[this->h_starts[i]]), this->T_lb_var[i], this->T_ub_var[i], lb_con);
+                    this->O_Slices[i].remove_rows(this->c_starts.get(), this->c_ends.get(), this->num_targets);
+                }
+            });
+            threadHandler_single_use->place(std::move(task), j);   
+        }
+        try{
+            for (int i = (num_targets*(N_portions - 1))/N_portions; i < num_targets; i++){
+                single_condense(i, T_grad_obj[i], T_Slices[i], &(hess[h_starts[i]]), T_lb_var[i], T_ub_var[i], lb_con);
+                O_Slices[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+            }
+            O_Slices[num_targets].remove_rows(c_starts.get(), c_ends.get(), num_targets);
+        }
+        catch (...) {threadHandler_single_use->combine_except(std::current_exception());}
+        threadHandler_single_use->assert_noexcept();
+        threadHandler_single_use = nullptr;
+    }
 
 //Assemble reduced constraint-jacobian (condensed jacobian without dependent-variable bounds)
     std::vector<Sparse_Matrix> reduced_Slices(2*num_targets + 1);
@@ -844,12 +874,6 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     Data.matching_sign = std::round(Data.matching_sign);
     
 	//Extract relevant subvectors and -matrices
-	// Data.B_k[0] = B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1]).dense();
-    // Data.B_k[0] *= -Data.matching_sign; //
-    // Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
-    // Data.c_k[0] *= Data.matching_sign;
-	// Data.r_k[0] = grad_obj.get_slice(Data.alt_vranges[0], Data.alt_vranges[1]);
-    
 	B_Jac.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.alt_vranges[0], Data.alt_vranges[1], Data.B_k[0]);
     Data.B_k[0] *= -Data.matching_sign; //
     lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.c_k[0]);
@@ -867,22 +891,6 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
         #endif
         if (Data.matching_sign != std::round(matching_sign)) throw std::logic_error("Error during condensing: All matchings of a target must have the same sign, i.e. all x_k+1 - F(x_k,...) = 0 or all F(x_k,...) - x_k+1 = 0");
         
-		// Data.B_k[i] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]).dense();
-        // Data.B_k[i] *= -Data.matching_sign;
-		// Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
-        // Data.c_k[i] *= Data.matching_sign;
-		// Data.r_k[i] = grad_obj.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
-        
-		// Data.A_k[i-1] = B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]).dense();
-        // Data.A_k[i-1] *= -Data.matching_sign;
-        
-		// Data.q_k[i-1] = grad_obj.get_slice(Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
-        
-		// Data.R_k[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-		// Data.Q_k[i-1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
-		// Data.S_k[i-1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i]- Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-        
-        
 		B_Jac.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], Data.B_k[i]);
         Data.B_k[i] *= -Data.matching_sign;
 		lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.c_k[i]);
@@ -898,13 +906,6 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 		sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.Q_k[i-1]);
 	    sub_hess[i].get_slice(0, Data.alt_vranges[2*i]- Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.S_k[i-1]);
     }
-    
-	// Data.q_k[n_stages - 1] = grad_obj.get_slice(Data.alt_vranges[2*n_stages - 1], Data.alt_vranges[2*n_stages]);
-	// Data.r_k[n_stages] = grad_obj.get_slice(Data.alt_vranges[2*n_stages], Data.alt_vranges[2*n_stages+1]);
-    
-	// Data.R_k[n_stages] = sub_hess[n_stages].get_slice(Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages + 1] - Data.alt_vranges[2*n_stages-1]);
-	// Data.Q_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], 0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1]);
-	// Data.S_k[n_stages - 1] = sub_hess[n_stages].get_slice(0, Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages] - Data.alt_vranges[2*n_stages-1], Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages-1]);
     
 	grad_obj.get_slice(Data.alt_vranges[2*n_stages - 1], Data.alt_vranges[2*n_stages], Data.q_k[n_stages - 1]);
 	grad_obj.get_slice(Data.alt_vranges[2*n_stages], Data.alt_vranges[2*n_stages+1], Data.r_k[n_stages]);
@@ -926,37 +927,21 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 	}
 
 	//calculate G
-	// for (int i = 0; i<n_stages; i++){
-	// 	Data.G.set(i,i, Data.B_k[i]);
-	// 	for (int k = i+1; k < n_stages; k++){
-	// 		Data.G.set(k, i, Data.A_k[k-1]*Data.G(k-1,i));
-	// 	}
-	// }
-    
 	for (int i = 0; i<n_stages; i++){
 		Data.G.set(i,i, Data.B_k[i]);
 		for (int k = i+1; k < n_stages; k++){
-            // Data.G(k,i) *= 0.;
             mult_to(Data.A_k[k-1], Data.G(k-1,i), Data.G(k,i), 0.);
-			// Data.G.set(k, i, Data.A_k[k-1]*Data.G(k-1,i));
 		}
 	}
 
 	//calculate h
-	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-    
     Data.h_k[n_stages] = Data.r_k[n_stages];
     Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
     
-    
-	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
     w_k[n_stages - 1] = Data.q_k[n_stages - 1];
     mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
 
-	for (int k = n_stages-1; k >=1; k--){
-		// Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-		// w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-        
+	for (int k = n_stages-1; k >=1; k--){        
         Data.h_k[k] = Data.r_k[k];
         Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
         Tmult_to(Data.B_k[k], w_k[k], Data.h_k[k]);
@@ -965,35 +950,26 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
         mult_to(Data.Q_k[k-1], Data.g_k[k-1], w_k[k-1]);
         Tmult_to(Data.A_k[k-1], w_k[k], w_k[k-1]);
 	}
-	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
     Data.h_k[0] = Data.r_k[0];
     Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
     
-
 	//calculate H
 	for (int i = 0; i < n_stages; i++){
-		// W_ik[n_stages-1] = Data.Q_k[n_stages-1] * Data.G(n_stages-1, i);
-		// Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages-1]) * Data.G(n_stages-1, i));
         mult(Data.Q_k[n_stages - 1], Data.G(n_stages - 1, i), W_ik[n_stages - 1]);
         Tmult_to(Data.S_k[n_stages - 1], Data.G(n_stages - 1, i), Data.H(n_stages, i), 0.);
         
 		for (int k = n_stages-1; k >= i+1; k--){
-			// Data.H.set(k,i, Transpose(Data.S_k[k-1])*Data.G(k-1, i) + Transpose(Data.B_k[k])*W_ik[k]);
-			// W_ik[k-1] = Transpose(Data.A_k[k-1])*W_ik[k] + Data.Q_k[k-1]*Data.G(k-1,i);
             Tmult_to(Data.S_k[k-1], Data.G(k-1, i), Data.H(k,i), 0.);
             Tmult_to(Data.B_k[k], W_ik[k], Data.H(k,i));
             
             Tmult(Data.A_k[k-1], W_ik[k], W_ik[k-1]);
             mult_to(Data.Q_k[k-1], Data.G(k-1,i), W_ik[k-1]);
 		}
-		// Data.H.set(i, i, Data.R_k[i] + Transpose(Data.B_k[i])*W_ik[i]);
-        
         Data.H.set(i, i, Data.R_k[i]);
         Tmult_to(Data.B_k[i], W_ik[i], Data.H(i,i));
 	}
 	Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
-
-
+    
     //Calculate slice of condensed constraint-jacobian corresponding to target variables
     std::vector<Matrix> D_lb_k(n_stages);
     std::vector<Matrix> D_ub_k(n_stages);
@@ -1004,23 +980,8 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
     Data.H.to_sym(Data.H_dense);
     Data.g = vertcat(Data.g_k);
     Data.h = vertcat(Data.h_k);
-
-	// Data.J_free_k[0] = B_Jac.get_slice(0, B_Jac.m, 0, Data.alt_vranges[1]);
-	// Data.J_free_k[0].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-	// F_lb_k[0] = B_lb_var.get_slice(0, Data.alt_vranges[1], 0, 1);
-	// F_ub_k[0] = B_ub_var.get_slice(0, Data.alt_vranges[1], 0, 1);
-	// for (int i = 1; i <= n_stages; i++){
-	// 	Data.J_dep_k[i-1] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i-1], Data.alt_vranges[2*i]);
-	// 	Data.J_free_k[i] = B_Jac.get_slice(0, B_Jac.m, Data.alt_vranges[2*i], Data.alt_vranges[2*i+1]);
-    //     Data.J_dep_k[i-1].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-    //     Data.J_free_k[i].remove_rows(c_starts.get(), c_ends.get(), num_targets);
-
-	// 	D_lb_k[i-1] = B_lb_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
-	// 	D_ub_k[i-1] = B_ub_var.get_slice(Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i], 0, 1);
-	// 	F_lb_k[i] = B_lb_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1);
-    //     F_ub_k[i] = B_ub_var.get_slice(Data.alt_vranges[2*i], Data.alt_vranges[2*i+1], 0, 1);
-	// }
     
+        
 	B_Jac.get_slice(0, B_Jac.m, 0, Data.alt_vranges[1], Data.J_free_k[0]);
 	Data.J_free_k[0].remove_rows(c_starts.get(), c_ends.get(), num_targets);
 	B_lb_var.get_slice(0, Data.alt_vranges[1], 0, 1, F_lb_k[0]);
@@ -1038,14 +999,12 @@ void Condenser::single_condense(int tnum, const Matrix &grad_obj, const Sparse_M
 	}
 
     //Calculate J_reduced = J_free + J_dep * G = J_free + J_dep * inv(A) * B
-
     Data.D_lb = vertcat(D_lb_k);
     Data.D_ub = vertcat(D_ub_k);
     Data.F_lb = vertcat(F_lb_k);
     Data.F_ub = vertcat(F_ub_k);
 
     Sparse_Matrix J_d = horzcat(Data.J_dep_k);
-
     CSR_Matrix J_fullrow;
     Data.J_reduced_k[n_stages] = Data.J_free_k[n_stages];
 
@@ -1091,13 +1050,7 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     
     //Get slices corresponding to targets free variables and other free variables
     int ind = 0;
-    for (int i = 0; i < num_targets; i++){
-        // O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
-        // T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-        // O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
-        // T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-        
+    for (int i = 0; i < num_targets; i++){        
         xi_cond.get_slice(ind, condensed_v_starts[i], O_xi_cond[i]);
         xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i], T_xi_cond[i]);
         
@@ -1106,9 +1059,6 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
         
         ind = condensed_v_ends[i];
     }
-    // O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-    // O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-    
     xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_xi_cond[num_targets]);
     lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars, O_mu[num_targets]);
     
@@ -1116,30 +1066,15 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
     ind = 0;
     int ind_2 = condensed_num_vars;
     for (int i = 0; i < num_targets; i++){
-        // O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
         lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind, O_sigma[i]);
         ind_2 += c_starts[i] - ind;
         ind = c_ends[i];
     }
-    // O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
     lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind, O_sigma[num_targets]);
     
     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
     ind = condensed_num_vars + num_true_cons;
-    
-    // if (add_dep_bounds){
-    //     for (int i = 0; i < num_targets; i++){
-    //         // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
-    //         lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
-    //         ind += targets_data[i].n_dep;
-    //     }
-    // }
-    // else{
-    //     for (int i = 0; i < num_targets; i++){
-    //         T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
-    //     }
-    // }
-    
+        
     switch (add_dep_bounds){
         case 0:
             for (int i = 0; i < num_targets; i++){
@@ -1167,12 +1102,13 @@ void Condenser::recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_con
                 ind += targets_data[i].n_dep;
             }
             break;
-        default: throw;
+        default: throw std::logic_error("Condenser::recover_var_mult: Invalid value of add_dep_bounds (" + std::to_string(add_dep_bounds) + "), should be one of 0, 1, 2");
     }
-    
     
     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
     //assemble multipliers for free and dependent variable bounds
+    
+    //TODO enable parallelization
     for (int i = 0; i < num_targets; i++){
         single_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, T_xi_full[i], T_nu[i], T_mu_lambda[i]);
     }
@@ -1219,7 +1155,6 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
-        // xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
         xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i], xi_free_k[i]);
         s_ind += Data.free_sizes[i];
     }
@@ -1227,7 +1162,6 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
     //Get multipliers for each stage-state bound
     s_ind = 0;
     for (int i = 0; i < n_stages; i++){
-        // lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
         lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i], lambda_k[i]);
         s_ind += Data.cond_sizes[i];
     }
@@ -1235,17 +1169,11 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
     //Get multipliers for free variable bounds for each stage
     s_ind = 0;
     for (int i = 0; i <= n_stages; i++){
-        // mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
         mu.get_slice(s_ind, s_ind + Data.free_sizes[i], mu_k[i]);
         s_ind += Data.free_sizes[i];
     }
 
     //Recover dependent variables
-    // xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0];
-    // for (int i = 1; i < n_stages; i++){
-    //     xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i];
-    // }
-    
     xi_dep_k[0] = Data.c_k[0];
     mult_to(Data.B_k[0], xi_free_k[0], xi_dep_k[0]);
     for (int i = 1; i < n_stages; i++){
@@ -1276,11 +1204,6 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
     }
 
     //If there are no free variables in the final stage N, S_N and xi_free_N have second and first dimension zero respectively and cannot be multiplied. We have to manually omit the term
-    // if (Data.alt_vranges[2*n_stages+1] - Data.alt_vranges[2*n_stages] > 0)
-    //     nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
-    // else
-    //     nu_k[n_stages - 1] = Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
-    
     nu_k[n_stages - 1] = Data.q_k[n_stages - 1];
     nu_k[n_stages - 1] -= lambda_k[n_stages - 1]; 
     nu_k[n_stages - 1] -= J_T_sigma;
@@ -1295,9 +1218,7 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
             J_T_sigma.Initialize(0.);
         }
         else J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
-
-        // nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
-            
+        
         nu_k[i] = Data.q_k[i];
         nu_k[i] -= lambda_k[i];
         nu_k[i] -= J_T_sigma;
@@ -1315,263 +1236,31 @@ void Condenser::single_recover(int tnum, const Matrix &xi_free, const Matrix &mu
 }
 
 
-// void Condenser::fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2){
-
-//     for (int tnum = 0; tnum < num_targets; tnum++){
-//         single_hess_condense(tnum, hess_2 + h_starts[tnum]);
-//     }
-
-//     //if (condensed_hess_2 == nullptr) condensed_hess_2 = new SymMatrix[condensed_num_hessblocks];
-    
-
-//     //Assemble second condensed block hessian
-//     int ind_1 = 0;
-//     int ind_2 = 0;
-
-//     for (int tnum = 0; tnum < num_targets; tnum++){
-//         for (int i = 0; i < h_starts[tnum] - ind_2; i++){
-//             condensed_hess_2[ind_1 + i] = hess_2[ind_2 + i];
-//         }
-//         ind_1 += h_starts[tnum] - ind_2;
-//         ind_2 = h_ends[tnum];
-//         condensed_hess_2[ind_1] = targets_data[tnum].H_dense_2;
-//         ind_1++;
-//     }
-//     for (int i = 0; i < num_hessblocks - ind_2; i++){
-//         condensed_hess_2[ind_1 + i] = hess_2[ind_2 + i];
-//     }
-
-//     //Assemble second linear term vector h_2
-//     std::vector<Matrix> condensed_h_k_2(2*num_targets + 1);
-//     for (int tnum = 0; tnum < num_targets; tnum++){
-//         condensed_h_k_2[2*tnum] = O_grad_obj[tnum];
-//         condensed_h_k_2[2*tnum + 1] = targets_data[tnum].h_2;
-//     }
-//     condensed_h_k_2[2*num_targets] = O_grad_obj[num_targets];
-
-//     condensed_h_2 = vertcat(condensed_h_k_2);
-// }
-
-
-// void Condenser::single_hess_condense(int tnum, const SymMatrix *const sub_hess){
-//     condensing_data &Data = targets_data[tnum];
-
-//     int n_stages = targets[tnum].n_stages;
-
-//     Data.R_k_2[0] = sub_hess[0];
-//     for (int i = 1; i <= n_stages; i++){
-//         Data.Q_k_2[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
-//         Data.S_k_2[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-//         Data.R_k_2[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-//     }
-
-//     //Calculate new h
-//     std::vector<Matrix> w_k(n_stages);
-//     w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k_2[n_stages - 1] * Data.g_k[n_stages - 1];
-
-//     Data.h_k_2[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k_2[n_stages - 1]) * Data.g_k[n_stages - 1];
-//     for (int k = n_stages - 1; k > 0; k--){
-//         Data.h_k_2[k] = Data.r_k[k] + Transpose(Data.S_k_2[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k]) * w_k[k];
-//         w_k[k-1] = Data.Q_k_2[k-1] * Data.g_k[k-1] + Data.q_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-//     }
-//     Data.h_k_2[0] = Data.r_k[0] + Transpose(Data.B_k[0]) * w_k[0];
-
-//     //Calculate new H
-//     for (int i = 0; i < n_stages; i++){
-//         w_k[n_stages - 1] = Data.Q_k_2[n_stages - 1] * Data.G(n_stages - 1, i);
-//         Data.H_2.set(n_stages, i, Transpose(Data.S_k_2[n_stages - 1]) * Data.G(n_stages - 1,i));
-//         for (int k = n_stages - 1; k > i; k--){
-//             Data.H_2.set(k, i, Transpose(Data.S_k_2[k-1]) * Data.G(k-1,i) + Transpose(Data.B_k[k]) * w_k[k]);
-//             w_k[k-1] = Data.Q_k_2[k-1] * Data.G(k-1, i) + Transpose(Data.A_k[k-1]) * w_k[k];
-//         }
-//         Data.H_2.set(i,i, Data.R_k_2[i] + Transpose(Data.B_k[i])*w_k[i]);
-//     }
-//     Data.H_2.set(n_stages, n_stages, Data.R_k_2[n_stages]);
-
-//     Data.h_2 = vertcat(Data.h_k_2);
-//     Data.H_2.to_sym(Data.H_dense_2);
-
-//     return;
-// }
-
-// void Condenser::convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const{
-//     std::vector<Matrix> O_xi_cond(num_targets + 1);
-//     std::vector<Matrix> T_xi_cond(num_targets);
-//     std::vector<Matrix> O_mu(num_targets + 1);
-//     std::vector<Matrix> T_mu(num_targets);
-//     std::vector<Matrix> T_lambda(num_targets);
-//     std::vector<Matrix> O_sigma(num_targets + 1);
-//     Matrix sigma = lambda_cond.get_slice(condensed_num_vars, condensed_num_vars + num_true_cons);
-
-//     std::vector<Matrix> T_xi_full(num_targets);
-//     std::vector<Matrix> T_nu(num_targets);
-//     std::vector<Matrix> T_mu_lambda(num_targets);
-
-//     std::vector<Matrix> xi_full_k(2*num_targets + 1);
-//     std::vector<Matrix> lambda_full_k(2*(2*num_targets + 1));
-
-//     //Get slices corresponding to targets free variables and other free variables
-//     int ind = 0;
-//     for (int i = 0; i < num_targets; i++){
-//         O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
-//         T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-//         O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
-//         T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-//         ind = condensed_v_ends[i];
-//     }
-//     O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-//     O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-
-
-//     //Slice constraint multipliers to later insert continuity condition multipliers
-//     ind = 0;
-//     int ind_2 = condensed_num_vars;
-//     for (int i = 0; i < num_targets; i++){
-//         O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
-//         ind_2 += c_starts[i] - ind;
-//         ind = c_ends[i];
-//     }
-//     O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
-
-
-//     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
-//     ind = condensed_num_vars + num_true_cons;
-//     if (add_dep_bounds){
-//         for (int i = 0; i < num_targets; i++){
-//             T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
-//             ind += targets_data[i].n_dep;
-//         }
-//     }
-//     else{
-//         for (int i = 0; i < num_targets; i++){
-//             T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
-//         }
-//     }
-
-//     //Recover dependent variables, compose them with free variables to vector T_xi_full, recover continuity condition multipliers nu,
-//     //assemble multipliers for free and dependent variable bounds
-//     for (int i = 0; i < num_targets; i++){
-//         single_convex_combination_recover(i, T_xi_cond[i], T_mu[i], T_lambda[i], sigma, t, T_xi_full[i], T_nu[i], T_mu_lambda[i]);
-//     }
-
-//     //Assemble complete vectors of uncondensed variables and corresponding bound-constraint multipliers
-//     for (int i = 0; i < num_targets; i++){
-//         xi_full_k[2*i] = O_xi_cond[i];
-//         xi_full_k[2*i + 1] = T_xi_full[i];
-//         lambda_full_k[2*i] = O_mu[i];
-//         lambda_full_k[2*i + 1] = T_mu_lambda[i];
-//     }
-//     xi_full_k[2*num_targets] = O_xi_cond[num_targets];
-//     lambda_full_k[2*num_targets] = O_mu[num_targets];
-
-//     //Append constraint and condition multipliers to bound-constraint multipliers
-//     ind = 2*num_targets + 1;
-//     for (int i = 0; i < num_targets; i++){
-//         lambda_full_k[ind + 2*i] = O_sigma[i];
-//         lambda_full_k[ind + 2*i + 1] = T_nu[i];
-//     }
-//     lambda_full_k[ind + 2*num_targets] = O_sigma[num_targets];
-
-//     xi_full = vertcat(xi_full_k);
-//     lambda_full = vertcat(lambda_full_k);
-
-//     return;
-// }
-
-// void Condenser::single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
-//                             Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const {
-//     int n_stages = targets[tnum].n_stages;
-//     condensing_data &Data = targets_data[tnum];
-
-//     std::vector<Matrix> xi_free_k(n_stages + 1);
-//     std::vector<Matrix> xi_dep_k(n_stages);
-//     std::vector<Matrix> nu_k(n_stages);
-//     std::vector<Matrix> lambda_k(n_stages);
-//     std::vector<Matrix> mu_k(n_stages + 1);
-//     std::vector<Matrix> xi_full_k(2*n_stages + 1);
-//     std::vector<Matrix> mu_lambda_k(2*n_stages + 1);
-
-//     int s_ind = 0;
-//     //int dep_size;
-
-//     //Get free variables of each stage
-//     for (int i = 0; i <= n_stages; i++){
-//         xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
-//         s_ind += Data.free_sizes[i];
-//     }
-
-//     //Get multipliers for each stage-state bound
-//     s_ind = 0;
-//     for (int i = 0; i < n_stages; i++){
-//         lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
-//         s_ind += Data.cond_sizes[i];
-//     }
-
-//     //Get multipliers for free variable bounds for each stage
-//     s_ind = 0;
-//     for (int i = 0; i <= n_stages; i++){
-//         mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
-//         s_ind += Data.free_sizes[i];
-//     }
-
-//     //Recover dependent variables
-//     xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0];
-//     for (int i = 1; i < n_stages; i++){
-//         xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i];
-//     }
-
-//     //Assemble original vector of free and dependent variables and corresponding vector of bound-constraint multipliers
-//     for (int i = 0; i < n_stages; i++){
-//         xi_full_k[2*i] = xi_free_k[i];
-//         xi_full_k[2*i + 1] = xi_dep_k[i];
-//         mu_lambda_k[2*i] = mu_k[i];
-//         mu_lambda_k[2*i + 1] = lambda_k[i];
-//     }
-//     xi_full_k[2*n_stages] = xi_free_k[n_stages];
-//     mu_lambda_k[2*n_stages] = mu_k[n_stages];
-
-//     //Calculate adjoint variables backward in time
-//     //Definition of Lagrangian: 0.5 xT H x + qT * x + lambdaT * x + muT * (Ax - b) + sigmaT J
-
-//     Matrix J_T_sigma(Data.cond_sizes[n_stages-1]);
-//     if (num_true_cons == 0){
-//         J_T_sigma.Initialize(0.);
-//     }
-//     else{
-//         J_T_sigma = transpose_multiply(Data.J_dep_k[n_stages - 1], sigma);
-//     }
-
-//     nu_k[n_stages - 1] = (Data.S_k[n_stages - 1]*(1-t) + Data.S_k_2[n_stages - 1]*t) * xi_free_k[n_stages] + (Data.Q_k[n_stages - 1]*(1-t) + Data.Q_k_2[n_stages - 1]*t) * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
-//     for (int i = n_stages - 2; i>= 0; i--){
-//         if (num_true_cons == 0){
-//             J_T_sigma.Dimension(Data.cond_sizes[i]);
-//             J_T_sigma.Initialize(0.);
-//         }
-//         else{
-//             J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
-//         }
-
-//         nu_k[i] = (Data.S_k[i]*(1-t) + Data.S_k_2[i]*t) * xi_free_k[i+1] + (Data.Q_k[i]*(1-t) + Data.Q_k_2[i]*t) * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
-//     }
-
-//     nu = vertcat(nu_k);
-//     nu *= Data.matching_sign;
-//     xi_full = vertcat(xi_full_k);
-//     mu_lambda = vertcat(mu_lambda_k);
-
-//     return;
-// }
-
-
-
-
 void Condenser::new_hessian_condense(const SymMatrix *const hess, Matrix &condensed_h, SymMatrix *condensed_hess){
-    for (int tnum = 0; tnum < num_targets; tnum++){
-        single_new_hess_condense(tnum, hess + h_starts[tnum]);
+    if (threadHandler_single_use == nullptr) threadHandler_single_use = threadHandler;
+    if (threadHandler_single_use == nullptr || threadHandler_single_use->get_N_threads() == 0){
+        for (int i = 0; i < num_targets; i++) {single_new_hess_condense(i, hess + h_starts[i]);}
     }
-
+    else{
+        int N_portions = (std::min)(threadHandler_single_use->get_N_threads() + 1, num_targets);
+        for (int j = 0; j < N_portions - 1; j++){
+            std::move_only_function<void()> task = std::move_only_function<void()>([this, j, N_portions, hess](){
+                for (int i = (this->num_targets*j)/N_portions; i < (this->num_targets*(j+1))/N_portions; i++){
+                    this->single_new_hess_condense(i, hess + this->h_starts[i]);
+                }
+            });
+            threadHandler_single_use->place(std::move(task), j);   
+        }
+        try{
+            for (int i = (num_targets*(N_portions - 1))/N_portions; i < num_targets; i++){
+                single_new_hess_condense(i, hess + h_starts[i]);
+            }
+        }
+        catch (...) {threadHandler_single_use->combine_except(std::current_exception());}
+        threadHandler_single_use->assert_noexcept();
+        threadHandler_single_use = nullptr;
+    }
+    
     //Assemble second condensed block hessian
     int ind_1 = 0;
     int ind_2 = 0;
@@ -1607,11 +1296,6 @@ void Condenser::single_new_hess_condense(int tnum, const SymMatrix *const sub_he
     int n_stages = targets[tnum].n_stages;
 
     Data.R_k[0] = sub_hess[0];
-    // for (int i = 1; i <= n_stages; i++){
-    //     Data.R_k[i] = sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-    //     Data.Q_k[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], 0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1]);
-    //     Data.S_k[i - 1] = sub_hess[i].get_slice(0, Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i-1], Data.alt_vranges[2*i+1] - Data.alt_vranges[2*i-1]);
-    // }
     
     for (int i = 1; i <= n_stages; i++){
         sub_hess[i].get_slice(Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i + 1] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i] - Data.alt_vranges[2*i - 1], Data.alt_vranges[2*i + 1] - Data.alt_vranges[2*i - 1], Data.R_k[i]);
@@ -1621,42 +1305,15 @@ void Condenser::single_new_hess_condense(int tnum, const SymMatrix *const sub_he
 
     // //Calculate new h
     std::vector<Matrix> w_k(n_stages);
-    // w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
-    
-    // Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-    // for (int k = n_stages - 1; k > 0; k--){
-    //     Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k]) * w_k[k];
-    //     w_k[k-1] = Data.Q_k[k-1] * Data.g_k[k-1] + Data.q_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-    // }
-    // Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0]) * w_k[0];
-
-    // //Calculate new H
-    // for (int i = 0; i < n_stages; i++){
-    //     w_k[n_stages - 1] = Data.Q_k[n_stages - 1] * Data.G(n_stages - 1, i);
-    //     Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages - 1]) * Data.G(n_stages - 1,i));
-    //     for (int k = n_stages - 1; k > i; k--){
-    //         Data.H.set(k, i, Transpose(Data.S_k[k-1]) * Data.G(k-1,i) + Transpose(Data.B_k[k]) * w_k[k]);
-    //         w_k[k-1] = Data.Q_k[k-1] * Data.G(k-1, i) + Transpose(Data.A_k[k-1]) * w_k[k];
-    //     }
-    //     Data.H.set(i,i, Data.R_k[i] + Transpose(Data.B_k[i])*w_k[i]);
-    // }
-    // Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
     
 	//calculate h
-	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-    
     Data.h_k[n_stages] = Data.r_k[n_stages];
     Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
     
-    
-	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
     w_k[n_stages - 1] = Data.q_k[n_stages - 1];
     mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
 
 	for (int k = n_stages-1; k >=1; k--){
-		// Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-		// w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-        
         Data.h_k[k] = Data.r_k[k];
         Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
         Tmult_to(Data.B_k[k], w_k[k], Data.h_k[k]);
@@ -1665,38 +1322,29 @@ void Condenser::single_new_hess_condense(int tnum, const SymMatrix *const sub_he
         mult_to(Data.Q_k[k-1], Data.g_k[k-1], w_k[k-1]);
         Tmult_to(Data.A_k[k-1], w_k[k], w_k[k-1]);
 	}
-	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
     Data.h_k[0] = Data.r_k[0];
     Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
     
     std::vector<Matrix> W_ik(n_stages);
 	//calculate H
 	for (int i = 0; i < n_stages; i++){
-		// W_ik[n_stages-1] = Data.Q_k[n_stages-1] * Data.G(n_stages-1, i);
-		// Data.H.set(n_stages, i, Transpose(Data.S_k[n_stages-1]) * Data.G(n_stages-1, i));
         mult(Data.Q_k[n_stages - 1], Data.G(n_stages - 1, i), W_ik[n_stages - 1]);
         Tmult_to(Data.S_k[n_stages - 1], Data.G(n_stages - 1, i), Data.H(n_stages, i), 0.);
         
 		for (int k = n_stages-1; k >= i+1; k--){
-			// Data.H.set(k,i, Transpose(Data.S_k[k-1])*Data.G(k-1, i) + Transpose(Data.B_k[k])*W_ik[k]);
-			// W_ik[k-1] = Transpose(Data.A_k[k-1])*W_ik[k] + Data.Q_k[k-1]*Data.G(k-1,i);
             Tmult_to(Data.S_k[k-1], Data.G(k-1, i), Data.H(k,i), 0.);
             Tmult_to(Data.B_k[k], W_ik[k], Data.H(k,i));
             
             Tmult(Data.A_k[k-1], W_ik[k], W_ik[k-1]);
             mult_to(Data.Q_k[k-1], Data.G(k-1,i), W_ik[k-1]);
 		}
-		// Data.H.set(i, i, Data.R_k[i] + Transpose(Data.B_k[i])*W_ik[i]);
-        
         Data.H.set(i, i, Data.R_k[i]);
         Tmult_to(Data.B_k[i], W_ik[i], Data.H(i,i));
 	}
 	Data.H.set(n_stages, n_stages, Data.R_k[n_stages]);
     
-    
     Data.h = vertcat(Data.h_k);
     Data.H.to_sym(Data.H_dense);
-
     return;
 }
 
@@ -1705,21 +1353,12 @@ void Condenser::single_new_hess_condense(int tnum, const SymMatrix *const sub_he
 
 
 void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const Matrix &ub_con, Matrix &condensed_h, Matrix &condensed_lb_con, Matrix &condensed_ub_con){
-
-	// O_grad_obj.resize(0);
-
-    // O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
-	// for (int i = 1; i < num_targets; i++){
-    //     O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-	// }
-    // O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
     
     grad_obj.get_slice(0, v_starts[0], 0, 1, O_grad_obj[0]);
 	for (int i = 1; i < num_targets; i++){
         grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1, O_grad_obj[i]);
 	}
     grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1, O_grad_obj[num_targets]);
-    
     
     //Assert that lower and upper bounds of condensing conditions are equal
     for (int tnum = 0; tnum < num_targets; tnum++){
@@ -1730,8 +1369,29 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
         }
     }
     
-    for (int i = 0; i < num_targets; i++){
-        single_SOC_condense(i, lb_con);
+    
+    if (threadHandler_single_use == nullptr) threadHandler_single_use = threadHandler;
+    if (threadHandler_single_use == nullptr || threadHandler_single_use->get_N_threads() == 0){
+        for (int i = 0; i < num_targets; i++) {single_SOC_condense(i, lb_con);}
+    }
+    else{
+        int N_portions = (std::min)(threadHandler_single_use->get_N_threads() + 1, num_targets);
+        for (int j = 0; j < N_portions - 1; j++){
+            std::move_only_function<void()> task = std::move_only_function<void()>([this, j, N_portions, &lb_con](){
+                for (int i = (this->num_targets*j)/N_portions; i < (this->num_targets*(j+1))/N_portions; i++){
+                    this->single_SOC_condense(i, lb_con);
+                }
+            });
+            threadHandler_single_use->place(std::move(task), j);   
+        }
+        try{
+            for (int i = (num_targets*(N_portions - 1))/N_portions; i < num_targets; i++){
+                single_SOC_condense(i, lb_con);
+            }
+        }
+        catch (...) {threadHandler_single_use->combine_except(std::current_exception());}
+        threadHandler_single_use->assert_noexcept();
+        threadHandler_single_use = nullptr;
     }
     
     //Assemble reduced constraint-bounds (without dependent-variable bounds)
@@ -1741,45 +1401,6 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
         reduced_lb_con -= targets_data[i].Jtimes_g;
         reduced_ub_con -= targets_data[i].Jtimes_g;
     }
-// //Add dependent variable bounds to constraints
-//     if (add_dep_bounds == 2){
-//         std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-//         std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-//         condensed_lb_con_k[0] = reduced_lb_con;
-//         condensed_ub_con_k[0] = reduced_ub_con;
-//         for (int tnum = 0; tnum < num_targets; tnum++){
-//             condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
-//             condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
-//         }
-//         condensed_lb_con = vertcat(condensed_lb_con_k);
-//         condensed_ub_con = vertcat(condensed_ub_con_k);
-//     }
-//     else if (add_dep_bounds == 1){
-//         std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-//         std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-//         condensed_lb_con_k[0] = reduced_lb_con;
-//         condensed_ub_con_k[0] = reduced_ub_con;
-//         for (int tnum = 0; tnum < num_targets; tnum++){
-//             condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
-//             condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
-//         }
-//         condensed_lb_con = vertcat(condensed_lb_con_k);
-//         condensed_ub_con = vertcat(condensed_ub_con_k);
-
-//         //Save bounds on dependent variables so a user can manually add them to the qp
-//         std::vector<Matrix> lb_dep_var_k(num_targets);
-//         std::vector<Matrix> ub_dep_var_k(num_targets);
-//         for (int tnum = 0; tnum < num_targets; tnum++){
-//             lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
-//             ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
-//         }
-//         lb_dep_var = vertcat(lb_dep_var_k);
-//         ub_dep_var = vertcat(ub_dep_var_k);
-//     }
-//     else{
-//         condensed_lb_con = reduced_lb_con;
-//         condensed_ub_con = reduced_ub_con;
-//     }
 
     if (add_dep_bounds == 0){
         condensed_lb_con = reduced_lb_con;
@@ -1823,8 +1444,6 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
     condensed_h_k[2*num_targets] = O_grad_obj[num_targets];
     condensed_h = vertcat(condensed_h_k);
 
-    //std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
-
     return;
 
 }
@@ -1833,17 +1452,7 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
 void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
 	int n_stages = targets[tnum].n_stages;
 	condensing_data &Data = targets_data[tnum];
-    
-    
-	//Extract the updated c_k
-	// Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
-    // Data.c_k[0] *= Data.matching_sign;
-
-	// for (int i = 1; i<n_stages; i++){
-	// 	Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
-    //     Data.c_k[i] *= Data.matching_sign;
-	// }
-    
+        
 	lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.c_k[0]);
     Data.c_k[0] *= Data.matching_sign;
     
@@ -1852,15 +1461,8 @@ void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
         Data.c_k[i] *= Data.matching_sign;
 	}
     
-    
 	std::vector<Matrix> w_k(n_stages);
     
-    //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
-	//calculate g
-	// Data.g_k[0] = Data.c_k[0];
-	// for (int i = 1; i < n_stages; i++){
-	// 	Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
-	// }
 	Data.g_k[0] = Data.c_k[0];
 	for (int i = 1; i < n_stages; i++){
 		// Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
@@ -1868,16 +1470,6 @@ void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
         mult_to(Data.A_k[i-1], Data.g_k[i-1], Data.g_k[i]);
 	}
     
-    
-	//calculate h
-	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
-
-	// for (int k = n_stages-1; k >=1; k--){
-	// 	Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-	// 	w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-	// }
-	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
     
     Data.h_k[n_stages] = Data.r_k[n_stages];
     Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
@@ -1910,14 +1502,6 @@ void Condenser::single_SOC_condense(int tnum, const Matrix &lb_con){
 
 
 void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con, const Matrix &ub_con, const Matrix *const target_corrections, Matrix &condensed_h, Matrix &condensed_lb_con, Matrix &condensed_ub_con){
-
-	// O_grad_obj.resize(0);
-
-    // O_grad_obj.push_back(grad_obj.get_slice(0, v_starts[0], 0, 1));
-	// for (int i = 1; i < num_targets; i++){
-    //     O_grad_obj.push_back(grad_obj.get_slice(v_ends[i-1], v_starts[i], 0, 1));
-	// }
-    // O_grad_obj.push_back(grad_obj.get_slice(v_ends[num_targets - 1], num_vars, 0, 1));
     
     grad_obj.get_slice(0, v_starts[0], 0, 1, O_grad_obj[0]);
 	for (int i = 1; i < num_targets; i++){
@@ -1945,46 +1529,7 @@ void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con
         reduced_lb_con -= targets_data[i].Jtimes_g;
         reduced_ub_con -= targets_data[i].Jtimes_g;
     }
-//Add dependent variable bounds to constraints
-    // if (add_dep_bounds == 2){
-    //     std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-    //     std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-    //     condensed_lb_con_k[0] = reduced_lb_con;
-    //     condensed_ub_con_k[0] = reduced_ub_con;
-    //     for (int tnum = 0; tnum < num_targets; tnum++){
-    //         condensed_lb_con_k[tnum + 1] = targets_data[tnum].D_lb - targets_data[tnum].g;
-    //         condensed_ub_con_k[tnum + 1] = targets_data[tnum].D_ub - targets_data[tnum].g;
-    //     }
-    //     condensed_lb_con = vertcat(condensed_lb_con_k);
-    //     condensed_ub_con = vertcat(condensed_ub_con_k);
-    // }
-    // else if (add_dep_bounds == 1){
-    //     std::vector<Matrix> condensed_lb_con_k(num_targets + 1);
-    //     std::vector<Matrix> condensed_ub_con_k(num_targets + 1);
-    //     condensed_lb_con_k[0] = reduced_lb_con;
-    //     condensed_ub_con_k[0] = reduced_ub_con;
-    //     for (int tnum = 0; tnum < num_targets; tnum++){
-    //         condensed_lb_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(-std::numeric_limits<double>::infinity());
-    //         condensed_ub_con_k[tnum + 1] = Matrix(targets_data[tnum].n_dep).Initialize(std::numeric_limits<double>::infinity());
-    //     }
-    //     condensed_lb_con = vertcat(condensed_lb_con_k);
-    //     condensed_ub_con = vertcat(condensed_ub_con_k);
-
-    //     //Save bounds on dependent variables so a user can manually add them to the qp
-    //     std::vector<Matrix> lb_dep_var_k(num_targets);
-    //     std::vector<Matrix> ub_dep_var_k(num_targets);
-    //     for (int tnum = 0; tnum < num_targets; tnum++){
-    //         lb_dep_var_k[tnum] = targets_data[tnum].D_lb - targets_data[tnum].g;
-    //         ub_dep_var_k[tnum] = targets_data[tnum].D_ub - targets_data[tnum].g;
-    //     }
-    //     lb_dep_var = vertcat(lb_dep_var_k);
-    //     ub_dep_var = vertcat(ub_dep_var_k);
-    // }
-    // else{
-    //     condensed_lb_con = reduced_lb_con;
-    //     condensed_ub_con = reduced_ub_con;
-    // }
-    
+        
     if (add_dep_bounds == 0){
         condensed_lb_con = reduced_lb_con;
         condensed_ub_con = reduced_ub_con;
@@ -2026,11 +1571,7 @@ void Condenser::correction_condense(const Matrix &grad_obj, const Matrix &lb_con
     }
     condensed_h_k[2*num_targets] = O_grad_obj[num_targets];
     condensed_h = vertcat(condensed_h_k);
-
-    //std::chrono::steady_clock::time_point T2 = std::chrono::steady_clock::now();
-
     return;
-
 }
 
 
@@ -2043,30 +1584,22 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
 	std::vector<Matrix> corr_k(n_stages);
 	int ind_1 = 0;
     for (int i = 0; i < n_stages; i++){
-        // corr_k[i] = correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i]);
         correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i], corr_k[i]);
-        
         ind_1 += Data.cond_sizes[i];
     }
-
-	// Data.c_k[0] = lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1]);
+    
     lb_con.get_slice(Data.cond_ranges[0], Data.cond_ranges[1], Data.c_k[0]);
     Data.c_k[0] *= Data.matching_sign;
 	for (int i = 1; i<n_stages; i++){
-		// Data.c_k[i] = lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1]);
         lb_con.get_slice(Data.cond_ranges[i], Data.cond_ranges[i+1], Data.c_k[i]);
         Data.c_k[i] *= Data.matching_sign;
 	}
-
-
+    
 	std::vector<Matrix> w_k(n_stages);
-
-    //std::chrono::steady_clock::time_point T1 = std::chrono::steady_clock::now();
-
+    
 	//calculate g
 	Data.g_k[0] = Data.c_k[0];
 	for (int i = 1; i < n_stages; i++){
-		// Data.g_k[i] = Data.A_k[i-1]*Data.g_k[i-1] + Data.c_k[i];
         Data.g_k[i] = Data.c_k[i];
         mult_to(Data.A_k[i-1], Data.g_k[i-1], Data.g_k[i]);
 	}
@@ -2075,24 +1608,13 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
     for (int i = 0; i < n_stages; i++){
         Data.g_k[i] += corr_k[i];
     }
-
-	//calculate h
-	// Data.h_k[n_stages] = Data.r_k[n_stages] + Transpose(Data.S_k[n_stages - 1]) * Data.g_k[n_stages - 1];
-	// w_k[n_stages - 1] = Data.q_k[n_stages - 1] + Data.Q_k[n_stages - 1] * Data.g_k[n_stages - 1];
-
-	// for (int k = n_stages-1; k >=1; k--){
-	// 	Data.h_k[k] = Data.r_k[k] + Transpose(Data.S_k[k-1]) * Data.g_k[k-1] + Transpose(Data.B_k[k])*w_k[k];
-	// 	w_k[k-1] = Data.q_k[k-1] + Data.Q_k[k-1] * Data.g_k[k-1] + Transpose(Data.A_k[k-1]) * w_k[k];
-	// }
-	// Data.h_k[0] = Data.r_k[0] + Transpose(Data.B_k[0])*w_k[0];
-    
     
     Data.h_k[n_stages] = Data.r_k[n_stages];
     Tmult_to(Data.S_k[n_stages - 1], Data.g_k[n_stages - 1], Data.h_k[n_stages]);
     
     w_k[n_stages - 1] = Data.q_k[n_stages - 1];
     mult_to(Data.Q_k[n_stages - 1], Data.g_k[n_stages - 1], w_k[n_stages - 1]);
-
+    
 	for (int k = n_stages-1; k >=1; k--){        
         Data.h_k[k] = Data.r_k[k];
         Tmult_to(Data.S_k[k-1], Data.g_k[k-1], Data.h_k[k]);
@@ -2105,13 +1627,11 @@ void Condenser::single_correction_condense(int tnum, const Matrix &lb_con, const
     Data.h_k[0] = Data.r_k[0];
     Tmult_to(Data.B_k[0], w_k[0], Data.h_k[0]);
     
-    
     Data.g = vertcat(Data.g_k);
     Data.h = vertcat(Data.h_k);
     
     Sparse_Matrix J_d(horzcat(Data.J_dep_k));
     Data.Jtimes_g = sparse_vector_multiply(J_d, Data.g);
-
     return;
 }
 
@@ -2136,17 +1656,6 @@ void Condenser::recover_correction_var_mult(const Matrix &xi_cond, const Matrix 
 
     //Get slices corresponding to targets free variables and other free variables
     int ind = 0;
-    // for (int i = 0; i < num_targets; i++){
-    //     O_xi_cond[i] = xi_cond.get_slice(ind, condensed_v_starts[i]);
-    //     T_xi_cond[i] = xi_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-    //     O_mu[i] = lambda_cond.get_slice(ind, condensed_v_starts[i]);
-    //     T_mu[i] = lambda_cond.get_slice(condensed_v_starts[i], condensed_v_ends[i]);
-
-    //     ind = condensed_v_ends[i];
-    // }
-    // O_xi_cond[num_targets] = xi_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
-    // O_mu[num_targets] = lambda_cond.get_slice(condensed_v_ends[num_targets - 1], condensed_num_vars);
     
     for (int i = 0; i < num_targets; i++){
         xi_cond.get_slice(ind, condensed_v_starts[i], O_xi_cond[i]);
@@ -2165,31 +1674,15 @@ void Condenser::recover_correction_var_mult(const Matrix &xi_cond, const Matrix 
     ind = 0;
     int ind_2 = condensed_num_vars;
     for (int i = 0; i < num_targets; i++){
-        // O_sigma[i] = lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind);
         lambda_cond.get_slice(ind_2, ind_2 + c_starts[i] - ind, O_sigma[i] );
         ind_2 += c_starts[i] - ind;
         ind = c_ends[i];
     }
-    // O_sigma[num_targets] = lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind);
     lambda_cond.get_slice(ind_2, ind_2 + num_cons - ind, O_sigma[num_targets]);
 
 
     //Get multipliers for dependent variable bounds, or set them to zero if dependent variable bounds weren't added to constraints
-    ind = condensed_num_vars + num_true_cons;
-    
-    // if (add_dep_bounds){
-    //     for (int i = 0; i < num_targets; i++){
-    //         // T_lambda[i] = lambda_cond.get_slice(ind, ind + targets_data[i].n_dep);
-    //         lambda_cond.get_slice(ind, ind + targets_data[i].n_dep, T_lambda[i]);
-    //         ind += targets_data[i].n_dep;
-    //     }
-    // }
-    // else{
-    //     for (int i = 0; i < num_targets; i++){
-    //         T_lambda[i].Dimension(targets_data[i].n_dep).Initialize(0.);
-    //     }
-    // }
-    
+    ind = condensed_num_vars + num_true_cons;    
     switch (add_dep_bounds){
         case 0:
             for (int i = 0; i < num_targets; i++){
@@ -2268,7 +1761,6 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
 
     //Get free variables of each stage
     for (int i = 0; i <= n_stages; i++){
-        // xi_free_k[i] = xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i]);
         xi_free.get_slice(s_ind, s_ind + Data.free_sizes[i], xi_free_k[i]);
         s_ind += Data.free_sizes[i];
     }
@@ -2276,7 +1768,6 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
     //Get multipliers for each stage-state bound
     s_ind = 0;
     for (int i = 0; i < n_stages; i++){
-        // lambda_k[i] = lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i]);
         lambda.get_slice(s_ind, s_ind + Data.cond_sizes[i], lambda_k[i]);
         s_ind += Data.cond_sizes[i];
     }
@@ -2284,7 +1775,6 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
     //Get multipliers for free variable bounds for each stage
     s_ind = 0;
     for (int i = 0; i <= n_stages; i++){
-        // mu_k[i] = mu.get_slice(s_ind, s_ind + Data.free_sizes[i]);
         mu.get_slice(s_ind, s_ind + Data.free_sizes[i], mu_k[i]);
         s_ind += Data.free_sizes[i];
     }
@@ -2293,16 +1783,9 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
 	std::vector<Matrix> corr_k(n_stages);
 	int ind_1 = 0;
     for (int i = 0; i < n_stages; i++){
-        // corr_k[i] = correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i]);
         correction.get_slice(ind_1, ind_1 + Data.cond_sizes[i], corr_k[i]);
         ind_1 += Data.cond_sizes[i];
     }
-
-    //Recover dependent variables
-    // xi_dep_k[0] = Data.B_k[0]*xi_free_k[0] + Data.c_k[0] + corr_k[0];
-    // for (int i = 1; i < n_stages; i++){
-    //     xi_dep_k[i] = Data.A_k[i-1]*xi_dep_k[i-1] + Data.B_k[i]*xi_free_k[i] + Data.c_k[i] + corr_k[i];
-    // }
     
     xi_dep_k[0] = Data.c_k[0];
     xi_dep_k[0] += corr_k[0];
@@ -2335,7 +1818,6 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
         J_T_sigma = transpose_multiply(Data.J_dep_k[n_stages - 1], sigma);
     }
 
-    // nu_k[n_stages - 1] = Data.S_k[n_stages - 1] * xi_free_k[n_stages] + Data.Q_k[n_stages - 1] * xi_dep_k[n_stages - 1] + Data.q_k[n_stages - 1] - lambda_k[n_stages - 1] - J_T_sigma;
     nu_k[n_stages - 1] = Data.q_k[n_stages - 1];
     nu_k[n_stages - 1] -= lambda_k[n_stages - 1]; 
     nu_k[n_stages - 1] -= J_T_sigma;
@@ -2352,9 +1834,7 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
         else{
             J_T_sigma = transpose_multiply(Data.J_dep_k[i], sigma);
         }
-
-        // nu_k[i] = Data.S_k[i] * xi_free_k[i+1] + Data.Q_k[i] * xi_dep_k[i] + Data.q_k[i] - lambda_k[i] + Transpose(Data.A_k[i]) * nu_k[i+1] - J_T_sigma;
-    
+        
         nu_k[i] = Data.q_k[i];
         nu_k[i] -= lambda_k[i];
         nu_k[i] -= J_T_sigma;
@@ -2367,7 +1847,6 @@ void Condenser::single_correction_recover(int tnum, const Matrix &xi_free, const
     nu *= Data.matching_sign;
     xi_full = vertcat(xi_full_k);
     mu_lambda = vertcat(mu_lambda_k);
-
     return;
 }
 
@@ -2382,9 +1861,6 @@ holding_Condenser::holding_Condenser(
                         Condenser(VBLOCKS.get(), n_VBLOCKS, CBLOCKS.get(), n_CBLOCKS, HSIZES.get(), n_HBLOCKS, TARGETS.get(), n_TARGETS, DEP_BOUNDS),
                         vblocks_hold(std::move(VBLOCKS)), cblocks_hold(std::move(CBLOCKS)), hess_block_sizes_hold(std::move(HSIZES)), targets_hold(std::move(TARGETS))
                         {}
-
-
-
 
 
 
@@ -2455,47 +1931,6 @@ PartialCondenser::~PartialCondenser(){}
 Condenser *PartialCondenser::layout_copy(){
     return new PartialCondenser(vblocks, num_vblocks, cblocks, num_cblocks, hess_block_sizes, num_hessblocks, targets_orig, n_targets_orig, n_split, add_dep_bounds);
 }
-
-//Moved to restoration.cpp
-/*
-holding_Condenser* create_restoration_Condenser(Condenser *parent, int DEP_BOUNDS){
-    int N_vblocks = parent->num_vblocks + parent->num_true_cons;
-    int N_cblocks = parent->num_cblocks;
-    int N_hessblocks = parent->num_hessblocks + parent->num_true_cons;
-    int N_targets = parent->num_targets;
-
-	std::unique_ptr<vblock[]> rest_vblocks = std::make_unique<vblock[]>(N_vblocks);
-    std::unique_ptr<cblock[]> rest_cblocks = std::make_unique<cblock[]>(N_cblocks);
-	std::unique_ptr<int[]> rest_hess_block_sizes = std::make_unique<int[]>(N_hessblocks);
-	std::unique_ptr<condensing_target[]> rest_targets = std::make_unique<condensing_target[]>(N_targets);
-
-    for (int i = 0; i < parent->num_vblocks; i++){
-        rest_vblocks[i] = parent->vblocks[i];
-    }
-    for (int i = parent->num_vblocks; i < N_vblocks; i++){
-        rest_vblocks[i] = vblock(1, false);
-    }
-
-    for (int i = 0; i < parent->num_cblocks; i++){
-        rest_cblocks[i] = parent->cblocks[i];
-    }
-
-    for (int i = 0; i<parent->num_hessblocks; i++){
-        rest_hess_block_sizes[i] = parent->hess_block_sizes[i];
-    }
-    for (int i = parent->num_hessblocks; i<N_hessblocks; i++){
-        rest_hess_block_sizes[i] = 1;
-    }
-
-    for (int i = 0; i<parent->num_targets; i++){
-        rest_targets[i] = parent->targets[i];
-    }
-
-    return new holding_Condenser(std::move(rest_vblocks), N_vblocks, std::move(rest_cblocks), N_cblocks, std::move(rest_hess_block_sizes), N_hessblocks, std::move(rest_targets), N_targets, DEP_BOUNDS);
-}
-*/
-
-
 
 
 } // namespace blockSQP2
