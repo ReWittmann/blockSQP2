@@ -11,7 +11,7 @@ project(CMakeblockSQP2
 	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP2
     LANGUAGES CXX
 )
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 enable_language(Fortran)	#For MUMPS linear solver
 
 # include(CheckIPOSupported)
@@ -96,6 +96,8 @@ add_library(qpOASES STATIC
 	${qpOASES_MODDED_DIR}/src/QProblem.cpp            
 	${qpOASES_MODDED_DIR}/src/SolutionAnalysis.cpp
 	)
+option(qpOASES_UNITY_BUILD "Enable unity build for qpOASES" ON)
+set_target_properties(qpOASES PROPERTIES UNITY_BUILD ${qpOASES_UNITY_BUILD} UNITY_BUILD_BATCH_SIZE 20)
 
 #MUMPS LINEAR SOLVER
 target_compile_definitions(qpOASES PUBLIC SOLVER_MUMPS PRIVATE __NO_COPYRIGHT__ __SUPPRESSANYOUTPUT__)
@@ -150,7 +152,6 @@ target_include_directories(qpOASES
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
 
-option(blockSQP2_UNITY_BUILD "Enable unity build for blockSQP2" OFF)
 add_library(blockSQP2 STATIC
 	blockSQP2/src/condensing.cpp
 	blockSQP2/src/matrix.cpp
@@ -170,7 +171,10 @@ add_library(blockSQP2 STATIC
 	blockSQP2/src/scaling.cpp
 	blockSQP2/src/sqputils.cpp
 	blockSQP2/src/load_mumps.cpp
+	blockSQP2/src/structure.cpp
+	blockSQP2/src/task.cpp
 	)
+option(blockSQP2_UNITY_BUILD "Enable unity build for blockSQP2" ON)
 set_target_properties(blockSQP2 PROPERTIES UNITY_BUILD ${blockSQP2_UNITY_BUILD} UNITY_BUILD_BATCH_SIZE 20)
 target_compile_definitions(blockSQP2 PUBLIC QPSOLVER_QPOASES)
 

@@ -20,6 +20,7 @@
 
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>
+#include <blockSQP2/task.hpp>
 
 #include <string>
 #include <vector>
@@ -227,79 +228,91 @@ class Condenser{
     std::unique_ptr<Matrix[]> O_ub_var;
     
     
-    std::unique_ptr<std::jthread[]> target_threads;
-
+    // std::unique_ptr<std::jthread[]> target_threads;
+    
+    
+    BasicThreadHandler *threadHandler;
+    std::unique_ptr<BasicThreadHandler> autoThreadHandler;
+    BasicThreadHandler *threadHandler_single_use;
+    
     ///Condensed QP data
-
+    
     //Bounds on dependent variables in condensed QP, which can be manually added to a QP condensed with option add_dep_bounds = 1
     // Matrix lb_dep_var;
     // Matrix ub_dep_var;
-
+    
     Condenser(int arg_add_dep_bounds = 1);
 	Condenser(vblock* VBLOCKS, int n_VBLOCKS, cblock* CBLOCKS, int n_CBLOCKS, int* HSIZES, int n_HBLOCKS, condensing_target* TARGETS, int n_TARGETS, int DEP_BOUNDS = 2);
-	Condenser(Condenser &&C);
+	// Condenser(Condenser &&C);
 	virtual ~Condenser();
     void setup();
     
     //Construct a new Condenser sharing the layout data of an existing condenser.
     virtual Condenser *layout_copy() const;
-
+    
     void print_info();
-
+    
     //Setter of changing how dependent variable bounds are added
     // void set_dep_bound_handling(int opt);
-
+    
+    //Give condenser access to worker threads or set maximum amount of auto created threads.
+    void set_threadHandler_single_use(BasicThreadHandler *arg_threads);
+    void set_threadHandler(BasicThreadHandler *arg_threads, bool own = false);
+    void set_threadHandler(std::unique_ptr<BasicThreadHandler> arg_threads){set_threadHandler(arg_threads.get(), true);}
+    void set_N_threads(int arg_N_threads);
+    
+    
     //For starting index start, get index of hessian block that starts at start
 	int get_hessblock_index(int start);
-
+    
 	//Complete condensing for new quadratic subproblem
 	void full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_jac, const SymMatrix *const hess,
                         const Matrix &lb_var, const Matrix &ub_var, const Matrix &lb_con, const Matrix &ub_con,
             Matrix &condensed_h, Sparse_Matrix &condensed_Jacobian, SymMatrix *condensed_hess,
                         Matrix &condensed_lb_var, Matrix &condensed_ub_var, Matrix &condensed_lb_con, Matrix &condensed_ub_con);
-
+    
 	//Condensing for a single block of variables and conditions with condensable structure
     void single_condense(int tnum, const Matrix &grad_obj, const Sparse_Matrix &B_Jac, const SymMatrix *const sub_hess,
                             const Matrix &B_lb_var, const Matrix &B_ub_var, const Matrix &lb_con) const;
-
+    
     //Recovery of dependent variables and condition-lagrange-multipliers from qp-solution X_cond
 	void recover_var_mult(const Matrix &xi_cond, const Matrix &lambda_cond,
                             Matrix &xi_full, Matrix &lambda_full) const;
-
+    
     //Recover dependent variables and continuity condition multipliers for a single condensable structure
     //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
     void single_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma,
                             Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
-
-
-
+    
+    
+    
     ///Methods for special cases.
     //They are modded versions of the four primary methods above, so currently there is still a lot of code duplication
-
+    
     //Update condensed QP with a different hessian. This also affects the linear term in the condensed QP.
     // void fallback_hessian_condense(const SymMatrix *const hess_2, Matrix &condensed_h_2, SymMatrix *condensed_hess_2);
     // void single_hess_condense(int tnum, const SymMatrix *const sub_hess);
-
+    
     // //Recover dependent variables and condition multipliers for a convex combination of the original and fallback hessian (1-t)*hess1 + t*hess2
     // void convex_combination_recover(const Matrix &xi_cond, const Matrix &lambda_cond, const double t, Matrix &xi_full, Matrix &lambda_full) const;
-
+    
     // //mu: multipliers for free variable bounds, lambda: multipliers for dependent variable bounds, nu: multipliers for continuity conditions, sigma: multipliers for (true) constraints
     // void single_convex_combination_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const double t,
     //                         Matrix &xi_full, Matrix &nu, Matrix &mu_lambda) const;
-
+    
     
     //Update condensed QP with a new hessian
     void new_hessian_condense(const SymMatrix *const hess, Matrix &condensed_h, SymMatrix *condensed_hess);
     void single_new_hess_condense(int tnum, const SymMatrix *const sub_hess);
-
+    
     //Update condensed QP with new constraint bounds. grad_obj must not be changed and is used to construct the new linear term condensed_h, which DOES change
     void SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const Matrix &ub_con, Matrix &condensed_h, Matrix &condensed_lb_con, Matrix &condensed_ub_con);
     void single_SOC_condense(int tnum, const Matrix &lb_con);
-
+    
     //Update condensed QP with new constraint bounds and add the correction term to the dependent variables
     void correction_condense(const Matrix &grad_obj, const Matrix &lb_con, const Matrix &ub_con, const Matrix *const target_corrections, Matrix &condensed_h, Matrix &condensed_lb_con, Matrix &condensed_ub_con);
     void single_correction_condense(int tnum, const Matrix &lb_con, const Matrix &correction);
-
+    
     //Recover dependent variables and dependent variable bounds and condition multipliers. The correction term used in condensing has to be passed again.
     void recover_correction_var_mult(const Matrix &xi_cond, const Matrix &lambda_cond, const Matrix *const target_corrections, Matrix &xi_full, Matrix &lambda_full);
     void single_correction_recover(int tnum, const Matrix &xi_free, const Matrix &mu, const Matrix &lambda, const Matrix &sigma, const Matrix &correction,

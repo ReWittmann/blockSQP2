@@ -169,7 +169,7 @@ class SQPiterate{
         double tolOpt_save;
         double cNormOpt_save;
         double cNormSOpt_save;
-        scaled_Problemspec *scaled_prob;              // Pointer to a scaled problem or nullptr. Used to save and restore scaling factors. 
+        ScaledProblemspec *scaled_prob;              // Pointer to a scaled problem or nullptr. Used to save and restore scaling factors. 
         std::unique_ptr<double[]> scaleFactors_save;
         
         //For parallel QP solution

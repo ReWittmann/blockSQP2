@@ -33,16 +33,13 @@
 #include <blockSQP2/defs.hpp>
 #include <blockSQP2/matrix.hpp>
 #include <blockSQP2/condensing.hpp>
+#include <blockSQP2/structure.hpp>
+#include <blockSQP2/task.hpp>
 #include <limits>
 #include <memory>
 
 namespace blockSQP2{
 
-/**
- * \brief Base class for problem specification as required by SQPmethod.
- * \author Dennis Janka
- * \date 2012-2015
- */
 class Problemspec{
     public:
         int         nVar = -1;                                          // number of variables
@@ -63,7 +60,12 @@ class Problemspec{
         int         n_vblocks = -1;                                     // number of distinct variable blocks of variables
         vblock      *vblocks = nullptr;                                 // variable blocks, containing structure information (free/dependent, ...)
         
-        Condenser   *condenser = nullptr;                                      //Condenser for the QPs for this problem
+        Condenser   *condenser = nullptr;                               //Condenser for the QPs for this problem
+        
+        // int n_vsystems = -1;
+        VariableSystem *vsystem = nullptr;
+        
+        BasicThreadHandler *threadHandler = nullptr;
         
     public:
         Problemspec();
@@ -131,15 +133,15 @@ class Problemspec{
 };
 
 //Wrap a Problemspec into a scalable version of itself
-class scaled_Problemspec: public Problemspec{
+class ScaledProblemspec: public Problemspec{
 public:
     Problemspec *unscaled_prob;
     
     std::unique_ptr<double[]> scaling_factors;
     Matrix xi_unscaled;
     
-    scaled_Problemspec(Problemspec *UNSCprob);
-    ~scaled_Problemspec();
+    ScaledProblemspec(Problemspec *UNSCprob);
+    ~ScaledProblemspec();
     
     //Set scaling factors
     void set_scale(const double *const scaleFacs);

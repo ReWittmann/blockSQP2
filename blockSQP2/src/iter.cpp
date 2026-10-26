@@ -189,7 +189,7 @@ SQPiterate::SQPiterate(Problemspec* prob, const SQPoptions* param){
     if (param->automatic_scaling){
         rescaleFactors = std::make_unique<double[]>(prob->nVar);
         vfreeScale = 1.0;
-        scaled_prob = static_cast<scaled_Problemspec*>(prob);
+        scaled_prob = static_cast<ScaledProblemspec*>(prob);
         scaleFactors_save = std::make_unique<double[]>(prob->nVar);
     }
     else scaled_prob = nullptr;

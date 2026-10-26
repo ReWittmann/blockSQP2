@@ -33,9 +33,9 @@ OCprob = OCProblems.Lotka_Volterra_Fishing(
                     parallel = True,        #run ODE integration in parallel
                     N_threads = 4,          #number of threads for parallelization
                                             #problem specific keyword parameters, e.g. c0, c1, x_init, t0, tf for Lotka_Volterra_Fishing, see default_params of problems
-                    # **OCProblems.D_Onofrio_Chemotherapy.param_set_4,
+                    # **OCProblems.Cart_Pendulum.param_set_2,
                     )
-itMax = 200                                  #max number of steps
+itMax = 300                                  #max number of steps
 
 step_plots = False                           #Plot each iterate?
 step_delay_ms = 0
@@ -54,7 +54,7 @@ start = OCprob.start_point
 opts = blockSQP2.SQPoptions(
     max_QP_it = 10000,
     max_QP_secs = 20.0,
-    print_level = 1,
+    print_level = 3,
     print_colored = True,
     
     max_conv_QPs = 4,                          #max number of additional QPs per SQP iteration including fallback Hess QP
@@ -62,6 +62,7 @@ opts = blockSQP2.SQPoptions(
     par_QPs = True,                            #Enable parallel solution of QPs
     enable_QP_cancellation = True,             #Enable cancellation of long running QP threads
     indef_delay = 3,                           #Only use fallback Hessian in first # iterations
+    max_auto_threads = 7,
     
     hess_approx = 'SR1',                    #'SR1'/'BFGS'/'exact'
     sizing = 'OL',                          #'SP' - Shanno-Phua, 'OL' - Oren-Luenberger, 'GM_SP_OL' - geometric mean of SP and OL, 'COL' - centered Oren-Luenberger
@@ -91,7 +92,6 @@ opts = blockSQP2.SQPoptions(
 # QPopts.sparsityLevel = 2                  #0-dense QPs, 1-sparse matrices + dense factorizations, 2 (default) - sparse matrices and factorizations
 # opts.qpsol_options = QPopts
 ################################
-
 #Create condenser, enable condensing by passing setting it as cond attribute of Problemspec
 vblocks = [blockSQP2.vblock(size, dep, impl) for size, dep, impl in zip(OCprob.vBlock_sizes, OCprob.vBlock_dependencies, OCprob.vBlock_bounds_implicit)]
 cblocks = [blockSQP2.cblock(size) for size in OCprob.cBlock_sizes]
@@ -115,7 +115,7 @@ prob.g = OCprob.g                           #constraint function
 
 #jac_g sparsity structure: # nonzeros, row and colind of CCS format
 prob.make_sparse(OCprob.jac_g_nnz, OCprob.jac_g_row, OCprob.jac_g_colind)
-prob.jac_g_nz = OCprob.jac_g_nz
+prob.jac_g_nz = lambda xi: OCprob.jac_g_nz(xi)
 
 prob.hess = OCprob.hess_lag
 prob.blockIdx = OCprob.hessBlock_index
@@ -124,6 +124,9 @@ prob.set_bounds(OCprob.lb_var, OCprob.ub_var, OCprob.lb_con, OCprob.ub_con)
 #Pass vblocks to enable convexification strategy 2 and automatic scaling
 prob.vblocks = vblocks
 prob.condenser = condenser
+
+prob.vgroup_types = OCprob.vgroup_types
+prob.vgroup_ind = OCprob.vgroup_ind
 
 prob.x_start = start
 prob.lam_start = np.zeros(prob.nVar + prob.nCon, dtype = np.float64).reshape(-1)

@@ -74,14 +74,10 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
 
     if (!initCalled){
         printf("init() must be called before run(). Aborting.\n");
-        //return -1;
         return print_SQPresult(SQPresults::misc_error, param->print_level, param->print_colored);
     }
     
     if (warmStart == 0 || stats->itCount == 0){
-        //calcInitialHessians();
-        //vars->hess2_updated = true;
-        
         // SQP iteration 0
         if (param->sparse)
             prob->evaluate(vars->xi, vars->lambda, &vars->obj, vars->constr, vars->gradObj,
@@ -99,9 +95,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
 
         /// Set initial Hessian approximation
         //Consider implementing strategy for the initial hessian, see e.g. Leineweber 1995 Theory of MUSCOD S. 72
-
-        //calcInitialHessians();
-        //vars->hess2_updated = true;
+        
     }
 
 
@@ -114,7 +108,7 @@ SQPresults SQPmethod::run(int maxIt, int warmStart){
         /////////////////////////////////////////////
         ///PHASE 1: Solve the quadratic subproblem///
         /////////////////////////////////////////////
-        
+        // if (stats->itCount == 5) for (int i = 0; i < prob->nnz; i++) vars->sparse_constrJac.nz[i] += 1;
         //Solve the quadratic subproblem. What kind of QP is solved how depends on options, parameters and iteration states. 
         infoQP = solveQP(vars->deltaXi, vars->lambdaQP);
         

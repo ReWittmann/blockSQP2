@@ -316,29 +316,23 @@ class OCProblem:
     
     def build_integrator(self):
         if self.integration_method.lower() == 'cvodes':
-            # print('cvodes')
             self.odesol_single = cs.integrator('odesol_single', 'cvodes', self.ODE, {'linear_solver': 'csparse', 'augmented_options' : {'linear_solver' : 'csparse'}})
         elif self.integration_method.lower() == 'collocation':
             self.odesol_single = cs.integrator('odesol_single', 'collocation', self.ODE, {'number_of_finite_elements': 2})
         elif self.integration_method.lower() == 'explicit_euler':
             self.odesol_single = explicit_euler_integrator(self.ODE, M = 1)
         else:
-            # print('rk4')
             self.odesol_single = RK4_integrator(self.ODE, M = 2)
         self.odesol_refined = self.odesol_single.mapaccum('odesol_refined',self.ntR, ['x0'], ['xf'])
         
         if self.ntR > 1:
             self.odesol_refC = self.odesol_single.fold(self.ntR)
-            # self.odesol_fill = self.odesol_single.mapaccum(self.ntR)
         else:
             self.odesol_refC = self.odesol_single
-            # self.odesol_fill = self.odesol_single
         self.odesol_full = self.odesol_refC.mapaccum('odesol_full', self.ntS, ['x0'], ['xf'])
         
     def integrate_full(self, xi):
         p_arr = [self.get_stage_param(xi, i) for i in range(self.ntS)]
-        # if self.fix_time:
-        #     p = cs.vertcat(cs.diff(self.time_grid_ref.reshape((1,-1)),1,1), p)
         p_exp_arr = []
         for i in range(self.ntS):
             for j in range(self.ntR):
@@ -350,10 +344,6 @@ class OCProblem:
             p_exp[0,:]/=self.ntR
         
         u = cs.horzcat(*(self.get_stage_control(xi, i) for i in range(self.ntS)))
-        # if self.fix_init:
-        #     start = self.x_init
-        # else:
-        #     start = self.get_stage_state(xi, 0)
         start = self.get_stage_state(xi, 0)
         out = self.odesol_full(x0 = start, p = cs.vertcat(p_exp, u))
         x_stages = out['xf']
@@ -384,13 +374,9 @@ class OCProblem:
         self.lbc_arr.append(np.concatenate([lbc_t]*(constr.numel()//len(lbc_t))))
         assert constr.numel()%len(ubc_t) == 0
         self.ubc_arr.append(np.concatenate([ubc_t]*(constr.numel()//len(ubc_t))))
-        
-        # self.lbc_arr.append(np.array(lbc))
-        # self.ubc_arr.append(np.array(ubc))
     
     def set_objective(self, obj : cs.MX):
         self.NLP['f'] = obj
-    
     
     def multiple_shooting(self):
         if self.odesol_single is None:
@@ -441,34 +427,25 @@ class OCProblem:
             assert self.time_grid is not None
             p_t_exp = cs.vertcat(cs.diff(cs.DM(self.time_grid_ref).T, 1, 1), p_exp)
         
-        
         if self.parallel:
             self.odesol_multi = self.odesol_refined.map(self.ntS, 'thread', self.N_threads)
         else:
             self.odesol_multi = self.odesol_refined.map(self.ntS)
         
-        # if self.fix_time:
-        #     assert self.time_grid is not None
-        #     out = self.odesol_multi(x0 = x_starts, p = cs.vertcat(cs.diff(cs.DM(self.time_grid_ref).T, 1, 1), p_m_exp, u))
-        # else:
         out = self.odesol_multi(x0 = x_starts, p = cs.vertcat(p_t_exp, u))
         self.F_xf = out['xf']
         self.F_qf = out['qf']
         
-        # self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:-self.ntR:self.ntR]), 0., 0., [self.nx]*(self.ntS - 1))
         self.add_constraint(cs.vec(x_stages - self.F_xf[:,self.ntR-1:self.ntR*self.ntS:self.ntR]), 0., 0., [self.nx]*self.ntS)
 
-        #Evaluate state bounds at intermediate values of refinement is used
+        #Evaluate state bounds at intermediate values if refinement is used
         if self.ntR > 1:
             F_x_eval = []
             for i in range(self.ntS):
                 F_x_eval.append(self.F_xf[:,i*self.ntR:(i+1)*self.ntR-1])
             self.add_constraint(cs.vec(cs.horzcat(*F_x_eval)), self.lbx, self.ubx)
         
-        
-        # self.x_eval = copy.copy(self.F_xf)
         self.x_eval = cs.horzcat(x_init, self.F_xf)
-        # self.x_eval[:,self.ntR-1:-self.ntR*:self.ntR] = x_s[:,1:]
         self.x_eval[:,self.ntR:self.ntR*self.ntS + 1:self.ntR] = x_stages
         
         self.q_eval = self.F_qf
@@ -485,11 +462,24 @@ class OCProblem:
         lbv_arr = []
         ubv_arr = []
         
+        
+        vgroup_labels = []
+        
+        ind = 0
+        initgroup_sym = list(range(self.nfree))
+        ind += self.nfree
+        stategroup_sym = list(range(ind, ind + self.nx))
+        ind += self.nx
+        paramgroup_sym = list(range(ind, ind + self.np))
+        ind += self.np
+        controlgroup_sym = list(range(ind, ind + self.nu))
+        self.vgroup_types = ['initial_state']*self.nfree + ['state']*self.nx + ['parameter']*self.np + ['control']*self.nu
+        
+        
         self.hessBlock_sizes = [0]
         self.vBlock_sizes = [0]
         self.vBlock_dependencies = [False]
         self.vBlock_bounds_implicit = [False]
-        
         
         vBlock_state_lt = []
         vBlock_state_impl = []
@@ -505,21 +495,15 @@ class OCProblem:
         vBlock_state_lt.append(count)
         vBlock_state_impl.append(vBlock_impl_current)
         
-        
-        # if not self.fix_init:
-        #     xopt_arr.append(x_arr[0])
-        #     self.hessBlock_sizes[0] += self.nx
-        #     self.vBlock_sizes[0] += self.nx
-        #     lbv_arr.append(self.lbx)
-        #     ubv_arr.append(self.ubx)
         xopt_arr.append(x_init_free)
         self.hessBlock_sizes[0] += self.nfree
         self.vBlock_sizes[0] += self.nfree
+        
+        vgroup_labels.extend(initgroup_sym)
+        
         lbv_arr.append(cs.DM(x_init_lb))
         ubv_arr.append(cs.DM(x_init_ub))
         
-        # lbv_arr += self.lbu*self.ntR
-        # ubv_arr += self.ubu*self.ntR
         xopt_arr.append(p_arr[0])
         for j in range(self.ntR):
             xopt_arr.append(u_arr[j])
@@ -528,7 +512,10 @@ class OCProblem:
         
         self.hessBlock_sizes[0] += self.np + self.ntR * self.nu
         self.vBlock_sizes[0] += self.np + self.ntR * self.nu
-        # self.vBlock_dependencies = [False]
+        
+        vgroup_labels.extend(paramgroup_sym)
+        for j in range(self.ntR):
+            vgroup_labels.extend(controlgroup_sym)
         
         for i in range(1, self.ntS):
             xopt_arr.append(x_arr[i])
@@ -537,11 +524,15 @@ class OCProblem:
                 xopt_arr.append(u_arr[i*self.ntR + j])
             self.hessBlock_sizes += [self.nx + self.np + self.ntR*self.nu]
             
-            # self.vBlock_sizes += [self.nx, self.np + self.ntR*self.nu]
-            # self.vBlock_dependencies += [True, False]
             self.vBlock_sizes += vBlock_state_lt + [self.np + self.ntR*self.nu]
             self.vBlock_dependencies += [True]*len(vBlock_state_lt) + [False]
             self.vBlock_bounds_implicit += vBlock_state_impl + [False]
+            
+            vgroup_labels.extend(stategroup_sym)
+            vgroup_labels.extend(paramgroup_sym)
+            for j in range(self.ntR):
+                vgroup_labels.extend(controlgroup_sym)
+            
             
             lbv_arr.append(cs.DM(self.lbx + self.lbp + self.lbu*self.ntR))
             ubv_arr.append(cs.DM(self.ubx + self.ubp + self.ubu*self.ntR))        
@@ -549,27 +540,28 @@ class OCProblem:
         #Terminal state is a shooting variable
         xopt_arr.append(x_arr[self.ntS])
         self.hessBlock_sizes += [self.nx]
-        
-        # self.vBlock_sizes += [self.nx]
-        # self.vBlock_dependencies += [True]
         self.vBlock_sizes += vBlock_state_lt
         self.vBlock_dependencies += [True]*len(vBlock_state_lt)
         self.vBlock_bounds_implicit += vBlock_state_impl
         
+        vgroup_labels.extend(stategroup_sym)
+        
+        
         lbv_arr.append(cs.DM(self.lbx))
         ubv_arr.append(cs.DM(self.ubx))
         
-        
         self.hessBlock_index = list(np.cumsum([0] + self.hessBlock_sizes, dtype = np.int32))
-        # self.cBlock_sizes = [self.nx]*(self.ntS - 1)
         self.NLP['x'] = cs.vertcat(*xopt_arr)
         self.nVar = self.NLP['x'].numel()
         self.start_point = np.zeros(self.nVar)
         self.lb_var = np.array(cs.vertcat(*lbv_arr), dtype = np.float64).reshape(-1)
         self.ub_var = np.array(cs.vertcat(*ubv_arr), dtype = np.float64).reshape(-1)
-        # self.ctarget_data = [self.ntS, 0, 2*self.ntS, 0, self.ntS]
         self.ctarget_data = [self.ntS, 0, (1 + len(vBlock_state_lt))*self.ntS, 0, self.ntS]
-    
+        
+        self.vgroup_ind = []
+        for i in range(len(self.vgroup_types)):
+            self.vgroup_ind.append([j for j in range(self.nVar) if vgroup_labels[j] == i])
+        self.vgroup_labels = vgroup_labels
     #Finalize NLP and populate NLP function fields
     def build_NLP(self):
         if 'x' not in self.NLP.keys() or 'f' not in self.NLP.keys():
@@ -704,18 +696,18 @@ class OCProblem:
         
         #Inplace versions (for UNO solver)
         def grad_f_inplace(xi, ret):
-            ret[:] = np.array(self._grad_f(xi), dtype = np.float64, copy = False)
+            ret[:] = np.array(self._jit_grad_f(xi), dtype = np.float64, copy = False)
         self.grad_f_inplace = grad_f_inplace
         def g_inplace(xi, ret):
-            ret[:] = np.array(self._g(xi), dtype = np.float64, copy = False).reshape(-1)
+            ret[:] = np.array(self._jit_g(xi), dtype = np.float64, copy = False).reshape(-1)
         self.g_inplace = g_inplace
         def jac_g_nz_inplace(xi, ret):
-            ret[:] = np.asarray(self._jac_g(xi).nz[:], dtype = np.float64).reshape(-1)
+            ret[:] = np.asarray(self._jit_jac_g(xi).nz[:], dtype = np.float64).reshape(-1)
         self.jac_g_nz_inplace = jac_g_nz_inplace
-        
-        
+    
+    
     def unjit(self):
-        pass
+        raise NotImplementedError("TODO")
     
     
     def get_stage_state(self, xi, i:int):

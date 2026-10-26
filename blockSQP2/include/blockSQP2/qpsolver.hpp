@@ -26,6 +26,7 @@
 #include <blockSQP2/condensing.hpp>
 #include <blockSQP2/iterate.hpp>
 #include <blockSQP2/load_mumps.hpp>
+#include <blockSQP2/task.hpp>
 #include <memory>
 #include <thread>
 #include <future>
@@ -76,7 +77,10 @@ enum class TimeLimitTypes{
 //////////////////////////////
 
 class BasicQPsolver{
-    public:    
+    public:
+    BasicThreadHandler *threads;
+    bool threads_own;
+    
     virtual ~BasicQPsolver();
     
     virtual void set_lin(const Matrix &grad_obj) = 0;
@@ -89,6 +93,9 @@ class BasicQPsolver{
     
     virtual void set_timeLimit(TimeLimitTypes limitType, double custom_limit_secs = -1.0) = 0;
     virtual void set_use_hotstart(bool use_hom) = 0;
+    
+    virtual void set_threadHandler(BasicThreadHandler *arg_threads, bool arg_threads_own = false);
+    inline void set_threadHandler(std::unique_ptr<BasicThreadHandler> arg_threads){set_threadHandler(arg_threads.release(), true);}
     
     //Set QP/active set of which to hotstart from. QP solver dependent, no effect by default, very important for qpOASES
     virtual void set_hotstart_point(BasicQPsolver *hot_QP);
@@ -197,6 +204,8 @@ class BasicCQPsolver : public BasicQPsolver{
     virtual double get_reg();
     
     virtual void set_cond_update_flags(bool up_h, bool up_hess, bool up_A, bool up_bounds);
+    
+    virtual void set_threadHandler(BasicThreadHandler *arg_threads, bool arg_threads_own);
     
     virtual void invoke_condensing() = 0;
     virtual void setup_inner_QPsol(Matrix &deltaXi, Matrix &lambdaQP) = 0;

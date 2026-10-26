@@ -38,6 +38,8 @@
 #include <blockSQP2/stats.hpp>
 #include <blockSQP2/qpsolver.hpp>
 #include <blockSQP2/restoration.hpp>
+#include <blockSQP2/task.hpp>
+
 #include <memory>
 #include <thread>
 #include <string>
@@ -56,10 +58,10 @@ class SQPmethod{
         std::unique_ptr<BasicQPsolver>   sub_QP;   ///< Class wrapping an external QP solver
         
         std::unique_ptr<std::unique_ptr<BasicQPsolver>[]> sub_QPs_par;   //QPsolver objects for parallelizing the QP solving loop
-        std::unique_ptr<std::jthread[]> QP_threads;
+        // std::unique_ptr<std::jthread[]> QP_threads;
         
         //Scalable problem used internally, wraps the original problem and is used in it's stead if automatic scaling is activated
-        std::unique_ptr<scaled_Problemspec> scaled_prob;
+        std::unique_ptr<ScaledProblemspec> scaled_prob;
         
         // Objects for feasibility restoration
         //Feasibility restoration problem
@@ -67,10 +69,19 @@ class SQPmethod{
         std::unique_ptr<SQPoptions>  rest_param;
         std::unique_ptr<SQPstats>    rest_stats;
         std::unique_ptr<SQPmethod>   rest_method;
+        
         //Returned iterates from restoration method. We do not assume that they are identical to those stored in the method (future scaling for restoration problems!)
         Matrix rest_xi;
         Matrix rest_lambda;
         Matrix rest_lambdaQP;
+        
+        
+        BasicThreadHandler* threads;
+        
+        std::unique_ptr<BasicThreadHandler> autoThreads;
+        std::unique_ptr<BasicThreadHandler> condensing_main_2;
+        std::unique_ptr<ThreadSubHandler> condensing_subthreads[2];
+        
         
     protected:
         bool initCalled = false;  ///< indicates if init() has been called (necessary for run())
@@ -114,8 +125,11 @@ class SQPmethod{
         virtual QPresults solveQP(Matrix &deltaXi, Matrix &lambdaQP, int hess_type = 0);
             QPresults solve_convex_QP(Matrix &deltaXi, Matrix &lambdaQP, bool id_hess, BasicQPsolver *QPS);
             QPresults solveQP_seq(Matrix &deltaXi, Matrix &lambdaQP);
-            QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
+            // QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
+            // QPresults solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
+            
+            QPresults solveQP_par(Matrix &deltaXi, Matrix &lambdaQP);
             QPresults solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP);
         
         virtual QPresults solve_SOC_QP( Matrix &deltaXi, Matrix &lambdaQP);
