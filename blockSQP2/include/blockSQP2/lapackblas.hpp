@@ -3,7 +3,6 @@
 
 #include <cblas.h>
 
-
 #ifndef OPENBLAS_CONFIG_H
 	#if defined(CBLAS_INT)
 		typedef CBLAS_INT blasint;
@@ -25,6 +24,24 @@
 #define BSQP_CONCAT(a,b) a##b
 #define BSQP_EXPAND_CONCAT(a,b) BSQP_CONCAT(a,b)
 #define BSQP_BLASFUNC(a) BSQP_EXPAND_CONCAT(BSQP_CBLAS_PREFIX, BSQP_EXPAND_CONCAT(a, BSQP_CBLAS_SUFFIX)) // #####!!! READ THIS !!!#####: If this is in an error message: Invalid cblas suffix. Check cblas.h, and use -DBSQP_CBLAS_SUFFIX= instead of -DBSQP_CBLAS_SUFFIX if there is no suffix.
+
+
+#ifndef BSQP_CBLAS_ARG_PREFIX
+	#define BSQP_CBLAS_ARG_PREFIX
+#endif
+#define BSQP_BLASARG(a) BSQP_EXPAND_CONCAT(BSQP_CBLAS_ARG_PREFIX, a)
+
+
+
+#include <blasfeo.h>
+extern "C" void blasfeo_cblas_dgemm(
+		BLASFEO_CBLAS_LAYOUT layout,
+		BLASFEO_CBLAS_TRANSPOSE TransA, BLASFEO_CBLAS_TRANSPOSE TransB,
+		int M, int N, int K, double alpha, const double *A, int lda,
+		const double *B, int ldb, double beta, double *C, int ldc);
+
+
+
 
 
 #endif

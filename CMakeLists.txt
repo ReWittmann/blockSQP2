@@ -146,8 +146,16 @@ target_include_directories(qpOASES
 )
 # target_link_libraries(qpOASES PUBLIC /path/to/libcoinhsl.* /path/to/libmetis.* /path/to/libGKlib.* LAPACK::LAPACK BLAS::BLAS dl)
 ]]
-
-
+FetchContent_Declare(
+	BLASFEO
+	GIT_REPOSITORY https://github.com/giaf/blasfeo.git
+	GIT_TAG 5cb0a065895479e7dc54c1771fec48548aec0746
+)
+set(BLASFEO_TESTING OFF)
+set(BLASFEO_BENCHMARKS OFF)
+set(BLASFEO_EXAMPLES OFF)
+FetchContent_MakeAvailable(BLASFEO)
+target_compile_definitions(blasfeo PUBLIC CBLAS_API)
 
 #As of right now, there are no export specifications ( __declspec(dllexport), __attribute__((visibility("default"))) )
 #in the code, so static linking is recommended.
@@ -185,11 +193,8 @@ if (UNIX)
 	endif()
 	target_compile_options(blockSQP2 PRIVATE 
 		-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
-		#-O3
 		$<$<CONFIG:Debug>:-O0 -g -DMATRIX_DEBUG>
     	$<$<CONFIG:Release>:-O3>
-		# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
-		# -DMATRIX_DEBUG -O0 -g
 		)
 elseif(WIN32)
 	target_compile_definitions(blockSQP2 PUBLIC WINDOWS)
@@ -198,8 +203,6 @@ elseif(WIN32)
 			-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized
 			$<$<CONFIG:Debug>:-O0 -g -DMATRIX_DEBUG>
 			$<$<CONFIG:Release>:-O3>
-			# -O3
-			# -DMATRIX_DEBUG		#Enable bounds and dimension checks for matrix operations
 			)
 	endif()
 endif()
@@ -209,7 +212,9 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 
 target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include)# ${OPENBLAS_INCLUDE_DIR})
-target_link_libraries(blockSQP2 PUBLIC qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
+
+target_compile_options(blockSQP2 PRIVATE -DBSQP_CBLAS_PREFIX=blasfeo_ -DBSQP_CBLAS_ARG_PREFIX=Blasfeo)
+target_link_libraries(blockSQP2 PUBLIC blasfeo qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
 
@@ -252,29 +257,7 @@ elseif(WIN32)
 
 	#In case of dynamic linking of libgfortran, libwinpthread, libstdc++ etc., search for them in the gcc folder
 	#Save them in a variable so they get copied to executable requiring them
-	#[[
-	execute_process(
-		COMMAND where gcc.exe
-		OUTPUT_VARIABLE GCC_PATH
-		RESULT_VARIABLE GCC_ERROR
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
-	if (GCC_ERROR)
-		message(FATAL_ERROR "gcc.exe not found on PATH!")
-	endif()
-
-	string(REPLACE "\r" "" GCC_PATH "${GCC_PATH}")
-	string(REGEX MATCH "^[^\n]*" GCC_PATH "${GCC_PATH}")
-
-	message(STATUS "Found gcc at: ${GCC_PATH}.")
-	get_filename_component(GCC_BIN_DIR "${GCC_PATH}" DIRECTORY)
 	
-	if(NOT EXISTS ${GCC_BIN_DIR}/libstdc++-6.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgfortran-5.dll OR NOT EXISTS ${GCC_BIN_DIR}/libgcc_s_seh-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libwinpthread-1.dll OR NOT EXISTS ${GCC_BIN_DIR}/libquadmath-0.dll)
-		message(FATAL_ERROR "Could not find one of libstdc++-6.dll, libgfortran.dll, libgcc_s_seh-1.dll, libwinpthread-1.dll, libquadmath-0.dll in ${GCC_BIN_DIR}")
-	endif()
-	set(STDLIB_BINARIES ${GCC_BIN_DIR}/libstdc++-6.dll ${GCC_BIN_DIR}/libgfortran-5.dll ${GCC_BIN_DIR}/libgcc_s_seh-1.dll ${GCC_BIN_DIR}/libwinpthread-1.dll ${GCC_BIN_DIR}/libquadmath-0.dll ${GCC_BIN_DIR}/libgomp-1.dll ${GCC_BIN_DIR}/libgfortran-5.dll)
-	]]
-
 	set(OPENBLAS_BINARY ${OPENBLAS_PREFIX}/bin/libopenblas.dll)
 	if(NOT EXISTS ${OPENBLAS_BINARY})
 		message(FATAL_ERROR "Expected libopenblas.dll in OPENBLAS_PREFIX/bin")
@@ -296,15 +279,6 @@ elseif(WIN32)
 				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${OPENBLAS_PREFIX}/bin/libopenblas.dll ${LIBPATH}
 			)
 		
-		##C/C++/Fortran etc. standard libraries
-		#[[
-		if (STDLIB_BINARIES)
-			list(APPEND COPY_COMMANDS
-				COMMAND ${CMAKE_COMMAND} -E copy_if_different ${STDLIB_BINARIES} ${LIBPATH}
-			)
-		endif()
-		]]
-
 		set(MUMPS_COPY_TARGET MCT_${COPY_COUNTER})
 		MATH(EXPR COPY_COUNTER_LOCAL "${COPY_COUNTER} + 1")
 		set(COPY_COUNTER ${COPY_COUNTER_LOCAL} PARENT_SCOPE)
@@ -366,7 +340,7 @@ else()
 endif()
 
 #Mumps dynamic libraries are available. Set corresponding preprocessor flag
-target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN) # -DBSQP_CBLAS_SUFFIX= 
+target_compile_definitions(blockSQP2 PRIVATE DMUMPS_C_DYN)
 
 #Build examples and place executables and required libraries in dedicated folder
 copy_dynamic_libraries_to(${CMAKE_SOURCE_DIR}/blockSQP2/examples/bin)

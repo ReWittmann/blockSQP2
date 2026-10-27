@@ -430,11 +430,13 @@ Matrix Matrix::without_rows(int const *row_indices, int row_indices_l) const {
     int ind = 0, ind_new = 0;
     for (int i = 0; i < row_indices_l; i++, ind++){
         for (; ind < row_indices[i]; ind++, ind_new++){
-            BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+            // BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+            cblas_dcopy(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
         }
     }
     for (; ind < m; ind++, ind_new++){
-        BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+        // BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+        cblas_dcopy(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
     }
     return ret;
 }
@@ -555,20 +557,12 @@ Matrix Matrix::operator*(const Matrix &M2) const{
         throw std::invalid_argument("Matrix *: Cannot multiply along chaining dimension zero into a true 2D matrix");
     }
     #endif
-    //NEW
+    
     if (m == 0) return Matrix(0, M2.n);
     else if (n == 0) return Matrix(m, M2.n);
-    //
-
-    double *array_3 = new double[m * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
-    // if (M2.n == 1)
-    //     BSQP_BLASFUNC(cblas_dgemv(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1)));
-    // else
-    // if (M2.n > 1)
-        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
-    // else
-    //     BSQP_BLASFUNC(cblas_dgemv)(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1));
     
+    double *array_3 = new double[m * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
+    BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasNoTrans), blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
     return Matrix(m, M2.n, array_3);
 }
 
@@ -2394,7 +2388,7 @@ CSR_Matrix fullrow_multiply(const CSR_Matrix &M1, const Matrix &M2){
     }
 
     double *nz = new double[n_nzrow * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
-    BSQP_BLASFUNC(cblas_dgemm)(CblasRowMajor, CblasNoTrans, CblasTrans, blasint(n_nzrow), blasint(M2.n), blasint(M1.n), 1.0, M1.nz, blasint(M1.n), M2.array, blasint(M2.ldim), 0., nz, M2.n);
+    BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasRowMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasTrans), blasint(n_nzrow), blasint(M2.n), blasint(M1.n), 1.0, M1.nz, blasint(M1.n), M2.array, blasint(M2.ldim), 0., nz, M2.n);
 
     int *col = new int[n_nzrow * M2.n];
     int ind = 0;
@@ -2438,6 +2432,70 @@ CSR_Matrix make_fullrow(const CSR_Matrix &M){
     }
 
     return CSR_Matrix(M.m, M.n, nz, col, rowind, true);
+}
+
+
+
+inline char enumTranspose_to_char(BLASFEO_CBLAS_TRANSPOSE trans){
+    switch (trans) {
+    case BlasfeoCblasNoTrans:   return 'N';
+    case BlasfeoCblasTrans:     return 'T';
+    case BlasfeoCblasConjTrans: return 'C';
+    default:                   return '\0';
+    }
+}
+
+extern "C" void blasfeo_cblas_dgemm(
+		BLASFEO_CBLAS_LAYOUT layout,
+		BLASFEO_CBLAS_TRANSPOSE TransA, BLASFEO_CBLAS_TRANSPOSE TransB,
+		int M, int N, int K, double alpha, const double *A, int lda,
+		const double *B, int ldb, double beta, double *C, int ldc){
+    char ta = enumTranspose_to_char(TransA);
+    char tb = enumTranspose_to_char(TransB);
+    const bool row_major = layout == BlasfeoCblasRowMajor;
+    
+    // Report invalid arguments using the CBLAS (one-based) parameter index.
+    int invalid = 0;
+    if (!row_major && layout != BlasfeoCblasColMajor) invalid = 1;
+    else if (!ta) invalid = 2;
+    else if (!tb) invalid = 3;
+    else if (M < 0) invalid = 4;
+    else if (N < 0) invalid = 5;
+    else if (K < 0) invalid = 6;
+    else if (lda < std::max(1, row_major ? (ta == 'N' ? K : M)
+                                                        : (ta == 'N' ? M : K))) invalid = 9;
+    else if (ldb < std::max(1, row_major ? (tb == 'N' ? N : K)
+                                                        : (tb == 'N' ? K : N))) invalid = 11;
+    else if (ldc < std::max(1, row_major ? N : M)) invalid = 14;
+    if (invalid) throw;
+
+    if (M == 0 || N == 0) return;
+
+    // Reinterpret row-major C as column-major C^T:
+    // C^T = alpha * op(B)^T * op(A)^T + beta * C^T.
+    if (row_major) {
+        std::swap(M, N);
+        std::swap(A, B);
+        std::swap(lda, ldb);
+        std::swap(ta, tb);
+    }
+
+    // Avoid reading A/B when the product is zero, and avoid reading C when
+    // beta is zero (C is permitted to contain uninitialized values or NaNs).
+    if (alpha == 0.0 || K == 0) {
+        if (beta == 1.0) return;
+        for (int j = 0; j < N; ++j) {
+            double *column = C + static_cast<std::ptrdiff_t>(j) * ldc;
+            for (int i = 0; i < M; ++i)
+                column[i] = beta == 0.0 ? 0.0 : beta * column[i];
+        }
+        return;
+    }
+
+    // BLASFEO's legacy BLAS signature lacks const on its read-only inputs.
+    blasfeo_blas_dgemm(&ta, &tb, &M, &N, &K, &alpha,
+                       const_cast<double *>(A), &lda,
+                       const_cast<double *>(B), &ldb, &beta, C, &ldc);
 }
 
 
