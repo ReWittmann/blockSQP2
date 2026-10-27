@@ -130,6 +130,7 @@ elseif(WIN32)
 endif()
 target_compile_options(blockSQP2 PRIVATE 
 	-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized -fPIC
+	-DCBLAS_API
 	)
 
 set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
