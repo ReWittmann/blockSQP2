@@ -120,7 +120,7 @@ target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES
 						SOLVER_MUMPS
 						BSQP_PAR_QPS_DISABLED 
 						BSQP_CBLAS_SUFFIX=${CBLAS_SUFFIX}
-						BSQP_BLASFEO
+						# BSQP_BLASFEO
 						)
 
 if (UNIX AND NOT APPLE)
@@ -130,7 +130,6 @@ elseif(WIN32)
 endif()
 target_compile_options(blockSQP2 PRIVATE 
 	-Wall -Wextra -Wno-unused-parameter -Wno-maybe-uninitialized -fPIC
-	-DCBLAS_API
 	)
 
 set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
@@ -138,7 +137,7 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 										   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
 										   )
 target_include_directories(blockSQP2 PUBLIC ${CMAKE_SOURCE_DIR}/blockSQP2/include ${BLASFEO_INCLUDE_DIR})
-target_link_libraries(blockSQP2 PUBLIC ${BLASFEO_LIBRARY} ${QPOASES_LIBRARIES})
+target_link_libraries(blockSQP2 PUBLIC ${QPOASES_LIBRARIES})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 #libblockSQP_jl is just the compiled C interface that blockSQP.jl calls
