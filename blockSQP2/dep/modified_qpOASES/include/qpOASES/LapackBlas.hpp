@@ -16,12 +16,17 @@
 	#endif
 #endif
 
+#ifndef QPOS_CBLAS_PREFIX
+	#define QPOS_CBLAS_PREFIX
+#endif
+
 #ifndef QPOS_CBLAS_SUFFIX
     #define QPOS_CBLAS_SUFFIX
 #endif
+
 #define QPOS_CONCAT(a, b) a##b
 #define QPOS_EXPAND_CONCAT(a, b) QPOS_CONCAT(a, b)
-#define QPOS_BLASFUNC(a) QPOS_EXPAND_CONCAT(a, QPOS_CBLAS_SUFFIX)
+#define QPOS_BLASFUNC(a) QPOS_EXPAND_CONCAT(QPOS_CBLAS_PREFIX, QPOS_EXPAND_CONCAT(a, QPOS_CBLAS_SUFFIX))
 
 
 #ifdef __USE_SINGLE_PRECISION__
@@ -40,10 +45,13 @@
 	#define POTRF dpotrf_
 	#define TRTRS dtrtrs_
 	#define TRCON dtrcon_
+	
+	/// Pivoting variants
 	// #define SYTRF dsytrf_
 	// #define SYTRS dsytrs_
 	#define SYTRF dsytrf_rook_
 	#define SYTRS dsytrs_rook_
+	
 #endif // __USE_SINGLE_PRECISION__
 
 #ifdef LAPACK_FORTRAN_STRLEN_END

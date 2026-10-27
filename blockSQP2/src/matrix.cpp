@@ -430,11 +430,13 @@ Matrix Matrix::without_rows(int const *row_indices, int row_indices_l) const {
     int ind = 0, ind_new = 0;
     for (int i = 0; i < row_indices_l; i++, ind++){
         for (; ind < row_indices[i]; ind++, ind_new++){
-            BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+            // BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+            cblas_dcopy(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
         }
     }
     for (; ind < m; ind++, ind_new++){
-        BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+        // BSQP_BLASFUNC(cblas_dcopy)(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
+        cblas_dcopy(ret.n, array + ind, ldim, ret.array + ind_new, ret.ldim);
     }
     return ret;
 }
@@ -555,19 +557,13 @@ Matrix Matrix::operator*(const Matrix &M2) const{
         throw std::invalid_argument("Matrix *: Cannot multiply along chaining dimension zero into a true 2D matrix");
     }
     #endif
-    //NEW
+    
     if (m == 0) return Matrix(0, M2.n);
     else if (n == 0) return Matrix(m, M2.n);
-    //
-
+    
     double *array_3 = new double[m * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
-    // if (M2.n == 1)
-    //     BSQP_BLASFUNC(cblas_dgemv(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1)));
-    // else
-    // if (M2.n > 1)
-        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
-    // else
-    //     BSQP_BLASFUNC(cblas_dgemv)(CblasColMajor, CblasNoTrans, blasint(m), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(1), 0., array_3, blasint(1));
+    // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasNoTrans), blasint(m), blasint(M2.n), blasint(n), 1.0, array, blasint(ldim), M2.array, blasint(M2.ldim), 0., array_3, blasint(m));
+    BSQP_CBLAS_DGEMM(CblasColMajor, CblasNoTrans, CblasNoTrans, m, M2.n, n, 1.0, array, ldim, M2.array, M2.ldim, 0., array_3, m);
     
     return Matrix(m, M2.n, array_3);
 }
@@ -2394,8 +2390,9 @@ CSR_Matrix fullrow_multiply(const CSR_Matrix &M1, const Matrix &M2){
     }
 
     double *nz = new double[n_nzrow * M2.n]; //We pass beta=0. to dgemm, so no need to initialize.
-    BSQP_BLASFUNC(cblas_dgemm)(CblasRowMajor, CblasNoTrans, CblasTrans, blasint(n_nzrow), blasint(M2.n), blasint(M1.n), 1.0, M1.nz, blasint(M1.n), M2.array, blasint(M2.ldim), 0., nz, M2.n);
-
+    // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasRowMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasTrans), blasint(n_nzrow), blasint(M2.n), blasint(M1.n), 1.0, M1.nz, blasint(M1.n), M2.array, blasint(M2.ldim), 0., nz, M2.n);
+    BSQP_CBLAS_DGEMM(CblasRowMajor, CblasNoTrans, CblasTrans, n_nzrow, M2.n, M1.n, 1.0, M1.nz, M1.n, M2.array, M2.ldim, 0., nz, M2.n);
+    
     int *col = new int[n_nzrow * M2.n];
     int ind = 0;
     for (int i = 0; i < n_nzrow; i++){

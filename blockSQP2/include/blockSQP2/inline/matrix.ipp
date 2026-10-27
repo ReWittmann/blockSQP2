@@ -47,7 +47,8 @@ inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
   
     if (M3.m != M1.m || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.m, M2.n);
     if (M1.m == 0 || M2.n == 0) [[unlikely]] return; 
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+    // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+    BSQP_CBLAS_DGEMM(CblasColMajor, CblasNoTrans, CblasNoTrans, M1.m, M2.n, M1.n, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, 0., M3.array, M3.ldim);
 }
 
 inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3){
@@ -58,7 +59,8 @@ inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3){
   
     if (M3.m != M1.n || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.n, M2.n);
     if (M1.n == 0 || M2.n == 0) [[unlikely]] return; 
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+    // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+    BSQP_CBLAS_DGEMM(CblasColMajor, CblasTrans, CblasNoTrans, M1.n, M2.n, M1.m, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, 0., M3.array, M3.ldim);
 }
 
 inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta){
@@ -68,7 +70,8 @@ inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double
       if (M3.m != M1.m || M3.n != M2.n) throw std::invalid_argument("mult_to: Output matrix dimension mismatch");
     #endif
     if (M1.m == 0 || M2.n == 0) [[unlikely]] return;
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+    // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+    BSQP_CBLAS_DGEMM(CblasColMajor, CblasNoTrans, CblasNoTrans, M1.m, M2.n, M1.n, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, beta, M3.array, M3.ldim);
 }
 
 inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double beta){
@@ -78,7 +81,8 @@ inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, doubl
       if (M3.m != M1.n || M3.n != M2.n) throw std::invalid_argument("Tmult_to: Output matrix dimension mismatch");
     #endif
     if (M1.n == 0 || M2.n == 0) [[unlikely]] return;
-    BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+    // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+    BSQP_CBLAS_DGEMM(CblasColMajor, CblasTrans, CblasNoTrans, M1.n, M2.n, M1.m, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, beta, M3.array, M3.ldim);
 }
 
 #else //defined(BSQP_SMALLMULT) 
@@ -158,7 +162,8 @@ inline void mult(const Matrix &M1, const Matrix &M2, Matrix &M3){
     if (M3.m != M1.m || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.m, M2.n);
     if (M1.m == 0 || M2.n == 0) [[unlikely]] return;
     if (M1.m > 3 || M1.n > 3 || M2.n > 3 || M1.ldim != M1.m || M2.ldim != M2.m || M3.ldim != M3.m)
-        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+        // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+        BSQP_CBLAS_DGEMM(CblasColMajor, CblasNoTrans, CblasNoTrans, M1.m, M2.n, M1.n, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, 0., M3.array, M3.ldim);
     else{
         switch (M1.m){
             case 1:
@@ -302,7 +307,8 @@ inline void Tmult(const Matrix &M1, const Matrix &M2, Matrix &M3){
     if (M3.m != M1.n || M3.n != M2.n) [[unlikely]] M3.Dimension(M1.n, M2.n);
     if (M1.n == 0 || M2.n == 0) [[unlikely]] return; 
     if (M1.n > 3 || M1.m > 3 || M2.n > 3 || M1.ldim != M1.m || M2.ldim != M2.m || M3.ldim != M3.m)
-        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+        // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), double(0.), M3.array, blasint(M3.ldim));
+        BSQP_CBLAS_DGEMM(CblasColMajor, CblasTrans, CblasNoTrans, M1.n, M2.n, M1.m, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, 0., M3.array, M3.ldim);
     else{
         switch (M1.n){
             case 1:
@@ -447,9 +453,10 @@ inline void mult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, double
     #endif
     if (M1.m == 0 || M2.n == 0) [[unlikely]] return;
     if (M1.m > 3 || M1.n > 3 || M2.n > 3 || M1.ldim != M1.m || M2.ldim != M2.m || M3.ldim != M3.m)
-        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasNoTrans, CblasNoTrans, blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+        // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasNoTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.m), blasint(M2.n), blasint(M1.n), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+        BSQP_CBLAS_DGEMM(CblasColMajor, CblasNoTrans, CblasNoTrans, M1.m, M2.n, M1.n, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, beta, M3.array, M3.ldim);
     else{
-        M3 *= beta; //NOTE: M3 may be uninitialized. Matrix::operator*= forwards to Matrix::Initialize in case beta is zero, so its ok.
+        M3 *= beta; //NOTE: M3 may be uninitialized. Matrix::operator*= forwards to Matrix::Initialize in case beta is zero, so this is fine.
         switch (M1.m){
             case 1:
                 switch (M2.n){
@@ -593,10 +600,10 @@ inline void Tmult_to(const Matrix &M1, const Matrix &M2, const Matrix &M3, doubl
     #endif
     if (M1.n == 0 || M2.n == 0) [[unlikely]] return;
     if (M1.n > 3 || M1.m > 3 || M2.n > 3 || M1.ldim != M1.m || M2.ldim != M2.m || M3.ldim != M3.m)
-    // if (true)
-        BSQP_BLASFUNC(cblas_dgemm)(CblasColMajor, CblasTrans, CblasNoTrans, blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+        // BSQP_BLASFUNC(cblas_dgemm)(BSQP_BLASARG(CblasColMajor), BSQP_BLASARG(CblasTrans), BSQP_BLASARG(CblasNoTrans), blasint(M1.n), blasint(M2.n), blasint(M1.m), double(1.0), M1.array, blasint(M1.ldim), M2.array, blasint(M2.ldim), beta, M3.array, blasint(M3.ldim));
+        BSQP_CBLAS_DGEMM(CblasColMajor, CblasTrans, CblasNoTrans, M1.n, M2.n, M1.m, 1.0, M1.array, M1.ldim, M2.array, M2.ldim, beta, M3.array, M3.ldim);
     else{
-        M3 *= beta; //NOTE: M3 may be uninitialized. Matrix::operator*= forwards to Matrix::Initialize in case beta is zero, so its ok.
+        M3 *= beta; //NOTE: M3 may be uninitialized. Matrix::operator*= forwards to Matrix::Initialize in case beta is zero, so this is fine.
         switch (M1.n){
             case 1:
                 switch (M2.n){
