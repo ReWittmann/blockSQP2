@@ -11,7 +11,7 @@ project(BinaryBuilderblockSQP2
 	HOMEPAGE_URL https://github.com/ReWittmann/blockSQP2
     LANGUAGES CXX
 	)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 message(STATUS "Building for " ${CMAKE_SYSTEM_NAME})
 
@@ -114,11 +114,14 @@ add_library(blockSQP2 STATIC
    	blockSQP2/src/scaling.cpp
    	blockSQP2/src/sqputils.cpp
 	blockSQP2/src/load_mumps.cpp
+	blockSQP2/src/blasfeo_helpers.cpp
    	)
 target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES 
 						SOLVER_MUMPS
 						BSQP_PAR_QPS_DISABLED 
-						BSQP_CBLAS_SUFFIX=${CBLAS_SUFFIX})
+						BSQP_CBLAS_SUFFIX=${CBLAS_SUFFIX}
+						BSQP_BLASFEO
+						)
 
 if (UNIX AND NOT APPLE)
 	target_compile_definitions(blockSQP2 PUBLIC LINUX)
@@ -134,7 +137,7 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 										   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin
 										   )
 target_include_directories(blockSQP2 PUBLIC ${CMAKE_SOURCE_DIR}/blockSQP2/include)
-target_link_libraries(blockSQP2 PUBLIC ${QPOASES_LIBRARIES})
+target_link_libraries(blockSQP2 PUBLIC ${BLASFEO_LIBRARY} ${QPOASES_LIBRARIES})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
 
 #libblockSQP_jl is just the compiled C interface that blockSQP.jl calls
