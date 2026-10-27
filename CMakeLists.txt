@@ -213,9 +213,7 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 										  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/blockSQP2/bin)
 
 target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include)# ${OPENBLAS_INCLUDE_DIR})
-
-# target_compile_options(blockSQP2 PRIVATE -DBSQP_CBLAS_PREFIX=blasfeo_ -DBSQP_CBLAS_ARG_PREFIX=Blasfeo)
-target_compile_definitions(blockSQP2 PRIVATE BSQP_BLASFEO)
+target_compile_definitions(blockSQP2 PRIVATE BSQP_BLASFEO) # Pass flag to enable forwarding dgemm calls to blasfeo
 target_link_libraries(blockSQP2 PUBLIC blasfeo qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
