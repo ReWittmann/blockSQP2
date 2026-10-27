@@ -181,9 +181,10 @@ add_library(blockSQP2 STATIC
 	blockSQP2/src/load_mumps.cpp
 	blockSQP2/src/structure.cpp
 	blockSQP2/src/task.cpp
+	blockSQP2/src/blasfeo_helpers.cpp
 	)
 option(blockSQP2_UNITY_BUILD "Enable unity build for blockSQP2" ON)
-set_target_properties(blockSQP2 PROPERTIES UNITY_BUILD ${blockSQP2_UNITY_BUILD} UNITY_BUILD_BATCH_SIZE 20)
+set_target_properties(blockSQP2 PROPERTIES UNITY_BUILD ${blockSQP2_UNITY_BUILD} UNITY_BUILD_BATCH_SIZE 25)
 target_compile_definitions(blockSQP2 PUBLIC QPSOLVER_QPOASES)
 
 
@@ -213,7 +214,8 @@ set_target_properties(blockSQP2 PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOUR
 
 target_include_directories(blockSQP2 PUBLIC blockSQP2/include ${qpOASES_MODDED_DIR}/include)# ${OPENBLAS_INCLUDE_DIR})
 
-target_compile_options(blockSQP2 PRIVATE -DBSQP_CBLAS_PREFIX=blasfeo_ -DBSQP_CBLAS_ARG_PREFIX=Blasfeo)
+# target_compile_options(blockSQP2 PRIVATE -DBSQP_CBLAS_PREFIX=blasfeo_ -DBSQP_CBLAS_ARG_PREFIX=Blasfeo)
+target_compile_definitions(blockSQP2 PRIVATE BSQP_BLASFEO)
 target_link_libraries(blockSQP2 PUBLIC blasfeo qpOASES) #Important: If qpOASES is built with MUMPS, -DSOLVER_MUMPS must be inherited
 											   #		   to enable workarounds for MUMPS not being thread safe,
 											   #		   or prevent MUMPS from running in parallel
