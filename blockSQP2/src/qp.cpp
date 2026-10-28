@@ -645,7 +645,7 @@ QPresults SQPmethod::solveQP_seq_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
 //     // static_cast<BasicCQPsolver*>(sub_QPs_par[maxQP - 1].get())->invoke_condensing();
 //     // QP_threads[0].join();
     
-//     condensing_main_2->place(std::move_only_function<void()>([QP0 = sub_QPs_par[0].get()](){static_cast<BasicCQPsolver*>(QP0)->invoke_condensing();}), 0);
+//     condensing_main_2->place(BasicThreadHandler::task_T([QP0 = sub_QPs_par[0].get()](){static_cast<BasicCQPsolver*>(QP0)->invoke_condensing();}), 0);
 //     try         {static_cast<BasicCQPsolver*>(sub_QPs_par[maxQP - 1].get())->invoke_condensing();}
 //     catch (...) {condensing_main_2->combine_except(std::current_exception());}
 //     condensing_main_2->assert_noexcept();
@@ -811,9 +811,9 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
     }
     int N_portions = (std::min)(threads->get_N_threads() + 1, maxQP);
     for (int j = 0; j < N_portions - 1; j++){
-        std::move_only_function<void()> task;
+        BasicThreadHandler::task_T task;
         if (j == 0){
-            task = std::move_only_function<void()>(
+            task = BasicThreadHandler::task_T(
                 [this, &QP_results_p, &QP_stop_sources, maxQP, N_portions](){
                     for (int i = 0; i < maxQP/N_portions; i++){
                         std::stop_token QPstop = QP_stop_sources[i].get_token();
@@ -824,7 +824,7 @@ QPresults SQPmethod::solveQP_par(Matrix &deltaXi, Matrix &lambdaQP){
             );
         }
         else{
-            task = std::move_only_function<void()>(
+            task = BasicThreadHandler::task_T(
                 [this, &QP_results_p, &QP_stop_sources, j, maxQP, N_portions](){
                     for (int i = (maxQP*(j+1))/N_portions - 1; i >= (maxQP*j)/N_portions; i--){
                         std::stop_token QPstop = QP_stop_sources[i].get_token();
@@ -989,7 +989,7 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     sub_QPs_par[0]->set_threadHandler(condensing_subthreads[0].get());
     sub_QPs_par[maxQP - 1]->set_threadHandler(condensing_subthreads[1].get());
     
-    condensing_main_2->place(std::move_only_function<void()>([QP0 = sub_QPs_par[0].get()](){static_cast<BasicCQPsolver*>(QP0)->invoke_condensing();}), 0);
+    condensing_main_2->place(BasicThreadHandler::task_T([QP0 = sub_QPs_par[0].get()](){static_cast<BasicCQPsolver*>(QP0)->invoke_condensing();}), 0);
     try         {static_cast<BasicCQPsolver*>(sub_QPs_par[maxQP - 1].get())->invoke_condensing();}
     catch (...) {condensing_main_2->combine_except(std::current_exception());}
     condensing_main_2->assert_noexcept();
@@ -1002,9 +1002,9 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     
     int N_portions = (std::min)(threads->get_N_threads() + 1, maxQP);
     for (int j = 0; j < N_portions - 1; j++){
-        std::move_only_function<void()> task;
+        BasicThreadHandler::task_T task;
         if (j == 0){
-            task = std::move_only_function<void()>(
+            task = BasicThreadHandler::task_T(
                 [this, &QP_results_p, &QP_stop_sources, maxQP, N_portions](){
                     for (int i = 0; i < maxQP/N_portions; i++){
                         std::stop_token QPstop = QP_stop_sources[i].get_token();
@@ -1015,7 +1015,7 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
             );
         }
         else{
-            task = std::move_only_function<void()>(
+            task = BasicThreadHandler::task_T(
                 [this, &QP_results_p, &QP_stop_sources, j, maxQP, N_portions](){
                     for (int i = (maxQP*(j+1))/N_portions - 1; i >= (maxQP*j)/N_portions; i--){
                         std::stop_token QPstop = QP_stop_sources[i].get_token();
@@ -1032,7 +1032,6 @@ QPresults SQPmethod::solveQP_par_cond_reduced(Matrix &deltaXi, Matrix &lambdaQP)
     QP_results[maxQP - 1] = sub_QPs_par[maxQP - 1]->solve(vars->par_QP_sols_prim[maxQP - 1], vars->par_QP_sols_dual[maxQP - 1]);
     steady_clock::time_point T1 = steady_clock::now();
     for (int i = maxQP - 2; i >= (maxQP*(N_portions - 1))/N_portions; i--){
-        std::cout << "Here, i = " << i << "\n";
         QP_results[i] = sub_QPs_par[i]->solve(vars->par_QP_sols_prim[i], vars->par_QP_sols_dual[i]);
     }
     

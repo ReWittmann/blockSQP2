@@ -7,7 +7,7 @@
 #include <future>
 #include <memory>
 #include <stdexcept>
-
+#include <iostream>
 
 namespace blockSQP2{
 
@@ -24,12 +24,45 @@ class MultiException : public std::exception{
     const char* what() const noexcept;
 };
 
+template<class T>
+concept task_C = std::invocable<T&> && std::same_as<std::invoke_result_t<T&>, void>;
 
 class BasicThreadHandler{
     public:
+    #ifdef __cpp_lib_move_only_function
+        typedef std::move_only_function<void()> task_T;
+    #else
+        class BasicTaskInner{
+            public:
+            virtual void operator()() = 0;
+        };
+        
+        template <typename T> requires std::invocable<std::decay_t<T>&> class TaskInner : public BasicTaskInner{
+            public:
+            std::decay_t<T> func;
+            void operator()(){std::invoke(std::move(func));}
+            TaskInner(T &&arg_func): func(std::forward<T>(arg_func)){std::cout << "placed\n";}
+        };
+        
+        class BasicThreadHandlerTask{
+            public:
+            std::unique_ptr<BasicTaskInner> inner;
+            template<typename T> BasicThreadHandlerTask(T &&func_arg): inner(std::make_unique<TaskInner<T>>(std::forward<T>(func_arg))){}
+            BasicThreadHandlerTask() = default;
+            BasicThreadHandlerTask(BasicThreadHandlerTask &other) = delete;
+            BasicThreadHandlerTask(BasicThreadHandlerTask &&other) = default;
+            BasicThreadHandlerTask &operator=(BasicThreadHandlerTask &other) = delete;
+            BasicThreadHandlerTask &operator=(BasicThreadHandlerTask &&other) = default;
+            
+            void operator()(){(*inner)();}
+        };
+        
+        typedef BasicThreadHandlerTask task_T;
+    #endif
+    
     virtual ~BasicThreadHandler();
     virtual int get_N_threads() const = 0;
-    virtual void place(std::move_only_function<void()> arg_task, int ind) = 0;
+    virtual void place(task_T arg_task, int ind) = 0;
     virtual void wait(int ind) = 0;
     virtual std::future_status wait_for(std::chrono::nanoseconds duration, int ind) = 0;
     virtual void assert_noexcept(int ind) = 0;
@@ -39,9 +72,9 @@ class BasicThreadHandler{
 };
 
 // Add functionality to passed tasks
-inline std::move_only_function<void()> observe_end(std::move_only_function<void()> arg_task, std::future<void> *ret_end_future);
-inline std::move_only_function<void()> set_affinity(std::move_only_function<void()> arg_task, int ind);
-inline std::move_only_function<void()> catch_exceptions(std::move_only_function<void()> arg_task, std::future<void> *ret_exception_future);
+template<task_C task_T> inline task_T observe_end(task_T arg_task, std::future<void> *ret_end_future);
+template<task_C task_T> inline task_T set_affinity(task_T arg_task, int ind);
+template<task_C task_T> inline task_T catch_exceptions(task_T arg_task, std::future<void> *ret_exception_future);
 
 
 class ThreadHandler : public BasicThreadHandler{
@@ -54,12 +87,10 @@ class ThreadHandler : public BasicThreadHandler{
     ThreadHandler(int arg_N_threads);
     ~ThreadHandler();
     int get_N_threads() const {return N_threads;}
-    void place(std::move_only_function<void()> arg_task, int ind);
+    void place(task_T arg_task, int ind);
     void wait(int ind);
     std::future_status wait_for(std::chrono::nanoseconds arg_duration, int ind);
-    // void assert_noexcept();
     void assert_noexcept(int ind);
-    // void combine_except(std::exception_ptr arg_except);
 };
 
 
@@ -88,7 +119,7 @@ class ThreadSubHandler : public BasicThreadHandler{
     }
     
     int get_N_threads() const {return N_threads;}
-    void place(std::move_only_function<void()> arg_task, int ind){parent->place(std::move(arg_task), thread_ind[ind]);}
+    void place(task_T arg_task, int ind){parent->place(std::move(arg_task), thread_ind[ind]);}
     void wait(int ind){parent->wait(thread_ind[ind]);}
     std::future_status wait_for(std::chrono::nanoseconds arg_duration, int ind){return parent->wait_for(arg_duration, thread_ind[ind]);}
     void assert_noexcept(int ind);
@@ -99,7 +130,7 @@ class ThisThreadHandle : public BasicThreadHandler{
     public:
     ThisThreadHandle(){};
     int get_N_threads() const {return 1;}
-    void place(std::move_only_function<void()> arg_task, int ind){arg_task();}
+    void place(task_T arg_task, int ind){arg_task();}
     void wait(int ind){};
     std::future_status wait_for(std::chrono::nanoseconds duration, int ind){return std::future_status::ready;}
     void assert_noexcept(){}

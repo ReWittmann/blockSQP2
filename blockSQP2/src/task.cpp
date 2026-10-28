@@ -73,7 +73,7 @@ namespace blockSQP2{
     
     ThreadHandler::~ThreadHandler(){}
     
-    void ThreadHandler::place(std::move_only_function<void()> arg_task, int ind){
+    void ThreadHandler::place(task_T arg_task, int ind){
         if (ind >= N_threads) throw std::runtime_error("Cannot assign task to thread " + std::to_string(ind) + ", only " + std::to_string(get_N_threads()) + " are available");
         threads[ind] = std::jthread(set_affinity(
                                         catch_exceptions(

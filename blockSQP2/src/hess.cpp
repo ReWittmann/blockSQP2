@@ -407,7 +407,7 @@ void SQPmethod::calcHessianUpdateLimitedMemory_par(Hessians updateType, Sizings 
     
     int N_portions = (std::min)(threads->get_N_threads() + 1, nBlocks);
     for (int j = 0; j < N_portions - 1; j++){
-        threads->place(std::move_only_function<void()>(
+        threads->place(BasicThreadHandler::task_T(
                 [this, updateType, sizingType, hess, j, nBlocks, N_portions](){
                     this->par_inner_update_loop(updateType, sizingType, hess, (nBlocks*j)/N_portions, (nBlocks*(j+1))/N_portions);
                 }

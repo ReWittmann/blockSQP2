@@ -730,7 +730,7 @@ void Condenser::full_condense(const Matrix &grad_obj, const Sparse_Matrix &con_j
     else{
         int N_portions = (std::min)(threadHandler_single_use->get_N_threads() + 1, num_targets);
         for (int j = 0; j < N_portions - 1; j++){
-            std::move_only_function<void()> task = std::move_only_function<void()>([this, j, N_portions, hess, &lb_con](){
+            BasicThreadHandler::task_T task = BasicThreadHandler::task_T([this, j, N_portions, hess, &lb_con](){
                 for (int i = (this->num_targets*j)/N_portions; i < (this->num_targets*(j+1))/N_portions; i++){
                     this->single_condense(i, this->T_grad_obj[i], this->T_Slices[i], &(hess[this->h_starts[i]]), this->T_lb_var[i], this->T_ub_var[i], lb_con);
                     this->O_Slices[i].remove_rows(this->c_starts.get(), this->c_ends.get(), this->num_targets);
@@ -1244,7 +1244,7 @@ void Condenser::new_hessian_condense(const SymMatrix *const hess, Matrix &conden
     else{
         int N_portions = (std::min)(threadHandler_single_use->get_N_threads() + 1, num_targets);
         for (int j = 0; j < N_portions - 1; j++){
-            std::move_only_function<void()> task = std::move_only_function<void()>([this, j, N_portions, hess](){
+            BasicThreadHandler::task_T task = BasicThreadHandler::task_T([this, j, N_portions, hess](){
                 for (int i = (this->num_targets*j)/N_portions; i < (this->num_targets*(j+1))/N_portions; i++){
                     this->single_new_hess_condense(i, hess + this->h_starts[i]);
                 }
@@ -1377,7 +1377,7 @@ void Condenser::SOC_condense(const Matrix &grad_obj, const Matrix &lb_con, const
     else{
         int N_portions = (std::min)(threadHandler_single_use->get_N_threads() + 1, num_targets);
         for (int j = 0; j < N_portions - 1; j++){
-            std::move_only_function<void()> task = std::move_only_function<void()>([this, j, N_portions, &lb_con](){
+            BasicThreadHandler::task_T task = BasicThreadHandler::task_T([this, j, N_portions, &lb_con](){
                 for (int i = (this->num_targets*j)/N_portions; i < (this->num_targets*(j+1))/N_portions; i++){
                     this->single_SOC_condense(i, lb_con);
                 }
