@@ -114,6 +114,8 @@ add_library(blockSQP2 STATIC
    	blockSQP2/src/scaling.cpp
    	blockSQP2/src/sqputils.cpp
 	blockSQP2/src/load_mumps.cpp
+	blockSQP2/src/structure.cpp
+	blockSQP2/src/task.cpp
 	blockSQP2/src/blasfeo_helpers.cpp
    	)
 target_compile_definitions(blockSQP2 PRIVATE QPSOLVER_QPOASES 
