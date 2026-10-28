@@ -35,6 +35,7 @@ class BasicThreadHandler{
         class BasicTaskInner{
             public:
             virtual void operator()() = 0;
+            virtual ~BasicTaskInner(){}
         };
         
         template <typename T> requires std::invocable<std::decay_t<T>&> class TaskInner : public BasicTaskInner{
